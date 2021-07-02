@@ -1,0 +1,791 @@
+WARNING -> Generating Logfile...
+Transfer benchmark@silver1 Pinned Host->Device : (256,25125) with step 256
+Warming up...
+Cublas-chunk Link Pinned Host->Device (Chunk 256x256):
+Transfer time:	 Average=0.070112 ms ( 7.477890 Gb/s), Min = 0.066996 ms, Max = 0.257969 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 256x256):
+Transfer time:	 Average=0.065327 ms ( 8.025629 Gb/s), Min = 0.064352 ms, Max = 0.067040 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 512x512):
+Transfer time:	 Average=0.181305 ms ( 11.566958 Gb/s), Min = 0.178814 ms, Max = 0.226974 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 512x512):
+Transfer time:	 Average=0.199135 ms ( 10.531289 Gb/s), Min = 0.184224 ms, Max = 0.206848 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 768x768):
+Transfer time:	 Average=0.393128 ms ( 12.002674 Gb/s), Min = 0.391960 ms, Max = 0.411034 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 768x768):
+Transfer time:	 Average=0.484132 ms ( 9.746509 Gb/s), Min = 0.466720 ms, Max = 0.490400 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 1024x1024):
+Transfer time:	 Average=0.690091 ms ( 12.155806 Gb/s), Min = 0.688076 ms, Max = 0.716925 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 1024x1024):
+Transfer time:	 Average=0.807449 ms ( 10.389026 Gb/s), Min = 0.789760 ms, Max = 0.822208 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 1280x1280):
+Transfer time:	 Average=1.076398 ms ( 12.176910 Gb/s), Min = 1.075029 ms, Max = 1.080036 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 1280x1280):
+Transfer time:	 Average=1.238610 ms ( 10.582186 Gb/s), Min = 1.215712 ms, Max = 1.250080 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 1536x1536):
+Transfer time:	 Average=1.542921 ms ( 12.232880 Gb/s), Min = 1.541138 ms, Max = 1.552105 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 1536x1536):
+Transfer time:	 Average=1.781185 ms ( 10.596525 Gb/s), Min = 1.748000 ms, Max = 1.800512 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 1792x1792):
+Transfer time:	 Average=2.094150 ms ( 12.267563 Gb/s), Min = 2.091885 ms, Max = 2.130985 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 1792x1792):
+Transfer time:	 Average=2.396285 ms ( 10.720806 Gb/s), Min = 2.369920 ms, Max = 2.423008 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 2048x2048):
+Transfer time:	 Average=2.728930 ms ( 12.295822 Gb/s), Min = 2.727985 ms, Max = 2.743959 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 2048x2048):
+Transfer time:	 Average=3.131467 ms ( 10.715244 Gb/s), Min = 3.119552 ms, Max = 3.146080 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 2304x2304):
+Transfer time:	 Average=3.457720 ms ( 12.281886 Gb/s), Min = 3.455877 ms, Max = 3.485918 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 2304x2304):
+Transfer time:	 Average=4.008990 ms ( 10.593025 Gb/s), Min = 3.991968 ms, Max = 4.030400 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 2560x2560):
+Transfer time:	 Average=4.262547 ms ( 12.299875 Gb/s), Min = 4.260778 ms, Max = 4.276991 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 2560x2560):
+Transfer time:	 Average=4.949448 ms ( 10.592857 Gb/s), Min = 4.932416 ms, Max = 4.970720 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 2816x2816):
+Transfer time:	 Average=5.152373 ms ( 12.312549 Gb/s), Min = 5.149841 ms, Max = 5.167007 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 2816x2816):
+Transfer time:	 Average=5.968862 ms ( 10.628299 Gb/s), Min = 5.949248 ms, Max = 5.990176 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 3072x3072):
+Transfer time:	 Average=6.126080 ms ( 12.323946 Gb/s), Min = 6.124020 ms, Max = 6.140947 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 3072x3072):
+Transfer time:	 Average=7.099935 ms ( 10.633545 Gb/s), Min = 7.079072 ms, Max = 7.118624 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 3328x3328):
+Transfer time:	 Average=7.198231 ms ( 12.309228 Gb/s), Min = 7.195950 ms, Max = 7.235050 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 3328x3328):
+Transfer time:	 Average=8.390561 ms ( 10.560042 Gb/s), Min = 8.375616 ms, Max = 8.414272 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 3584x3584):
+Transfer time:	 Average=8.341630 ms ( 12.318990 Gb/s), Min = 8.338928 ms, Max = 8.379936 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 3584x3584):
+Transfer time:	 Average=9.743876 ms ( 10.546158 Gb/s), Min = 9.711168 ms, Max = 9.777536 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 3840x3840):
+Transfer time:	 Average=9.569969 ms ( 12.326560 Gb/s), Min = 9.567976 ms, Max = 9.604931 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 3840x3840):
+Transfer time:	 Average=11.269438 ms ( 10.467673 Gb/s), Min = 11.216576 ms, Max = 11.313728 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 4096x4096):
+Transfer time:	 Average=10.882261 ms ( 12.333625 Gb/s), Min = 10.879993 ms, Max = 10.917902 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 4096x4096):
+Transfer time:	 Average=12.874878 ms ( 10.424777 Gb/s), Min = 12.784096 ms, Max = 12.921440 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 4352x4352):
+Transfer time:	 Average=12.296710 ms ( 12.321933 Gb/s), Min = 12.294054 ms, Max = 12.331963 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 4352x4352):
+Transfer time:	 Average=14.628122 ms ( 10.358078 Gb/s), Min = 14.582432 ms, Max = 14.685504 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 4608x4608):
+Transfer time:	 Average=13.779261 ms ( 12.327897 Gb/s), Min = 13.776064 ms, Max = 13.816118 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 4608x4608):
+Transfer time:	 Average=16.330585 ms ( 10.401912 Gb/s), Min = 16.262367 ms, Max = 16.389664 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 4864x4864):
+Transfer time:	 Average=15.345879 ms ( 12.333472 Gb/s), Min = 15.343904 ms, Max = 15.382051 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 4864x4864):
+Transfer time:	 Average=18.191256 ms ( 10.404337 Gb/s), Min = 18.132769 ms, Max = 18.235456 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 5120x5120):
+Transfer time:	 Average=16.997361 ms ( 12.338103 Gb/s), Min = 16.994953 ms, Max = 17.033815 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 5120x5120):
+Transfer time:	 Average=20.107757 ms ( 10.429567 Gb/s), Min = 20.047264 ms, Max = 20.156544 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 5376x5376):
+Transfer time:	 Average=18.754070 ms ( 12.328578 Gb/s), Min = 18.750906 ms, Max = 18.789053 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 5376x5376):
+Transfer time:	 Average=22.316821 ms ( 10.360392 Gb/s), Min = 22.259935 ms, Max = 22.369024 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 5632x5632):
+Transfer time:	 Average=20.575311 ms ( 12.333004 Gb/s), Min = 20.572901 ms, Max = 20.612001 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 5632x5632):
+Transfer time:	 Average=24.445348 ms ( 10.380519 Gb/s), Min = 24.407232 ms, Max = 24.482048 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 5888x5888):
+Transfer time:	 Average=22.481079 ms ( 12.336968 Gb/s), Min = 22.477865 ms, Max = 22.517920 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 5888x5888):
+Transfer time:	 Average=26.750933 ms ( 10.367801 Gb/s), Min = 26.714848 ms, Max = 26.779840 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 6144x6144):
+Transfer time:	 Average=24.471788 ms ( 12.340328 Gb/s), Min = 24.468899 ms, Max = 24.518013 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 6144x6144):
+Transfer time:	 Average=29.183962 ms ( 10.347803 Gb/s), Min = 29.146336 ms, Max = 29.228672 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 6400x6400):
+Transfer time:	 Average=26.570098 ms ( 12.332660 Gb/s), Min = 26.567936 ms, Max = 26.604891 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 6400x6400):
+Transfer time:	 Average=31.781542 ms ( 10.310387 Gb/s), Min = 31.742529 ms, Max = 31.829056 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 6656x6656):
+Transfer time:	 Average=28.730261 ms ( 12.336076 Gb/s), Min = 28.725863 ms, Max = 28.767109 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 6656x6656):
+Transfer time:	 Average=34.457927 ms ( 10.285549 Gb/s), Min = 34.425663 ms, Max = 34.501728 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 6912x6912):
+Transfer time:	 Average=30.975170 ms ( 12.339107 Gb/s), Min = 30.971050 ms, Max = 31.013012 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 6912x6912):
+Transfer time:	 Average=37.303329 ms ( 10.245894 Gb/s), Min = 37.241600 ms, Max = 37.343967 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 7168x7168):
+Transfer time:	 Average=33.303852 ms ( 12.342170 Gb/s), Min = 33.300877 ms, Max = 33.339977 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 7168x7168):
+Transfer time:	 Average=40.224820 ms ( 10.218611 Gb/s), Min = 40.171646 ms, Max = 40.284481 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 7424x7424):
+Transfer time:	 Average=35.745661 ms ( 12.335097 Gb/s), Min = 35.742044 ms, Max = 35.779953 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 7424x7424):
+Transfer time:	 Average=43.447588 ms ( 10.148462 Gb/s), Min = 43.312160 ms, Max = 43.515423 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 7680x7680):
+Transfer time:	 Average=38.245287 ms ( 12.337708 Gb/s), Min = 38.241148 ms, Max = 38.285017 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 7680x7680):
+Transfer time:	 Average=46.511236 ms ( 10.145058 Gb/s), Min = 46.441536 ms, Max = 46.578304 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 7936x7936):
+Transfer time:	 Average=40.828619 ms ( 12.340382 Gb/s), Min = 40.823936 ms, Max = 40.865898 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 7936x7936):
+Transfer time:	 Average=49.574810 ms ( 10.163241 Gb/s), Min = 49.496990 ms, Max = 49.646496 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 8192x8192):
+Transfer time:	 Average=43.496301 ms ( 12.342910 Gb/s), Min = 43.491840 ms, Max = 43.585062 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 8192x8192):
+Transfer time:	 Average=52.717134 ms ( 10.183993 Gb/s), Min = 52.626015 ms, Max = 52.781120 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 8448x8448):
+Transfer time:	 Average=46.280358 ms ( 12.336759 Gb/s), Min = 46.276093 ms, Max = 46.321154 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 8448x8448):
+Transfer time:	 Average=56.231878 ms ( 10.153487 Gb/s), Min = 56.148479 ms, Max = 56.312416 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 8704x8704):
+Transfer time:	 Average=49.117780 ms ( 12.339257 Gb/s), Min = 49.113035 ms, Max = 49.154043 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 8704x8704):
+Transfer time:	 Average=59.615146 ms ( 10.166492 Gb/s), Min = 59.566433 ms, Max = 59.661247 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 8960x8960):
+Transfer time:	 Average=52.039075 ms ( 12.341741 Gb/s), Min = 52.034855 ms, Max = 52.077055 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 8960x8960):
+Transfer time:	 Average=63.192977 ms ( 10.163357 Gb/s), Min = 63.142529 ms, Max = 63.250366 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 9216x9216):
+Transfer time:	 Average=55.045910 ms ( 12.343828 Gb/s), Min = 55.040836 ms, Max = 55.083036 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 9216x9216):
+Transfer time:	 Average=66.910842 ms ( 10.154965 Gb/s), Min = 66.865440 ms, Max = 67.001282 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 9472x9472):
+Transfer time:	 Average=58.173971 ms ( 12.337997 Gb/s), Min = 58.169842 ms, Max = 58.210850 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 9472x9472):
+Transfer time:	 Average=70.759060 ms ( 10.143581 Gb/s), Min = 70.706429 ms, Max = 70.820221 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 9728x9728):
+Transfer time:	 Average=61.350110 ms ( 12.340188 Gb/s), Min = 61.346054 ms, Max = 61.385155 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 9728x9728):
+Transfer time:	 Average=74.793294 ms ( 10.122189 Gb/s), Min = 74.728477 ms, Max = 74.866692 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 9984x9984):
+Transfer time:	 Average=64.610908 ms ( 12.342220 Gb/s), Min = 64.604044 ms, Max = 64.654827 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 9984x9984):
+Transfer time:	 Average=78.888054 ms ( 10.108527 Gb/s), Min = 78.839455 ms, Max = 78.935043 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 10240x10240):
+Transfer time:	 Average=67.955840 ms ( 12.344205 Gb/s), Min = 67.950964 ms, Max = 67.996025 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 10240x10240):
+Transfer time:	 Average=83.110598 ms ( 10.093307 Gb/s), Min = 83.031487 ms, Max = 83.171204 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 10496x10496):
+Transfer time:	 Average=71.427100 ms ( 12.338848 Gb/s), Min = 71.419954 ms, Max = 71.531057 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 10496x10496):
+Transfer time:	 Average=87.593854 ms ( 10.061529 Gb/s), Min = 87.380577 ms, Max = 87.726913 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 10752x10752):
+Transfer time:	 Average=74.941061 ms ( 12.340952 Gb/s), Min = 74.936867 ms, Max = 74.980974 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 10752x10752):
+Transfer time:	 Average=91.934086 ms ( 10.059860 Gb/s), Min = 91.689087 ms, Max = 92.191360 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 11008x11008):
+Transfer time:	 Average=78.540590 ms ( 12.342771 Gb/s), Min = 78.535080 ms, Max = 78.574181 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 11008x11008):
+Transfer time:	 Average=96.317168 ms ( 10.064753 Gb/s), Min = 96.143715 ms, Max = 96.543839 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 11264x11264):
+Transfer time:	 Average=82.224309 ms ( 12.344544 Gb/s), Min = 82.217932 ms, Max = 82.260847 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 11264x11264):
+Transfer time:	 Average=100.838044 ms ( 10.065859 Gb/s), Min = 100.725250 ms, Max = 101.117378 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 11520x11520):
+Transfer time:	 Average=86.036921 ms ( 12.339856 Gb/s), Min = 86.030960 ms, Max = 86.072922 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 11520x11520):
+Transfer time:	 Average=105.627907 ms ( 10.051162 Gb/s), Min = 105.554878 ms, Max = 105.726013 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 11776x11776):
+Transfer time:	 Average=89.891632 ms ( 12.341454 Gb/s), Min = 89.884043 ms, Max = 89.931011 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 11776x11776):
+Transfer time:	 Average=110.425010 ms ( 10.046577 Gb/s), Min = 110.363075 ms, Max = 110.652992 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 12032x12032):
+Transfer time:	 Average=93.828483 ms ( 12.343290 Gb/s), Min = 93.823910 ms, Max = 93.860865 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 12032x12032):
+Transfer time:	 Average=115.296752 ms ( 10.044968 Gb/s), Min = 115.219742 ms, Max = 115.419167 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 12288x12288):
+Transfer time:	 Average=97.851481 ms ( 12.344826 Gb/s), Min = 97.846031 ms, Max = 97.888947 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 12288x12288):
+Transfer time:	 Average=120.492399 ms ( 10.025193 Gb/s), Min = 120.344162 ms, Max = 120.665054 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 12544x12544):
+Transfer time:	 Average=102.007411 ms ( 12.340432 Gb/s), Min = 101.999998 ms, Max = 102.118969 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 12544x12544):
+Transfer time:	 Average=126.445397 ms ( 9.955408 Gb/s), Min = 126.062752 ms, Max = 126.695038 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 12800x12800):
+Transfer time:	 Average=106.197281 ms ( 12.342312 Gb/s), Min = 106.189966 ms, Max = 106.234074 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 12800x12800):
+Transfer time:	 Average=132.154789 ms ( 9.918067 Gb/s), Min = 131.870758 ms, Max = 132.277786 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 13056x13056):
+Transfer time:	 Average=110.474715 ms ( 12.343757 Gb/s), Min = 110.466957 ms, Max = 110.507965 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 13056x13056):
+Transfer time:	 Average=137.384592 ms ( 9.925954 Gb/s), Min = 137.259323 ms, Max = 137.446213 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 13312x13312):
+Transfer time:	 Average=114.837587 ms ( 12.345041 Gb/s), Min = 114.829063 ms, Max = 114.939928 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 13312x13312):
+Transfer time:	 Average=142.519805 ms ( 9.947212 Gb/s), Min = 142.246750 ms, Max = 142.659073 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 13568x13568):
+Transfer time:	 Average=119.334600 ms ( 12.341140 Gb/s), Min = 119.327068 ms, Max = 119.372845 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 13568x13568):
+Transfer time:	 Average=148.242510 ms ( 9.934566 Gb/s), Min = 148.129272 ms, Max = 148.375168 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 13824x13824):
+Transfer time:	 Average=123.865502 ms ( 12.342612 Gb/s), Min = 123.858929 ms, Max = 123.905182 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 13824x13824):
+Transfer time:	 Average=154.242672 ms ( 9.911808 Gb/s), Min = 154.072861 ms, Max = 154.619003 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 14080x14080):
+Transfer time:	 Average=128.481719 ms ( 12.343944 Gb/s), Min = 128.473997 ms, Max = 128.585100 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 14080x14080):
+Transfer time:	 Average=160.143064 ms ( 9.903465 Gb/s), Min = 159.942429 ms, Max = 160.605316 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 14336x14336):
+Transfer time:	 Average=133.182058 ms ( 12.345260 Gb/s), Min = 133.175135 ms, Max = 133.219004 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 14336x14336):
+Transfer time:	 Average=166.163136 ms ( 9.894897 Gb/s), Min = 166.036377 ms, Max = 166.502502 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 14592x14592):
+Transfer time:	 Average=138.021569 ms ( 12.341634 Gb/s), Min = 138.012886 ms, Max = 138.059139 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 14592x14592):
+Transfer time:	 Average=172.377845 ms ( 9.881848 Gb/s), Min = 172.282043 ms, Max = 172.733444 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 14848x14848):
+Transfer time:	 Average=142.891791 ms ( 12.342940 Gb/s), Min = 142.881870 ms, Max = 142.929077 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 14848x14848):
+Transfer time:	 Average=178.676989 ms ( 9.870912 Gb/s), Min = 178.597916 ms, Max = 178.813019 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 15104x15104):
+Transfer time:	 Average=147.845969 ms ( 12.344243 Gb/s), Min = 147.837877 ms, Max = 147.884130 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 15104x15104):
+Transfer time:	 Average=185.173212 ms ( 9.855889 Gb/s), Min = 185.049179 ms, Max = 185.424347 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 15360x15360):
+Transfer time:	 Average=152.885423 ms ( 12.345433 Gb/s), Min = 152.876854 ms, Max = 152.925968 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 15360x15360):
+Transfer time:	 Average=191.990114 ms ( 9.830906 Gb/s), Min = 191.846786 ms, Max = 192.161407 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 15616x15616):
+Transfer time:	 Average=158.067789 ms ( 12.342019 Gb/s), Min = 158.057928 ms, Max = 158.103943 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 15616x15616):
+Transfer time:	 Average=198.943972 ms ( 9.806156 Gb/s), Min = 198.810913 ms, Max = 199.029282 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 15872x15872):
+Transfer time:	 Average=163.278511 ms ( 12.343101 Gb/s), Min = 163.269997 ms, Max = 163.342953 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 15872x15872):
+Transfer time:	 Average=205.712998 ms ( 9.796965 Gb/s), Min = 205.551071 ms, Max = 205.838913 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 16128x16128):
+Transfer time:	 Average=168.569572 ms ( 12.344452 Gb/s), Min = 168.561935 ms, Max = 168.606997 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 16128x16128):
+Transfer time:	 Average=212.660080 ms ( 9.785095 Gb/s), Min = 212.575684 ms, Max = 212.747421 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 16384x16384):
+Transfer time:	 Average=173.947041 ms ( 12.345618 Gb/s), Min = 173.938990 ms, Max = 173.984051 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 16384x16384):
+Transfer time:	 Average=219.600303 ms ( 9.779056 Gb/s), Min = 219.556061 ms, Max = 219.647110 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 16640x16640):
+Transfer time:	 Average=179.474022 ms ( 12.342270 Gb/s), Min = 179.466009 ms, Max = 179.515123 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 16640x16640):
+Transfer time:	 Average=226.695781 ms ( 9.771319 Gb/s), Min = 226.651779 ms, Max = 226.732925 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 16896x16896):
+Transfer time:	 Average=185.019879 ms ( 12.343531 Gb/s), Min = 185.011148 ms, Max = 185.068130 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 16896x16896):
+Transfer time:	 Average=233.806941 ms ( 9.767882 Gb/s), Min = 233.752380 ms, Max = 233.913025 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 17152x17152):
+Transfer time:	 Average=190.652666 ms ( 12.344589 Gb/s), Min = 190.644026 ms, Max = 190.754890 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 17152x17152):
+Transfer time:	 Average=241.231234 ms ( 9.756319 Gb/s), Min = 241.116348 ms, Max = 241.533157 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 17408x17408):
+Transfer time:	 Average=196.370168 ms ( 12.345601 Gb/s), Min = 196.359158 ms, Max = 196.410894 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 17408x17408):
+Transfer time:	 Average=249.069984 ms ( 9.733440 Gb/s), Min = 248.891266 ms, Max = 249.532730 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 17664x17664):
+Transfer time:	 Average=202.238929 ms ( 12.342506 Gb/s), Min = 202.228069 ms, Max = 202.368975 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 17664x17664):
+Transfer time:	 Average=257.037742 ms ( 9.711162 Gb/s), Min = 256.836456 ms, Max = 257.901367 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 17920x17920):
+Transfer time:	 Average=208.124321 ms ( 12.343638 Gb/s), Min = 208.112955 ms, Max = 208.161116 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 17920x17920):
+Transfer time:	 Average=264.795297 ms ( 9.701876 Gb/s), Min = 264.674438 ms, Max = 265.689911 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 18176x18176):
+Transfer time:	 Average=214.097149 ms ( 12.344563 Gb/s), Min = 214.083910 ms, Max = 214.230061 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 18176x18176):
+Transfer time:	 Average=273.220693 ms ( 9.673264 Gb/s), Min = 273.070435 ms, Max = 273.339752 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 18432x18432):
+Transfer time:	 Average=220.150323 ms ( 12.345696 Gb/s), Min = 220.139980 ms, Max = 220.186949 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 18432x18432):
+Transfer time:	 Average=281.655622 ms ( 9.649759 Gb/s), Min = 281.524719 ms, Max = 281.711212 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 18688x18688):
+Transfer time:	 Average=226.362422 ms ( 12.342732 Gb/s), Min = 226.350069 ms, Max = 226.459980 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 18688x18688):
+Transfer time:	 Average=290.158636 ms ( 9.628977 Gb/s), Min = 290.120056 ms, Max = 290.200623 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 18944x18944):
+Transfer time:	 Average=232.586653 ms ( 12.343791 Gb/s), Min = 232.575893 ms, Max = 232.685089 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 18944x18944):
+Transfer time:	 Average=298.637198 ms ( 9.613675 Gb/s), Min = 298.571655 ms, Max = 298.905396 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 19200x19200):
+Transfer time:	 Average=238.894713 ms ( 12.344853 Gb/s), Min = 238.883018 ms, Max = 238.991022 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 19200x19200):
+Transfer time:	 Average=307.295464 ms ( 9.597018 Gb/s), Min = 307.255890 ms, Max = 307.457733 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 19456x19456):
+Transfer time:	 Average=245.289509 ms ( 12.345768 Gb/s), Min = 245.278120 ms, Max = 245.404959 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 19456x19456):
+Transfer time:	 Average=316.133963 ms ( 9.579127 Gb/s), Min = 316.104736 ms, Max = 316.179901 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 19712x19712):
+Transfer time:	 Average=251.842680 ms ( 12.343037 Gb/s), Min = 251.830101 ms, Max = 251.893044 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 19712x19712):
+Transfer time:	 Average=325.257638 ms ( 9.557050 Gb/s), Min = 325.231201 ms, Max = 325.285004 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 19968x19968):
+Transfer time:	 Average=258.408110 ms ( 12.343917 Gb/s), Min = 258.394957 ms, Max = 258.503914 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 19968x19968):
+Transfer time:	 Average=334.341593 ms ( 9.540447 Gb/s), Min = 334.304901 ms, Max = 334.366974 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 20224x20224):
+Transfer time:	 Average=265.056188 ms ( 12.344860 Gb/s), Min = 265.043020 ms, Max = 265.093088 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 20224x20224):
+Transfer time:	 Average=343.574995 ms ( 9.523631 Gb/s), Min = 343.542236 ms, Max = 343.599274 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 20480x20480):
+Transfer time:	 Average=271.788573 ms ( 12.345785 Gb/s), Min = 271.775007 ms, Max = 271.886826 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 20480x20480):
+Transfer time:	 Average=352.929149 ms ( 9.507413 Gb/s), Min = 352.909241 ms, Max = 352.952057 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 20736x20736):
+Transfer time:	 Average=278.685181 ms ( 12.343152 Gb/s), Min = 278.672934 ms, Max = 278.793812 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 20736x20736):
+Transfer time:	 Average=362.657611 ms ( 9.485127 Gb/s), Min = 362.640930 ms, Max = 362.671265 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 20992x20992):
+Transfer time:	 Average=285.585430 ms ( 12.344161 Gb/s), Min = 285.573959 ms, Max = 285.624027 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 20992x20992):
+Transfer time:	 Average=372.278337 ms ( 9.469561 Gb/s), Min = 372.271851 ms, Max = 372.290436 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 21248x21248):
+Transfer time:	 Average=292.573640 ms ( 12.344995 Gb/s), Min = 292.562962 ms, Max = 292.610884 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 21248x21248):
+Transfer time:	 Average=381.450396 ms ( 9.468649 Gb/s), Min = 381.446655 ms, Max = 381.454254 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 21504x21504):
+Transfer time:	 Average=299.642112 ms ( 12.345982 Gb/s), Min = 299.629927 ms, Max = 299.677134 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 21504x21504):
+Transfer time:	 Average=390.633321 ms ( 9.470201 Gb/s), Min = 390.630341 ms, Max = 390.636780 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 21760x21760):
+Transfer time:	 Average=306.881168 ms ( 12.343478 Gb/s), Min = 306.869030 ms, Max = 306.919098 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 21760x21760):
+Transfer time:	 Average=400.180862 ms ( 9.465672 Gb/s), Min = 400.177917 ms, Max = 400.184906 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 22016x22016):
+Transfer time:	 Average=314.121799 ms ( 12.344365 Gb/s), Min = 314.108133 ms, Max = 314.156055 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 22016x22016):
+Transfer time:	 Average=409.583801 ms ( 9.467254 Gb/s), Min = 409.580200 ms, Max = 409.587799 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 22272x22272):
+Transfer time:	 Average=321.447880 ms ( 12.345192 Gb/s), Min = 321.436882 ms, Max = 321.484089 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 22272x22272):
+Transfer time:	 Average=419.098537 ms ( 9.468742 Gb/s), Min = 419.094452 ms, Max = 419.102234 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 22528x22528):
+Transfer time:	 Average=328.861461 ms ( 12.345887 Gb/s), Min = 328.849077 ms, Max = 328.895092 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 22528x22528):
+Transfer time:	 Average=428.720168 ms ( 9.470248 Gb/s), Min = 428.717224 ms, Max = 428.724335 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 22784x22784):
+Transfer time:	 Average=336.440701 ms ( 12.343588 Gb/s), Min = 336.426020 ms, Max = 336.555004 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 22784x22784):
+Transfer time:	 Average=438.720105 ms ( 9.465910 Gb/s), Min = 438.716553 ms, Max = 438.740143 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 23040x23040):
+Transfer time:	 Average=344.020817 ms ( 12.344406 Gb/s), Min = 344.007015 ms, Max = 344.170094 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 23040x23040):
+Transfer time:	 Average=448.563815 ms ( 9.467399 Gb/s), Min = 448.559174 ms, Max = 448.577759 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 23296x23296):
+Transfer time:	 Average=351.684093 ms ( 12.345252 Gb/s), Min = 351.669073 ms, Max = 351.783037 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 23296x23296):
+Transfer time:	 Average=458.517504 ms ( 9.468840 Gb/s), Min = 458.513977 ms, Max = 458.520782 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 23552x23552):
+Transfer time:	 Average=359.434702 ms ( 12.345980 Gb/s), Min = 359.421015 ms, Max = 359.540939 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 23552x23552):
+Transfer time:	 Average=468.580008 ms ( 9.470258 Gb/s), Min = 468.576416 ms, Max = 468.583923 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 23808x23808):
+Transfer time:	 Average=367.356968 ms ( 12.343762 Gb/s), Min = 367.342949 ms, Max = 367.457867 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 23808x23808):
+Transfer time:	 Average=479.030837 ms ( 9.466127 Gb/s), Min = 479.027008 ms, Max = 479.034546 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 24064x24064):
+Transfer time:	 Average=375.274920 ms ( 12.344573 Gb/s), Min = 375.259876 ms, Max = 375.381947 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 24064x24064):
+Transfer time:	 Average=489.314751 ms ( 9.467544 Gb/s), Min = 489.311066 ms, Max = 489.320770 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 24320x24320):
+Transfer time:	 Average=383.278673 ms ( 12.345323 Gb/s), Min = 383.263111 ms, Max = 383.383036 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 24320x24320):
+Transfer time:	 Average=499.709174 ms ( 9.468906 Gb/s), Min = 499.705597 ms, Max = 499.723114 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 24576x24576):
+Transfer time:	 Average=391.365802 ms ( 12.346092 Gb/s), Min = 391.347885 ms, Max = 391.474962 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 24576x24576):
+Transfer time:	 Average=510.210685 ms ( 9.470280 Gb/s), Min = 510.207245 ms, Max = 510.214355 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 24832x24832):
+Transfer time:	 Average=399.641817 ms ( 12.343618 Gb/s), Min = 399.619102 ms, Max = 399.914026 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 24832x24832):
+Transfer time:	 Average=521.112612 ms ( 9.466334 Gb/s), Min = 521.109497 ms, Max = 521.120422 ms
+Cublas-chunk Link Pinned Host->Device (Chunk 25088x25088):
+Transfer time:	 Average=407.893760 ms ( 12.344543 Gb/s), Min = 407.876968 ms, Max = 408.016920 ms
+Reverse overlapped Link Pinned Host->Device (Chunk 25088x25088):
+Transfer time:	 Average=531.836780 ms ( 9.467683 Gb/s), Min = 531.834045 ms, Max = 531.850647 ms
+no errorWARNING -> Generating Logfile...
+Transfer benchmark@silver1 Device->Pinned Host : (256,25125) with step 256
+Warming up...
+Cublas-chunk Link Device->Pinned Host (Chunk 256x256):
+Transfer time:	 Average=0.070012 ms ( 7.488586 Gb/s), Min = 0.067949 ms, Max = 0.164032 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 256x256):
+Transfer time:	 Average=0.065477 ms ( 8.007233 Gb/s), Min = 0.065152 ms, Max = 0.066304 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 512x512):
+Transfer time:	 Average=0.169380 ms ( 12.381365 Gb/s), Min = 0.165939 ms, Max = 0.237942 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 512x512):
+Transfer time:	 Average=0.307807 ms ( 6.813211 Gb/s), Min = 0.255552 ms, Max = 0.317984 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 768x768):
+Transfer time:	 Average=0.369229 ms ( 12.779570 Gb/s), Min = 0.367165 ms, Max = 0.407934 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 768x768):
+Transfer time:	 Average=0.578399 ms ( 8.158017 Gb/s), Min = 0.535392 ms, Max = 0.595936 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 1024x1024):
+Transfer time:	 Average=0.651722 ms ( 12.871452 Gb/s), Min = 0.648975 ms, Max = 0.672102 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 1024x1024):
+Transfer time:	 Average=1.001617 ms ( 8.375069 Gb/s), Min = 0.982848 ms, Max = 1.049344 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 1280x1280):
+Transfer time:	 Average=1.012919 ms ( 12.940028 Gb/s), Min = 1.010180 ms, Max = 1.025915 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 1280x1280):
+Transfer time:	 Average=1.622007 ms ( 8.080851 Gb/s), Min = 1.607008 ms, Max = 1.644032 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 1536x1536):
+Transfer time:	 Average=1.450231 ms ( 13.014731 Gb/s), Min = 1.447916 ms, Max = 1.468897 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 1536x1536):
+Transfer time:	 Average=2.309234 ms ( 8.173432 Gb/s), Min = 2.283552 ms, Max = 2.340544 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 1792x1792):
+Transfer time:	 Average=1.967988 ms ( 13.053998 Gb/s), Min = 1.966953 ms, Max = 1.981974 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 1792x1792):
+Transfer time:	 Average=3.165469 ms ( 8.115737 Gb/s), Min = 3.131360 ms, Max = 3.207552 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 2048x2048):
+Transfer time:	 Average=2.559359 ms ( 13.110482 Gb/s), Min = 2.557993 ms, Max = 2.573967 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 2048x2048):
+Transfer time:	 Average=4.104812 ms ( 8.174415 Gb/s), Min = 4.079712 ms, Max = 4.122912 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 2304x2304):
+Transfer time:	 Average=3.238201 ms ( 13.114481 Gb/s), Min = 3.236055 ms, Max = 3.250837 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 2304x2304):
+Transfer time:	 Average=5.157526 ms ( 8.234051 Gb/s), Min = 5.119520 ms, Max = 5.189376 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 2560x2560):
+Transfer time:	 Average=3.993440 ms ( 13.128732 Gb/s), Min = 3.991842 ms, Max = 3.998995 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 2560x2560):
+Transfer time:	 Average=6.338335 ms ( 8.271699 Gb/s), Min = 6.307040 ms, Max = 6.367520 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 2816x2816):
+Transfer time:	 Average=4.829111 ms ( 13.136755 Gb/s), Min = 4.827023 ms, Max = 4.847050 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 2816x2816):
+Transfer time:	 Average=7.671696 ms ( 8.269208 Gb/s), Min = 7.640704 ms, Max = 7.702560 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 3072x3072):
+Transfer time:	 Average=5.743639 ms ( 13.144535 Gb/s), Min = 5.741835 ms, Max = 5.789042 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 3072x3072):
+Transfer time:	 Average=9.119377 ms ( 8.278797 Gb/s), Min = 9.094432 ms, Max = 9.151168 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 3328x3328):
+Transfer time:	 Average=6.742048 ms ( 13.142100 Gb/s), Min = 6.739855 ms, Max = 6.760120 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 3328x3328):
+Transfer time:	 Average=10.670266 ms ( 8.303886 Gb/s), Min = 10.641536 ms, Max = 10.699328 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 3584x3584):
+Transfer time:	 Average=7.818933 ms ( 13.142516 Gb/s), Min = 7.813931 ms, Max = 8.050919 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 3584x3584):
+Transfer time:	 Average=12.325001 ms ( 8.337561 Gb/s), Min = 12.278208 ms, Max = 12.357920 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 3840x3840):
+Transfer time:	 Average=8.970268 ms ( 13.150644 Gb/s), Min = 8.966923 ms, Max = 9.018898 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 3840x3840):
+Transfer time:	 Average=13.971913 ms ( 8.442996 Gb/s), Min = 13.892704 ms, Max = 14.042496 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 4096x4096):
+Transfer time:	 Average=10.201383 ms ( 13.156817 Gb/s), Min = 10.198832 ms, Max = 10.249853 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 4096x4096):
+Transfer time:	 Average=15.788661 ms ( 8.500894 Gb/s), Min = 15.708032 ms, Max = 15.888352 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 4352x4352):
+Transfer time:	 Average=11.521523 ms ( 13.150972 Gb/s), Min = 11.518955 ms, Max = 11.568785 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 4352x4352):
+Transfer time:	 Average=17.773891 ms ( 8.524821 Gb/s), Min = 17.713247 ms, Max = 17.863297 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 4608x4608):
+Transfer time:	 Average=12.913539 ms ( 13.154357 Gb/s), Min = 12.912035 ms, Max = 12.926817 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 4608x4608):
+Transfer time:	 Average=19.967073 ms ( 8.507472 Gb/s), Min = 19.857409 ms, Max = 20.072416 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 4864x4864):
+Transfer time:	 Average=14.383943 ms ( 13.158281 Gb/s), Min = 14.381170 ms, Max = 14.426947 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 4864x4864):
+Transfer time:	 Average=22.220998 ms ( 8.517528 Gb/s), Min = 22.155199 ms, Max = 22.314016 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 5120x5120):
+Transfer time:	 Average=15.934200 ms ( 13.161326 Gb/s), Min = 15.931129 ms, Max = 15.979052 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 5120x5120):
+Transfer time:	 Average=24.652635 ms ( 8.506807 Gb/s), Min = 24.583649 ms, Max = 24.724384 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 5376x5376):
+Transfer time:	 Average=17.579191 ms ( 13.152540 Gb/s), Min = 17.576933 ms, Max = 17.596006 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 5376x5376):
+Transfer time:	 Average=27.100174 ms ( 8.531717 Gb/s), Min = 27.033472 ms, Max = 27.184032 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 5632x5632):
+Transfer time:	 Average=19.285343 ms ( 13.157941 Gb/s), Min = 19.283056 ms, Max = 19.319057 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 5632x5632):
+Transfer time:	 Average=29.780148 ms ( 8.520958 Gb/s), Min = 29.725344 ms, Max = 29.829281 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 5888x5888):
+Transfer time:	 Average=21.071229 ms ( 13.162419 Gb/s), Min = 21.068096 ms, Max = 21.120071 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 5888x5888):
+Transfer time:	 Average=32.468703 ms ( 8.542021 Gb/s), Min = 32.433311 ms, Max = 32.522751 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 6144x6144):
+Transfer time:	 Average=22.940221 ms ( 13.164210 Gb/s), Min = 22.938013 ms, Max = 22.957087 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 6144x6144):
+Transfer time:	 Average=35.221347 ms ( 8.574058 Gb/s), Min = 35.162849 ms, Max = 35.271198 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 6400x6400):
+Transfer time:	 Average=24.903338 ms ( 13.158075 Gb/s), Min = 24.900913 ms, Max = 24.949074 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 6400x6400):
+Transfer time:	 Average=38.174210 ms ( 8.583806 Gb/s), Min = 38.129089 ms, Max = 38.230530 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 6656x6656):
+Transfer time:	 Average=26.930339 ms ( 13.160573 Gb/s), Min = 26.927948 ms, Max = 26.983023 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 6656x6656):
+Transfer time:	 Average=41.124131 ms ( 8.618266 Gb/s), Min = 41.072159 ms, Max = 41.174080 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 6912x6912):
+Transfer time:	 Average=29.033160 ms ( 13.164463 Gb/s), Min = 29.031038 ms, Max = 29.087067 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 6912x6912):
+Transfer time:	 Average=44.102636 ms ( 8.666284 Gb/s), Min = 44.048321 ms, Max = 44.159519 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 7168x7168):
+Transfer time:	 Average=31.220672 ms ( 13.165693 Gb/s), Min = 31.219006 ms, Max = 31.264067 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 7168x7168):
+Transfer time:	 Average=47.204623 ms ( 8.707660 Gb/s), Min = 47.123966 ms, Max = 47.264992 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 7424x7424):
+Transfer time:	 Average=33.500371 ms ( 13.161831 Gb/s), Min = 33.496857 ms, Max = 33.545017 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 7424x7424):
+Transfer time:	 Average=50.404320 ms ( 8.747786 Gb/s), Min = 50.308929 ms, Max = 50.541759 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 7680x7680):
+Transfer time:	 Average=35.845191 ms ( 13.163807 Gb/s), Min = 35.842896 ms, Max = 35.892963 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 7680x7680):
+Transfer time:	 Average=53.904643 ms ( 8.753591 Gb/s), Min = 53.835777 ms, Max = 53.987392 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 7936x7936):
+Transfer time:	 Average=38.268592 ms ( 13.165908 Gb/s), Min = 38.265944 ms, Max = 38.312912 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 7936x7936):
+Transfer time:	 Average=57.594448 ms ( 8.748079 Gb/s), Min = 57.503521 ms, Max = 57.679169 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 8192x8192):
+Transfer time:	 Average=40.775096 ms ( 13.166637 Gb/s), Min = 40.771008 ms, Max = 40.825129 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 8192x8192):
+Transfer time:	 Average=61.426930 ms ( 8.739993 Gb/s), Min = 61.352352 ms, Max = 61.494881 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 8448x8448):
+Transfer time:	 Average=43.362668 ms ( 13.166848 Gb/s), Min = 43.359995 ms, Max = 43.411016 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 8448x8448):
+Transfer time:	 Average=65.319906 ms ( 8.740821 Gb/s), Min = 65.218590 ms, Max = 65.417442 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 8704x8704):
+Transfer time:	 Average=46.028428 ms ( 13.167448 Gb/s), Min = 46.024799 ms, Max = 46.076059 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 8704x8704):
+Transfer time:	 Average=69.379761 ms ( 8.735644 Gb/s), Min = 69.287102 ms, Max = 69.464195 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 8960x8960):
+Transfer time:	 Average=48.775339 ms ( 13.167572 Gb/s), Min = 48.770905 ms, Max = 48.825979 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 8960x8960):
+Transfer time:	 Average=73.425710 ms ( 8.746974 Gb/s), Min = 73.351326 ms, Max = 73.488480 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 9216x9216):
+Transfer time:	 Average=51.602597 ms ( 13.167501 Gb/s), Min = 51.598072 ms, Max = 51.649809 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 9216x9216):
+Transfer time:	 Average=77.549600 ms ( 8.761841 Gb/s), Min = 77.431549 ms, Max = 77.612450 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 9472x9472):
+Transfer time:	 Average=54.505749 ms ( 13.168341 Gb/s), Min = 54.500818 ms, Max = 54.558992 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 9472x9472):
+Transfer time:	 Average=81.988409 ms ( 8.754290 Gb/s), Min = 81.894943 ms, Max = 82.038719 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 9728x9728):
+Transfer time:	 Average=57.491877 ms ( 13.168328 Gb/s), Min = 57.485819 ms, Max = 57.607889 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 9728x9728):
+Transfer time:	 Average=86.188655 ms ( 8.783892 Gb/s), Min = 86.131424 ms, Max = 86.247330 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 9984x9984):
+Transfer time:	 Average=60.556817 ms ( 13.168493 Gb/s), Min = 60.552835 ms, Max = 60.608149 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 9984x9984):
+Transfer time:	 Average=90.557858 ms ( 8.805885 Gb/s), Min = 90.497345 ms, Max = 90.626404 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 10240x10240):
+Transfer time:	 Average=63.702252 ms ( 13.168464 Gb/s), Min = 63.696861 ms, Max = 63.752890 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 10240x10240):
+Transfer time:	 Average=95.002599 ms ( 8.829872 Gb/s), Min = 94.932320 ms, Max = 95.077919 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 10496x10496):
+Transfer time:	 Average=66.913710 ms ( 13.171114 Gb/s), Min = 66.907883 ms, Max = 66.958904 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 10496x10496):
+Transfer time:	 Average=99.681591 ms ( 8.841433 Gb/s), Min = 99.507423 ms, Max = 99.873985 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 10752x10752):
+Transfer time:	 Average=70.232680 ms ( 13.168286 Gb/s), Min = 70.225000 ms, Max = 70.281982 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 10752x10752):
+Transfer time:	 Average=104.495717 ms ( 8.850545 Gb/s), Min = 104.179619 ms, Max = 104.778366 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 11008x11008):
+Transfer time:	 Average=73.613293 ms ( 13.168933 Gb/s), Min = 73.606968 ms, Max = 73.663950 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 11008x11008):
+Transfer time:	 Average=109.516839 ms ( 8.851685 Gb/s), Min = 109.226654 ms, Max = 109.764259 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 11264x11264):
+Transfer time:	 Average=77.077501 ms ( 13.168844 Gb/s), Min = 77.071905 ms, Max = 77.124119 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 11264x11264):
+Transfer time:	 Average=114.630780 ms ( 8.854704 Gb/s), Min = 114.372383 ms, Max = 114.779198 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 11520x11520):
+Transfer time:	 Average=80.608821 ms ( 13.170807 Gb/s), Min = 80.601931 ms, Max = 80.665112 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 11520x11520):
+Transfer time:	 Average=119.941842 ms ( 8.851650 Gb/s), Min = 119.800034 ms, Max = 120.035233 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 11776x11776):
+Transfer time:	 Average=84.242041 ms ( 13.169118 Gb/s), Min = 84.237099 ms, Max = 84.296942 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 11776x11776):
+Transfer time:	 Average=125.201348 ms ( 8.860874 Gb/s), Min = 124.958076 ms, Max = 125.280800 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 12032x12032):
+Transfer time:	 Average=87.945282 ms ( 13.169009 Gb/s), Min = 87.940931 ms, Max = 87.989092 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 12032x12032):
+Transfer time:	 Average=130.581637 ms ( 8.869181 Gb/s), Min = 130.498459 ms, Max = 130.674850 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 12288x12288):
+Transfer time:	 Average=91.723969 ms ( 13.169508 Gb/s), Min = 91.718912 ms, Max = 91.819048 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 12288x12288):
+Transfer time:	 Average=135.722387 ms ( 8.900223 Gb/s), Min = 135.499588 ms, Max = 135.932831 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 12544x12544):
+Transfer time:	 Average=95.580721 ms ( 13.170182 Gb/s), Min = 95.571995 ms, Max = 95.649004 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 12544x12544):
+Transfer time:	 Average=140.583457 ms ( 8.954222 Gb/s), Min = 140.389572 ms, Max = 140.868027 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 12800x12800):
+Transfer time:	 Average=99.524171 ms ( 13.169866 Gb/s), Min = 99.518061 ms, Max = 99.566936 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 12800x12800):
+Transfer time:	 Average=145.738385 ms ( 8.993650 Gb/s), Min = 145.617401 ms, Max = 145.981918 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 13056x13056):
+Transfer time:	 Average=103.550987 ms ( 13.169098 Gb/s), Min = 103.545904 ms, Max = 103.603125 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 13056x13056):
+Transfer time:	 Average=151.675232 ms ( 8.990743 Gb/s), Min = 151.558685 ms, Max = 151.785217 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 13312x13312):
+Transfer time:	 Average=107.638948 ms ( 13.170649 Gb/s), Min = 107.632160 ms, Max = 107.690096 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 13312x13312):
+Transfer time:	 Average=157.866241 ms ( 8.980227 Gb/s), Min = 157.714203 ms, Max = 158.128357 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 13568x13568):
+Transfer time:	 Average=111.825438 ms ( 13.169857 Gb/s), Min = 111.816883 ms, Max = 111.871004 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 13568x13568):
+Transfer time:	 Average=164.109136 ms ( 8.974059 Gb/s), Min = 163.949219 ms, Max = 164.264633 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 13824x13824):
+Transfer time:	 Average=116.086068 ms ( 13.169744 Gb/s), Min = 116.080046 ms, Max = 116.139889 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 13824x13824):
+Transfer time:	 Average=170.015955 ms ( 8.992237 Gb/s), Min = 169.624222 ms, Max = 170.214874 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 14080x14080):
+Transfer time:	 Average=120.430880 ms ( 13.169141 Gb/s), Min = 120.424986 ms, Max = 120.486021 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 14080x14080):
+Transfer time:	 Average=176.183473 ms ( 9.001816 Gb/s), Min = 175.621948 ms, Max = 176.373825 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 14336x14336):
+Transfer time:	 Average=124.854307 ms ( 13.168686 Gb/s), Min = 124.848843 ms, Max = 124.968052 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 14336x14336):
+Transfer time:	 Average=182.342553 ms ( 9.016914 Gb/s), Min = 182.022079 ms, Max = 182.451996 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 14592x14592):
+Transfer time:	 Average=129.345174 ms ( 13.169503 Gb/s), Min = 129.335880 ms, Max = 129.456043 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 14592x14592):
+Transfer time:	 Average=188.884047 ms ( 9.018293 Gb/s), Min = 188.602905 ms, Max = 188.962524 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 14848x14848):
+Transfer time:	 Average=133.920002 ms ( 13.169839 Gb/s), Min = 133.911848 ms, Max = 133.974791 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 14848x14848):
+Transfer time:	 Average=195.215205 ms ( 9.034669 Gb/s), Min = 195.064346 ms, Max = 195.298141 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 15104x15104):
+Transfer time:	 Average=138.583403 ms ( 13.169301 Gb/s), Min = 138.576984 ms, Max = 138.725996 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 15104x15104):
+Transfer time:	 Average=201.592313 ms ( 9.053155 Gb/s), Min = 201.493881 ms, Max = 201.683105 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 15360x15360):
+Transfer time:	 Average=143.303950 ms ( 13.170864 Gb/s), Min = 143.294811 ms, Max = 143.356085 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 15360x15360):
+Transfer time:	 Average=207.756674 ms ( 9.084843 Gb/s), Min = 207.637924 ms, Max = 207.903397 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 15616x15616):
+Transfer time:	 Average=148.131969 ms ( 13.169849 Gb/s), Min = 148.122072 ms, Max = 148.187160 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 15616x15616):
+Transfer time:	 Average=214.421826 ms ( 9.098307 Gb/s), Min = 214.289978 ms, Max = 214.570114 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 15872x15872):
+Transfer time:	 Average=153.031390 ms ( 13.169606 Gb/s), Min = 153.023958 ms, Max = 153.093815 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 15872x15872):
+Transfer time:	 Average=221.220024 ms ( 9.110220 Gb/s), Min = 220.997086 ms, Max = 221.411270 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 16128x16128):
+Transfer time:	 Average=158.015442 ms ( 13.168960 Gb/s), Min = 158.008814 ms, Max = 158.066988 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 16128x16128):
+Transfer time:	 Average=228.002878 ms ( 9.126635 Gb/s), Min = 227.837540 ms, Max = 228.140030 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 16384x16384):
+Transfer time:	 Average=163.049853 ms ( 13.170718 Gb/s), Min = 163.038969 ms, Max = 163.157225 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 16384x16384):
+Transfer time:	 Average=235.009473 ms ( 9.137860 Gb/s), Min = 234.930176 ms, Max = 235.106750 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 16640x16640):
+Transfer time:	 Average=168.189812 ms ( 13.170339 Gb/s), Min = 168.179035 ms, Max = 168.245077 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 16640x16640):
+Transfer time:	 Average=242.468656 ms ( 9.135683 Gb/s), Min = 242.385254 ms, Max = 242.537155 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 16896x16896):
+Transfer time:	 Average=173.406389 ms ( 13.170210 Gb/s), Min = 173.393965 ms, Max = 173.470974 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 16896x16896):
+Transfer time:	 Average=249.768458 ms ( 9.143663 Gb/s), Min = 249.681412 ms, Max = 249.854141 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 17152x17152):
+Transfer time:	 Average=178.711462 ms ( 13.169434 Gb/s), Min = 178.701878 ms, Max = 178.764105 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 17152x17152):
+Transfer time:	 Average=257.100774 ms ( 9.154110 Gb/s), Min = 257.009155 ms, Max = 257.179718 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 17408x17408):
+Transfer time:	 Average=184.072928 ms ( 13.170365 Gb/s), Min = 184.062958 ms, Max = 184.170961 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 17408x17408):
+Transfer time:	 Average=264.183692 ms ( 9.176599 Gb/s), Min = 263.874817 ms, Max = 264.247711 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 17664x17664):
+Transfer time:	 Average=189.529850 ms ( 13.170143 Gb/s), Min = 189.515829 ms, Max = 189.651012 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 17664x17664):
+Transfer time:	 Average=271.699767 ms ( 9.187108 Gb/s), Min = 271.415894 ms, Max = 271.805176 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 17920x17920):
+Transfer time:	 Average=195.065188 ms ( 13.170014 Gb/s), Min = 195.052147 ms, Max = 195.198059 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 17920x17920):
+Transfer time:	 Average=279.052526 ms ( 9.206192 Gb/s), Min = 278.940582 ms, Max = 279.108429 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 18176x18176):
+Transfer time:	 Average=200.684421 ms ( 13.169611 Gb/s), Min = 200.675011 ms, Max = 200.797081 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 18176x18176):
+Transfer time:	 Average=286.053587 ms ( 9.239303 Gb/s), Min = 286.007446 ms, Max = 286.104370 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 18432x18432):
+Transfer time:	 Average=206.374753 ms ( 13.169775 Gb/s), Min = 206.364870 ms, Max = 206.427097 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 18432x18432):
+Transfer time:	 Average=293.329766 ms ( 9.265712 Gb/s), Min = 293.280334 ms, Max = 293.385864 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 18688x18688):
+Transfer time:	 Average=212.140591 ms ( 13.170185 Gb/s), Min = 212.126017 ms, Max = 212.243080 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 18688x18688):
+Transfer time:	 Average=301.102618 ms ( 9.278999 Gb/s), Min = 301.060364 ms, Max = 301.154572 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 18944x18944):
+Transfer time:	 Average=217.994406 ms ( 13.170068 Gb/s), Min = 217.980146 ms, Max = 218.118191 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 18944x18944):
+Transfer time:	 Average=308.885062 ms ( 9.294723 Gb/s), Min = 308.810455 ms, Max = 308.946991 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 19200x19200):
+Transfer time:	 Average=223.928363 ms ( 13.169926 Gb/s), Min = 223.917007 ms, Max = 223.986864 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 19200x19200):
+Transfer time:	 Average=316.613524 ms ( 9.314574 Gb/s), Min = 316.530151 ms, Max = 316.689697 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 19456x19456):
+Transfer time:	 Average=229.929760 ms ( 13.170490 Gb/s), Min = 229.918957 ms, Max = 230.044127 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 19456x19456):
+Transfer time:	 Average=324.384587 ms ( 9.335485 Gb/s), Min = 324.325256 ms, Max = 324.436279 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 19712x19712):
+Transfer time:	 Average=236.028655 ms ( 13.170026 Gb/s), Min = 236.009836 ms, Max = 236.234188 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 19712x19712):
+Transfer time:	 Average=332.529958 ms ( 9.348041 Gb/s), Min = 332.469574 ms, Max = 332.571106 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 19968x19968):
+Transfer time:	 Average=242.194221 ms ( 13.170290 Gb/s), Min = 242.179155 ms, Max = 242.260933 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 19968x19968):
+Transfer time:	 Average=340.497940 ms ( 9.367952 Gb/s), Min = 340.443542 ms, Max = 340.541626 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 20224x20224):
+Transfer time:	 Average=248.447776 ms ( 13.170097 Gb/s), Min = 248.435974 ms, Max = 248.554945 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 20224x20224):
+Transfer time:	 Average=348.540628 ms ( 9.387948 Gb/s), Min = 348.485474 ms, Max = 348.581177 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 20480x20480):
+Transfer time:	 Average=254.774582 ms ( 13.170243 Gb/s), Min = 254.762888 ms, Max = 254.874945 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 20480x20480):
+Transfer time:	 Average=356.663229 ms ( 9.407875 Gb/s), Min = 356.625092 ms, Max = 356.689545 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 20736x20736):
+Transfer time:	 Average=261.185660 ms ( 13.170147 Gb/s), Min = 261.168957 ms, Max = 261.306047 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 20736x20736):
+Transfer time:	 Average=365.118752 ms ( 9.421191 Gb/s), Min = 365.088226 ms, Max = 365.139923 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 20992x20992):
+Transfer time:	 Average=267.670498 ms ( 13.170344 Gb/s), Min = 267.653942 ms, Max = 267.776966 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 20992x20992):
+Transfer time:	 Average=373.444012 ms ( 9.440003 Gb/s), Min = 373.419098 ms, Max = 373.475464 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 21248x21248):
+Transfer time:	 Average=274.236863 ms ( 13.170440 Gb/s), Min = 274.221897 ms, Max = 274.343014 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 21248x21248):
+Transfer time:	 Average=382.451956 ms ( 9.443853 Gb/s), Min = 382.428314 ms, Max = 382.488007 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 21504x21504):
+Transfer time:	 Average=280.892148 ms ( 13.170094 Gb/s), Min = 280.881166 ms, Max = 280.932188 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 21504x21504):
+Transfer time:	 Average=391.643157 ms ( 9.445783 Gb/s), Min = 391.620605 ms, Max = 391.666748 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 21760x21760):
+Transfer time:	 Average=287.617850 ms ( 13.170187 Gb/s), Min = 287.598848 ms, Max = 287.837982 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 21760x21760):
+Transfer time:	 Average=401.191165 ms ( 9.441835 Gb/s), Min = 401.160126 ms, Max = 401.226532 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 22016x22016):
+Transfer time:	 Average=294.421282 ms ( 13.170359 Gb/s), Min = 294.402838 ms, Max = 294.597864 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 22016x22016):
+Transfer time:	 Average=410.586277 ms ( 9.444139 Gb/s), Min = 410.545013 ms, Max = 410.618378 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 22272x22272):
+Transfer time:	 Average=301.308374 ms ( 13.170347 Gb/s), Min = 301.292896 ms, Max = 301.473856 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 22272x22272):
+Transfer time:	 Average=420.099371 ms ( 9.446184 Gb/s), Min = 420.030975 ms, Max = 420.147552 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 22528x22528):
+Transfer time:	 Average=308.281336 ms ( 13.170068 Gb/s), Min = 308.267117 ms, Max = 308.415890 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 22528x22528):
+Transfer time:	 Average=429.737521 ms ( 9.447828 Gb/s), Min = 429.692535 ms, Max = 429.775360 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 22784x22784):
+Transfer time:	 Average=315.325232 ms ( 13.170165 Gb/s), Min = 315.308809 ms, Max = 315.412045 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 22784x22784):
+Transfer time:	 Average=439.743456 ms ( 9.443882 Gb/s), Min = 439.702759 ms, Max = 439.786346 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 23040x23040):
+Transfer time:	 Average=322.451048 ms ( 13.170163 Gb/s), Min = 322.431087 ms, Max = 322.586060 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 23040x23040):
+Transfer time:	 Average=449.586374 ms ( 9.445866 Gb/s), Min = 449.536346 ms, Max = 449.627441 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 23296x23296):
+Transfer time:	 Average=329.657438 ms ( 13.170123 Gb/s), Min = 329.638958 ms, Max = 329.860926 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 23296x23296):
+Transfer time:	 Average=459.544860 ms ( 9.447672 Gb/s), Min = 459.482086 ms, Max = 459.584473 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 23552x23552):
+Transfer time:	 Average=336.955562 ms ( 13.169611 Gb/s), Min = 336.940050 ms, Max = 337.090015 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 23552x23552):
+Transfer time:	 Average=469.595888 ms ( 9.449771 Gb/s), Min = 469.559265 ms, Max = 469.631683 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 23808x23808):
+Transfer time:	 Average=344.314699 ms ( 13.169832 Gb/s), Min = 344.295979 ms, Max = 344.454050 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 23808x23808):
+Transfer time:	 Average=480.035668 ms ( 9.446312 Gb/s), Min = 480.005402 ms, Max = 480.084381 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 24064x24064):
+Transfer time:	 Average=351.749012 ms ( 13.170211 Gb/s), Min = 351.731062 ms, Max = 351.856947 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 24064x24064):
+Transfer time:	 Average=490.313453 ms ( 9.448260 Gb/s), Min = 490.259125 ms, Max = 490.369965 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 24320x24320):
+Transfer time:	 Average=359.275944 ms ( 13.170097 Gb/s), Min = 359.253883 ms, Max = 359.411001 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 24320x24320):
+Transfer time:	 Average=500.714634 ms ( 9.449892 Gb/s), Min = 500.657593 ms, Max = 500.773834 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 24576x24576):
+Transfer time:	 Average=366.897931 ms ( 13.169434 Gb/s), Min = 366.882086 ms, Max = 367.079973 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 24576x24576):
+Transfer time:	 Average=511.234959 ms ( 9.451306 Gb/s), Min = 511.186127 ms, Max = 511.288086 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 24832x24832):
+Transfer time:	 Average=374.556453 ms ( 13.170313 Gb/s), Min = 374.535084 ms, Max = 374.659061 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 24832x24832):
+Transfer time:	 Average=522.155613 ms ( 9.447425 Gb/s), Min = 522.101318 ms, Max = 522.214905 ms
+Cublas-chunk Link Device->Pinned Host (Chunk 25088x25088):
+Transfer time:	 Average=382.331548 ms ( 13.169884 Gb/s), Min = 382.305861 ms, Max = 382.465124 ms
+Reverse overlapped Link Device->Pinned Host (Chunk 25088x25088):
+Transfer time:	 Average=532.891204 ms ( 9.448949 Gb/s), Min = 532.824646 ms, Max = 533.005005 ms
+no error

@@ -1,0 +1,702 @@
+WARNING -> Generating Logfile...
+Transfer benchmark@dungani Pinned Host->Device : (256,14904) with step 256
+Warming up...
+Cublas-chunk Link Pinned Host->Device (Chunk 256x256):
+Microbenchmark (dim1 = dim2 = 256) complete:	 mean_exec_t=0.179087 ms  ( 2.927556 Gb/s), Error Margin (percentage of mean) = 4.999104 %, Itter = 3634, Microbench_t = 0.665421
+
+Reverse overlapped Link Pinned Host->Device (Chunk 256x256):
+Microbenchmark (dim1 = dim2 = 256) complete:	 mean_exec_t=0.199744 ms  ( 2.624796 Gb/s), Error Margin (percentage of mean) = 4.999241 %, Itter = 3379, Microbench_t = 6.208973
+
+Cublas-chunk Link Pinned Host->Device (Chunk 512x512):
+Microbenchmark (dim1 = dim2 = 512) complete:	 mean_exec_t=0.678052 ms  ( 3.092909 Gb/s), Error Margin (percentage of mean) = 4.998148 %, Itter = 1497, Microbench_t = 1.019896
+
+Reverse overlapped Link Pinned Host->Device (Chunk 512x512):
+Microbenchmark (dim1 = dim2 = 512) complete:	 mean_exec_t=0.733043 ms  ( 2.860884 Gb/s), Error Margin (percentage of mean) = 4.999476 %, Itter = 1421, Microbench_t = 10.157660
+
+Cublas-chunk Link Pinned Host->Device (Chunk 768x768):
+Microbenchmark (dim1 = dim2 = 768) complete:	 mean_exec_t=1.507634 ms  ( 3.129798 Gb/s), Error Margin (percentage of mean) = 4.992744 %, Itter = 880, Microbench_t = 1.329408
+
+Reverse overlapped Link Pinned Host->Device (Chunk 768x768):
+Microbenchmark (dim1 = dim2 = 768) complete:	 mean_exec_t=1.622944 ms  ( 2.907427 Gb/s), Error Margin (percentage of mean) = 4.991755 %, Itter = 838, Microbench_t = 13.399927
+
+Cublas-chunk Link Pinned Host->Device (Chunk 1024x1024):
+Microbenchmark (dim1 = dim2 = 1024) complete:	 mean_exec_t=2.665053 ms  ( 3.147633 Gb/s), Error Margin (percentage of mean) = 4.997576 %, Itter = 602, Microbench_t = 1.606179
+
+Reverse overlapped Link Pinned Host->Device (Chunk 1024x1024):
+Microbenchmark (dim1 = dim2 = 1024) complete:	 mean_exec_t=2.831584 ms  ( 2.962514 Gb/s), Error Margin (percentage of mean) = 4.987781 %, Itter = 579, Microbench_t = 16.401695
+
+Cublas-chunk Link Pinned Host->Device (Chunk 1280x1280):
+Microbenchmark (dim1 = dim2 = 1280) complete:	 mean_exec_t=4.155844 ms  ( 3.153920 Gb/s), Error Margin (percentage of mean) = 4.998466 %, Itter = 448, Microbench_t = 1.863236
+
+Reverse overlapped Link Pinned Host->Device (Chunk 1280x1280):
+Microbenchmark (dim1 = dim2 = 1280) complete:	 mean_exec_t=4.384343 ms  ( 2.989547 Gb/s), Error Margin (percentage of mean) = 4.987371 %, Itter = 433, Microbench_t = 19.131191
+
+Cublas-chunk Link Pinned Host->Device (Chunk 1536x1536):
+Microbenchmark (dim1 = dim2 = 1536) complete:	 mean_exec_t=5.970793 ms  ( 3.161116 Gb/s), Error Margin (percentage of mean) = 4.980841 %, Itter = 353, Microbench_t = 2.108803
+
+Reverse overlapped Link Pinned Host->Device (Chunk 1536x1536):
+Microbenchmark (dim1 = dim2 = 1536) complete:	 mean_exec_t=6.275410 ms  ( 3.007671 Gb/s), Error Margin (percentage of mean) = 4.992856 %, Itter = 341, Microbench_t = 21.678153
+
+Cublas-chunk Link Pinned Host->Device (Chunk 1792x1792):
+Microbenchmark (dim1 = dim2 = 1792) complete:	 mean_exec_t=8.112878 ms  ( 3.166584 Gb/s), Error Margin (percentage of mean) = 4.981325 %, Itter = 288, Microbench_t = 2.337421
+
+Reverse overlapped Link Pinned Host->Device (Chunk 1792x1792):
+Microbenchmark (dim1 = dim2 = 1792) complete:	 mean_exec_t=8.498961 ms  ( 3.022736 Gb/s), Error Margin (percentage of mean) = 4.988569 %, Itter = 279, Microbench_t = 24.116726
+
+Cublas-chunk Link Pinned Host->Device (Chunk 2048x2048):
+Microbenchmark (dim1 = dim2 = 2048) complete:	 mean_exec_t=10.590932 ms  ( 3.168223 Gb/s), Error Margin (percentage of mean) = 4.992382 %, Itter = 241, Microbench_t = 2.553189
+
+Reverse overlapped Link Pinned Host->Device (Chunk 2048x2048):
+Microbenchmark (dim1 = dim2 = 2048) complete:	 mean_exec_t=11.048600 ms  ( 3.036985 Gb/s), Error Margin (percentage of mean) = 4.971365 %, Itter = 235, Microbench_t = 26.506780
+
+Cublas-chunk Link Pinned Host->Device (Chunk 2304x2304):
+Microbenchmark (dim1 = dim2 = 2304) complete:	 mean_exec_t=13.403241 ms  ( 3.168437 Gb/s), Error Margin (percentage of mean) = 4.999748 %, Itter = 206, Microbench_t = 2.761753
+
+Reverse overlapped Link Pinned Host->Device (Chunk 2304x2304):
+Microbenchmark (dim1 = dim2 = 2304) complete:	 mean_exec_t=13.972608 ms  ( 3.039327 Gb/s), Error Margin (percentage of mean) = 4.977424 %, Itter = 201, Microbench_t = 28.688372
+
+Cublas-chunk Link Pinned Host->Device (Chunk 2560x2560):
+Microbenchmark (dim1 = dim2 = 2560) complete:	 mean_exec_t=16.534493 ms  ( 3.170874 Gb/s), Error Margin (percentage of mean) = 4.969857 %, Itter = 180, Microbench_t = 2.976787
+
+Reverse overlapped Link Pinned Host->Device (Chunk 2560x2560):
+Microbenchmark (dim1 = dim2 = 2560) complete:	 mean_exec_t=17.211194 ms  ( 3.046204 Gb/s), Error Margin (percentage of mean) = 4.982327 %, Itter = 175, Microbench_t = 30.840507
+
+Cublas-chunk Link Pinned Host->Device (Chunk 2816x2816):
+Microbenchmark (dim1 = dim2 = 2816) complete:	 mean_exec_t=20.005436 ms  ( 3.171080 Gb/s), Error Margin (percentage of mean) = 4.955844 %, Itter = 159, Microbench_t = 3.181386
+
+Reverse overlapped Link Pinned Host->Device (Chunk 2816x2816):
+Microbenchmark (dim1 = dim2 = 2816) complete:	 mean_exec_t=20.773386 ms  ( 3.053852 Gb/s), Error Margin (percentage of mean) = 4.960355 %, Itter = 155, Microbench_t = 33.043285
+
+Cublas-chunk Link Pinned Host->Device (Chunk 3072x3072):
+Microbenchmark (dim1 = dim2 = 3072) complete:	 mean_exec_t=23.800912 ms  ( 3.172041 Gb/s), Error Margin (percentage of mean) = 4.997228 %, Itter = 141, Microbench_t = 3.356400
+
+Reverse overlapped Link Pinned Host->Device (Chunk 3072x3072):
+Microbenchmark (dim1 = dim2 = 3072) complete:	 mean_exec_t=24.706894 ms  ( 3.055725 Gb/s), Error Margin (percentage of mean) = 4.973500 %, Itter = 138, Microbench_t = 34.984293
+
+Cublas-chunk Link Pinned Host->Device (Chunk 3328x3328):
+Microbenchmark (dim1 = dim2 = 3328) complete:	 mean_exec_t=27.903416 ms  ( 3.175406 Gb/s), Error Margin (percentage of mean) = 4.995140 %, Itter = 127, Microbench_t = 3.544165
+
+Reverse overlapped Link Pinned Host->Device (Chunk 3328x3328):
+Microbenchmark (dim1 = dim2 = 3328) complete:	 mean_exec_t=28.987189 ms  ( 3.056684 Gb/s), Error Margin (percentage of mean) = 4.986168 %, Itter = 124, Microbench_t = 36.892939
+
+Cublas-chunk Link Pinned Host->Device (Chunk 3584x3584):
+Microbenchmark (dim1 = dim2 = 3584) complete:	 mean_exec_t=32.365725 ms  ( 3.174977 Gb/s), Error Margin (percentage of mean) = 4.941757 %, Itter = 116, Microbench_t = 3.754823
+
+Reverse overlapped Link Pinned Host->Device (Chunk 3584x3584):
+Microbenchmark (dim1 = dim2 = 3584) complete:	 mean_exec_t=33.644807 ms  ( 3.054274 Gb/s), Error Margin (percentage of mean) = 4.947028 %, Itter = 113, Microbench_t = 39.007504
+
+Cublas-chunk Link Pinned Host->Device (Chunk 3840x3840):
+Microbenchmark (dim1 = dim2 = 3840) complete:	 mean_exec_t=37.163815 ms  ( 3.174184 Gb/s), Error Margin (percentage of mean) = 4.936040 %, Itter = 106, Microbench_t = 3.939727
+
+Reverse overlapped Link Pinned Host->Device (Chunk 3840x3840):
+Microbenchmark (dim1 = dim2 = 3840) complete:	 mean_exec_t=38.657360 ms  ( 3.051548 Gb/s), Error Margin (percentage of mean) = 4.957173 %, Itter = 103, Microbench_t = 40.824345
+
+Cublas-chunk Link Pinned Host->Device (Chunk 4096x4096):
+Microbenchmark (dim1 = dim2 = 4096) complete:	 mean_exec_t=42.262141 ms  ( 3.175838 Gb/s), Error Margin (percentage of mean) = 4.968340 %, Itter = 97, Microbench_t = 4.099772
+
+Reverse overlapped Link Pinned Host->Device (Chunk 4096x4096):
+Microbenchmark (dim1 = dim2 = 4096) complete:	 mean_exec_t=43.992171 ms  ( 3.050946 Gb/s), Error Margin (percentage of mean) = 4.926915 %, Itter = 95, Microbench_t = 42.799668
+
+Cublas-chunk Link Pinned Host->Device (Chunk 4352x4352):
+Microbenchmark (dim1 = dim2 = 4352) complete:	 mean_exec_t=47.689671 ms  ( 3.177192 Gb/s), Error Margin (percentage of mean) = 4.935470 %, Itter = 90, Microbench_t = 4.292379
+
+Reverse overlapped Link Pinned Host->Device (Chunk 4352x4352):
+Microbenchmark (dim1 = dim2 = 4352) complete:	 mean_exec_t=49.740013 ms  ( 3.046224 Gb/s), Error Margin (percentage of mean) = 4.983255 %, Itter = 87, Microbench_t = 44.299833
+
+Cublas-chunk Link Pinned Host->Device (Chunk 4608x4608):
+Microbenchmark (dim1 = dim2 = 4608) complete:	 mean_exec_t=53.479611 ms  ( 3.176338 Gb/s), Error Margin (percentage of mean) = 4.980199 %, Itter = 83, Microbench_t = 4.439086
+
+Reverse overlapped Link Pinned Host->Device (Chunk 4608x4608):
+Microbenchmark (dim1 = dim2 = 4608) complete:	 mean_exec_t=55.873337 ms  ( 3.040257 Gb/s), Error Margin (percentage of mean) = 4.947816 %, Itter = 81, Microbench_t = 46.206263
+
+Cublas-chunk Link Pinned Host->Device (Chunk 4864x4864):
+Microbenchmark (dim1 = dim2 = 4864) complete:	 mean_exec_t=59.600338 ms  ( 3.175619 Gb/s), Error Margin (percentage of mean) = 4.914057 %, Itter = 78, Microbench_t = 4.649096
+
+Reverse overlapped Link Pinned Host->Device (Chunk 4864x4864):
+Microbenchmark (dim1 = dim2 = 4864) complete:	 mean_exec_t=62.343410 ms  ( 3.035894 Gb/s), Error Margin (percentage of mean) = 4.988262 %, Itter = 75, Microbench_t = 47.720166
+
+Cublas-chunk Link Pinned Host->Device (Chunk 5120x5120):
+Microbenchmark (dim1 = dim2 = 5120) complete:	 mean_exec_t=65.972077 ms  ( 3.178848 Gb/s), Error Margin (percentage of mean) = 4.913020 %, Itter = 73, Microbench_t = 4.816215
+
+Reverse overlapped Link Pinned Host->Device (Chunk 5120x5120):
+Microbenchmark (dim1 = dim2 = 5120) complete:	 mean_exec_t=69.163827 ms  ( 3.032151 Gb/s), Error Margin (percentage of mean) = 4.997577 %, Itter = 70, Microbench_t = 49.356109
+
+Cublas-chunk Link Pinned Host->Device (Chunk 5376x5376):
+Microbenchmark (dim1 = dim2 = 5376) complete:	 mean_exec_t=72.767955 ms  ( 3.177374 Gb/s), Error Margin (percentage of mean) = 4.966015 %, Itter = 68, Microbench_t = 4.948445
+
+Reverse overlapped Link Pinned Host->Device (Chunk 5376x5376):
+Microbenchmark (dim1 = dim2 = 5376) complete:	 mean_exec_t=76.389990 ms  ( 3.026719 Gb/s), Error Margin (percentage of mean) = 4.952320 %, Itter = 66, Microbench_t = 51.256096
+
+Cublas-chunk Link Pinned Host->Device (Chunk 5632x5632):
+Microbenchmark (dim1 = dim2 = 5632) complete:	 mean_exec_t=79.854794 ms  ( 3.177710 Gb/s), Error Margin (percentage of mean) = 4.966725 %, Itter = 64, Microbench_t = 5.110929
+
+Reverse overlapped Link Pinned Host->Device (Chunk 5632x5632):
+Microbenchmark (dim1 = dim2 = 5632) complete:	 mean_exec_t=83.960338 ms  ( 3.022325 Gb/s), Error Margin (percentage of mean) = 4.960048 %, Itter = 62, Microbench_t = 52.841698
+
+Cublas-chunk Link Pinned Host->Device (Chunk 5888x5888):
+Microbenchmark (dim1 = dim2 = 5888) complete:	 mean_exec_t=87.282662 ms  ( 3.177588 Gb/s), Error Margin (percentage of mean) = 4.892066 %, Itter = 61, Microbench_t = 5.324455
+
+Reverse overlapped Link Pinned Host->Device (Chunk 5888x5888):
+Microbenchmark (dim1 = dim2 = 5888) complete:	 mean_exec_t=91.896759 ms  ( 3.018043 Gb/s), Error Margin (percentage of mean) = 4.891021 %, Itter = 59, Microbench_t = 54.966816
+
+Cublas-chunk Link Pinned Host->Device (Chunk 6144x6144):
+Microbenchmark (dim1 = dim2 = 6144) complete:	 mean_exec_t=95.020098 ms  ( 3.178169 Gb/s), Error Margin (percentage of mean) = 4.988240 %, Itter = 57, Microbench_t = 5.416342
+
+Reverse overlapped Link Pinned Host->Device (Chunk 6144x6144):
+Microbenchmark (dim1 = dim2 = 6144) complete:	 mean_exec_t=100.209871 ms  ( 3.013574 Gb/s), Error Margin (percentage of mean) = 4.997703 %, Itter = 55, Microbench_t = 55.811845
+
+Cublas-chunk Link Pinned Host->Device (Chunk 6400x6400):
+Microbenchmark (dim1 = dim2 = 6400) complete:	 mean_exec_t=103.061919 ms  ( 3.179448 Gb/s), Error Margin (percentage of mean) = 4.998900 %, Itter = 54, Microbench_t = 5.565534
+
+Reverse overlapped Link Pinned Host->Device (Chunk 6400x6400):
+Microbenchmark (dim1 = dim2 = 6400) complete:	 mean_exec_t=108.882452 ms  ( 3.009484 Gb/s), Error Margin (percentage of mean) = 4.870259 %, Itter = 53, Microbench_t = 58.253393
+
+Cublas-chunk Link Pinned Host->Device (Chunk 6656x6656):
+Microbenchmark (dim1 = dim2 = 6656) complete:	 mean_exec_t=111.461837 ms  ( 3.179731 Gb/s), Error Margin (percentage of mean) = 4.899560 %, Itter = 52, Microbench_t = 5.796198
+
+Reverse overlapped Link Pinned Host->Device (Chunk 6656x6656):
+Microbenchmark (dim1 = dim2 = 6656) complete:	 mean_exec_t=117.941713 ms  ( 3.005033 Gb/s), Error Margin (percentage of mean) = 4.919888 %, Itter = 50, Microbench_t = 59.555857
+
+Cublas-chunk Link Pinned Host->Device (Chunk 6912x6912):
+Microbenchmark (dim1 = dim2 = 6912) complete:	 mean_exec_t=120.217187 ms  ( 3.179295 Gb/s), Error Margin (percentage of mean) = 4.980106 %, Itter = 49, Microbench_t = 5.890810
+
+Reverse overlapped Link Pinned Host->Device (Chunk 6912x6912):
+Microbenchmark (dim1 = dim2 = 6912) complete:	 mean_exec_t=127.428695 ms  ( 2.999371 Gb/s), Error Margin (percentage of mean) = 4.850724 %, Itter = 48, Microbench_t = 61.544454
+
+Cublas-chunk Link Pinned Host->Device (Chunk 7168x7168):
+Microbenchmark (dim1 = dim2 = 7168) complete:	 mean_exec_t=129.277564 ms  ( 3.179529 Gb/s), Error Margin (percentage of mean) = 4.939962 %, Itter = 47, Microbench_t = 6.076211
+
+Reverse overlapped Link Pinned Host->Device (Chunk 7168x7168):
+Microbenchmark (dim1 = dim2 = 7168) complete:	 mean_exec_t=137.311639 ms  ( 2.993496 Gb/s), Error Margin (percentage of mean) = 4.975420 %, Itter = 45, Microbench_t = 62.181868
+
+Cublas-chunk Link Pinned Host->Device (Chunk 7424x7424):
+Microbenchmark (dim1 = dim2 = 7424) complete:	 mean_exec_t=138.684569 ms  ( 3.179346 Gb/s), Error Margin (percentage of mean) = 4.926286 %, Itter = 45, Microbench_t = 6.240963
+
+Reverse overlapped Link Pinned Host->Device (Chunk 7424x7424):
+Microbenchmark (dim1 = dim2 = 7424) complete:	 mean_exec_t=147.635443 ms  ( 2.986588 Gb/s), Error Margin (percentage of mean) = 4.966343 %, Itter = 43, Microbench_t = 63.758711
+
+Cublas-chunk Link Pinned Host->Device (Chunk 7680x7680):
+Microbenchmark (dim1 = dim2 = 7680) complete:	 mean_exec_t=148.428418 ms  ( 3.179035 Gb/s), Error Margin (percentage of mean) = 4.939883 %, Itter = 43, Microbench_t = 6.382574
+
+Reverse overlapped Link Pinned Host->Device (Chunk 7680x7680):
+Microbenchmark (dim1 = dim2 = 7680) complete:	 mean_exec_t=158.249581 ms  ( 2.981741 Gb/s), Error Margin (percentage of mean) = 4.989767 %, Itter = 41, Microbench_t = 65.062307
+
+Cublas-chunk Link Pinned Host->Device (Chunk 7936x7936):
+Microbenchmark (dim1 = dim2 = 7936) complete:	 mean_exec_t=158.471974 ms  ( 3.179368 Gb/s), Error Margin (percentage of mean) = 4.982923 %, Itter = 41, Microbench_t = 6.497493
+
+Reverse overlapped Link Pinned Host->Device (Chunk 7936x7936):
+Microbenchmark (dim1 = dim2 = 7936) complete:	 mean_exec_t=169.341812 ms  ( 2.975289 Gb/s), Error Margin (percentage of mean) = 4.846058 %, Itter = 40, Microbench_t = 67.638105
+
+Cublas-chunk Link Pinned Host->Device (Chunk 8192x8192):
+Microbenchmark (dim1 = dim2 = 8192) complete:	 mean_exec_t=168.837768 ms  ( 3.179803 Gb/s), Error Margin (percentage of mean) = 4.860451 %, Itter = 40, Microbench_t = 6.753651
+
+Reverse overlapped Link Pinned Host->Device (Chunk 8192x8192):
+Microbenchmark (dim1 = dim2 = 8192) complete:	 mean_exec_t=180.758149 ms  ( 2.970106 Gb/s), Error Margin (percentage of mean) = 4.918482 %, Itter = 38, Microbench_t = 68.636810
+
+Cublas-chunk Link Pinned Host->Device (Chunk 8448x8448):
+Microbenchmark (dim1 = dim2 = 8448) complete:	 mean_exec_t=179.617066 ms  ( 3.178705 Gb/s), Error Margin (percentage of mean) = 4.949963 %, Itter = 38, Microbench_t = 6.825576
+
+Reverse overlapped Link Pinned Host->Device (Chunk 8448x8448):
+Microbenchmark (dim1 = dim2 = 8448) complete:	 mean_exec_t=192.592285 ms  ( 2.964551 Gb/s), Error Margin (percentage of mean) = 4.812951 %, Itter = 37, Microbench_t = 70.908816
+
+Cublas-chunk Link Pinned Host->Device (Chunk 8704x8704):
+Microbenchmark (dim1 = dim2 = 8704) complete:	 mean_exec_t=190.551120 ms  ( 3.180653 Gb/s), Error Margin (percentage of mean) = 4.864592 %, Itter = 37, Microbench_t = 7.050520
+
+Reverse overlapped Link Pinned Host->Device (Chunk 8704x8704):
+Microbenchmark (dim1 = dim2 = 8704) complete:	 mean_exec_t=204.813995 ms  ( 2.959158 Gb/s), Error Margin (percentage of mean) = 4.937554 %, Itter = 35, Microbench_t = 71.398224
+
+Cublas-chunk Link Pinned Host->Device (Chunk 8960x8960):
+Microbenchmark (dim1 = dim2 = 8960) complete:	 mean_exec_t=202.013731 ms  ( 3.179253 Gb/s), Error Margin (percentage of mean) = 4.789854 %, Itter = 36, Microbench_t = 7.272623
+
+Reverse overlapped Link Pinned Host->Device (Chunk 8960x8960):
+Microbenchmark (dim1 = dim2 = 8960) complete:	 mean_exec_t=217.405342 ms  ( 2.954172 Gb/s), Error Margin (percentage of mean) = 4.868280 %, Itter = 34, Microbench_t = 73.511436
+
+Cublas-chunk Link Pinned Host->Device (Chunk 9216x9216):
+Microbenchmark (dim1 = dim2 = 9216) complete:	 mean_exec_t=213.676558 ms  ( 3.179934 Gb/s), Error Margin (percentage of mean) = 4.953301 %, Itter = 34, Microbench_t = 7.265119
+
+Reverse overlapped Link Pinned Host->Device (Chunk 9216x9216):
+Microbenchmark (dim1 = dim2 = 9216) complete:	 mean_exec_t=230.417154 ms  ( 2.948900 Gb/s), Error Margin (percentage of mean) = 4.814166 %, Itter = 33, Microbench_t = 75.284585
+
+Cublas-chunk Link Pinned Host->Device (Chunk 9472x9472):
+Microbenchmark (dim1 = dim2 = 9472) complete:	 mean_exec_t=225.714973 ms  ( 3.179897 Gb/s), Error Margin (percentage of mean) = 4.914487 %, Itter = 33, Microbench_t = 7.448702
+
+Reverse overlapped Link Pinned Host->Device (Chunk 9472x9472):
+Microbenchmark (dim1 = dim2 = 9472) complete:	 mean_exec_t=243.788443 ms  ( 2.944152 Gb/s), Error Margin (percentage of mean) = 4.776034 %, Itter = 32, Microbench_t = 77.118722
+
+Cublas-chunk Link Pinned Host->Device (Chunk 9728x9728):
+Microbenchmark (dim1 = dim2 = 9728) complete:	 mean_exec_t=238.040343 ms  ( 3.180435 Gb/s), Error Margin (percentage of mean) = 4.891424 %, Itter = 32, Microbench_t = 7.617400
+
+Reverse overlapped Link Pinned Host->Device (Chunk 9728x9728):
+Microbenchmark (dim1 = dim2 = 9728) complete:	 mean_exec_t=257.526112 ms  ( 2.939787 Gb/s), Error Margin (percentage of mean) = 4.753519 %, Itter = 31, Microbench_t = 78.807846
+
+Cublas-chunk Link Pinned Host->Device (Chunk 9984x9984):
+Microbenchmark (dim1 = dim2 = 9984) complete:	 mean_exec_t=250.729269 ms  ( 3.180490 Gb/s), Error Margin (percentage of mean) = 4.882453 %, Itter = 31, Microbench_t = 7.772714
+
+Reverse overlapped Link Pinned Host->Device (Chunk 9984x9984):
+Microbenchmark (dim1 = dim2 = 9984) complete:	 mean_exec_t=271.736411 ms  ( 2.934616 Gb/s), Error Margin (percentage of mean) = 4.744611 %, Itter = 30, Microbench_t = 80.350891
+
+Cublas-chunk Link Pinned Host->Device (Chunk 10240x10240):
+Microbenchmark (dim1 = dim2 = 10240) complete:	 mean_exec_t=263.715378 ms  ( 3.180932 Gb/s), Error Margin (percentage of mean) = 4.888934 %, Itter = 30, Microbench_t = 7.911562
+
+Reverse overlapped Link Pinned Host->Device (Chunk 10240x10240):
+Microbenchmark (dim1 = dim2 = 10240) complete:	 mean_exec_t=286.309814 ms  ( 2.929906 Gb/s), Error Margin (percentage of mean) = 4.751528 %, Itter = 29, Microbench_t = 81.703047
+
+Cublas-chunk Link Pinned Host->Device (Chunk 10496x10496):
+Microbenchmark (dim1 = dim2 = 10496) complete:	 mean_exec_t=277.254014 ms  ( 3.178775 Gb/s), Error Margin (percentage of mean) = 4.906866 %, Itter = 29, Microbench_t = 8.040461
+
+Reverse overlapped Link Pinned Host->Device (Chunk 10496x10496):
+Microbenchmark (dim1 = dim2 = 10496) complete:	 mean_exec_t=301.219105 ms  ( 2.925871 Gb/s), Error Margin (percentage of mean) = 4.774969 %, Itter = 28, Microbench_t = 82.894334
+
+Cublas-chunk Link Pinned Host->Device (Chunk 10752x10752):
+Microbenchmark (dim1 = dim2 = 10752) complete:	 mean_exec_t=290.927155 ms  ( 3.178954 Gb/s), Error Margin (percentage of mean) = 4.944074 %, Itter = 28, Microbench_t = 8.146051
+
+Reverse overlapped Link Pinned Host->Device (Chunk 10752x10752):
+Microbenchmark (dim1 = dim2 = 10752) complete:	 mean_exec_t=316.534223 ms  ( 2.921782 Gb/s), Error Margin (percentage of mean) = 4.814606 %, Itter = 27, Microbench_t = 83.887643
+
+Cublas-chunk Link Pinned Host->Device (Chunk 11008x11008):
+Microbenchmark (dim1 = dim2 = 11008) complete:	 mean_exec_t=304.742021 ms  ( 3.181079 Gb/s), Error Margin (percentage of mean) = 4.719863 %, Itter = 28, Microbench_t = 8.532868
+
+Reverse overlapped Link Pinned Host->Device (Chunk 11008x11008):
+Microbenchmark (dim1 = dim2 = 11008) complete:	 mean_exec_t=331.930559 ms  ( 2.920516 Gb/s), Error Margin (percentage of mean) = 4.876014 %, Itter = 26, Microbench_t = 84.985298
+
+Cublas-chunk Link Pinned Host->Device (Chunk 11264x11264):
+Microbenchmark (dim1 = dim2 = 11264) complete:	 mean_exec_t=319.100945 ms  ( 3.180879 Gb/s), Error Margin (percentage of mean) = 4.775897 %, Itter = 27, Microbench_t = 8.615812
+
+Reverse overlapped Link Pinned Host->Device (Chunk 11264x11264):
+Microbenchmark (dim1 = dim2 = 11264) complete:	 mean_exec_t=347.545257 ms  ( 2.920545 Gb/s), Error Margin (percentage of mean) = 4.958297 %, Itter = 25, Microbench_t = 85.572745
+
+Cublas-chunk Link Pinned Host->Device (Chunk 11520x11520):
+Microbenchmark (dim1 = dim2 = 11520) complete:	 mean_exec_t=333.779014 ms  ( 3.180797 Gb/s), Error Margin (percentage of mean) = 4.849026 %, Itter = 26, Microbench_t = 8.678342
+
+Reverse overlapped Link Pinned Host->Device (Chunk 11520x11520):
+Microbenchmark (dim1 = dim2 = 11520) complete:	 mean_exec_t=363.589251 ms  ( 2.920007 Gb/s), Error Margin (percentage of mean) = 4.739504 %, Itter = 25, Microbench_t = 89.177059
+
+Cublas-chunk Link Pinned Host->Device (Chunk 11776x11776):
+Microbenchmark (dim1 = dim2 = 11776) complete:	 mean_exec_t=348.723097 ms  ( 3.181302 Gb/s), Error Margin (percentage of mean) = 4.941560 %, Itter = 25, Microbench_t = 8.718159
+
+Reverse overlapped Link Pinned Host->Device (Chunk 11776x11776):
+Microbenchmark (dim1 = dim2 = 11776) complete:	 mean_exec_t=380.005784 ms  ( 2.919412 Gb/s), Error Margin (percentage of mean) = 4.841519 %, Itter = 24, Microbench_t = 89.475416
+
+Cublas-chunk Link Pinned Host->Device (Chunk 12032x12032):
+Microbenchmark (dim1 = dim2 = 12032) complete:	 mean_exec_t=364.072208 ms  ( 3.181106 Gb/s), Error Margin (percentage of mean) = 4.733346 %, Itter = 25, Microbench_t = 9.101887
+
+Reverse overlapped Link Pinned Host->Device (Chunk 12032x12032):
+Microbenchmark (dim1 = dim2 = 12032) complete:	 mean_exec_t=396.788810 ms  ( 2.918813 Gb/s), Error Margin (percentage of mean) = 4.965295 %, Itter = 23, Microbench_t = 89.907478
+
+Cublas-chunk Link Pinned Host->Device (Chunk 12288x12288):
+Microbenchmark (dim1 = dim2 = 12288) complete:	 mean_exec_t=379.922012 ms  ( 3.179493 Gb/s), Error Margin (percentage of mean) = 4.842739 %, Itter = 24, Microbench_t = 9.118206
+
+Reverse overlapped Link Pinned Host->Device (Chunk 12288x12288):
+Microbenchmark (dim1 = dim2 = 12288) complete:	 mean_exec_t=413.768104 ms  ( 2.919412 Gb/s), Error Margin (percentage of mean) = 4.761481 %, Itter = 23, Microbench_t = 93.370746
+
+Cublas-chunk Link Pinned Host->Device (Chunk 12544x12544):
+Microbenchmark (dim1 = dim2 = 12544) complete:	 mean_exec_t=395.778138 ms  ( 3.180609 Gb/s), Error Margin (percentage of mean) = 4.977965 %, Itter = 23, Microbench_t = 9.102969
+
+Reverse overlapped Link Pinned Host->Device (Chunk 12544x12544):
+Microbenchmark (dim1 = dim2 = 12544) complete:	 mean_exec_t=431.199654 ms  ( 2.919333 Gb/s), Error Margin (percentage of mean) = 4.908877 %, Itter = 22, Microbench_t = 93.080056
+
+Cublas-chunk Link Pinned Host->Device (Chunk 12800x12800):
+Microbenchmark (dim1 = dim2 = 12800) complete:	 mean_exec_t=412.287038 ms  ( 3.179144 Gb/s), Error Margin (percentage of mean) = 4.778969 %, Itter = 23, Microbench_t = 9.482675
+
+Reverse overlapped Link Pinned Host->Device (Chunk 12800x12800):
+Microbenchmark (dim1 = dim2 = 12800) complete:	 mean_exec_t=449.185481 ms  ( 2.917993 Gb/s), Error Margin (percentage of mean) = 4.712492 %, Itter = 22, Microbench_t = 96.956939
+
+Cublas-chunk Link Pinned Host->Device (Chunk 13056x13056):
+Microbenchmark (dim1 = dim2 = 13056) complete:	 mean_exec_t=428.638599 ms  ( 3.181405 Gb/s), Error Margin (percentage of mean) = 4.938287 %, Itter = 22, Microbench_t = 9.430115
+
+Reverse overlapped Link Pinned Host->Device (Chunk 13056x13056):
+Microbenchmark (dim1 = dim2 = 13056) complete:	 mean_exec_t=467.283405 ms  ( 2.918300 Gb/s), Error Margin (percentage of mean) = 4.884458 %, Itter = 21, Microbench_t = 96.282808
+
+Cublas-chunk Link Pinned Host->Device (Chunk 13312x13312):
+Microbenchmark (dim1 = dim2 = 13312) complete:	 mean_exec_t=445.670800 ms  ( 3.180991 Gb/s), Error Margin (percentage of mean) = 4.749550 %, Itter = 22, Microbench_t = 9.804825
+
+Reverse overlapped Link Pinned Host->Device (Chunk 13312x13312):
+Microbenchmark (dim1 = dim2 = 13312) complete:	 mean_exec_t=485.801200 ms  ( 2.918220 Gb/s), Error Margin (percentage of mean) = 4.698249 %, Itter = 21, Microbench_t = 100.091579
+
+Cublas-chunk Link Pinned Host->Device (Chunk 13568x13568):
+Microbenchmark (dim1 = dim2 = 13568) complete:	 mean_exec_t=462.863933 ms  ( 3.181767 Gb/s), Error Margin (percentage of mean) = 4.931121 %, Itter = 21, Microbench_t = 9.720205
+
+Reverse overlapped Link Pinned Host->Device (Chunk 13568x13568):
+Microbenchmark (dim1 = dim2 = 13568) complete:	 mean_exec_t=504.693958 ms  ( 2.918056 Gb/s), Error Margin (percentage of mean) = 4.896006 %, Itter = 20, Microbench_t = 99.048614
+
+Cublas-chunk Link Pinned Host->Device (Chunk 13824x13824):
+Microbenchmark (dim1 = dim2 = 13824) complete:	 mean_exec_t=480.626969 ms  ( 3.180895 Gb/s), Error Margin (percentage of mean) = 4.748868 %, Itter = 21, Microbench_t = 10.093233
+
+Reverse overlapped Link Pinned Host->Device (Chunk 13824x13824):
+Microbenchmark (dim1 = dim2 = 13824) complete:	 mean_exec_t=523.944834 ms  ( 2.917910 Gb/s), Error Margin (percentage of mean) = 4.716189 %, Itter = 20, Microbench_t = 102.824262
+
+Cublas-chunk Link Pinned Host->Device (Chunk 14080x14080):
+Microbenchmark (dim1 = dim2 = 14080) complete:	 mean_exec_t=498.503983 ms  ( 3.181461 Gb/s), Error Margin (percentage of mean) = 4.956839 %, Itter = 20, Microbench_t = 9.970139
+
+Reverse overlapped Link Pinned Host->Device (Chunk 14080x14080):
+Microbenchmark (dim1 = dim2 = 14080) complete:	 mean_exec_t=543.645878 ms  ( 2.917287 Gb/s), Error Margin (percentage of mean) = 4.942778 %, Itter = 19, Microbench_t = 101.358455
+
+Cublas-chunk Link Pinned Host->Device (Chunk 14336x14336):
+Microbenchmark (dim1 = dim2 = 14336) complete:	 mean_exec_t=516.890764 ms  ( 3.180879 Gb/s), Error Margin (percentage of mean) = 4.780444 %, Itter = 20, Microbench_t = 10.337882
+
+Reverse overlapped Link Pinned Host->Device (Chunk 14336x14336):
+Microbenchmark (dim1 = dim2 = 14336) complete:	 mean_exec_t=563.665933 ms  ( 2.916918 Gb/s), Error Margin (percentage of mean) = 4.767277 %, Itter = 19, Microbench_t = 105.074323
+
+Cublas-chunk Link Pinned Host->Device (Chunk 14592x14592):
+Microbenchmark (dim1 = dim2 = 14592) complete:	 mean_exec_t=535.484385 ms  ( 3.181067 Gb/s), Error Margin (percentage of mean) = 4.614650 %, Itter = 20, Microbench_t = 10.709749
+
+Reverse overlapped Link Pinned Host->Device (Chunk 14592x14592):
+Microbenchmark (dim1 = dim2 = 14592) complete:	 mean_exec_t=583.957192 ms  ( 2.917015 Gb/s), Error Margin (percentage of mean) = 4.601531 %, Itter = 19, Microbench_t = 108.871820
+
+Cublas-chunk Link Pinned Host->Device (Chunk 14848x14848):
+Microbenchmark (dim1 = dim2 = 14848) complete:	 mean_exec_t=554.424186 ms  ( 3.181147 Gb/s), Error Margin (percentage of mean) = 4.846863 %, Itter = 19, Microbench_t = 10.534116
+
+Reverse overlapped Link Pinned Host->Device (Chunk 14848x14848):
+Microbenchmark (dim1 = dim2 = 14848) complete:	 mean_exec_t=604.764879 ms  ( 2.916348 Gb/s), Error Margin (percentage of mean) = 4.856004 %, Itter = 18, Microbench_t = 106.829488
+
+WARNING -> Generating Logfile...
+Transfer benchmark@dungani Device->Pinned Host : (256,14904) with step 256
+Warming up...
+Cublas-chunk Link Device->Pinned Host (Chunk 256x256):
+Microbenchmark (dim1 = dim2 = 256) complete:	 mean_exec_t=0.167553 ms  ( 3.129085 Gb/s), Error Margin (percentage of mean) = 4.998764 %, Itter = 3799, Microbench_t = 0.652672
+
+Reverse overlapped Link Device->Pinned Host (Chunk 256x256):
+Microbenchmark (dim1 = dim2 = 256) complete:	 mean_exec_t=0.198399 ms  ( 2.642593 Gb/s), Error Margin (percentage of mean) = 4.999914 %, Itter = 3394, Microbench_t = 6.573146
+
+Cublas-chunk Link Device->Pinned Host (Chunk 512x512):
+Microbenchmark (dim1 = dim2 = 512) complete:	 mean_exec_t=0.639255 ms  ( 3.280621 Gb/s), Error Margin (percentage of mean) = 4.997786 %, Itter = 1557, Microbench_t = 1.000464
+
+Reverse overlapped Link Device->Pinned Host (Chunk 512x512):
+Microbenchmark (dim1 = dim2 = 512) complete:	 mean_exec_t=0.753305 ms  ( 2.783935 Gb/s), Error Margin (percentage of mean) = 4.996419 %, Itter = 1396, Microbench_t = 10.453426
+
+Cublas-chunk Link Device->Pinned Host (Chunk 768x768):
+Microbenchmark (dim1 = dim2 = 768) complete:	 mean_exec_t=1.422072 ms  ( 3.318111 Gb/s), Error Margin (percentage of mean) = 4.991845 %, Itter = 915, Microbench_t = 1.303921
+
+Reverse overlapped Link Device->Pinned Host (Chunk 768x768):
+Microbenchmark (dim1 = dim2 = 768) complete:	 mean_exec_t=1.675872 ms  ( 2.815605 Gb/s), Error Margin (percentage of mean) = 4.994318 %, Itter = 820, Microbench_t = 13.692486
+
+Cublas-chunk Link Device->Pinned Host (Chunk 1024x1024):
+Microbenchmark (dim1 = dim2 = 1024) complete:	 mean_exec_t=2.520191 ms  ( 3.328561 Gb/s), Error Margin (percentage of mean) = 4.995148 %, Itter = 625, Microbench_t = 1.576978
+
+Reverse overlapped Link Device->Pinned Host (Chunk 1024x1024):
+Microbenchmark (dim1 = dim2 = 1024) complete:	 mean_exec_t=2.967557 ms  ( 2.826773 Gb/s), Error Margin (percentage of mean) = 4.990376 %, Itter = 561, Microbench_t = 16.573014
+
+Cublas-chunk Link Device->Pinned Host (Chunk 1280x1280):
+Microbenchmark (dim1 = dim2 = 1280) complete:	 mean_exec_t=3.927835 ms  ( 3.337004 Gb/s), Error Margin (percentage of mean) = 4.984171 %, Itter = 466, Microbench_t = 1.831793
+
+Reverse overlapped Link Device->Pinned Host (Chunk 1280x1280):
+Microbenchmark (dim1 = dim2 = 1280) complete:	 mean_exec_t=4.624460 ms  ( 2.834320 Gb/s), Error Margin (percentage of mean) = 4.985841 %, Itter = 418, Microbench_t = 19.257660
+
+Cublas-chunk Link Device->Pinned Host (Chunk 1536x1536):
+Microbenchmark (dim1 = dim2 = 1536) complete:	 mean_exec_t=5.648611 ms  ( 3.341418 Gb/s), Error Margin (percentage of mean) = 4.985729 %, Itter = 366, Microbench_t = 2.068489
+
+Reverse overlapped Link Device->Pinned Host (Chunk 1536x1536):
+Microbenchmark (dim1 = dim2 = 1536) complete:	 mean_exec_t=6.656765 ms  ( 2.835367 Gb/s), Error Margin (percentage of mean) = 4.990245 %, Itter = 328, Microbench_t = 21.707059
+
+Cublas-chunk Link Device->Pinned Host (Chunk 1792x1792):
+Microbenchmark (dim1 = dim2 = 1792) complete:	 mean_exec_t=7.685391 ms  ( 3.342720 Gb/s), Error Margin (percentage of mean) = 4.994671 %, Itter = 298, Microbench_t = 2.291141
+
+Reverse overlapped Link Device->Pinned Host (Chunk 1792x1792):
+Microbenchmark (dim1 = dim2 = 1792) complete:	 mean_exec_t=9.062781 ms  ( 2.834683 Gb/s), Error Margin (percentage of mean) = 4.998574 %, Itter = 267, Microbench_t = 24.031589
+
+Cublas-chunk Link Device->Pinned Host (Chunk 2048x2048):
+Microbenchmark (dim1 = dim2 = 2048) complete:	 mean_exec_t=10.035135 ms  ( 3.343695 Gb/s), Error Margin (percentage of mean) = 4.985255 %, Itter = 250, Microbench_t = 2.509551
+
+Reverse overlapped Link Device->Pinned Host (Chunk 2048x2048):
+Microbenchmark (dim1 = dim2 = 2048) complete:	 mean_exec_t=11.833822 ms  ( 2.835469 Gb/s), Error Margin (percentage of mean) = 4.989734 %, Itter = 224, Microbench_t = 26.311904
+
+Cublas-chunk Link Device->Pinned Host (Chunk 2304x2304):
+Microbenchmark (dim1 = dim2 = 2304) complete:	 mean_exec_t=12.699359 ms  ( 3.344053 Gb/s), Error Margin (percentage of mean) = 4.981706 %, Itter = 214, Microbench_t = 2.718334
+
+Reverse overlapped Link Device->Pinned Host (Chunk 2304x2304):
+Microbenchmark (dim1 = dim2 = 2304) complete:	 mean_exec_t=14.966688 ms  ( 2.837457 Gb/s), Error Margin (percentage of mean) = 4.979904 %, Itter = 192, Microbench_t = 28.527002
+
+Cublas-chunk Link Device->Pinned Host (Chunk 2560x2560):
+Microbenchmark (dim1 = dim2 = 2560) complete:	 mean_exec_t=15.666076 ms  ( 3.346645 Gb/s), Error Margin (percentage of mean) = 4.991526 %, Itter = 186, Microbench_t = 2.914475
+
+Reverse overlapped Link Device->Pinned Host (Chunk 2560x2560):
+Microbenchmark (dim1 = dim2 = 2560) complete:	 mean_exec_t=18.472853 ms  ( 2.838154 Gb/s), Error Margin (percentage of mean) = 4.982570 %, Itter = 167, Microbench_t = 30.616848
+
+Cublas-chunk Link Device->Pinned Host (Chunk 2816x2816):
+Microbenchmark (dim1 = dim2 = 2816) complete:	 mean_exec_t=18.960031 ms  ( 3.345925 Gb/s), Error Margin (percentage of mean) = 4.989627 %, Itter = 164, Microbench_t = 3.109956
+
+Reverse overlapped Link Device->Pinned Host (Chunk 2816x2816):
+Microbenchmark (dim1 = dim2 = 2816) complete:	 mean_exec_t=22.352756 ms  ( 2.838077 Gb/s), Error Margin (percentage of mean) = 4.995197 %, Itter = 147, Microbench_t = 32.610272
+
+Cublas-chunk Link Device->Pinned Host (Chunk 3072x3072):
+Microbenchmark (dim1 = dim2 = 3072) complete:	 mean_exec_t=22.559691 ms  ( 3.346565 Gb/s), Error Margin (percentage of mean) = 4.949403 %, Itter = 147, Microbench_t = 3.316732
+
+Reverse overlapped Link Device->Pinned Host (Chunk 3072x3072):
+Microbenchmark (dim1 = dim2 = 3072) complete:	 mean_exec_t=26.601430 ms  ( 2.838098 Gb/s), Error Margin (percentage of mean) = 4.998787 %, Itter = 131, Microbench_t = 34.593384
+
+Cublas-chunk Link Device->Pinned Host (Chunk 3328x3328):
+Microbenchmark (dim1 = dim2 = 3328) complete:	 mean_exec_t=26.472951 ms  ( 3.346989 Gb/s), Error Margin (percentage of mean) = 4.965471 %, Itter = 132, Microbench_t = 3.494840
+
+Reverse overlapped Link Device->Pinned Host (Chunk 3328x3328):
+Microbenchmark (dim1 = dim2 = 3328) complete:	 mean_exec_t=31.212331 ms  ( 2.838771 Gb/s), Error Margin (percentage of mean) = 4.992930 %, Itter = 118, Microbench_t = 36.551557
+
+Cublas-chunk Link Device->Pinned Host (Chunk 3584x3584):
+Microbenchmark (dim1 = dim2 = 3584) complete:	 mean_exec_t=30.702645 ms  ( 3.346958 Gb/s), Error Margin (percentage of mean) = 4.947906 %, Itter = 120, Microbench_t = 3.684700
+
+Reverse overlapped Link Device->Pinned Host (Chunk 3584x3584):
+Microbenchmark (dim1 = dim2 = 3584) complete:	 mean_exec_t=36.177860 ms  ( 2.840424 Gb/s), Error Margin (percentage of mean) = 4.998553 %, Itter = 107, Microbench_t = 38.440446
+
+Cublas-chunk Link Device->Pinned Host (Chunk 3840x3840):
+Microbenchmark (dim1 = dim2 = 3840) complete:	 mean_exec_t=35.221461 ms  ( 3.349231 Gb/s), Error Margin (percentage of mean) = 4.991656 %, Itter = 109, Microbench_t = 3.839478
+
+Reverse overlapped Link Device->Pinned Host (Chunk 3840x3840):
+Microbenchmark (dim1 = dim2 = 3840) complete:	 mean_exec_t=41.520905 ms  ( 2.841094 Gb/s), Error Margin (percentage of mean) = 4.978573 %, Itter = 98, Microbench_t = 40.390722
+
+Cublas-chunk Link Device->Pinned Host (Chunk 4096x4096):
+Microbenchmark (dim1 = dim2 = 4096) complete:	 mean_exec_t=40.088970 ms  ( 3.347996 Gb/s), Error Margin (percentage of mean) = 4.925087 %, Itter = 101, Microbench_t = 4.049309
+
+Reverse overlapped Link Device->Pinned Host (Chunk 4096x4096):
+Microbenchmark (dim1 = dim2 = 4096) complete:	 mean_exec_t=47.225507 ms  ( 2.842060 Gb/s), Error Margin (percentage of mean) = 4.983925 %, Itter = 90, Microbench_t = 42.235763
+
+Cublas-chunk Link Device->Pinned Host (Chunk 4352x4352):
+Microbenchmark (dim1 = dim2 = 4352) complete:	 mean_exec_t=45.236762 ms  ( 3.349471 Gb/s), Error Margin (percentage of mean) = 4.949281 %, Itter = 93, Microbench_t = 4.207314
+
+Reverse overlapped Link Device->Pinned Host (Chunk 4352x4352):
+Microbenchmark (dim1 = dim2 = 4352) complete:	 mean_exec_t=53.312377 ms  ( 2.842102 Gb/s), Error Margin (percentage of mean) = 4.995767 %, Itter = 83, Microbench_t = 43.970572
+
+Cublas-chunk Link Device->Pinned Host (Chunk 4608x4608):
+Microbenchmark (dim1 = dim2 = 4608) complete:	 mean_exec_t=50.724254 ms  ( 3.348877 Gb/s), Error Margin (percentage of mean) = 4.973531 %, Itter = 86, Microbench_t = 4.362567
+
+Reverse overlapped Link Device->Pinned Host (Chunk 4608x4608):
+Microbenchmark (dim1 = dim2 = 4608) complete:	 mean_exec_t=59.748252 ms  ( 2.843084 Gb/s), Error Margin (percentage of mean) = 4.999492 %, Itter = 77, Microbench_t = 45.730163
+
+Cublas-chunk Link Device->Pinned Host (Chunk 4864x4864):
+Microbenchmark (dim1 = dim2 = 4864) complete:	 mean_exec_t=56.521881 ms  ( 3.348579 Gb/s), Error Margin (percentage of mean) = 4.984836 %, Itter = 80, Microbench_t = 4.522001
+
+Reverse overlapped Link Device->Pinned Host (Chunk 4864x4864):
+Microbenchmark (dim1 = dim2 = 4864) complete:	 mean_exec_t=66.541047 ms  ( 2.844379 Gb/s), Error Margin (percentage of mean) = 4.975130 %, Itter = 72, Microbench_t = 47.612302
+
+Cublas-chunk Link Device->Pinned Host (Chunk 5120x5120):
+Microbenchmark (dim1 = dim2 = 5120) complete:	 mean_exec_t=62.606713 ms  ( 3.349724 Gb/s), Error Margin (percentage of mean) = 4.967305 %, Itter = 75, Microbench_t = 4.695736
+
+Reverse overlapped Link Device->Pinned Host (Chunk 5120x5120):
+Microbenchmark (dim1 = dim2 = 5120) complete:	 mean_exec_t=73.699623 ms  ( 2.845540 Gb/s), Error Margin (percentage of mean) = 4.903284 %, Itter = 68, Microbench_t = 49.800560
+
+Cublas-chunk Link Device->Pinned Host (Chunk 5376x5376):
+Microbenchmark (dim1 = dim2 = 5376) complete:	 mean_exec_t=69.023633 ms  ( 3.349737 Gb/s), Error Margin (percentage of mean) = 4.900011 %, Itter = 71, Microbench_t = 4.900903
+
+Reverse overlapped Link Device->Pinned Host (Chunk 5376x5376):
+Microbenchmark (dim1 = dim2 = 5376) complete:	 mean_exec_t=81.219273 ms  ( 2.846751 Gb/s), Error Margin (percentage of mean) = 4.883236 %, Itter = 64, Microbench_t = 51.716670
+
+Cublas-chunk Link Device->Pinned Host (Chunk 5632x5632):
+Microbenchmark (dim1 = dim2 = 5632) complete:	 mean_exec_t=75.782556 ms  ( 3.348467 Gb/s), Error Margin (percentage of mean) = 4.992084 %, Itter = 66, Microbench_t = 5.001858
+
+Reverse overlapped Link Device->Pinned Host (Chunk 5632x5632):
+Microbenchmark (dim1 = dim2 = 5632) complete:	 mean_exec_t=89.112123 ms  ( 2.847597 Gb/s), Error Margin (percentage of mean) = 4.915038 %, Itter = 60, Microbench_t = 53.165029
+
+Cublas-chunk Link Device->Pinned Host (Chunk 5888x5888):
+Microbenchmark (dim1 = dim2 = 5888) complete:	 mean_exec_t=82.788055 ms  ( 3.350101 Gb/s), Error Margin (percentage of mean) = 4.908046 %, Itter = 63, Microbench_t = 5.215844
+
+Reverse overlapped Link Device->Pinned Host (Chunk 5888x5888):
+Microbenchmark (dim1 = dim2 = 5888) complete:	 mean_exec_t=97.352394 ms  ( 2.848911 Gb/s), Error Margin (percentage of mean) = 4.868804 %, Itter = 57, Microbench_t = 55.234128
+
+Cublas-chunk Link Device->Pinned Host (Chunk 6144x6144):
+Microbenchmark (dim1 = dim2 = 6144) complete:	 mean_exec_t=90.133728 ms  ( 3.350465 Gb/s), Error Margin (percentage of mean) = 4.986652 %, Itter = 59, Microbench_t = 5.318075
+
+Reverse overlapped Link Device->Pinned Host (Chunk 6144x6144):
+Microbenchmark (dim1 = dim2 = 6144) complete:	 mean_exec_t=105.951764 ms  ( 2.850258 Gb/s), Error Margin (percentage of mean) = 4.862645 %, Itter = 54, Microbench_t = 56.908632
+
+Cublas-chunk Link Device->Pinned Host (Chunk 6400x6400):
+Microbenchmark (dim1 = dim2 = 6400) complete:	 mean_exec_t=97.815680 ms  ( 3.349974 Gb/s), Error Margin (percentage of mean) = 4.979771 %, Itter = 56, Microbench_t = 5.477854
+
+Reverse overlapped Link Device->Pinned Host (Chunk 6400x6400):
+Microbenchmark (dim1 = dim2 = 6400) complete:	 mean_exec_t=114.938498 ms  ( 2.850916 Gb/s), Error Margin (percentage of mean) = 4.896147 %, Itter = 51, Microbench_t = 58.366286
+
+Cublas-chunk Link Device->Pinned Host (Chunk 6656x6656):
+Microbenchmark (dim1 = dim2 = 6656) complete:	 mean_exec_t=105.814435 ms  ( 3.349436 Gb/s), Error Margin (percentage of mean) = 4.868879 %, Itter = 54, Microbench_t = 5.714150
+
+Reverse overlapped Link Device->Pinned Host (Chunk 6656x6656):
+Microbenchmark (dim1 = dim2 = 6656) complete:	 mean_exec_t=124.310340 ms  ( 2.851080 Gb/s), Error Margin (percentage of mean) = 4.972401 %, Itter = 48, Microbench_t = 59.559954
+
+Cublas-chunk Link Device->Pinned Host (Chunk 6912x6912):
+Microbenchmark (dim1 = dim2 = 6912) complete:	 mean_exec_t=114.156779 ms  ( 3.348079 Gb/s), Error Margin (percentage of mean) = 4.929823 %, Itter = 51, Microbench_t = 5.822163
+
+Reverse overlapped Link Device->Pinned Host (Chunk 6912x6912):
+Microbenchmark (dim1 = dim2 = 6912) complete:	 mean_exec_t=134.016982 ms  ( 2.851922 Gb/s), Error Margin (percentage of mean) = 4.926834 %, Itter = 46, Microbench_t = 61.482021
+
+Cublas-chunk Link Device->Pinned Host (Chunk 7168x7168):
+Microbenchmark (dim1 = dim2 = 7168) complete:	 mean_exec_t=122.727652 ms  ( 3.349219 Gb/s), Error Margin (percentage of mean) = 4.878280 %, Itter = 49, Microbench_t = 6.013805
+
+Reverse overlapped Link Device->Pinned Host (Chunk 7168x7168):
+Microbenchmark (dim1 = dim2 = 7168) complete:	 mean_exec_t=144.041838 ms  ( 2.853628 Gb/s), Error Margin (percentage of mean) = 4.911522 %, Itter = 44, Microbench_t = 63.272865
+
+Cublas-chunk Link Device->Pinned Host (Chunk 7424x7424):
+Microbenchmark (dim1 = dim2 = 7424) complete:	 mean_exec_t=131.663962 ms  ( 3.348875 Gb/s), Error Margin (percentage of mean) = 4.850475 %, Itter = 47, Microbench_t = 6.188374
+
+Reverse overlapped Link Device->Pinned Host (Chunk 7424x7424):
+Microbenchmark (dim1 = dim2 = 7424) complete:	 mean_exec_t=154.408886 ms  ( 2.855575 Gb/s), Error Margin (percentage of mean) = 4.925473 %, Itter = 42, Microbench_t = 64.817295
+
+Cublas-chunk Link Device->Pinned Host (Chunk 7680x7680):
+Microbenchmark (dim1 = dim2 = 7680) complete:	 mean_exec_t=140.858629 ms  ( 3.349878 Gb/s), Error Margin (percentage of mean) = 4.850216 %, Itter = 45, Microbench_t = 6.338782
+
+Reverse overlapped Link Device->Pinned Host (Chunk 7680x7680):
+Microbenchmark (dim1 = dim2 = 7680) complete:	 mean_exec_t=165.175940 ms  ( 2.856707 Gb/s), Error Margin (percentage of mean) = 4.968133 %, Itter = 40, Microbench_t = 66.107362
+
+Cublas-chunk Link Device->Pinned Host (Chunk 7936x7936):
+Microbenchmark (dim1 = dim2 = 7936) complete:	 mean_exec_t=150.367404 ms  ( 3.350731 Gb/s), Error Margin (percentage of mean) = 4.876032 %, Itter = 43, Microbench_t = 6.465926
+
+Reverse overlapped Link Device->Pinned Host (Chunk 7936x7936):
+Microbenchmark (dim1 = dim2 = 7936) complete:	 mean_exec_t=176.303562 ms  ( 2.857803 Gb/s), Error Margin (percentage of mean) = 4.842204 %, Itter = 39, Microbench_t = 68.690285
+
+Cublas-chunk Link Device->Pinned Host (Chunk 8192x8192):
+Microbenchmark (dim1 = dim2 = 8192) complete:	 mean_exec_t=160.229392 ms  ( 3.350639 Gb/s), Error Margin (percentage of mean) = 4.928251 %, Itter = 41, Microbench_t = 6.569532
+
+Reverse overlapped Link Device->Pinned Host (Chunk 8192x8192):
+Microbenchmark (dim1 = dim2 = 8192) complete:	 mean_exec_t=187.816931 ms  ( 2.858480 Gb/s), Error Margin (percentage of mean) = 4.935339 %, Itter = 37, Microbench_t = 69.490867
+
+Cublas-chunk Link Device->Pinned Host (Chunk 8448x8448):
+Microbenchmark (dim1 = dim2 = 8448) complete:	 mean_exec_t=170.416534 ms  ( 3.350318 Gb/s), Error Margin (percentage of mean) = 4.815423 %, Itter = 40, Microbench_t = 6.816787
+
+Reverse overlapped Link Device->Pinned Host (Chunk 8448x8448):
+Microbenchmark (dim1 = dim2 = 8448) complete:	 mean_exec_t=199.667103 ms  ( 2.859508 Gb/s), Error Margin (percentage of mean) = 4.845942 %, Itter = 36, Microbench_t = 71.931897
+
+Cublas-chunk Link Device->Pinned Host (Chunk 8704x8704):
+Microbenchmark (dim1 = dim2 = 8704) complete:	 mean_exec_t=180.830868 ms  ( 3.351623 Gb/s), Error Margin (percentage of mean) = 4.916548 %, Itter = 38, Microbench_t = 6.871696
+
+Reverse overlapped Link Device->Pinned Host (Chunk 8704x8704):
+Microbenchmark (dim1 = dim2 = 8704) complete:	 mean_exec_t=211.881224 ms  ( 2.860456 Gb/s), Error Margin (percentage of mean) = 4.995253 %, Itter = 34, Microbench_t = 72.167935
+
+Cublas-chunk Link Device->Pinned Host (Chunk 8960x8960):
+Microbenchmark (dim1 = dim2 = 8960) complete:	 mean_exec_t=191.654759 ms  ( 3.351092 Gb/s), Error Margin (percentage of mean) = 4.836511 %, Itter = 37, Microbench_t = 7.091335
+
+Reverse overlapped Link Device->Pinned Host (Chunk 8960x8960):
+Microbenchmark (dim1 = dim2 = 8960) complete:	 mean_exec_t=224.449076 ms  ( 2.861463 Gb/s), Error Margin (percentage of mean) = 4.942169 %, Itter = 33, Microbench_t = 74.263692
+
+Cublas-chunk Link Device->Pinned Host (Chunk 9216x9216):
+Microbenchmark (dim1 = dim2 = 9216) complete:	 mean_exec_t=202.802685 ms  ( 3.350435 Gb/s), Error Margin (percentage of mean) = 4.986604 %, Itter = 35, Microbench_t = 7.098203
+
+Reverse overlapped Link Device->Pinned Host (Chunk 9216x9216):
+Microbenchmark (dim1 = dim2 = 9216) complete:	 mean_exec_t=237.384285 ms  ( 2.862351 Gb/s), Error Margin (percentage of mean) = 4.904873 %, Itter = 32, Microbench_t = 76.023308
+
+Cublas-chunk Link Device->Pinned Host (Chunk 9472x9472):
+Microbenchmark (dim1 = dim2 = 9472) complete:	 mean_exec_t=214.136818 ms  ( 3.351830 Gb/s), Error Margin (percentage of mean) = 4.942532 %, Itter = 34, Microbench_t = 7.280757
+
+Reverse overlapped Link Device->Pinned Host (Chunk 9472x9472):
+Microbenchmark (dim1 = dim2 = 9472) complete:	 mean_exec_t=250.717588 ms  ( 2.862784 Gb/s), Error Margin (percentage of mean) = 4.882712 %, Itter = 31, Microbench_t = 77.817238
+
+Cublas-chunk Link Device->Pinned Host (Chunk 9728x9728):
+Microbenchmark (dim1 = dim2 = 9728) complete:	 mean_exec_t=225.919211 ms  ( 3.351073 Gb/s), Error Margin (percentage of mean) = 4.910037 %, Itter = 33, Microbench_t = 7.455435
+
+Reverse overlapped Link Device->Pinned Host (Chunk 9728x9728):
+Microbenchmark (dim1 = dim2 = 9728) complete:	 mean_exec_t=264.278984 ms  ( 2.864669 Gb/s), Error Margin (percentage of mean) = 4.878810 %, Itter = 30, Microbench_t = 79.451476
+
+Cublas-chunk Link Device->Pinned Host (Chunk 9984x9984):
+Microbenchmark (dim1 = dim2 = 9984) complete:	 mean_exec_t=237.770155 ms  ( 3.353836 Gb/s), Error Margin (percentage of mean) = 4.897624 %, Itter = 32, Microbench_t = 7.609052
+
+Reverse overlapped Link Device->Pinned Host (Chunk 9984x9984):
+Microbenchmark (dim1 = dim2 = 9984) complete:	 mean_exec_t=277.919498 ms  ( 2.869327 Gb/s), Error Margin (percentage of mean) = 4.894885 %, Itter = 29, Microbench_t = 80.823493
+
+Cublas-chunk Link Device->Pinned Host (Chunk 10240x10240):
+Microbenchmark (dim1 = dim2 = 10240) complete:	 mean_exec_t=249.933504 ms  ( 3.356336 Gb/s), Error Margin (percentage of mean) = 4.897885 %, Itter = 31, Microbench_t = 7.748351
+
+Reverse overlapped Link Device->Pinned Host (Chunk 10240x10240):
+Microbenchmark (dim1 = dim2 = 10240) complete:	 mean_exec_t=292.263077 ms  ( 2.870225 Gb/s), Error Margin (percentage of mean) = 4.921244 %, Itter = 28, Microbench_t = 82.117717
+
+Cublas-chunk Link Device->Pinned Host (Chunk 10496x10496):
+Microbenchmark (dim1 = dim2 = 10496) complete:	 mean_exec_t=262.555488 ms  ( 3.356731 Gb/s), Error Margin (percentage of mean) = 4.910457 %, Itter = 30, Microbench_t = 7.877045
+
+Reverse overlapped Link Device->Pinned Host (Chunk 10496x10496):
+Microbenchmark (dim1 = dim2 = 10496) complete:	 mean_exec_t=306.976225 ms  ( 2.870998 Gb/s), Error Margin (percentage of mean) = 4.964409 %, Itter = 27, Microbench_t = 83.231978
+
+Cublas-chunk Link Device->Pinned Host (Chunk 10752x10752):
+Microbenchmark (dim1 = dim2 = 10752) complete:	 mean_exec_t=275.502123 ms  ( 3.356940 Gb/s), Error Margin (percentage of mean) = 4.937833 %, Itter = 29, Microbench_t = 7.989940
+
+Reverse overlapped Link Device->Pinned Host (Chunk 10752x10752):
+Microbenchmark (dim1 = dim2 = 10752) complete:	 mean_exec_t=322.047024 ms  ( 2.871767 Gb/s), Error Margin (percentage of mean) = 4.732090 %, Itter = 27, Microbench_t = 87.072503
+
+Cublas-chunk Link Device->Pinned Host (Chunk 11008x11008):
+Microbenchmark (dim1 = dim2 = 11008) complete:	 mean_exec_t=288.784248 ms  ( 3.356861 Gb/s), Error Margin (percentage of mean) = 4.980526 %, Itter = 28, Microbench_t = 8.086308
+
+Reverse overlapped Link Device->Pinned Host (Chunk 11008x11008):
+Microbenchmark (dim1 = dim2 = 11008) complete:	 mean_exec_t=337.508629 ms  ( 2.872248 Gb/s), Error Margin (percentage of mean) = 4.795377 %, Itter = 26, Microbench_t = 87.913697
+
+Cublas-chunk Link Device->Pinned Host (Chunk 11264x11264):
+Microbenchmark (dim1 = dim2 = 11264) complete:	 mean_exec_t=302.363481 ms  ( 3.356958 Gb/s), Error Margin (percentage of mean) = 4.756848 %, Itter = 28, Microbench_t = 8.466529
+
+Reverse overlapped Link Device->Pinned Host (Chunk 11264x11264):
+Microbenchmark (dim1 = dim2 = 11264) complete:	 mean_exec_t=353.379862 ms  ( 2.872324 Gb/s), Error Margin (percentage of mean) = 4.876390 %, Itter = 25, Microbench_t = 88.835556
+
+Cublas-chunk Link Device->Pinned Host (Chunk 11520x11520):
+Microbenchmark (dim1 = dim2 = 11520) complete:	 mean_exec_t=316.265203 ms  ( 3.356940 Gb/s), Error Margin (percentage of mean) = 4.818600 %, Itter = 27, Microbench_t = 8.539494
+
+Reverse overlapped Link Device->Pinned Host (Chunk 11520x11520):
+Microbenchmark (dim1 = dim2 = 11520) complete:	 mean_exec_t=369.614231 ms  ( 2.872409 Gb/s), Error Margin (percentage of mean) = 4.977578 %, Itter = 24, Microbench_t = 89.244058
+
+Cublas-chunk Link Device->Pinned Host (Chunk 11776x11776):
+Microbenchmark (dim1 = dim2 = 11776) complete:	 mean_exec_t=330.872334 ms  ( 3.352935 Gb/s), Error Margin (percentage of mean) = 4.903087 %, Itter = 26, Microbench_t = 8.602996
+
+Reverse overlapped Link Device->Pinned Host (Chunk 11776x11776):
+Microbenchmark (dim1 = dim2 = 11776) complete:	 mean_exec_t=386.202253 ms  ( 2.872571 Gb/s), Error Margin (percentage of mean) = 4.763781 %, Itter = 24, Microbench_t = 92.930506
+
+Cublas-chunk Link Device->Pinned Host (Chunk 12032x12032):
+Microbenchmark (dim1 = dim2 = 12032) complete:	 mean_exec_t=344.983807 ms  ( 3.357120 Gb/s), Error Margin (percentage of mean) = 4.995070 %, Itter = 25, Microbench_t = 8.624893
+
+Reverse overlapped Link Device->Pinned Host (Chunk 12032x12032):
+Microbenchmark (dim1 = dim2 = 12032) complete:	 mean_exec_t=403.179757 ms  ( 2.872545 Gb/s), Error Margin (percentage of mean) = 4.886503 %, Itter = 23, Microbench_t = 92.990951
+
+Cublas-chunk Link Device->Pinned Host (Chunk 12288x12288):
+Microbenchmark (dim1 = dim2 = 12288) complete:	 mean_exec_t=359.859982 ms  ( 3.356749 Gb/s), Error Margin (percentage of mean) = 4.788585 %, Itter = 25, Microbench_t = 8.996798
+
+Reverse overlapped Link Device->Pinned Host (Chunk 12288x12288):
+Microbenchmark (dim1 = dim2 = 12288) complete:	 mean_exec_t=420.519988 ms  ( 2.872538 Gb/s), Error Margin (percentage of mean) = 4.685014 %, Itter = 23, Microbench_t = 96.997700
+
+Cublas-chunk Link Device->Pinned Host (Chunk 12544x12544):
+Microbenchmark (dim1 = dim2 = 12544) complete:	 mean_exec_t=374.983410 ms  ( 3.356990 Gb/s), Error Margin (percentage of mean) = 4.906308 %, Itter = 24, Microbench_t = 8.999893
+
+Reverse overlapped Link Device->Pinned Host (Chunk 12544x12544):
+Microbenchmark (dim1 = dim2 = 12544) complete:	 mean_exec_t=438.203367 ms  ( 2.872674 Gb/s), Error Margin (percentage of mean) = 4.830374 %, Itter = 22, Microbench_t = 96.713976
+
+Cublas-chunk Link Device->Pinned Host (Chunk 12800x12800):
+Microbenchmark (dim1 = dim2 = 12800) complete:	 mean_exec_t=390.439560 ms  ( 3.357037 Gb/s), Error Margin (percentage of mean) = 4.712086 %, Itter = 24, Microbench_t = 9.370839
+
+Reverse overlapped Link Device->Pinned Host (Chunk 12800x12800):
+Microbenchmark (dim1 = dim2 = 12800) complete:	 mean_exec_t=456.243883 ms  ( 2.872849 Gb/s), Error Margin (percentage of mean) = 4.639385 %, Itter = 22, Microbench_t = 100.707598
+
+Cublas-chunk Link Device->Pinned Host (Chunk 13056x13056):
+Microbenchmark (dim1 = dim2 = 13056) complete:	 mean_exec_t=406.197392 ms  ( 3.357168 Gb/s), Error Margin (percentage of mean) = 4.850205 %, Itter = 23, Microbench_t = 9.342812
+
+Reverse overlapped Link Device->Pinned Host (Chunk 13056x13056):
+Microbenchmark (dim1 = dim2 = 13056) complete:	 mean_exec_t=474.655221 ms  ( 2.872976 Gb/s), Error Margin (percentage of mean) = 4.808527 %, Itter = 21, Microbench_t = 100.040141
+
+Cublas-chunk Link Device->Pinned Host (Chunk 13312x13312):
+Microbenchmark (dim1 = dim2 = 13312) complete:	 mean_exec_t=423.007094 ms  ( 3.351421 Gb/s), Error Margin (percentage of mean) = 4.657699 %, Itter = 23, Microbench_t = 9.729261
+
+Reverse overlapped Link Device->Pinned Host (Chunk 13312x13312):
+Microbenchmark (dim1 = dim2 = 13312) complete:	 mean_exec_t=494.157878 ms  ( 2.868870 Gb/s), Error Margin (percentage of mean) = 4.618951 %, Itter = 21, Microbench_t = 104.155810
+
+Cublas-chunk Link Device->Pinned Host (Chunk 13568x13568):
+Microbenchmark (dim1 = dim2 = 13568) complete:	 mean_exec_t=439.794931 ms  ( 3.348663 Gb/s), Error Margin (percentage of mean) = 4.813946 %, Itter = 22, Microbench_t = 9.675611
+
+Reverse overlapped Link Device->Pinned Host (Chunk 13568x13568):
+Microbenchmark (dim1 = dim2 = 13568) complete:	 mean_exec_t=512.930894 ms  ( 2.871196 Gb/s), Error Margin (percentage of mean) = 4.817784 %, Itter = 20, Microbench_t = 103.041327
+
+Cublas-chunk Link Device->Pinned Host (Chunk 13824x13824):
+Microbenchmark (dim1 = dim2 = 13824) complete:	 mean_exec_t=456.179001 ms  ( 3.351368 Gb/s), Error Margin (percentage of mean) = 4.640144 %, Itter = 22, Microbench_t = 10.036007
+
+Reverse overlapped Link Device->Pinned Host (Chunk 13824x13824):
+Microbenchmark (dim1 = dim2 = 13824) complete:	 mean_exec_t=533.042088 ms  ( 2.868111 Gb/s), Error Margin (percentage of mean) = 4.635687 %, Itter = 20, Microbench_t = 107.075306
+
+Cublas-chunk Link Device->Pinned Host (Chunk 14080x14080):
+Microbenchmark (dim1 = dim2 = 14080) complete:	 mean_exec_t=473.276888 ms  ( 3.351043 Gb/s), Error Margin (percentage of mean) = 4.822618 %, Itter = 21, Microbench_t = 9.938874
+
+Reverse overlapped Link Device->Pinned Host (Chunk 14080x14080):
+Microbenchmark (dim1 = dim2 = 14080) complete:	 mean_exec_t=553.013077 ms  ( 2.867873 Gb/s), Error Margin (percentage of mean) = 4.859122 %, Itter = 19, Microbench_t = 105.557312
+
+Cublas-chunk Link Device->Pinned Host (Chunk 14336x14336):
+Microbenchmark (dim1 = dim2 = 14336) complete:	 mean_exec_t=490.770408 ms  ( 3.350176 Gb/s), Error Margin (percentage of mean) = 4.650835 %, Itter = 21, Microbench_t = 10.306239
+
+Reverse overlapped Link Device->Pinned Host (Chunk 14336x14336):
+Microbenchmark (dim1 = dim2 = 14336) complete:	 mean_exec_t=573.204590 ms  ( 2.868378 Gb/s), Error Margin (percentage of mean) = 4.687990 %, Itter = 19, Microbench_t = 109.435657
+
+Cublas-chunk Link Device->Pinned Host (Chunk 14592x14592):
+Microbenchmark (dim1 = dim2 = 14592) complete:	 mean_exec_t=508.330262 ms  ( 3.350994 Gb/s), Error Margin (percentage of mean) = 4.861190 %, Itter = 20, Microbench_t = 10.166666
+
+Reverse overlapped Link Device->Pinned Host (Chunk 14592x14592):
+Microbenchmark (dim1 = dim2 = 14592) complete:	 mean_exec_t=593.794869 ms  ( 2.868687 Gb/s), Error Margin (percentage of mean) = 4.945756 %, Itter = 18, Microbench_t = 107.468603
+
+Cublas-chunk Link Device->Pinned Host (Chunk 14848x14848):
+Microbenchmark (dim1 = dim2 = 14848) complete:	 mean_exec_t=526.536751 ms  ( 3.349633 Gb/s), Error Margin (percentage of mean) = 4.693120 %, Itter = 20, Microbench_t = 10.530789
+
+Reverse overlapped Link Device->Pinned Host (Chunk 14848x14848):
+Microbenchmark (dim1 = dim2 = 14848) complete:	 mean_exec_t=614.696731 ms  ( 2.869228 Gb/s), Error Margin (percentage of mean) = 4.777503 %, Itter = 18, Microbench_t = 111.261592
+

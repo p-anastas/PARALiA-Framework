@@ -1,0 +1,404 @@
+WARNING -> Generating Logfile...
+Allocating device memory...done.
+Alloc time:	5.964994 ms
+
+Initializing to random values...done.
+Init time:	87.361813 ms
+
+
+Matrix details: A(Col major) B(Col major) C(Col major) -> Mmax = 14904, Nmax = 14904, Kmax = 14904
+Constants: alpha = 1.123400, beta = 1.234500
+Running cublasDgemm-> square T = 256:
+Microbenchmark (M = N = K = 256) complete:	 mean_exec_t=0.089659 ms, Error Margin (percentage of mean) = 4.998958 %, Itter = 5763, Microbench_t = 0.545396
+
+Running cublasDgemm-> square T = 512:
+Microbenchmark (M = N = K = 512) complete:	 mean_exec_t=0.460193 ms, Error Margin (percentage of mean) = 4.997808 %, Itter = 1938, Microbench_t = 0.898758
+
+Running cublasDgemm-> square T = 768:
+Microbenchmark (M = N = K = 768) complete:	 mean_exec_t=0.994563 ms, Error Margin (percentage of mean) = 4.997575 %, Itter = 1160, Microbench_t = 1.157423
+
+Running cublasDgemm-> square T = 1024:
+Microbenchmark (M = N = K = 1024) complete:	 mean_exec_t=2.139575 ms, Error Margin (percentage of mean) = 4.994062 %, Itter = 697, Microbench_t = 1.493457
+
+Running cublasDgemm-> square T = 1280:
+Microbenchmark (M = N = K = 1280) complete:	 mean_exec_t=3.710241 ms, Error Margin (percentage of mean) = 4.999425 %, Itter = 483, Microbench_t = 1.793582
+
+Running cublasDgemm-> square T = 1536:
+Microbenchmark (M = N = K = 1536) complete:	 mean_exec_t=6.290581 ms, Error Margin (percentage of mean) = 4.980294 %, Itter = 341, Microbench_t = 2.146178
+
+Running cublasDgemm-> square T = 1792:
+Microbenchmark (M = N = K = 1792) complete:	 mean_exec_t=10.169893 ms, Error Margin (percentage of mean) = 4.979088 %, Itter = 248, Microbench_t = 2.522931
+
+Running cublasDgemm-> square T = 2048:
+Microbenchmark (M = N = K = 2048) complete:	 mean_exec_t=14.881559 ms, Error Margin (percentage of mean) = 4.969110 %, Itter = 193, Microbench_t = 2.872770
+
+Running cublasDgemm-> square T = 2304:
+Microbenchmark (M = N = K = 2304) complete:	 mean_exec_t=20.467225 ms, Error Margin (percentage of mean) = 4.985632 %, Itter = 156, Microbench_t = 3.193403
+
+Running cublasDgemm-> square T = 2560:
+Microbenchmark (M = N = K = 2560) complete:	 mean_exec_t=27.880915 ms, Error Margin (percentage of mean) = 4.999076 %, Itter = 127, Microbench_t = 3.541293
+
+Running cublasDgemm-> square T = 2816:
+Microbenchmark (M = N = K = 2816) complete:	 mean_exec_t=37.280923 ms, Error Margin (percentage of mean) = 4.991802 %, Itter = 105, Microbench_t = 3.914850
+
+Running cublasDgemm-> square T = 3072:
+Microbenchmark (M = N = K = 3072) complete:	 mean_exec_t=47.998841 ms, Error Margin (percentage of mean) = 4.987815 %, Itter = 89, Microbench_t = 4.272190
+
+Running cublasDgemm-> square T = 3328:
+Microbenchmark (M = N = K = 3328) complete:	 mean_exec_t=61.252240 ms, Error Margin (percentage of mean) = 4.975092 %, Itter = 76, Microbench_t = 4.655430
+
+Running cublasDgemm-> square T = 3584:
+Microbenchmark (M = N = K = 3584) complete:	 mean_exec_t=75.945186 ms, Error Margin (percentage of mean) = 4.981140 %, Itter = 66, Microbench_t = 5.012615
+
+Running cublasDgemm-> square T = 3840:
+Microbenchmark (M = N = K = 3840) complete:	 mean_exec_t=93.498916 ms, Error Margin (percentage of mean) = 4.935243 %, Itter = 58, Microbench_t = 5.423140
+
+Running cublasDgemm-> square T = 4096:
+Microbenchmark (M = N = K = 4096) complete:	 mean_exec_t=112.982282 ms, Error Margin (percentage of mean) = 4.980818 %, Itter = 51, Microbench_t = 5.762278
+
+Running cublasDgemm-> square T = 4608:
+Microbenchmark (M = N = K = 4608) complete:	 mean_exec_t=160.571034 ms, Error Margin (percentage of mean) = 4.917568 %, Itter = 41, Microbench_t = 6.583560
+
+Running cublasDgemm-> square T = 5120:
+Microbenchmark (M = N = K = 5120) complete:	 mean_exec_t=219.743771 ms, Error Margin (percentage of mean) = 4.816355 %, Itter = 34, Microbench_t = 7.471409
+
+Running cublasDgemm-> square T = 5632:
+Microbenchmark (M = N = K = 5632) complete:	 mean_exec_t=291.735922 ms, Error Margin (percentage of mean) = 4.930136 %, Itter = 28, Microbench_t = 8.168702
+
+Running cublasDgemm-> square T = 6144:
+Microbenchmark (M = N = K = 6144) complete:	 mean_exec_t=378.655364 ms, Error Margin (percentage of mean) = 4.858729 %, Itter = 24, Microbench_t = 9.087809
+
+Running cublasDgemm-> square T = 6656:
+Microbenchmark (M = N = K = 6656) complete:	 mean_exec_t=481.408539 ms, Error Margin (percentage of mean) = 4.741075 %, Itter = 21, Microbench_t = 10.109647
+
+Running cublasDgemm-> square T = 7168:
+Microbenchmark (M = N = K = 7168) complete:	 mean_exec_t=600.719333 ms, Error Margin (percentage of mean) = 4.888532 %, Itter = 18, Microbench_t = 10.813004
+
+Running cublasDgemm-> square T = 7680:
+Microbenchmark (M = N = K = 7680) complete:	 mean_exec_t=737.930760 ms, Error Margin (percentage of mean) = 4.836859 %, Itter = 16, Microbench_t = 11.806937
+
+Running cublasDgemm-> square T = 8192:
+Microbenchmark (M = N = K = 8192) complete:	 mean_exec_t=894.094774 ms, Error Margin (percentage of mean) = 4.989841 %, Itter = 14, Microbench_t = 12.517367
+
+Running cublasDgemm-> square T = 9216:
+Microbenchmark (M = N = K = 9216) complete:	 mean_exec_t=1275.250832 ms, Error Margin (percentage of mean) = 4.538915 %, Itter = 12, Microbench_t = 15.303040
+
+Running cublasDgemm-> square T = 10240:
+Microbenchmark (M = N = K = 10240) complete:	 mean_exec_t=1745.374159 ms, Error Margin (percentage of mean) = 3.843445 %, Itter = 11, Microbench_t = 19.199147
+
+Running cublasDgemm-> square T = 11264:
+Microbenchmark (M = N = K = 11264) complete:	 mean_exec_t=2323.209849 ms, Error Margin (percentage of mean) = 2.876881 %, Itter = 11, Microbench_t = 25.555340
+
+Running cublasDgemm-> square T = 12288:
+Microbenchmark (M = N = K = 12288) complete:	 mean_exec_t=3013.554335 ms, Error Margin (percentage of mean) = 2.220725 %, Itter = 11, Microbench_t = 33.149126
+
+Running cublasDgemm-> square T = 13312:
+Microbenchmark (M = N = K = 13312) complete:	 mean_exec_t=3832.911383 ms, Error Margin (percentage of mean) = 1.758316 %, Itter = 11, Microbench_t = 42.162076
+
+Running cublasDgemm-> square T = 14336:
+Microbenchmark (M = N = K = 14336) complete:	 mean_exec_t=4781.303124 ms, Error Margin (percentage of mean) = 1.403885 %, Itter = 11, Microbench_t = 52.594412
+
+Ran 30 Benchmarks.Finallizing...
+WARNING -> Generating Logfile...
+Allocating device memory...done.
+Alloc time:	10.955095 ms
+
+Initializing to random values...done.
+Init time:	93.062162 ms
+
+
+Matrix details: A(Col major) B(Col major) C(Col major) -> Mmax = 14904, Nmax = 14904, Kmax = 14904
+Constants: alpha = 1.123400, beta = 1.234500
+Running cublasDgemm-> square T = 256:
+Microbenchmark (M = N = K = 256) complete:	 mean_exec_t=0.092200 ms, Error Margin (percentage of mean) = 4.999310 %, Itter = 8012, Microbench_t = 0.802080
+
+Running cublasDgemm-> square T = 512:
+Microbenchmark (M = N = K = 512) complete:	 mean_exec_t=0.442611 ms, Error Margin (percentage of mean) = 4.997695 %, Itter = 1989, Microbench_t = 0.890391
+
+Running cublasDgemm-> square T = 768:
+Microbenchmark (M = N = K = 768) complete:	 mean_exec_t=0.952431 ms, Error Margin (percentage of mean) = 4.997106 %, Itter = 1194, Microbench_t = 1.142939
+
+Running cublasDgemm-> square T = 1024:
+Microbenchmark (M = N = K = 1024) complete:	 mean_exec_t=2.032722 ms, Error Margin (percentage of mean) = 4.995803 %, Itter = 721, Microbench_t = 1.469049
+
+Running cublasDgemm-> square T = 1280:
+Microbenchmark (M = N = K = 1280) complete:	 mean_exec_t=3.523638 ms, Error Margin (percentage of mean) = 4.997226 %, Itter = 500, Microbench_t = 1.764254
+
+Running cublasDgemm-> square T = 1536:
+Microbenchmark (M = N = K = 1536) complete:	 mean_exec_t=5.977930 ms, Error Margin (percentage of mean) = 4.999911 %, Itter = 356, Microbench_t = 2.129927
+
+Running cublasDgemm-> square T = 1792:
+Microbenchmark (M = N = K = 1792) complete:	 mean_exec_t=9.631190 ms, Error Margin (percentage of mean) = 4.977877 %, Itter = 258, Microbench_t = 2.486218
+
+Running cublasDgemm-> square T = 2048:
+Microbenchmark (M = N = K = 2048) complete:	 mean_exec_t=14.070492 ms, Error Margin (percentage of mean) = 4.980049 %, Itter = 200, Microbench_t = 2.815195
+
+Running cublasDgemm-> square T = 2304:
+Microbenchmark (M = N = K = 2304) complete:	 mean_exec_t=19.456141 ms, Error Margin (percentage of mean) = 4.984022 %, Itter = 163, Microbench_t = 3.172296
+
+Running cublasDgemm-> square T = 2560:
+Microbenchmark (M = N = K = 2560) complete:	 mean_exec_t=26.455411 ms, Error Margin (percentage of mean) = 4.969884 %, Itter = 132, Microbench_t = 3.493007
+
+Running cublasDgemm-> square T = 2816:
+Microbenchmark (M = N = K = 2816) complete:	 mean_exec_t=35.245919 ms, Error Margin (percentage of mean) = 4.988095 %, Itter = 109, Microbench_t = 3.842636
+
+Running cublasDgemm-> square T = 3072:
+Microbenchmark (M = N = K = 3072) complete:	 mean_exec_t=45.379723 ms, Error Margin (percentage of mean) = 4.933566 %, Itter = 93, Microbench_t = 4.221161
+
+Running cublasDgemm-> square T = 3328:
+Microbenchmark (M = N = K = 3328) complete:	 mean_exec_t=57.886742 ms, Error Margin (percentage of mean) = 4.961661 %, Itter = 79, Microbench_t = 4.573885
+
+Running cublasDgemm-> square T = 3584:
+Microbenchmark (M = N = K = 3584) complete:	 mean_exec_t=71.767665 ms, Error Margin (percentage of mean) = 4.923586 %, Itter = 69, Microbench_t = 4.952808
+
+Running cublasDgemm-> square T = 3840:
+Microbenchmark (M = N = K = 3840) complete:	 mean_exec_t=88.338677 ms, Error Margin (percentage of mean) = 4.957892 %, Itter = 60, Microbench_t = 5.301130
+
+Running cublasDgemm-> square T = 4096:
+Microbenchmark (M = N = K = 4096) complete:	 mean_exec_t=106.744343 ms, Error Margin (percentage of mean) = 4.967665 %, Itter = 53, Microbench_t = 5.658181
+
+Running cublasDgemm-> square T = 4608:
+Microbenchmark (M = N = K = 4608) complete:	 mean_exec_t=151.666264 ms, Error Margin (percentage of mean) = 4.834214 %, Itter = 43, Microbench_t = 6.522227
+
+Running cublasDgemm-> square T = 5120:
+Microbenchmark (M = N = K = 5120) complete:	 mean_exec_t=207.870640 ms, Error Margin (percentage of mean) = 4.864874 %, Itter = 35, Microbench_t = 7.275928
+
+Running cublasDgemm-> square T = 5632:
+Microbenchmark (M = N = K = 5632) complete:	 mean_exec_t=275.505609 ms, Error Margin (percentage of mean) = 4.937773 %, Itter = 29, Microbench_t = 7.990028
+
+Running cublasDgemm-> square T = 6144:
+Microbenchmark (M = N = K = 6144) complete:	 mean_exec_t=357.770395 ms, Error Margin (percentage of mean) = 4.816554 %, Itter = 25, Microbench_t = 8.944550
+
+Running cublasDgemm-> square T = 6656:
+Microbenchmark (M = N = K = 6656) complete:	 mean_exec_t=454.807650 ms, Error Margin (percentage of mean) = 4.654025 %, Itter = 22, Microbench_t = 10.006012
+
+Running cublasDgemm-> square T = 7168:
+Microbenchmark (M = N = K = 7168) complete:	 mean_exec_t=567.600388 ms, Error Margin (percentage of mean) = 4.734090 %, Itter = 19, Microbench_t = 10.784603
+
+Running cublasDgemm-> square T = 7680:
+Microbenchmark (M = N = K = 7680) complete:	 mean_exec_t=697.209120 ms, Error Margin (percentage of mean) = 4.629190 %, Itter = 17, Microbench_t = 11.852722
+
+Running cublasDgemm-> square T = 8192:
+Microbenchmark (M = N = K = 8192) complete:	 mean_exec_t=845.939604 ms, Error Margin (percentage of mean) = 4.699920 %, Itter = 15, Microbench_t = 12.689228
+
+Running cublasDgemm-> square T = 9216:
+Microbenchmark (M = N = K = 9216) complete:	 mean_exec_t=1205.609282 ms, Error Margin (percentage of mean) = 4.797680 %, Itter = 12, Microbench_t = 14.467401
+
+Running cublasDgemm-> square T = 10240:
+Microbenchmark (M = N = K = 10240) complete:	 mean_exec_t=1651.196090 ms, Error Margin (percentage of mean) = 4.058350 %, Itter = 11, Microbench_t = 18.163235
+
+Running cublasDgemm-> square T = 11264:
+Microbenchmark (M = N = K = 11264) complete:	 mean_exec_t=2196.304711 ms, Error Margin (percentage of mean) = 3.047304 %, Itter = 11, Microbench_t = 24.159426
+
+Running cublasDgemm-> square T = 12288:
+Microbenchmark (M = N = K = 12288) complete:	 mean_exec_t=2848.412384 ms, Error Margin (percentage of mean) = 2.356862 %, Itter = 11, Microbench_t = 31.332612
+
+Running cublasDgemm-> square T = 13312:
+Microbenchmark (M = N = K = 13312) complete:	 mean_exec_t=3620.066513 ms, Error Margin (percentage of mean) = 1.855286 %, Itter = 11, Microbench_t = 39.820807
+
+Running cublasDgemm-> square T = 14336:
+Microbenchmark (M = N = K = 14336) complete:	 mean_exec_t=4517.530008 ms, Error Margin (percentage of mean) = 1.482962 %, Itter = 11, Microbench_t = 49.692907
+
+Ran 30 Benchmarks.Finallizing...
+WARNING -> Generating Logfile...
+Allocating device memory...done.
+Alloc time:	9.226084 ms
+
+Initializing to random values...done.
+Init time:	90.735912 ms
+
+
+Matrix details: A(Col major) B(Col major) C(Col major) -> Mmax = 14904, Nmax = 14904, Kmax = 14904
+Constants: alpha = 1.123400, beta = 1.234500
+Running cublasDgemm-> square T = 256:
+Microbenchmark (M = N = K = 256) complete:	 mean_exec_t=0.104887 ms, Error Margin (percentage of mean) = 4.999207 %, Itter = 5191, Microbench_t = 0.577746
+
+Running cublasDgemm-> square T = 512:
+Microbenchmark (M = N = K = 512) complete:	 mean_exec_t=0.404436 ms, Error Margin (percentage of mean) = 4.998269 %, Itter = 2480, Microbench_t = 1.015832
+
+Running cublasDgemm-> square T = 768:
+Microbenchmark (M = N = K = 768) complete:	 mean_exec_t=1.032144 ms, Error Margin (percentage of mean) = 4.996197 %, Itter = 1132, Microbench_t = 1.173764
+
+Running cublasDgemm-> square T = 1024:
+Microbenchmark (M = N = K = 1024) complete:	 mean_exec_t=2.210264 ms, Error Margin (percentage of mean) = 4.992710 %, Itter = 720, Microbench_t = 1.594863
+
+Running cublasDgemm-> square T = 1280:
+Microbenchmark (M = N = K = 1280) complete:	 mean_exec_t=3.900097 ms, Error Margin (percentage of mean) = 4.998991 %, Itter = 477, Microbench_t = 1.862670
+
+Running cublasDgemm-> square T = 1536:
+Microbenchmark (M = N = K = 1536) complete:	 mean_exec_t=6.557185 ms, Error Margin (percentage of mean) = 4.997409 %, Itter = 331, Microbench_t = 2.172098
+
+Running cublasDgemm-> square T = 1792:
+Microbenchmark (M = N = K = 1792) complete:	 mean_exec_t=10.265474 ms, Error Margin (percentage of mean) = 4.972939 %, Itter = 250, Microbench_t = 2.567687
+
+Running cublasDgemm-> square T = 2048:
+Microbenchmark (M = N = K = 2048) complete:	 mean_exec_t=15.199065 ms, Error Margin (percentage of mean) = 4.984533 %, Itter = 190, Microbench_t = 2.888865
+
+Running cublasDgemm-> square T = 2304:
+Microbenchmark (M = N = K = 2304) complete:	 mean_exec_t=21.245100 ms, Error Margin (percentage of mean) = 4.996802 %, Itter = 152, Microbench_t = 3.230177
+
+Running cublasDgemm-> square T = 2560:
+Microbenchmark (M = N = K = 2560) complete:	 mean_exec_t=29.158329 ms, Error Margin (percentage of mean) = 4.957569 %, Itter = 124, Microbench_t = 3.616504
+
+Running cublasDgemm-> square T = 2816:
+Microbenchmark (M = N = K = 2816) complete:	 mean_exec_t=38.777534 ms, Error Margin (percentage of mean) = 4.942489 %, Itter = 103, Microbench_t = 3.994941
+
+Running cublasDgemm-> square T = 3072:
+Microbenchmark (M = N = K = 3072) complete:	 mean_exec_t=50.323056 ms, Error Margin (percentage of mean) = 4.926199 %, Itter = 87, Microbench_t = 4.378981
+
+Running cublasDgemm-> square T = 3328:
+Microbenchmark (M = N = K = 3328) complete:	 mean_exec_t=63.971925 ms, Error Margin (percentage of mean) = 4.962887 %, Itter = 74, Microbench_t = 4.734776
+
+Running cublasDgemm-> square T = 3584:
+Microbenchmark (M = N = K = 3584) complete:	 mean_exec_t=79.996448 ms, Error Margin (percentage of mean) = 4.958175 %, Itter = 64, Microbench_t = 5.120612
+
+Running cublasDgemm-> square T = 3840:
+Microbenchmark (M = N = K = 3840) complete:	 mean_exec_t=98.303080 ms, Error Margin (percentage of mean) = 4.955539 %, Itter = 56, Microbench_t = 5.505750
+
+Running cublasDgemm-> square T = 4096:
+Microbenchmark (M = N = K = 4096) complete:	 mean_exec_t=119.777164 ms, Error Margin (percentage of mean) = 4.873951 %, Itter = 50, Microbench_t = 5.989565
+
+Running cublasDgemm-> square T = 4608:
+Microbenchmark (M = N = K = 4608) complete:	 mean_exec_t=176.188093 ms, Error Margin (percentage of mean) = 4.966830 %, Itter = 40, Microbench_t = 7.048069
+
+Running cublasDgemm-> square T = 5120:
+Microbenchmark (M = N = K = 5120) complete:	 mean_exec_t=240.495805 ms, Error Margin (percentage of mean) = 4.842685 %, Itter = 33, Microbench_t = 7.936783
+
+Running cublasDgemm-> square T = 5632:
+Microbenchmark (M = N = K = 5632) complete:	 mean_exec_t=335.297726 ms, Error Margin (percentage of mean) = 4.770310 %, Itter = 27, Microbench_t = 9.053366
+
+Running cublasDgemm-> square T = 6144:
+Microbenchmark (M = N = K = 6144) complete:	 mean_exec_t=431.871839 ms, Error Margin (percentage of mean) = 4.995511 %, Itter = 23, Microbench_t = 9.933319
+
+Running cublasDgemm-> square T = 6656:
+Microbenchmark (M = N = K = 6656) complete:	 mean_exec_t=541.062480 ms, Error Margin (percentage of mean) = 4.790619 %, Itter = 21, Microbench_t = 11.362549
+
+Running cublasDgemm-> square T = 7168:
+Microbenchmark (M = N = K = 7168) complete:	 mean_exec_t=696.884990 ms, Error Margin (percentage of mean) = 4.584723 %, Itter = 18, Microbench_t = 12.544121
+
+Running cublasDgemm-> square T = 7680:
+Microbenchmark (M = N = K = 7680) complete:	 mean_exec_t=835.546606 ms, Error Margin (percentage of mean) = 4.674000 %, Itter = 17, Microbench_t = 14.204464
+
+Running cublasDgemm-> square T = 8192:
+Microbenchmark (M = N = K = 8192) complete:	 mean_exec_t=1027.584489 ms, Error Margin (percentage of mean) = 4.637069 %, Itter = 15, Microbench_t = 15.413907
+
+Running cublasDgemm-> square T = 9216:
+Microbenchmark (M = N = K = 9216) complete:	 mean_exec_t=1455.676469 ms, Error Margin (percentage of mean) = 4.970246 %, Itter = 11, Microbench_t = 16.012520
+
+Running cublasDgemm-> square T = 10240:
+Microbenchmark (M = N = K = 10240) complete:	 mean_exec_t=2014.983567 ms, Error Margin (percentage of mean) = 3.583304 %, Itter = 11, Microbench_t = 22.164896
+
+Running cublasDgemm-> square T = 11264:
+Microbenchmark (M = N = K = 11264) complete:	 mean_exec_t=2644.536387 ms, Error Margin (percentage of mean) = 2.758220 %, Itter = 11, Microbench_t = 29.089978
+
+Running cublasDgemm-> square T = 12288:
+Microbenchmark (M = N = K = 12288) complete:	 mean_exec_t=3483.172525 ms, Error Margin (percentage of mean) = 1.982404 %, Itter = 11, Microbench_t = 38.314976
+
+Running cublasDgemm-> square T = 13312:
+Microbenchmark (M = N = K = 13312) complete:	 mean_exec_t=4433.130178 ms, Error Margin (percentage of mean) = 1.818315 %, Itter = 11, Microbench_t = 48.764509
+
+Running cublasDgemm-> square T = 14336:
+Microbenchmark (M = N = K = 14336) complete:	 mean_exec_t=5543.860956 ms, Error Margin (percentage of mean) = 1.356322 %, Itter = 11, Microbench_t = 60.982551
+
+Ran 30 Benchmarks.Finallizing...
+WARNING -> Generating Logfile...
+Allocating device memory...done.
+Alloc time:	10.805130 ms
+
+Initializing to random values...done.
+Init time:	93.209982 ms
+
+
+Matrix details: A(Col major) B(Col major) C(Col major) -> Mmax = 14904, Nmax = 14904, Kmax = 14904
+Constants: alpha = 1.123400, beta = 1.234500
+Running cublasDgemm-> square T = 256:
+Microbenchmark (M = N = K = 256) complete:	 mean_exec_t=0.098336 ms, Error Margin (percentage of mean) = 4.999899 %, Itter = 5420, Microbench_t = 0.568230
+
+Running cublasDgemm-> square T = 512:
+Microbenchmark (M = N = K = 512) complete:	 mean_exec_t=0.379531 ms, Error Margin (percentage of mean) = 4.999550 %, Itter = 2203, Microbench_t = 0.847107
+
+Running cublasDgemm-> square T = 768:
+Microbenchmark (M = N = K = 768) complete:	 mean_exec_t=0.927227 ms, Error Margin (percentage of mean) = 4.996997 %, Itter = 1220, Microbench_t = 1.137046
+
+Running cublasDgemm-> square T = 1024:
+Microbenchmark (M = N = K = 1024) complete:	 mean_exec_t=2.200319 ms, Error Margin (percentage of mean) = 4.995238 %, Itter = 718, Microbench_t = 1.583248
+
+Running cublasDgemm-> square T = 1280:
+Microbenchmark (M = N = K = 1280) complete:	 mean_exec_t=3.847957 ms, Error Margin (percentage of mean) = 4.992461 %, Itter = 473, Microbench_t = 1.822400
+
+Running cublasDgemm-> square T = 1536:
+Microbenchmark (M = N = K = 1536) complete:	 mean_exec_t=6.506633 ms, Error Margin (percentage of mean) = 4.980154 %, Itter = 339, Microbench_t = 2.207446
+
+Running cublasDgemm-> square T = 1792:
+Microbenchmark (M = N = K = 1792) complete:	 mean_exec_t=10.063004 ms, Error Margin (percentage of mean) = 4.977486 %, Itter = 250, Microbench_t = 2.517058
+
+Running cublasDgemm-> square T = 2048:
+Microbenchmark (M = N = K = 2048) complete:	 mean_exec_t=14.930908 ms, Error Margin (percentage of mean) = 4.998010 %, Itter = 192, Microbench_t = 2.867804
+
+Running cublasDgemm-> square T = 2304:
+Microbenchmark (M = N = K = 2304) complete:	 mean_exec_t=21.143991 ms, Error Margin (percentage of mean) = 4.986325 %, Itter = 153, Microbench_t = 3.235961
+
+Running cublasDgemm-> square T = 2560:
+Microbenchmark (M = N = K = 2560) complete:	 mean_exec_t=28.349937 ms, Error Margin (percentage of mean) = 4.993869 %, Itter = 126, Microbench_t = 3.572971
+
+Running cublasDgemm-> square T = 2816:
+Microbenchmark (M = N = K = 2816) complete:	 mean_exec_t=37.654493 ms, Error Margin (percentage of mean) = 4.942424 %, Itter = 105, Microbench_t = 3.954578
+
+Running cublasDgemm-> square T = 3072:
+Microbenchmark (M = N = K = 3072) complete:	 mean_exec_t=48.521492 ms, Error Margin (percentage of mean) = 4.934398 %, Itter = 89, Microbench_t = 4.319251
+
+Running cublasDgemm-> square T = 3328:
+Microbenchmark (M = N = K = 3328) complete:	 mean_exec_t=61.841729 ms, Error Margin (percentage of mean) = 4.947683 %, Itter = 76, Microbench_t = 4.700844
+
+Running cublasDgemm-> square T = 3584:
+Microbenchmark (M = N = K = 3584) complete:	 mean_exec_t=81.914194 ms, Error Margin (percentage of mean) = 4.901903 %, Itter = 66, Microbench_t = 5.407217
+
+Running cublasDgemm-> square T = 3840:
+Microbenchmark (M = N = K = 3840) complete:	 mean_exec_t=100.315361 ms, Error Margin (percentage of mean) = 4.884400 %, Itter = 58, Microbench_t = 5.819082
+
+Running cublasDgemm-> square T = 4096:
+Microbenchmark (M = N = K = 4096) complete:	 mean_exec_t=126.928702 ms, Error Margin (percentage of mean) = 4.967227 %, Itter = 48, Microbench_t = 6.093218
+
+Running cublasDgemm-> square T = 4608:
+Microbenchmark (M = N = K = 4608) complete:	 mean_exec_t=179.623353 ms, Error Margin (percentage of mean) = 4.890993 %, Itter = 39, Microbench_t = 7.005824
+
+Running cublasDgemm-> square T = 5120:
+Microbenchmark (M = N = K = 5120) complete:	 mean_exec_t=248.461739 ms, Error Margin (percentage of mean) = 4.961522 %, Itter = 31, Microbench_t = 7.702699
+
+Running cublasDgemm-> square T = 5632:
+Microbenchmark (M = N = K = 5632) complete:	 mean_exec_t=331.539099 ms, Error Margin (percentage of mean) = 4.882101 %, Itter = 26, Microbench_t = 8.620317
+
+Running cublasDgemm-> square T = 6144:
+Microbenchmark (M = N = K = 6144) complete:	 mean_exec_t=428.978806 ms, Error Margin (percentage of mean) = 4.703286 %, Itter = 23, Microbench_t = 9.866773
+
+Running cublasDgemm-> square T = 6656:
+Microbenchmark (M = N = K = 6656) complete:	 mean_exec_t=547.562436 ms, Error Margin (percentage of mean) = 4.907576 %, Itter = 19, Microbench_t = 10.403878
+
+Running cublasDgemm-> square T = 7168:
+Microbenchmark (M = N = K = 7168) complete:	 mean_exec_t=684.293396 ms, Error Margin (percentage of mean) = 4.716946 %, Itter = 17, Microbench_t = 11.633156
+
+Running cublasDgemm-> square T = 7680:
+Microbenchmark (M = N = K = 7680) complete:	 mean_exec_t=841.283449 ms, Error Margin (percentage of mean) = 4.727150 %, Itter = 15, Microbench_t = 12.619387
+
+Running cublasDgemm-> square T = 8192:
+Microbenchmark (M = N = K = 8192) complete:	 mean_exec_t=1022.109857 ms, Error Margin (percentage of mean) = 4.954513 %, Itter = 13, Microbench_t = 13.287534
+
+Running cublasDgemm-> square T = 9216:
+Microbenchmark (M = N = K = 9216) complete:	 mean_exec_t=1452.264071 ms, Error Margin (percentage of mean) = 4.695681 %, Itter = 11, Microbench_t = 15.974984
+
+Running cublasDgemm-> square T = 10240:
+Microbenchmark (M = N = K = 10240) complete:	 mean_exec_t=1997.164206 ms, Error Margin (percentage of mean) = 3.431222 %, Itter = 11, Microbench_t = 21.968885
+
+Running cublasDgemm-> square T = 11264:
+Microbenchmark (M = N = K = 11264) complete:	 mean_exec_t=2672.947168 ms, Error Margin (percentage of mean) = 2.594719 %, Itter = 11, Microbench_t = 29.402495
+
+Running cublasDgemm-> square T = 12288:
+Microbenchmark (M = N = K = 12288) complete:	 mean_exec_t=3479.410128 ms, Error Margin (percentage of mean) = 1.959601 %, Itter = 11, Microbench_t = 38.273588
+
+Running cublasDgemm-> square T = 13312:
+Microbenchmark (M = N = K = 13312) complete:	 mean_exec_t=4428.809361 ms, Error Margin (percentage of mean) = 1.541758 %, Itter = 11, Microbench_t = 48.716982
+
+Running cublasDgemm-> square T = 14336:
+Microbenchmark (M = N = K = 14336) complete:	 mean_exec_t=5530.027216 ms, Error Margin (percentage of mean) = 1.234893 %, Itter = 11, Microbench_t = 60.830374
+
+Ran 30 Benchmarks.Finallizing...
