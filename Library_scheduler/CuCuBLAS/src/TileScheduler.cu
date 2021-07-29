@@ -137,7 +137,7 @@ kernel3_p CoCopeLiaDgemmSubkernelInit(cublasOperation_t gpu_op_A, cublasOperatio
   	if (!d2h_stream[devId]) cudaStreamCreate(&d2h_stream[devId]);
   	if (!exec_stream[devId]) cudaStreamCreate(&exec_stream[devId]);
 	if (!handle[devId]){
-		assert(CUBLAS_STATUS_SUCCESS == cublasCreate(&handle[devId]));
+		assert(CUBLAS_STATUS_SUCCESS == cublasCreate(&(handle[devId])));
 		assert(CUBLAS_STATUS_SUCCESS == cublasSetStream(handle[devId], exec_stream[devId]));
 	}
 

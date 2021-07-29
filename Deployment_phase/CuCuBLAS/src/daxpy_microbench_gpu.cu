@@ -33,7 +33,7 @@ int main(const int argc, const char *argv[]) {
   	}
 
 	char *filename = (char *) malloc(256* sizeof(char));
-	sprintf(filename, "%s/%s-install/Benchmark-Results/cublasDaxpy_dev-%d_min-%d_step-%d.log", DEPLOYDIR, TESTBED, dev_id, MIN_DIM_BLAS1, STEP_BLAS1);
+	sprintf(filename, "%s/Benchmark-Results/cublasDaxpy_dev-%d_min-%d_step-%d.log", DEPLOYDB, dev_id, MIN_DIM_BLAS1, STEP_BLAS1);
 	check_benchmark(filename);
 
 	size_t free_cuda_mem, max_cuda_mem; 

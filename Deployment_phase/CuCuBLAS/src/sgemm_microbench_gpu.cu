@@ -37,7 +37,7 @@ int main(const int argc, const char *argv[]) {
 	size_t maxDim = CoCopeLiaGetMaxSqdimLvl3(3, sizeof(float), STEP_BLAS3); 
 
 	char *filename = (char *) malloc(256* sizeof(char));
-	sprintf(filename, "%s/%s-install/Benchmark-Results/cublasSgemm_dev-%d_TransA-%c_TransB-%c.log", DEPLOYDIR, TESTBED, dev_id, TransA, TransB);
+	sprintf(filename, "%s/Benchmark-Results/cublasSgemm_dev-%d_TransA-%c_TransB-%c.log", DEPLOYDB, dev_id, TransA, TransB);
 	check_benchmark(filename);
 
 	size_t ldA = maxDim, ldB = maxDim, ldC = maxDim;

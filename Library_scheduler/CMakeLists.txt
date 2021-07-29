@@ -22,7 +22,7 @@ message( "Library Scheduler - Included DIR: " ${AUTOTUNE_INSTALL_INC} )
 set (LIBSC_DIR_SRC ${LIBSC_DIR}/src)
 message( "Library Scheduler - Source DIR: " ${LIBSC_DIR_SRC} )
 
-set (LIBSC_INSTALL ${LIBSC_DIR}/${TESTBED_NAME}-install)
+set (LIBSC_INSTALL ${CMAKE_INSTALL_PROJECT}/Library_scheduler)
 file(MAKE_DIRECTORY ${LIBSC_INSTALL})
 
 set (LIBSC_INSTALL_INC ${LIBSC_INSTALL}/include)
@@ -48,20 +48,37 @@ set (OBLAS_LD ${OBLAS_PREFIX}/lib)
 set (OBLAS_LINK  "-L${OBLAS_LD} -lopenblas" )
 message( "Library Scheduler - Linking OpenBLAS: " ${OBLAS_LINK} )
 
+#BLASX libs and includes 
+set (BLASX_PREFIX "/home/users/panastas/PhD_stuff/Other-libs/BLASX-pinned") #  (testbed-II-TeslaV100 build)
+#set (BLASX_PREFIX "/home/users/panastas/PhD_stuff/BLASX-dungani") (testbed-I-TeslaK40)
+set (BLASX_INCLUDE_DIRS ${BLASX_PREFIX}/include)
+include_directories(${BLASX_INCLUDE_DIRS} )
+message( "Library Scheduler - Included BLASx: " ${BLASX_INCLUDE_DIRS} )
+set (BLASX_LD ${BLASX_PREFIX}/lib)
+set (BLASX_LINK  "-L${BLASX_LD} -lblasx" )
+message( "Library Scheduler - Linking BLASx: " ${BLASX_LINK} )
 
 add_library(cocopelia SHARED 
 ${LIBSC_DIR_SRC}/Dgemm.cu
 ${LIBSC_DIR_SRC}/TileScheduler.cu
 ${LIBSC_DIR_SRC}/BLAS3Wrappers.cu
+${LIBSC_DIR_SRC}/testing.cpp
 )
-target_link_libraries(cocopelia ${INTERNAL_LINK_LIB} autotuning_runtime unihelpers ${OBLAS_LINK})
+target_link_libraries(cocopelia ${INTERNAL_LINK_LIB} autotuning_runtime unihelpers ${OBLAS_LINK} ${BLASX_LINK})
 configure_file(${LIBSC_DIR_INC}/CoCoPeLia.hpp ${LIBSC_INSTALL_INC}/CoCoPeLia.hpp COPYONLY)
 configure_file(${LIBSC_DIR_INC}/cuBLASXtWrapped.hpp ${LIBSC_INSTALL_INC}/cuBLASXtWrapped.hpp COPYONLY)
+configure_file(${LIBSC_DIR_INC}/BLASxWrapped.hpp ${LIBSC_INSTALL_INC}/BLASxWrapped.hpp COPYONLY)
 
 add_executable (CoCopeLiaDgemmRunner ${LIBSC_DIR}/testing/CoCopeLiaDgemmRunner.cpp )
+add_executable (cuBLASXtDgemmRunner ${LIBSC_DIR}/testing/cuBLASXtDgemmRunner.cpp )
+add_executable (BLASxDgemmRunner ${LIBSC_DIR}/testing/BLASxDgemmRunner.cpp )
+add_executable (BLASxExDgemmRunner ${LIBSC_DIR}/testing/BLASxExDgemmRunner.cpp )
 add_executable (CoCopeLiaDgemmTester ${LIBSC_DIR}/testing/CoCopeLiaDgemmTester.cpp )
 
 target_link_libraries(CoCopeLiaDgemmRunner ${INTERNAL_LINK_LIB} cocopelia autotuning_runtime unihelpers)
+target_link_libraries(cuBLASXtDgemmRunner ${INTERNAL_LINK_LIB} cocopelia autotuning_runtime unihelpers)
+target_link_libraries(BLASxDgemmRunner ${INTERNAL_LINK_LIB} cocopelia autotuning_runtime unihelpers)
+target_link_libraries(BLASxExDgemmRunner ${INTERNAL_LINK_LIB} cocopelia autotuning_runtime unihelpers)
 target_link_libraries(CoCopeLiaDgemmTester ${INTERNAL_LINK_LIB} cocopelia autotuning_runtime unihelpers)
 
 

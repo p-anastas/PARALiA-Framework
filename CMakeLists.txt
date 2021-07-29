@@ -1,14 +1,18 @@
 cmake_minimum_required (VERSION 3.10)
-#set(CMAKE_VERBOSE_MAKEFILE on)set (CMAKE_CURRENT_SOURCE_DIR_BACKUP ${CMAKE_CURRENT_SOURCE_DIR}) 
 
 ## Define a name for the backened library wrappers/implementations used in this build, Currently implemented only with CuCuBLAS(==CUDA+CUBLAS)
 set(BACKENED "CuCuBLAS")
-message("Master DIR - using CUCUBLAS (==CUDA+CUBLAS) Backend")
+project (CoCopeLia-Framework VERSION 0.0.1 DESCRIPTION "The complete CoCoPeLia Framework")
+message("CoCopeLia-Framework - BACKEND: " ${BACKENED})
 
 ## Define a name for the testbed, to be used for the whole framework setup
 #set(TESTBED_NAME "dungani")
 set(TESTBED_NAME "silver1")
-message("Testbed: " ${TESTBED_NAME})
+message("CoCopeLia-Framework - TESTBED_NAME: " ${TESTBED_NAME})
+
+## Define the number of devices for utilization (0-num_devices)
+set(NUM_DEVICES 2)
+message("CoCopeLia-Framework - NUM_DEVICES: " ${NUM_DEVICES})
 
 ###TODO:Define specific compiler, flags, includes, libs for the target system (IF needed).
 
@@ -18,7 +22,7 @@ message("Testbed: " ${TESTBED_NAME})
 
 #	b) compile flags
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -fopenmp -lm -Wuninitialized") # -std=gnu89 TODO:needed? 
-message( "CMAKE_CXX_FLAGS: " ${CMAKE_CXX_FLAGS})
+message("CoCopeLia-Framework - CMAKE_CXX_FLAGS: " ${CMAKE_CXX_FLAGS})
 
 #	c) auto
 
@@ -26,30 +30,32 @@ message( "CMAKE_CXX_FLAGS: " ${CMAKE_CXX_FLAGS})
 
 ## 2) CUCUBLAS TODO: Other backends?
 set (CUDA_PREFIX "/usr/local/cuda-9.2")
+if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
+  set(CMAKE_CUDA_ARCHITECTURES 70) #35 for Tesla K40, 70 for V100, 61 for GTX 1060/70
+endif()
 
 # 	a) Compiler
 set (CMAKE_CUDA_COMPILER ${CUDA_PREFIX}/bin/nvcc)
 
 # 	b) Compile flags
-#set (CMAKE_CUDA_FLAGS "-w -O3 -arch=sm_35") #35 for Tesla K40, 70 for V100, 61 for GTX 1060/70
-set (CMAKE_CUDA_FLAGS "-w -O3 -arch=sm_70")
-message("CMAKE_CUDA_FLAGS: " ${CMAKE_CUDA_FLAGS})
+set (CMAKE_CUDA_FLAGS "-w -O3")
+message("CoCopeLia-Framework - CMAKE_CUDA_FLAGS: " ${CMAKE_CUDA_FLAGS})
 
 # 	c) Includes
 set (CUDA_INCLUDE_DIRS ${CUDA_PREFIX}/include ${CUDA_PREFIX}/samples/common/inc)
 include_directories(${CUDA_INCLUDE_DIRS})
-message("CUDA_INCLUDE_DIRS: " ${CUDA_INCLUDE_DIRS})
+message("CoCopeLia-Framework - CUDA_INCLUDE_DIRS: " ${CUDA_INCLUDE_DIRS})
 set(OPENBLAS_PREFIX "/home/users/panastas/Lib_install/OpenBLAS")
 set (OPENBLAS_INCLUDE_DIRS ${OPENBLAS_PREFIX}/include)
 include_directories(${OPENBLAS_INCLUDE_DIRS})
-message("OPENBLAS_INCLUDE_DIRS: " ${OPENBLAS_INCLUDE_DIRS})
+message("CoCopeLia-Framework - OPENBLAS_INCLUDE_DIRS: " ${OPENBLAS_INCLUDE_DIRS})
 
 # 	d) Link Libraries
 set (CUDA_LD ${CUDA_PREFIX}/lib64) # or /lib depending on system
 set (CUDA_LINK "-L${CUDA_LD} -lcudart -lcublas -lcurand") #  
-message( "CUDA_LINK: " ${CUDA_LINK} )
+message("CoCopeLia-Framework - CUDA_LINK: " ${CUDA_LINK} )
 set (INTERNAL_LINK_LIB "${CUDA_LINK} -lrt -ldl")
-message( "PROJECT - INTERNAL_LINK_LIB: " ${INTERNAL_LINK_LIB})
+message("CoCopeLia-Framework - INTERNAL_LINK_LIB: " ${INTERNAL_LINK_LIB})
 
 #Run in testing mode : details about models, decisions and time spend in operations.
 #add_definitions(-DTEST)
@@ -57,7 +63,20 @@ message( "PROJECT - INTERNAL_LINK_LIB: " ${INTERNAL_LINK_LIB})
 #Run in debug mode, which includes detailed function calls and info for error-checking
 #add_definitions(-DDEBUG)
 
+if ("${CMAKE_INSTALL_PREFIX}" STREQUAL "/usr/local") 
+message("CoCopeLia-Framework - CMAKE_INSTALL_PREFIX not provided (with --install-prefix <directory>) - project will be installed at default build dir.")
+ set (CMAKE_INSTALL_PREFIX ${CMAKE_CURRENT_BINARY_DIR}/${TESTBED_NAME}-install)
+endif()
+set (CMAKE_INSTALL_PROJECT ${CMAKE_INSTALL_PREFIX})
+message("CoCopeLia-Framework - CMAKE_INSTALL_PROJECT: " ${CMAKE_INSTALL_PROJECT})
+
 add_definitions(-DTESTBED="${TESTBED_NAME}")
+add_definitions(-DDEV_NUM=${NUM_DEVICES})
+
+configure_file(${PROJECT_SOURCE_DIR}/Deploy.in ${CMAKE_INSTALL_PROJECT}/Deploy.sh @ONLY)
+configure_file(${PROJECT_SOURCE_DIR}/Model_validation.in ${CMAKE_INSTALL_PROJECT}/Model_validation.sh @ONLY)
+configure_file(${PROJECT_SOURCE_DIR}/Performance_evaluation.in ${CMAKE_INSTALL_PROJECT}/Performance_evaluation.sh @ONLY)
+
 ADD_SUBDIRECTORY (Universal_helpers)
 
 ADD_SUBDIRECTORY (Deployment_phase)

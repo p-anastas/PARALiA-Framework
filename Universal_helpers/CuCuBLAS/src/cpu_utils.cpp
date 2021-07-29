@@ -221,6 +221,23 @@ size_t count_lines(FILE* fp){
 }
 
 
+void check_benchmark(char *filename){
+	FILE* fp = fopen(filename,"r");
+	if (!fp) { 
+		fp = fopen(filename,"w+");
+		if (!fp) error("report_results: LogFile failed to open");
+		else warning("Generating Logfile...");
+		fclose(fp);
+	}
+	else {
+		fprintf(stderr,"Benchmark found: %s\n", filename);
+		fclose(fp);	
+		exit(1); 
+	}
+	return;		  	
+}
+
+
 
 
 

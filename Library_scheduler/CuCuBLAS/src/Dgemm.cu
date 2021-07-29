@@ -8,12 +8,14 @@
 
 #include "CoCoPeLiaLibBackened.hpp"
 #include "CoCoPeLiaModel.hpp"
+#include "CoCoPeLia.hpp"
 #include "unihelpers.hpp"
 
-/// TODO: Works for systems with up to 128 devices, not future-proof
+/// TODO: Works for systems with up to 128 devices, not 'completely' future-proof
 BLAS3GPUBufPtr GloBuf[128];
 CoCoModel_p glob_model;
-size_t predefined_T = 0; 
+struct CoControl predef_vals;
+CoControl_p used_vals = NULL;
 
 void CoCopeLiaDgemm_flush_gpu_mem_buf(short dev_id){
 	short lvl = 3; 
@@ -196,7 +198,7 @@ void CoCopeLiaDgemmDevice(cublasOperation_t gpu_op_A,  cublasOperation_t gpu_op_
 		CoCoModel_p model = NULL;
 
 		size_t T = 0;
-		if(!predefined_T){ 
+		if(predef_vals.T <= 0){ 
 			model = CoCoPeLiaModelInit(dev_id, "Dgemm", 'X', PrintCublasOp(gpu_op_A), PrintCublasOp(gpu_op_B), M, N, K, A_remote_f, B_remote_f, C_remote_f, A_remote_f, B_remote_f, C_remote_f, ldA, ldB, ldC);
 #ifdef TEST
 			cpu_timer = csecond() - cpu_timer; 
@@ -205,6 +207,7 @@ void CoCopeLiaDgemmDevice(cublasOperation_t gpu_op_A,  cublasOperation_t gpu_op_
 #endif
 			tunableParams_p pred_p = CoCoPeLiaModelOptimizeTile(model, COCOPELIA_REUSE);
 			T = pred_p->T;
+
 #ifdef TEST
 
 			cpu_timer = csecond() - cpu_timer; 
@@ -232,13 +235,19 @@ void CoCopeLiaDgemmDevice(cublasOperation_t gpu_op_A,  cublasOperation_t gpu_op_
 */
 		}
 		else{
-			T = predefined_T; 
+			T = predef_vals.T; 
 #ifdef DEBUG
 			lprintf(lvl, "====================================\n");
 			lprintf(lvl, "Using predefined T=%zu\n", T);
 			lprintf(lvl, "====================================\n");
 #endif
 		}
+
+		if(used_vals == NULL) {
+			used_vals = (CoControl_p) malloc(sizeof(struct CoControl));
+			used_vals->dev_ids = NULL;
+		}
+		used_vals->T = T;
 
 		kernel3_p kernel = CoCopeLiaDgemmSubkernelInit(gpu_op_A, gpu_op_B, M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC, C, ldC, GloBuf[dev_id], dev_id);
 		cudaCheckErrors();
@@ -283,7 +292,7 @@ void CoCopeLiaDgemmDevice(cublasOperation_t gpu_op_A,  cublasOperation_t gpu_op_
 #ifdef TEST
 
 		cpu_timer = csecond() - cpu_timer; 
-		lprintf(lvl, "Memory management: t_mem = %lf ms\n", dev_id, cpu_timer*1000);
+		lprintf(lvl, "Memory management for dev_id = %d : t_mem = %lf ms\n", dev_id, cpu_timer*1000);
 		cpu_timer = csecond(); 
 #endif
 
@@ -300,7 +309,7 @@ void CoCopeLiaDgemmDevice(cublasOperation_t gpu_op_A,  cublasOperation_t gpu_op_
 
 
 		size_t T;
-		if(!predefined_T){
+		if(predef_vals.T <= 0){
 			model = CoCoPeLiaModelInit(dev_id, "Dgemm", 'X', PrintCublasOp(gpu_op_A), PrintCublasOp(gpu_op_B), M/Mp, N/Np, K/Kp, A_remote_f, B_remote_f, C_remote_f, A_remote_f, B_remote_f, C_remote_f, ldA, ldB, ldC);
 #ifdef TEST
 			cpu_timer = csecond() - cpu_timer; 
@@ -338,11 +347,17 @@ void CoCopeLiaDgemmDevice(cublasOperation_t gpu_op_A,  cublasOperation_t gpu_op_
 			T = T_model;
 		}
 		else{
-			T = predefined_T; 
+			T = predef_vals.T; 
 #ifdef DEBUG
 			lprintf(lvl, "Using predefined T=%zu\n", T);
 #endif
 		}
+
+		if(used_vals == NULL) {
+			used_vals = (CoControl_p) malloc(sizeof(struct CoControl));
+			used_vals->dev_ids = NULL;
+		}
+		used_vals->T = T;
 
 		/// Flag which is used to ALWAYS include reuse
 		short reverseK = 0, reverseN = 0; 
@@ -434,8 +449,8 @@ void CoCopeLiaDgemmDevice(cublasOperation_t gpu_op_A,  cublasOperation_t gpu_op_
 #endif	
 #ifdef DEBUG
 		lprintf(lvl, "====================================\n");
-		//if(!predefined_T) lprintf(lvl, "Model vs Pipeline: Error %lf vs %lf\n", (t_pred_total_model - t_total)/t_total, (t_pred_total_pipe - t_total)/t_total);
-		if(!predefined_T) lprintf(lvl, "Model Error %lf\n", (t_pred_total_model - t_total)/t_total);
+		//if(!predef_vals.T) lprintf(lvl, "Model vs Pipeline: Error %lf vs %lf\n", (t_pred_total_model - t_total)/t_total, (t_pred_total_pipe - t_total)/t_total);
+		if(predef_vals.T <= 0) lprintf(lvl, "Model Error %lf\n", (t_pred_total_model - t_total)/t_total);
 #endif
 	}
 #ifdef DEBUG
@@ -461,7 +476,7 @@ void* CoCopeLiaDgemmDeviceVoid(void* compressed_gemm_data){
 }
 
 /// A dgemm wrapper including auto-tuning of T and cpu_ratio, as well as device management
-void CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t K, double alpha, double* A, size_t ldA, double* B, size_t ldB, double beta, double* C, size_t ldC)
+CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t K, double alpha, double* A, size_t ldA, double* B, size_t ldB, double beta, double* C, size_t ldC)
 {
 	short lvl = 1; 
 #ifdef DEBUG
@@ -474,6 +489,7 @@ void CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t K, dou
 	lprintf(lvl-1, "|-----> CoCopeLiaDgemm\n");
 	double cpu_timer = csecond();
 #endif
+	CoControl_p used_params;
 
 	cudaPointerAttributes attributes;
 	short pinA, pinB, pinC = pinB = pinA = 0;
@@ -501,14 +517,37 @@ void CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t K, dou
 	int prev_devID; 
 	cudaGetDevice(&prev_devID); 
 	cublasOperation_t gpu_op_A  = OpCharToCublas(TransA),  gpu_op_B = OpCharToCublas(TransB);
-	//CoCopeLiaDgemmDevice(gpu_op_A,  gpu_op_B, M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC, 0);
-	//cudaCheckErrors();
 
-	short num_devices = 2, dev_id[num_devices];
+	short num_devices, *dev_id = NULL;
+	if (predef_vals.dev_num > 0){
+		num_devices = predef_vals.dev_num;
+		dev_id = (short*) malloc (num_devices*sizeof(short));
+		for (int i =0; i < num_devices; i++) dev_id[i] = predef_vals.dev_ids[i];
+#ifdef TEST
+		lprintf(lvl, "Running on %d devices with dev_ids=[ ", num_devices);
+		for (int i =0; i < num_devices; i++) fprintf(stderr, "%d ", predef_vals.dev_ids[i]);
+		fprintf(stderr, "]\n");
+#endif
+	}
+	else if (predef_vals.dev_num == 0) error("CoCopeLiaDgemm: CPU-only version not implemented (why should it?)\n");
+	else{
+		num_devices = DEV_NUM;
+		dev_id = (short*) malloc (num_devices*sizeof(short));
+		for (int i =0; i < num_devices; i++) dev_id[i] = i;
+	}
+
+	if(used_vals == NULL) {
+		used_vals = (CoControl_p) malloc(sizeof(struct CoControl));
+		used_vals->dev_ids = NULL;
+	}
+	used_vals->dev_num = num_devices;
+	if(used_vals->dev_ids != NULL)  free(used_vals->dev_ids);
+	used_vals->dev_ids = (int*) malloc(num_devices*sizeof(int));
+	for (int d = 0; d< num_devices; d++) used_vals->dev_ids[d] = dev_id[d];
+	
 	pthread_t thread_id[num_devices];
 	pthread_gemm_data_p gemm_data_tmp[num_devices];
-	dev_id[0] = 0;
-	dev_id[1] = 1;
+
 	double t_pred[num_devices], t_total = 0;
  	//t_pred[0] = 0.5;
 	//t_pred[1] = 0.5;
@@ -539,27 +578,37 @@ void CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t K, dou
         //       if (s != 0)handle_error_en(s, "pthread_attr_setstacksize");
         //}
 
-	size_t temp_M, M_sum = 0; 
-	long long A_ptr_offset_dev, C_ptr_offset_dev;
+	size_t temp_M = M, M_sum = 0, temp_N = N, N_sum = 0; 
+	long long A_ptr_offset_dev = 0, B_ptr_offset_dev = 0, C_ptr_offset_dev = 0;
 	for(int i=0; i<num_devices;i++){
 
+		// Check/Enable peer access between participating GPUs
+		CoCoPeLiaEnableGPUPeer(i, dev_id, num_devices); 
+
+		/// Split M dim.
 		temp_M = (size_t) M*t_pred[i]/t_total; 
 		if ( i == num_devices - 1) temp_M = M - M_sum; 
-
         	if (gpu_op_A == CUBLAS_OP_N) A_ptr_offset_dev = M_sum;
 		else A_ptr_offset_dev = M_sum*ldA;
         	C_ptr_offset_dev = M_sum;
-
-		//if(!predefined_T) predefined_T = min((size_t)2048,(size_t)min(min(temp_M,N),K));
-
+		M_sum += temp_M;		
+/*
+		/// Split N dim.
+		temp_N = (size_t) N*t_pred[i]/t_total; 
+		if ( i == num_devices - 1) temp_N = N - N_sum; 
+        	if (gpu_op_B == CUBLAS_OP_N) B_ptr_offset_dev = N_sum*ldB;
+		else B_ptr_offset_dev = N_sum;
+		C_ptr_offset_dev = N_sum*ldC;
+		N_sum += temp_N;
+*/
 		gemm_data_tmp[i] = (pthread_gemm_data_p) malloc(sizeof(struct gemm_in));
 		gemm_data_tmp[i]->gpu_op_A = gpu_op_A;
 		gemm_data_tmp[i]->gpu_op_B = gpu_op_B;
 		gemm_data_tmp[i]->M = temp_M;
-		gemm_data_tmp[i]->N = N;
+		gemm_data_tmp[i]->N = temp_N;
 		gemm_data_tmp[i]->K = K;
 		gemm_data_tmp[i]->A = A + A_ptr_offset_dev;
-		gemm_data_tmp[i]->B = B;
+		gemm_data_tmp[i]->B = B + B_ptr_offset_dev;
 		gemm_data_tmp[i]->C = C + C_ptr_offset_dev;
 		gemm_data_tmp[i]->alpha = alpha;
 		gemm_data_tmp[i]->beta = beta;
@@ -568,42 +617,8 @@ void CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t K, dou
 		gemm_data_tmp[i]->ldC = ldC;
 		gemm_data_tmp[i]->dev_id = dev_id[i];
 
-		//Check for peer access between participating GPUs
-#ifdef TEST
-		cpu_timer = csecond();
-#endif
-		cudaSetDevice(dev_id[i]);
-		for(int j=0; j<num_devices;j++){
-			if (dev_id[i] == dev_id[j]) continue;
-			int can_access_peer; 
-			massert(cudaSuccess == cudaDeviceCanAccessPeer(&can_access_peer, dev_id[i], dev_id[j]), "CoCopeLiaDgemm: cudaDeviceCanAccessPeer failed\n");
-			if(can_access_peer){ 
-				cudaError_t check_peer = cudaDeviceEnablePeerAccess(dev_id[j], 0);
-				if(check_peer == cudaSuccess){ ;
-#ifdef DEBUG
-					lprintf(lvl, "Enabled Peer access for dev %d to dev %d\n", dev_id[i], dev_id[j]);
-#endif
-				}
-				else if (check_peer == cudaErrorPeerAccessAlreadyEnabled){
-					cudaGetLastError();
-#ifdef DEBUG
-					lprintf(lvl, "Peer access already enabled for dev %d to dev %d\n", dev_id[i], dev_id[j]);
-#endif
-				}
-				else error("Enabling Peer access failed for %d to dev %d\n", dev_id[i], dev_id[j]);
-			}
-		}
-#ifdef TEST
-		cpu_timer = csecond() - cpu_timer; 
-		lprintf(lvl, "Utiilizing Peer access for dev %d -> t_enable =%lf ms\n", dev_id[i], 1000*cpu_timer);
-		cpu_timer = csecond();
-#endif
-
 		s = pthread_create(&thread_id[i], &attr,
                                   &CoCopeLiaDgemmDeviceVoid, gemm_data_tmp[i]);
-		cudaCheckErrors();
-		//CoCopeLiaDgemmDevice(gpu_op_A,  gpu_op_B, temp_M, N, K, alpha, A + A_ptr_offset_dev, ldA, B, ldB, beta, C + C_ptr_offset_dev, ldC, dev_id[i]);
-		M_sum += temp_M;
 		
 	}
 	void* res;
@@ -632,11 +647,16 @@ void CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t K, dou
 #ifdef TEST
 	lprintf(lvl-1, "<-----|\n"); 
 #endif
+	return used_vals;
 }
 
-/// A modification of CoCopeLiaDgemm but with a given T (mainly for performance/debug purposes)
-void CoCopeLiaDgemmTin(char TransA,  char TransB, size_t M, size_t N, size_t K, double alpha, double* A, size_t ldA, double* B, size_t ldB, double beta, double* C, size_t ldC, size_t Tin){
-	predefined_T = Tin; 
-	CoCopeLiaDgemm(TransA, TransB,  M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC);
+/// A modification of CoCopeLiaDgemm but with given parameters (mainly for performance/debug purposes)
+CoControl_p CoCopeLiaDgemmControled(char TransA,  char TransB, size_t M, size_t N, size_t K, double alpha, double* A, size_t ldA, double* B, size_t ldB, double beta, double* C, size_t ldC, CoControl_p predef_control_values){
+	if (predef_control_values == NULL) return CoCopeLiaDgemm(TransA, TransB,  M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC);
+	predef_vals.T = predef_control_values->T; 
+	predef_vals.dev_ids = predef_control_values->dev_ids; 
+	predef_vals.dev_num = predef_control_values->dev_num; 
+	predef_vals.cpu_ratio = predef_control_values->cpu_ratio; 
+	return CoCopeLiaDgemm(TransA, TransB,  M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC);
 }
 

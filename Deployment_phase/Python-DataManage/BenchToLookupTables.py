@@ -5,6 +5,7 @@ import pandas as pd
 
 parser = argparse.ArgumentParser(description='Translate Deployment Phase Microbenchmark Outputs to Lookup tables for the Autotuning Runtime')
 parser.add_argument("-i", "--inputdir", type=str,help="Deployment Phase's microbenchmark output directory")
+parser.add_argument("-o", "--outputdir", type=str,help="Lookup table store directory")
 parser.add_argument("-f", "--function", type=str, help="The name of the function (e.g. BLAS routine)")
 parser.add_argument("-d", "--dev_id", type=int, default=0, help="The GPU device's ID")
 parser.add_argument("-l", "--libID", type=int, help="The ID of the backened library used.")
@@ -12,6 +13,7 @@ parser.add_argument("-l", "--libID", type=int, help="The ID of the backened libr
 args = parser.parse_args()
 
 InDataDir = args.inputdir
+OutDataDir = args.outputdir
 func = args.function
 dev_id = args.dev_id
 libID= args.libID
@@ -47,8 +49,4 @@ for filename in entries:
 		#[-1].split('-')[1]
 		#print(indata)
 final_output = outdata.sort_values(0)
-final_output.to_csv("%s/../Database/%s_lookup-table_dev-%d.log" %(InDataDir, func, dev_id), index = False, header = False, float_format = '%e')		
-
-#outfile_h2d_name = sprintf("%s/../Database/Linear-Model_to-%d_from--1.log", InDataDir, dev_id)
-#outfile_d2h_name = sprintf("%s/../Database/Linear-Model_to--1_from-%d.log", InDataDir, dev_id)
-
+final_output.to_csv("%s/%s_lookup-table_dev-%d.log" %(OutDataDir, func, dev_id), index = False, header = False, float_format = '%e')		

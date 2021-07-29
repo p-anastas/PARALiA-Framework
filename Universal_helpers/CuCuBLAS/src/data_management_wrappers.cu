@@ -44,13 +44,13 @@ void* CoCoMalloc(long long bytes, short loc){
     //fprintf(stderr, "Allocating %lld bytes to device(%d)...\n", bytes, loc);
     int prev_loc; cudaGetDevice(&prev_loc);	
     /// TODO: Can this ever happen in a healthy scenario?
-    if (prev_loc != loc) warning("CoCoMalloc: Malloc'ed memory in other device (Previous device: %d, Malloc in: %d)\n", prev_loc, loc);
+    //if (prev_loc != loc) warning("CoCoMalloc: Malloc'ed memory in other device (Previous device: %d, Malloc in: %d)\n", prev_loc, loc);
     cudaSetDevice(loc);
     ptr = gpu_malloc(bytes);
   
 	cudaCheckErrors();
     	if (prev_loc != loc){ 
-		warning("CoCoMalloc: Reseting device to previous: %d\n", prev_loc);
+		//warning("CoCoMalloc: Reseting device to previous: %d\n", prev_loc);
 		cudaSetDevice(prev_loc);
 	}
   }
@@ -77,13 +77,12 @@ void CoCoFree(void * ptr, short loc){
   else if (loc >= count || loc < 0) error("CoCoFree: Invalid device id/location\n");
   else {
 	int prev_loc; cudaGetDevice(&prev_loc);	
-	/// TODO: Can this ever happen in a healthy scenario?
-	if (prev_loc != loc) warning("CoCoFree: Freed memory in other device (Previous device: %d, Free in: %d)\n", prev_loc, loc);
+	//if (prev_loc != loc) warning("CoCoFree: Freed memory in other device (Previous device: %d, Free in: %d)\n", prev_loc, loc);
     	cudaSetDevice(loc);
 	gpu_free(ptr);
 	cudaCheckErrors();
     	if (prev_loc != loc){ 
-		warning("CoCoFree: Reseting device to previous: %d\n", prev_loc);
+		//warning("CoCoFree: Reseting device to previous: %d\n", prev_loc);
 		cudaSetDevice(prev_loc);
 	}
   }
@@ -134,8 +133,8 @@ void CoCoVecInit(VALUETYPE *vec, long long length, int seed, short loc)
   else if (loc >= count || loc < 0) error("CoCoVecInit: Invalid device id/location\n");
   else {
 	int prev_loc; cudaGetDevice(&prev_loc);	
-	/// TODO: Can this ever happen in a healthy scenario?
-	if (prev_loc != loc) warning("CoCoVecInit: Initialized vector in other device (Previous device: %d, init in: %d)\n", prev_loc, loc);
+
+	//if (prev_loc != loc) warning("CoCoVecInit: Initialized vector in other device (Previous device: %d, init in: %d)\n", prev_loc, loc);
     	cudaSetDevice(loc);
 	curandGenerator_t gen;
 	/* Create pseudo-random number generator */
@@ -152,7 +151,7 @@ void CoCoVecInit(VALUETYPE *vec, long long length, int seed, short loc)
             cudaGetErrorString(cudaGetLastError()));
 	cudaCheckErrors();
     	if (prev_loc != loc){ 
-		warning("CoCoVecInit: Reseting device to previous: %d\n", prev_loc);
+		//warning("CoCoVecInit: Reseting device to previous: %d\n", prev_loc);
 		cudaSetDevice(prev_loc);
 	}
   }
@@ -192,9 +191,51 @@ void CoCoMemcpy2DAsync(void* dest, size_t ldest, void* src, size_t lsrc, size_t 
 	else if (loc_src < 0) kind = cudaMemcpyHostToDevice;
 	else kind = cudaMemcpyDeviceToDevice;
 
-	massert(cudaSuccess == cudaMemcpy2DAsync(dest, ldest*elemSize, src, lsrc*elemSize, rows*elemSize, cols, kind, stream),  "CoCoMemcpy2DAsync: cudaMemcpy2D failed\n");
+	cudaMemcpy2DAsync(dest, ldest*elemSize, src, lsrc*elemSize, rows*elemSize, cols, kind, stream);
 	//if (loc_src == -1 && loc_dest >=0) massert(CUBLAS_STATUS_SUCCESS == cublasSetMatrixAsync(rows, cols, elemSize, src, lsrc, dest, ldest, stream), "CoCoMemcpy2DAsync: cublasSetMatrixAsync failed\n");
 	//else if (loc_src >=0 && loc_dest == -1) massert(CUBLAS_STATUS_SUCCESS == cublasGetMatrixAsync(rows, cols, elemSize, src, lsrc, dest, ldest, stream),  "CoCoMemcpy2DAsync: cublasGetMatrixAsync failed");
-
 }
+
+void CoCoPeLiaEnableGPUPeer(short target_dev_i, short dev_ids[], short num_devices){
+	short lvl = 2;
+#ifdef DEBUG
+	lprintf(lvl-1, "|-----> CoCoPeLiaEnableGPUPeer(%d,dev_ids,%d)\n", target_dev_i, num_devices);
+#endif
+
+#ifdef TEST
+	lprintf(lvl-1, "|-----> CoCopeLiaDgemm\n");
+	double cpu_timer = csecond();
+#endif
+	cudaSetDevice(dev_ids[target_dev_i]);
+	for(int j=0; j<num_devices;j++){
+		if (dev_ids[target_dev_i] == dev_ids[j]) continue;
+		int can_access_peer; 
+		massert(cudaSuccess == cudaDeviceCanAccessPeer(&can_access_peer, dev_ids[target_dev_i], dev_ids[j]), "CoCopeLiaDgemm: cudaDeviceCanAccessPeer failed\n");
+		if(can_access_peer){ 
+			cudaError_t check_peer = cudaDeviceEnablePeerAccess(dev_ids[j], 0);
+			if(check_peer == cudaSuccess){ ;
+#ifdef DEBUG
+				lprintf(lvl, "Enabled Peer access for dev %d to dev %d\n", dev_ids[target_dev_i], dev_ids[j]);
+#endif
+			}
+			else if (check_peer == cudaErrorPeerAccessAlreadyEnabled){
+				cudaGetLastError();
+#ifdef DEBUG
+				lprintf(lvl, "Peer access already enabled for dev %d to dev %d\n", dev_ids[target_dev_i], dev_ids[j]);
+#endif
+			}
+			else error("Enabling Peer access failed for %d to dev %d\n", dev_ids[target_dev_i], dev_ids[j]);
+		}
+	}
+#ifdef TEST
+	cpu_timer = csecond() - cpu_timer; 
+	lprintf(lvl, "Utiilizing Peer access for dev %d -> t_enable =%lf ms\n", dev_ids[target_dev_i], 1000*cpu_timer);
+	cpu_timer = csecond();
+	lprintf(lvl-1, "<-----|\n"); 
+#endif
+#ifdef DEBUG
+	lprintf(lvl-1, "<-----|\n"); 
+#endif
+}
+
 

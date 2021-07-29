@@ -53,7 +53,7 @@ GPUexec3Model_p GPUexec3Model_init(short dev_id, char* func){
 	}
 	GPUexec3Model_p out_model = (GPUexec3Model_p) malloc(sizeof(struct  BLAS3_data));
 	char filename[256];
-	sprintf(filename, "%s/%s_lookup-table_dev-%d.log", DEPLOYDB, func, dev_id);
+	sprintf(filename, "%s/Processed/%s_lookup-table_dev-%d.log", DEPLOYDB, func, dev_id);
 	FILE* fp = fopen(filename,"r");
 	if (!fp) {
 		fprintf(stderr, "GPUexec3Model_init: Logfile = %s\n", filename);
@@ -72,7 +72,7 @@ GPUexec3Model_p GPUexec3Model_init(short dev_id, char* func){
 	size_t trashdata, trashdata2, conv_itter; 
 	double error_margin, Dtrashdata; 
 	for (int i = 0; i < bench_lines; i++){
-		items = fscanf(fp, "%c,%c,%zu,%zu,%zu, %lf,%lf,%lf,%lf\n", &out_model->TransA_buf[i], &out_model->TransB_buf[i], &out_model->T_lookup_buf[i], &trashdata, &trashdata2, &out_model->av_time_buf[i], &error_margin, &conv_itter, &Dtrashdata);
+		items = fscanf(fp, "%c,%c,%zu,%zu,%zu, %lf,%lf,%zu,%lf\n", &out_model->TransA_buf[i], &out_model->TransB_buf[i], &out_model->T_lookup_buf[i], &trashdata, &trashdata2, &out_model->av_time_buf[i], &error_margin, &conv_itter, &Dtrashdata);
 		if (items != 9) error("GPUexec3Model_init: Problem in reading model");
 #ifdef DEBUG
 		lprintf(lvl, "Scanned entry %d: T = %zu, TransA = %c, TransB = %c -> t_av = %lf ms\n", i, out_model->T_lookup_buf[i], out_model->TransA_buf[i], out_model->TransB_buf[i], out_model->av_time_buf[i]*1000);

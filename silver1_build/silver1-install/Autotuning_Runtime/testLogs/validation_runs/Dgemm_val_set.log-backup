@@ -1,0 +1,118 @@
+ParseInputLvl3: Parsed configuration:
+	Control: 512,1,1,0.000
+	TransA: N, TransB: N
+	alpha: 1.234500, beta: 1.115400
+	D1: 4096, D2: 4096, D3: 4096
+	loc1: -1, loc2: -1, loc3: -1, outloc: -1
+
+Allocating memory...done.
+Alloc time:	2980.116129 ms
+
+Initializing to random values (VALIDATE)...done.
+Init time:	894.130945 ms
+
+First call time:	269.820929 ms
+
+CoCopeLia :
+	avg_t = 67.821698 ms ( 2026.722043 Gflops/s )
+	min_t = 65.217972 ms ( 2107.635777 Gflops/s )
+	max_t = 79.421997 ms ( 1730.701012 Gflops/s )
+Test passed(Accuracy= 15 digits, 3893837/16777216 breaking for 16)
+
+ParseInputLvl3: Parsed configuration:
+	Control: 512,1,1,0.000
+	TransA: N, TransB: N
+	alpha: 1.234500, beta: 1.115400
+	D1: 8192, D2: 8192, D3: 8192
+	loc1: -1, loc2: -1, loc3: -1, outloc: -1
+
+Allocating memory...done.
+Alloc time:	3408.488989 ms
+
+Initializing to random values (VALIDATE)...done.
+Init time:	3561.167002 ms
+
+First call time:	718.615055 ms
+
+CoCopeLia :
+	avg_t = 455.635810 ms ( 2413.284278 Gflops/s )
+	min_t = 453.186989 ms ( 2426.324594 Gflops/s )
+	max_t = 458.935976 ms ( 2395.930574 Gflops/s )
+Test passed(Accuracy= 15 digits, 25706091/67108864 breaking for 16)
+
+ParseInputLvl3: Parsed configuration:
+	Control: 512,1,1,0.000
+	TransA: N, TransB: N
+	alpha: 1.234500, beta: 1.115400
+	D1: 12288, D2: 12288, D3: 12288
+	loc1: -1, loc2: -1, loc3: -1, outloc: -1
+
+Allocating memory...done.
+Alloc time:	4435.857058 ms
+
+Initializing to random values (VALIDATE)...done.
+Init time:	8216.980934 ms
+
+First call time:	1805.795908 ms
+
+CoCopeLia :
+	avg_t = 1483.679485 ms ( 2501.215913 Gflops/s )
+	min_t = 1477.229118 ms ( 2512.137550 Gflops/s )
+	max_t = 1493.291855 ms ( 2485.115503 Gflops/s )
+Test passed(Accuracy= 15 digits, 77677819/150994944 breaking for 16)
+
+ParseInputLvl3: Parsed configuration:
+	Control: 512,1,1,0.000
+	TransA: N, TransB: N
+	alpha: 1.234500, beta: 1.115400
+	D1: 16384, D2: 16384, D3: 16384
+	loc1: -1, loc2: -1, loc3: -1, outloc: -1
+
+Allocating memory...done.
+Alloc time:	5172.262907 ms
+
+Initializing to random values (VALIDATE)...done.
+Init time:	14292.068958 ms
+
+First call time:	3732.522011 ms
+
+CoCopeLia :
+	avg_t = 3402.835703 ms ( 2585.009159 Gflops/s )
+	min_t = 3399.715900 ms ( 2587.381333 Gflops/s )
+	max_t = 3414.662838 ms ( 2576.055639 Gflops/s )
+Test passed(Accuracy= 15 digits, 142693333/268435456 breaking for 16)
+
+ParseInputLvl3: Parsed configuration:
+	Control: 768,1,1,0.000
+	TransA: N, TransB: N
+	alpha: 1.234500, beta: 1.115400
+	D1: 4096, D2: 4096, D3: 4096
+	loc1: -1, loc2: -1, loc3: -1, outloc: -1
+
+Allocating memory...done.
+Alloc time:	2797.811031 ms
+
+Initializing to random values (VALIDATE)...done.
+Init time:	910.887003 ms
+
+First call time:	274.559975 ms
+
+CoCopeLia :
+	avg_t = 48.235831 ms ( 2849.660244 Gflops/s )
+	min_t = 45.973063 ms ( 2989.918947 Gflops/s )
+	max_t = 87.880135 ms ( 1564.127449 Gflops/s )
+Test passed(Accuracy= 15 digits, 3878024/16777216 breaking for 16)
+
+ParseInputLvl3: Parsed configuration:
+	Control: 768,1,1,0.000
+	TransA: N, TransB: N
+	alpha: 1.234500, beta: 1.115400
+	D1: 8192, D2: 8192, D3: 8192
+	loc1: -1, loc2: -1, loc3: -1, outloc: -1
+
+Allocating memory...done.
+Alloc time:	3587.234974 ms
+
+Initializing to random values (VALIDATE)...done.
+Init time:	3560.295820 ms
+

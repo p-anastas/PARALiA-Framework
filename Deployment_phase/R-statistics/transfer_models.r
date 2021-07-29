@@ -1,15 +1,16 @@
 #TODO: Input is complex and contains numbers, should be generalized
 args = commandArgs(trailingOnly=TRUE)
-if (length(args)!=3) {
-  stop("Usage: Rscript --vanilla Rprogram InDataDir dev_id libID", call.=FALSE)
+if (length(args)!=4) {
+  stop("Usage: Rscript --vanilla Rprogram InDataDir OutDataDir dev_id libID", call.=FALSE)
 }
 InDataDir = args[1]
-dev_id = as.integer(args[2])
-libID= as.integer(args[3]) 
+OutDataDir = args[2]
+dev_id = as.integer(args[3])
+libID= as.integer(args[4]) 
 
 if (libID == 0){ # CuCuBLAS
-	infile_h2d = sprintf("%s/cublasSet_Get_to-%d_from--1.log", InDataDir, dev_id)
-	infile_d2h = sprintf("%s/cublasSet_Get_to--1_from-%d.log", InDataDir, dev_id)
+	infile_h2d = sprintf("%s/CoCoMemcpy2DAsync_to-%d_from--1.log", InDataDir, dev_id)
+	infile_d2h = sprintf("%s/CoCoMemcpy2DAsync_to--1_from-%d.log", InDataDir, dev_id)
 } else {
 	stop("Invalid libID", call.=FALSE)
 }
@@ -66,8 +67,8 @@ cat("Slowdown =", slowdown_d2h,"\n")
 
 #outfile_h2d<-file("../Models/transfer_model_dungani_2_-1.log")
 #outfile_d2h<-file("../Models/transfer_model_dungani_-1_2.log")
-outfile_h2d_name = sprintf("%s/../Database/Linear-Model_to-%d_from--1.log", InDataDir, dev_id)
-outfile_d2h_name = sprintf("%s/../Database/Linear-Model_to--1_from-%d.log", InDataDir, dev_id)
+outfile_h2d_name = sprintf("%s/Linear-Model_to-%d_from--1.log", OutDataDir, dev_id)
+outfile_d2h_name = sprintf("%s/Linear-Model_to--1_from-%d.log", OutDataDir, dev_id)
 outfile_h2d<-file(outfile_h2d_name)
 outfile_d2h<-file(outfile_d2h_name)
 

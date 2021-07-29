@@ -33,7 +33,7 @@ int main(const int argc, const char *argv[]) {
   	}
 
 	char *filename = (char *) malloc(256* sizeof(char));
-	sprintf(filename, "%s/%s-install/Benchmark-Results/cublasSet_Get_to-%d_from-%d.log", DEPLOYDIR, TESTBED, to, from);
+	sprintf(filename, "%s/Benchmark-Results/CoCoMemcpy2DAsync_to-%d_from-%d.log", DEPLOYDB, to, from);
 	check_benchmark(filename);
 
 	// Define the max size of a benchmark kernel to run on this machine. 
@@ -51,35 +51,36 @@ int main(const int argc, const char *argv[]) {
 
 	//Only model pinned memory transfers from host to dev and visa versa
   	if (from < 0 && to < 0) error("Transfer Microbench: Both locations are in host");
-  	else if ( from >= 0 && to >= 0) error("Transfer Microbench: Both locations are devices - device communication not implemented");
 	else if (from == -2 || to == -2) error("Transfer Microbench: Not pinned memory (synchronous)");
+  	else if ( from >= 0 && to >= 0){
+		short dev_id[2], num_devices = 2;
+		dev_id[0] = from;
+		dev_id[1] = to;
+		// Check/Enable peer access between participating GPUs
+		CoCoPeLiaEnableGPUPeer(0, dev_id, num_devices); 
+		// Check/Enable peer access between participating GPUs
+		CoCoPeLiaEnableGPUPeer(1, dev_id, num_devices); 
+	}
+	else if(from >= 0) cudaSetDevice(from);
+	else if(to >= 0) cudaSetDevice(to);
 	
 	size_t ldsrc, ldest = ldsrc = maxDim + 1; 
 
-	src = CoCoMalloc(maxDim*(maxDim+1)*8, from);
-	dest =  CoCoMalloc(maxDim*(maxDim+1)*8, to);
-	rev_src = CoCoMalloc(maxDim*(maxDim+1)*8, to);
-	rev_dest = CoCoMalloc(maxDim*(maxDim+1)*8, from);
+	src = CoCoMalloc(maxDim*(maxDim+1)*sizeof(double), from);
+	dest =  CoCoMalloc(maxDim*(maxDim+1)*sizeof(double), to);
+	rev_src = CoCoMalloc(maxDim*(maxDim+1)*sizeof(double), to);
+	rev_dest = CoCoMalloc(maxDim*(maxDim+1)*sizeof(double), from);
 
-	/*if (from < 0){
-		Dvec_init_CoCoRand((double*)src, maxDim*(maxDim+1), 42, 1, 0);
-		Dvec_init_CoCoRand((double*)rev_src, maxDim*(maxDim+1), 43, 0, to);
-	}
-	else {
-		Dvec_init_CoCoRand((double*)src, maxDim*(maxDim+1), 42, 0, from);
-		Dvec_init_CoCoRand((double*)rev_src, maxDim*(maxDim+1), 43, 1, 0);
-	}*/
+	CoCoVecInit((double*)src, maxDim*(maxDim+1), 42, from);
+	CoCoVecInit((double*)rev_src, maxDim*(maxDim+1), 43, to);
 
 	cudaStream_t stream, reverse_stream;
 	cudaStreamCreate(&stream);
 	cudaStreamCreate(&reverse_stream);
-	
+	cudaCheckErrors();
 	fprintf(stderr, "Warming up...\n");
 	/// Warmup.
-	for (int it = 0; it < 10; it++) {
-		if(from == -1) cublasSetMatrixAsync(maxDim*(maxDim+1), 1, sizeof(double), src, maxDim*(maxDim+1), dest, maxDim*(maxDim+1),stream);
-		else cublasGetMatrixAsync(maxDim*(maxDim+1), 1, sizeof(double), src, maxDim*(maxDim+1), dest, maxDim*(maxDim+1),stream);
-	}
+	for (int it = 0; it < 10; it++) CoCoMemcpy2DAsync(dest, ldest, src, ldsrc, maxDim, maxDim, sizeof(double), to, from, stream);
 	cudaCheckErrors();
 #ifdef AUTO_BENCH_USE_BOOST
 	double cpu_timer, transfer_t_vals[MICRO_MAX_ITER], transfer_t_sum, transfer_t_mean, bench_t, error_margin; 
@@ -87,6 +88,7 @@ int main(const int argc, const char *argv[]) {
 	size_t sample_sz, sample_sz_bid;
 	gpu_timer_p cuda_timer = gpu_timer_init();
 	for (size_t dim = minDim; dim < maxDim+1; dim+=step){
+		if (dim >= step * 16) step*=2;
 		transfer_t_sum = transfer_t_mean = bench_t = error_margin = 0;
 		fprintf(stderr, "Cublas-chunk Link %s->%s (Chunk %dx%d):\n", print_loc(from), print_loc(to), dim, dim);
 		sample_sz = 0; 
@@ -94,8 +96,7 @@ int main(const int argc, const char *argv[]) {
 		double std_dev = 0; 
 		for (sample_sz = 1; sample_sz < MICRO_MAX_ITER + 1; sample_sz++) {	
 			cpu_timer = csecond();
-			if(from == -1) cublasSetMatrixAsync(dim, dim, 8, src, ldsrc, dest, ldest, stream);
-			else cublasGetMatrixAsync(dim, dim, 8, src, ldsrc, dest, ldest, stream);
+			CoCoMemcpy2DAsync(dest, ldest, src, ldsrc, dim, dim, sizeof(double), to, from, stream);
 			cudaStreamSynchronize(stream);
 			cpu_timer  = csecond() - cpu_timer ;
 			transfer_t_vals[sample_sz-1] = cpu_timer;
@@ -121,13 +122,9 @@ int main(const int argc, const char *argv[]) {
 		bench_t = csecond() - bench_t;
 		std_dev = 0; 
 		for (sample_sz_bid = 1; sample_sz_bid < MICRO_MAX_ITER + 1; sample_sz_bid++) {	
-			for (int rep = 0; rep < 10 ; rep++) {
-				if(to == -1) cublasSetMatrixAsync(dim, dim, 8, rev_src, ldsrc, rev_dest, ldest, reverse_stream);
-				else cublasGetMatrixAsync(dim, dim, 8, rev_src, ldsrc, rev_dest, ldest, reverse_stream);
-			}
+			for (int rep = 0; rep < 10 ; rep++) CoCoMemcpy2DAsync(rev_dest, ldest, rev_src, ldsrc, dim, dim, sizeof(double), from, to, reverse_stream);
 			gpu_timer_start(cuda_timer, stream);
-			if(from == -1) cublasSetMatrixAsync(dim, dim, 8, src, ldsrc, dest, ldest,stream);
-			else cublasGetMatrixAsync(dim, dim, 8, src, ldsrc, dest, ldest,stream);
+			CoCoMemcpy2DAsync(dest, ldest, src, ldsrc, dim, dim, sizeof(double), to, from, stream);
 			gpu_timer_stop(cuda_timer, stream);
 			cudaCheckErrors();
 			transfer_t_vals[sample_sz_bid-1] = gpu_timer_get(cuda_timer)/1000;
@@ -154,14 +151,14 @@ int main(const int argc, const char *argv[]) {
 	double cpu_timer, t_sq_av, t_sq_min, t_sq_max, t_sq_bid_av, t_sq_bid_min, t_sq_bid_max, bench_t;
 	gpu_timer_p cuda_timer = gpu_timer_init();
 	for (size_t dim = minDim; dim < maxDim+1; dim+=step){
+		if (dim >= step * 16) step*=2;
 		t_sq_av = t_sq_max = t_sq_bid_av = t_sq_bid_max = bench_t= 0;
 		t_sq_min = t_sq_bid_min = 1e9; 
 		fprintf(stderr, "Cublas-chunk Link %s->%s (Chunk %dx%d):\n", print_loc(from), print_loc(to), dim, dim);
 		bench_t = csecond();
 		for (int it = 0; it < ITER ; it++) {
 			cpu_timer = - csecond();
-			if(from == -1) cublasSetMatrixAsync(dim, dim, 8, src, ldsrc, dest, ldest, stream);
-			else cublasGetMatrixAsync(dim, dim, 8, src, ldsrc, dest, ldest, stream);
+			CoCoMemcpy2DAsync(dest, ldest, src, ldsrc, dim, dim, sizeof(double), to, from, stream);
 			cudaStreamSynchronize(stream);
 			cpu_timer = csecond() + cpu_timer;
 			t_sq_av += cpu_timer;
@@ -174,13 +171,9 @@ int main(const int argc, const char *argv[]) {
 
 		fprintf(stderr, "Reverse overlapped Link %s->%s (Chunk %dx%d):\n", print_loc(from), print_loc(to), dim, dim);
 		for (int it = 0; it < ITER ; it++) {
-			for (int rep = 0; rep < 10 ; rep++) {
-				if(to == -1) cublasSetMatrixAsync(dim, dim, 8, rev_src, ldsrc, rev_dest, ldest, reverse_stream);
-				else cublasGetMatrixAsync(dim, dim, 8, rev_src, ldsrc, rev_dest, ldest, reverse_stream);
-			}
+			for (int rep = 0; rep < 10 ; rep++) CoCoMemcpy2DAsync(rev_dest, ldest, rev_src, ldsrc, dim, dim, sizeof(double), from, to, reverse_stream);
 			gpu_timer_start(cuda_timer, stream);
-			if(from == -1) cublasSetMatrixAsync(dim, dim, 8, src, ldsrc, dest, ldest,stream);
-			else cublasGetMatrixAsync(dim, dim, 8, src, ldsrc, dest, ldest,stream);
+			CoCoMemcpy2DAsync(dest, ldest, src, ldsrc, dim, dim, sizeof(double), to, from, stream);
 			gpu_timer_stop(cuda_timer, stream);
 			cudaCheckErrors();
 			t_sq_bid_av += gpu_timer_get(cuda_timer);

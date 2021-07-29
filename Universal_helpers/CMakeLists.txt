@@ -15,7 +15,7 @@ include_directories(${UNIHELP_DIR_INC})
 set (UNIHELP_DIR_SRC ${UNIHELP_DIR}/src)
 message( "Universal Helpers - Source DIR: " ${UNIHELP_DIR_SRC} )
 
-set (UNIHELP_INSTALL ${UNIHELP_DIR}/${TESTBED_NAME}-install) 
+set (UNIHELP_INSTALL ${CMAKE_INSTALL_PROJECT}/Universal_helpers) 
 file(MAKE_DIRECTORY ${UNIHELP_INSTALL})
 
 set (UNIHELP_INSTALL_LIB ${UNIHELP_INSTALL}/lib)
@@ -29,7 +29,6 @@ add_library(unihelpers SHARED
 ${UNIHELP_DIR_SRC}/cpu_utils.cpp
 ${UNIHELP_DIR_SRC}/gpu_utils.cu
 ${UNIHELP_DIR_SRC}/data_management_wrappers.cu
-${UNIHELP_DIR_SRC}/testing.cpp
 )
 target_link_libraries(unihelpers ${INTERNAL_LINK_LIB})
 configure_file(${UNIHELP_DIR_INC}/unihelpers.hpp ${UNIHELP_INSTALL_INC}/unihelpers.hpp COPYONLY)

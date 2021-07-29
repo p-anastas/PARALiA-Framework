@@ -22,7 +22,7 @@ CoModel_p CoModel_init(short to, short from)
 #endif
 	CoModel_p out_model = (CoModel_p) malloc(sizeof(struct  comm_data));
 	char filename[256];
-	sprintf(filename, "%s/Linear-Model_to-%d_from-%d.log", DEPLOYDB, to, from);
+	sprintf(filename, "%s/Processed/Linear-Model_to-%d_from-%d.log", DEPLOYDB, to, from);
 	FILE* fp = fopen(filename,"r");
 	if (!fp) error("CoModel_init: t_comm LogFile =%s not generated\n",filename);
 #ifdef DEBUG
@@ -33,7 +33,8 @@ CoModel_p CoModel_init(short to, short from)
 	fclose(fp);
 	out_model->to = to; 
 	out_model->from = from; 
-	out_model->machine = TESTBED; 
+	out_model->machine = (char*) malloc(256);
+	strcpy(out_model->machine, TESTBED); 
 #ifdef TEST
 	timer = csecond() - timer;
 	lprintf(lvl, "Initialization time:%lf ms\n", timer*1000);

@@ -53,7 +53,7 @@ int main(const int argc, const char *argv[]) {
 		error("Incorrect input arguments. Usage: ./correct_run dev_id func(={Dgemm,Sgemm}) flag1 flag2 flag3 Dim1 Dim2 Dim3 Loc1 Loc2 Loc3 OutLoc1 OutLoc2 OutLoc3 offset1 offset2 offset3");
   	}
 
-	sprintf(filename, "%s/CoCopeLiaLogPrediction-%s_dev-%d.log", TESTDIR, func, dev_id);
+	sprintf(filename, "%s/predictions/CoCopeLiaLogPrediction-%s_dev-%d.log", TESTDIR, func, dev_id);
 	FILE* fp = fopen(filename,"a");
 	if (!fp) error("report_results: LogFile failed to open");
 	CoCoModel_p CoComodel = CoCoPeLiaModelInit(dev_id, func, flag1, flag2, flag3, Dim1, Dim2, Dim3, Loc1, Loc2, Loc3, OutLoc1, OutLoc2, OutLoc3, offset1, offset2, offset3);

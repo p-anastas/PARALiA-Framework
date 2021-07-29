@@ -23,7 +23,7 @@ CoCoModel_p CoCoPeLiaModelInit(short dev_id, char* func, char flag1, char flag2,
 	out_model->flags = (flagParams_p) malloc(sizeof(struct flagParams));
 
 	if ( !strcmp(func, "Dgemm") || !strcmp(func, "Sgemm")) return CoCoModel_gemm_init(out_model, flag2, flag3, Dim1, Dim2, Dim3, Loc1, Loc2, Loc3, OutLoc1, OutLoc2, OutLoc3, offset1, offset2, offset3, dev_id, func);
-	else error("CoCoPeLiaModelInit: Model for '%s' func not integrated"); 
+	else error("CoCoPeLiaModelInit: Model for '%s' func not integrated", func); 
 }
 double CoCoPeLiaModelPredict(CoCo_model* model, size_t T, ModelType mode){
 	switch(mode){
@@ -485,7 +485,7 @@ tunableParams_p tunableParamsInit(){
 const char* printTunableParams(tunableParams_p params){
 	char* buf = (char*) malloc(256*sizeof(char));
 
-	sprintf(buf, "{%d|%.2lf|%e}", params->T, params->cpuRatio, params->pred_t);
+	sprintf(buf, "{%zu|%.2lf|%e}", params->T, params->cpuRatio, params->pred_t);
 	return buf;
 }
 	

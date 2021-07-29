@@ -13,26 +13,26 @@
 
 int main(const int argc, const char *argv[]) {
 
-	short dev_id;
 
 	char TransA, TransB; 
   	double alpha, beta;
 	size_t M, N, K;
 	short A_loc, B_loc, C_loc, C_out_loc;
-	int Tin; 
-	double cpu_ratio; 
 
-	ParseInputLvl3(argc, argv, &dev_id, &TransA, &TransB, &alpha, &beta, &M, &N, &K, &A_loc, &B_loc, &C_loc, &C_out_loc, &Tin, &cpu_ratio);
+	CoControl_p predef_control_values = NULL, return_values = NULL;
+	ParseInputLvl3(argc, argv, &predef_control_values, &TransA, &TransB, &alpha, &beta, &M, &N, &K, &A_loc, &B_loc, &C_loc, &C_out_loc);
 
 	char *filename = (char *) malloc(256* sizeof(char));
-	if (Tin > 0) {
-		if (Tin > M || Tin > N || Tin > K) error("Given Tin=%d bigger than problem dim\n", Tin); 
-		else if (Tin > M/1.5 && Tin > N/1.5 && Tin > K/1.5) error("Given Tin=%d bigger than all problem dims/1.5\n", Tin);
-		sprintf(filename, "%s/CoCopeLiaDgemmRunner.log", TESTLIBDIR);	
+	if (predef_control_values!= NULL){ 
+		if(predef_control_values->T > 0) {
+			if (predef_control_values->T > M || predef_control_values->T > N || predef_control_values->T > K) error("Given Tin=%d bigger than problem dim\n", predef_control_values->T); 
+			else if (predef_control_values->T > M/1.5 && predef_control_values->T > N/1.5 && predef_control_values->T > K/1.5) error("Given Tin=%d bigger than all problem dims/1.5\n", predef_control_values->T);
+		}
+		sprintf(filename, "%s/CoCopeLiaDgemmRunner_predefined_vals.log", TESTLIBDIR);	
 	}
-	else sprintf(filename, "%s/CoCopeLiaDgemmRunner.log", TESTLIBDIR);	
+	else sprintf(filename, "%s/CoCopeLiaDgemmRunner.log", TESTLIBDIR);
 
-	//CheckLogLvl3(filename, dev_id, TransA, TransB, alpha, beta, M, N, K, A_loc, B_loc, C_loc, C_out_loc, -1, cpu_ratio);
+	CheckLogLvl3(filename, predef_control_values, TransA, TransB, alpha, beta, M, N, K, A_loc, B_loc, C_loc, C_out_loc);
 	
 	/// Matrix Layouts for CPU GEMM
 	CBLAS_TRANSPOSE cpu_op_A, cpu_op_B;    // CblasNoTrans, CblasTrans
@@ -73,11 +73,14 @@ int main(const int argc, const char *argv[]) {
 
 	// First call for Validate and/or additional overhead counting
 	cpu_timer = csecond();
-	if (Tin > 0) CoCopeLiaDgemmTin(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC, Tin);
-	else CoCopeLiaDgemm(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC);
+	if (predef_control_values!= NULL) return_values = CoCopeLiaDgemmControled(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC, predef_control_values);
+	else return_values = CoCopeLiaDgemm(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC);
 	cudaCheckErrors();
 	cpu_timer  = csecond() - cpu_timer;
-	fprintf(stderr, "First call time:\t%lf ms\n\n", cpu_timer  * 1000);
+	fprintf(stderr, "First call time:\t%lf ms ( %lf Gflops/s )\n\n", cpu_timer  * 1000, Gval_per_s(dgemm_flops(M,N,K),cpu_timer));
+
+	CheckLogLvl3(filename, return_values, TransA, TransB, alpha, beta, M, N, K, A_loc, B_loc, C_loc, C_out_loc);
+
 	double first_over_t = cpu_timer; 
 
  	CoCoMemcpy(C_out, C,  M * N *sizeof(double), -2, C_loc);
@@ -88,8 +91,8 @@ int main(const int argc, const char *argv[]) {
 	if ( M >= 8192 || N >= 8192 || K >= 8192) bench_it = 10; 
 	for(int it = 0; it < bench_it; it++){
 		cpu_timer = csecond();
-		if (Tin > 0) CoCopeLiaDgemmTin(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC, Tin);
-		else CoCopeLiaDgemm(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC);
+		if (predef_control_values!= NULL) return_values = CoCopeLiaDgemmControled(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC, predef_control_values);
+		else return_values = CoCopeLiaDgemm(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC);
 		cudaCheckErrors();
 		cpu_timer = csecond() - cpu_timer;
 		if ( cpu_timer < min_t ) min_t = cpu_timer;
@@ -97,22 +100,24 @@ int main(const int argc, const char *argv[]) {
 		avg_t += cpu_timer;
 	}
 	avg_t/=bench_it;
-	fprintf(stderr, "CoCopeLia :\n\tavg_t = %lf ms ( %lf Gflops/s )\n\tmin_t = %lf ms ( %lf Gflops/s )\n\tmax_t = %lf ms ( %lf Gflops/s )\n", 
+	fprintf(stderr, "CoCopeLia (%s):\n\tavg_t = %lf ms ( %lf Gflops/s )\n\tmin_t = %lf ms ( %lf Gflops/s )\n\tmax_t = %lf ms ( %lf Gflops/s )\n", 
+	CoControlPrint(return_values),
 	avg_t  * 1000, Gval_per_s(dgemm_flops(M,N,K),avg_t),
 	min_t  * 1000, Gval_per_s(dgemm_flops(M,N,K),min_t),
 	max_t  * 1000, Gval_per_s(dgemm_flops(M,N,K),max_t));
 
 
-	CoCopeLiaDgemm_flush_gpu_mem_buf(0);
+	for (int i = 0; i< return_values->dev_num; i++) CoCopeLiaDgemm_flush_gpu_mem_buf(return_values->dev_ids[i]);
 	
  	CoCoMemcpy(C, C_out1,  M * N *sizeof(double), C_loc, -2);
-	short dev_num = 2; 
-	int dev_ids[dev_num] = {0,1};
-	cuBLASXtDgemmWrap(TransA,  TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC,  (size_t) fmin(fmin(fmin(M,N),K)/2,CBLASXT_MAX_SAFE_TILE), 0, dev_num, dev_ids);
+
+	int dev_ids[DEV_NUM];
+	for (int i = 0; i < DEV_NUM; i++) dev_ids[i] = i; 
+	cuBLASXtDgemmWrap(TransA,  TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC,  (size_t) fmin(fmin(fmin(M,N),K)/2,CBLASXT_MAX_SAFE_TILE), 0, DEV_NUM, dev_ids);
 	CoCoMemcpy(C_out1, C,  M * N *sizeof(double), -2, C_loc);
  	if(Dtest_equality(C_out1, C_out, M * N) < 9) error("Insufficient accuracy for benchmarks\n");
 
-	StoreLogLvl3(filename, dev_id, TransA, TransB, alpha, beta, M, N, K, A_loc, B_loc, C_loc, C_out_loc, -1, cpu_ratio, avg_t, min_t, max_t); 
+	StoreLogLvl3(filename, return_values, TransA, TransB, alpha, beta, M, N, K, A_loc, B_loc, C_loc, C_out_loc, avg_t, min_t, max_t); 
 	cudaCheckErrors();
 	CoCoFree(A, A_loc);
 	CoCoFree(B, B_loc);
