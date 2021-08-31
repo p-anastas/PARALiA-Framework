@@ -1,7 +1,7 @@
 ///
 /// \author Anastasiadis Petros (panastas@cslab.ece.ntua.gr)
 ///
-/// \brief A cublasDgemm micro-benchmark
+/// \brief A cblasDgemm micro-benchmark
 ///
 
 #include <cassert>
@@ -21,7 +21,7 @@ int main(const int argc, const char *argv[]) {
   	double alpha, beta;
   	alpha = 1.1234, beta = 1.2345;
 
-	char TransA, TransB; 
+	char TransA = 'X', TransB = 'X'; 
   	int ctr = 1;
 
 	switch (argc) {
@@ -110,7 +110,7 @@ int main(const int argc, const char *argv[]) {
 			if (sample_sz > MICRO_MIN_ITER && error_margin/cblas_t_mean  * 100 <= 5) break; 
 		}
 		bench_t = csecond() - bench_t;
-		fprintf(stderr, "Microbenchmark (M = N = K = %zu) complete:\t mean_exec_t=%lf ms, Error Margin (percentage of mean) = %lf \%, Itter = %zu, Microbench_t = %lf\n\n", T, cblas_t_mean  * 1000, error_margin/cblas_t_mean  * 100, sample_sz, bench_t);
+		fprintf(stderr, "Microbenchmark (M = N = K = %zu) complete:\t mean_exec_t=%lf ms, Error Margin (percentage of mean) = %lf %%, Itter = %zu, Microbench_t = %lf\n\n", T, cblas_t_mean  * 1000, error_margin/cblas_t_mean  * 100, sample_sz, bench_t);
 		cudaCheckErrors();
 
 		report_run(filename, T, T, T, cblas_t_mean, error_margin, sample_sz, bench_t); 

@@ -56,6 +56,9 @@ set (CUDA_LINK "-L${CUDA_LD} -lcudart -lcublas -lcurand") #
 message("CoCopeLia-Framework - CUDA_LINK: " ${CUDA_LINK} )
 set (INTERNAL_LINK_LIB "${CUDA_LINK} -lrt -ldl")
 message("CoCopeLia-Framework - INTERNAL_LINK_LIB: " ${INTERNAL_LINK_LIB})
+set (OPENBLAS_LD ${OPENBLAS_PREFIX}/lib)
+set (OPENBLAS_LINK  "-L${OPENBLAS_LD} -lopenblas" )
+message("CoCopeLia-Framework - Linking OpenBLAS: " ${OPENBLAS_LINK} )
 
 #Run in testing mode : details about models, decisions and time spend in operations.
 #add_definitions(-DTEST)
@@ -74,8 +77,11 @@ add_definitions(-DTESTBED="${TESTBED_NAME}")
 add_definitions(-DDEV_NUM=${NUM_DEVICES})
 
 configure_file(${PROJECT_SOURCE_DIR}/Deploy.in ${CMAKE_INSTALL_PROJECT}/Deploy.sh @ONLY)
-configure_file(${PROJECT_SOURCE_DIR}/Model_validation.in ${CMAKE_INSTALL_PROJECT}/Model_validation.sh @ONLY)
-configure_file(${PROJECT_SOURCE_DIR}/Performance_evaluation.in ${CMAKE_INSTALL_PROJECT}/Performance_evaluation.sh @ONLY)
+
+set(PROJECT_BENCH_DIR ${PROJECT_SOURCE_DIR}/Benchmarking)
+configure_file(${PROJECT_BENCH_DIR}/Test_correctness.in ${CMAKE_INSTALL_PROJECT}/Test_correctness.sh @ONLY)
+configure_file(${PROJECT_BENCH_DIR}/Full_model_validation.in ${CMAKE_INSTALL_PROJECT}/Full_model_validation.sh @ONLY)
+configure_file(${PROJECT_BENCH_DIR}/Full_performance_evaluation.in ${CMAKE_INSTALL_PROJECT}/Full_performance_evaluation.sh @ONLY)
 
 ADD_SUBDIRECTORY (Universal_helpers)
 

@@ -10,7 +10,7 @@ LIBSC_DIR=$PROJECT_INSTALL_DIR/Library_scheduler
 LIBSC_TEST_LOG_DIR=$LIBSC_DIR/testLogs
 
 mkdir -p "${LIBSC_TEST_LOG_DIR}/exec_logs"
-mkdir -p "${LIBSC_TEST_LOG_DIR}/evaluation"
+#mkdir -p "${LIBSC_TEST_LOG_DIR}/evaluation"
 
 rm ${LIBSC_TEST_LOG_DIR}/exec_logs/*_perf_eval.log
 dgemm_perf_log="${LIBSC_TEST_LOG_DIR}/exec_logs/Dgemm_perf_eval.log"

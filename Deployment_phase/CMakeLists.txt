@@ -3,8 +3,6 @@ cmake_minimum_required (VERSION 3.10)
 project (CoCopeLia-Deployment CXX CUDA)
 message( "------------------------------------------------------------------------------------------------")
 message( "Deployment Phase - PROJECT_SOURCE_DIR: " ${PROJECT_SOURCE_DIR} )
-#message( "Deployment Phase - CMAKE_CURRENT_SOURCE_DIR: " ${CMAKE_CURRENT_SOURCE_DIR} )
-#message( "Deployment Phase - CMAKE_CURRENT_BINARY_DIR: " ${CMAKE_CURRENT_BINARY_DIR} )
 
 set ( DEPLOYMENT_DIR ${PROJECT_SOURCE_DIR}/${BACKENED} )
 message( "Deployment Phase - DEPLOYMENT_DIR: " ${DEPLOYMENT_DIR} )
@@ -15,7 +13,7 @@ message( "Deployment Phase - Included DIR: " ${DEPLOYMENT_DIR}/include )
 include_directories(${UNIHELP_INSTALL_INC})
 message( "Deployment Phase - Included DIR: " ${UNIHELP_INSTALL_INC} )
 
-## Choose between ->
+## TODO: Choose between ->
 ## i) Automatic micro-benchmarking (Population checked within 95% CI) using boost (recommended if boost available). 
 message("Deployment Phase - Using Boost for microbenchmark statistics")
 add_definitions(-DAUTO_BENCH_USE_BOOST)
@@ -45,15 +43,6 @@ file(MAKE_DIRECTORY ${DEPLOYMENT_DIR_DB})
 set (DEPLOYMENT_DIR_DB ${DEPLOYMENT_DIR_DB} PARENT_SCOPE)
 message( "Deployment Phase - Database DIR: " ${DEPLOYMENT_DIR_DB} )
 
-#OpenBLAS libs and includes
-set (OBLAS_PREFIX "/home/users/panastas/Lib_install/OpenBLAS")
-set (OBLAS_INCLUDE_DIRS ${OBLAS_PREFIX}/include)
-include_directories(${OBLAS_INCLUDE_DIRS} )
-message( "Library Scheduler - Included OpenBLAS: " ${OBLAS_INCLUDE_DIRS} )
-set (OBLAS_LD ${OBLAS_PREFIX}/lib)
-set (OBLAS_LINK  "-L${OBLAS_LD} -lopenblas" )
-message( "Library Scheduler - Linking OpenBLAS: " ${OBLAS_LINK} )
-
 add_definitions(-DDEPLOYDB="${DEPLOYMENT_DIR_DB}")
 
 add_executable (RunCuCuBlasDaxpyBench ${DEPLOYMENT_DIR_SRC}/daxpy_microbench_gpu.cu )
@@ -66,7 +55,7 @@ target_link_libraries(RunCuCuBlasDaxpyBench ${INTERNAL_LINK_LIB} unihelpers)
 target_link_libraries(RunCuCuBlasDgemmBench ${INTERNAL_LINK_LIB} unihelpers)
 target_link_libraries(RunCuCuBlasSgemmBench ${INTERNAL_LINK_LIB} unihelpers)
 target_link_libraries(RunCuCuBlasTransferBench ${INTERNAL_LINK_LIB} unihelpers)
-target_link_libraries(RunCBlasDgemmBench ${INTERNAL_LINK_LIB} unihelpers ${OBLAS_LINK})
+target_link_libraries(RunCBlasDgemmBench ${INTERNAL_LINK_LIB} unihelpers ${OPENBLAS_LINK})
 
 configure_file(${PROJECT_SOURCE_DIR}/RunMicrobenchmarks.in ${DEPLOYMENT_INSTALL_PREFIX}/RunMicrobenchmarks.sh @ONLY)
 configure_file(${PROJECT_SOURCE_DIR}/ProcessDatabase.in ${DEPLOYMENT_INSTALL_PREFIX}/ProcessDatabase.sh @ONLY)
