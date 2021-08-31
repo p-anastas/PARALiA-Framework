@@ -21,7 +21,8 @@ dgemm_log="${RES_DIR}/microbench_logs/dgemm_microbench_gpu.log"
 sgemm_log="${RES_DIR}/microbench_logs/sgemm_microbench_gpu.log"
 
 micro_transfer_exec="${BIN_DIR}/RunCuCuBlasTransferBench"
-micro_dgemm_exec="${BIN_DIR}/RunCuCuBlasDgemmBench"
+micro_dgemm_gpu_exec="${BIN_DIR}/RunCuCuBlasDgemmBench"
+micro_dgemm_cpu_exec="${BIN_DIR}/RunCBlasDgemmBench"
 micro_sgemm_exec="${BIN_DIR}/RunCuCuBlasSgemmBench"
 
 
@@ -38,12 +39,14 @@ rm $dgemm_log
 echo "Performing microbenchmarks for dgemm..."
 for TransA in N T;
 do
-for TransB in N T;
-do
-	echo "$micro_dgemm_exec $device $TransA $TransB &>> $dgemm_log"
-	$micro_dgemm_exec $device $TransA $TransB &>> $dgemm_log
-	echo "Done"
-done 
+	for TransB in N T;
+	do
+		echo "$micro_dgemm_gpu_exec $device $TransA $TransB &>> $dgemm_log"
+		$micro_dgemm_gpu_exec $device $TransA $TransB &>> $dgemm_log
+		echo "$micro_dgemm_cpu_exec $TransA $TransB &>> $dgemm_log"
+		$micro_dgemm_cpu_exec $TransA $TransB &>> $dgemm_log
+		echo "Done"
+	done 
 done
 
 # sgemm micro-benchmark Tile size
@@ -51,11 +54,11 @@ rm $sgemm_log
 echo "Performing microbenchmarks for sgemm..."
 for TransA in N T;
 do
-for TransB in N T;
-do
-	echo "$micro_sgemm_exec $device $TransA $TransB &>> $sgemm_log"
-	$micro_sgemm_exec $device $TransA $TransB &>> $sgemm_log
-	echo "Done"
-done 
+	for TransB in N T;
+	do
+		echo "$micro_sgemm_exec $device $TransA $TransB &>> $sgemm_log"
+		$micro_sgemm_exec $device $TransA $TransB &>> $sgemm_log
+		echo "Done"
+	done 
 done
 

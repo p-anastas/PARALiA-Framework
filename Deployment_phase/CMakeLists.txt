@@ -45,17 +45,28 @@ file(MAKE_DIRECTORY ${DEPLOYMENT_DIR_DB})
 set (DEPLOYMENT_DIR_DB ${DEPLOYMENT_DIR_DB} PARENT_SCOPE)
 message( "Deployment Phase - Database DIR: " ${DEPLOYMENT_DIR_DB} )
 
+#OpenBLAS libs and includes
+set (OBLAS_PREFIX "/home/users/panastas/Lib_install/OpenBLAS")
+set (OBLAS_INCLUDE_DIRS ${OBLAS_PREFIX}/include)
+include_directories(${OBLAS_INCLUDE_DIRS} )
+message( "Library Scheduler - Included OpenBLAS: " ${OBLAS_INCLUDE_DIRS} )
+set (OBLAS_LD ${OBLAS_PREFIX}/lib)
+set (OBLAS_LINK  "-L${OBLAS_LD} -lopenblas" )
+message( "Library Scheduler - Linking OpenBLAS: " ${OBLAS_LINK} )
+
 add_definitions(-DDEPLOYDB="${DEPLOYMENT_DIR_DB}")
 
 add_executable (RunCuCuBlasDaxpyBench ${DEPLOYMENT_DIR_SRC}/daxpy_microbench_gpu.cu )
 add_executable (RunCuCuBlasDgemmBench ${DEPLOYMENT_DIR_SRC}/dgemm_microbench_gpu.cu )
 add_executable (RunCuCuBlasSgemmBench ${DEPLOYMENT_DIR_SRC}/sgemm_microbench_gpu.cu )
 add_executable (RunCuCuBlasTransferBench ${DEPLOYMENT_DIR_SRC}/transfers_microbench_gpu.cu )
+add_executable (RunCBlasDgemmBench ${DEPLOYMENT_DIR_SRC}/dgemm_microbench_cpu.cpp )
 
 target_link_libraries(RunCuCuBlasDaxpyBench ${INTERNAL_LINK_LIB} unihelpers)
 target_link_libraries(RunCuCuBlasDgemmBench ${INTERNAL_LINK_LIB} unihelpers)
 target_link_libraries(RunCuCuBlasSgemmBench ${INTERNAL_LINK_LIB} unihelpers)
 target_link_libraries(RunCuCuBlasTransferBench ${INTERNAL_LINK_LIB} unihelpers)
+target_link_libraries(RunCBlasDgemmBench ${INTERNAL_LINK_LIB} unihelpers ${OBLAS_LINK})
 
 configure_file(${PROJECT_SOURCE_DIR}/RunMicrobenchmarks.in ${DEPLOYMENT_INSTALL_PREFIX}/RunMicrobenchmarks.sh @ONLY)
 configure_file(${PROJECT_SOURCE_DIR}/ProcessDatabase.in ${DEPLOYMENT_INSTALL_PREFIX}/ProcessDatabase.sh @ONLY)
