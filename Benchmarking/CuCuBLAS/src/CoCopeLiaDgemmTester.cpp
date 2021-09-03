@@ -7,7 +7,6 @@
 #include "unihelpers.hpp"
 #include "CoCoPeLia.hpp"
 #include "cuBLASXtWrapped.hpp"
-//#include "testing.hpp"
 
 #define CBLASXT_MAX_SAFE_TILE 10000
 

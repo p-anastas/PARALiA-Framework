@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 3.10)
 ### Initialize the project 
-project (CoCopeLia-Deployment CXX CUDA)
+project (CoCopeLia-Deployment VERSION ${PROJECT_VERSION} DESCRIPTION "The Deployment component of the CoCoPeLia framework" LANGUAGES CXX CUDA)
 message( "------------------------------------------------------------------------------------------------")
 message( "Deployment Phase - PROJECT_SOURCE_DIR: " ${PROJECT_SOURCE_DIR} )
 

@@ -7,7 +7,7 @@ BACKEND=@BACKENED@
 machine=@TESTBED_NAME@
 NUM_DEVICES=@NUM_DEVICES@
 
-LIBSC_DIR=$PROJECT_INSTALL_DIR/Library_scheduler
+LIBSC_DIR=$PROJECT_INSTALL_DIR/Benchmarking
 LIBSC_TEST_LOG_DIR=$LIBSC_DIR/testLogs
 
 mkdir -p "${LIBSC_TEST_LOG_DIR}/exec_logs"
@@ -19,7 +19,7 @@ beta=1.1154
 for FUNC in Dgemm Sgemm 
 do
 	perf_log="${LIBSC_TEST_LOG_DIR}/exec_logs/${FUNC}_perf_eval.log"
-	rm ${LIBSC_TEST_LOG_DIR}/exec_logs/$perf_log
+	rm $perf_log
 
 	CoCopelia_run=$LIBSC_DIR/testing-bin/CoCopeLia${FUNC}Runner
 	cuBLASXt_run=$LIBSC_DIR/testing-bin/cuBLASXt${FUNC}Runner
@@ -32,7 +32,7 @@ do
 	for scenario in "A" "B"
 	do
 		C_loc=-1
-		if "$scenario" = "A"
+		if [ "$scenario" = "A" ];
 		then
 			A_loc=-1
 			B_loc=-1

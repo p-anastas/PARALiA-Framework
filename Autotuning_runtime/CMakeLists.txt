@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 3.10)
 ### Initialize the project 
-project (CoCopeLia-Autotune VERSION 0.0.1 DESCRIPTION "Auto-tuning function lib for CoCoPeLia" LANGUAGES CXX)
+project (CoCopeLia-Autotune VERSION ${PROJECT_VERSION} DESCRIPTION "Auto-tuning function lib for CoCoPeLia" LANGUAGES CXX)
 message( "------------------------------------------------------------------------------------------------")
 message( "Autotuning Runtime - PROJECT_SOURCE_DIR: " ${PROJECT_SOURCE_DIR} )
 #message( "Autotuning Runtime - CMAKE_CURRENT_SOURCE_DIR: " ${CMAKE_CURRENT_SOURCE_DIR} )

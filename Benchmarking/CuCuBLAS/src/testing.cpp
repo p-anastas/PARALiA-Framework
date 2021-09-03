@@ -99,11 +99,11 @@ void CheckLogLvl3(char* filename, CoControl_p predef_control_values, char TransA
 	return;
 }
 
-void StoreLogLvl3(char* filename, CoControl_p predef_control_values, char TransA, char TransB, double alpha, double beta, size_t D1, size_t D2, size_t D3, short loc1, short loc2, short loc3, short outloc, double av_time, double min_time, double max_time){
+void StoreLogLvl3(char* filename, CoControl_p predef_control_values, char TransA, char TransB, double alpha, double beta, size_t D1, size_t D2, size_t D3, short loc1, short loc2, short loc3, short outloc, double timer){
 	FILE* fp = fopen(filename,"a");
 	if (!fp) error("report_results: LogFile failed to open");
 	char* control_str = CoControlPrint(predef_control_values); 
-   	fprintf(fp,"%s, %c,%c,%.5lf,%.5lf,%zu,%zu,%zu,%d,%d,%d,%d, %e,%e,%e\n",  control_str, TransA, TransB, alpha, beta, D1, D2, D3, loc1, loc2, loc3, outloc, av_time, min_time, max_time);
+   	fprintf(fp,"%s, %c,%c,%.5lf,%.5lf,%zu,%zu,%zu,%d,%d,%d,%d, %e\n",  control_str, TransA, TransB, alpha, beta, D1, D2, D3, loc1, loc2, loc3, outloc, timer);
 	free(control_str);
         fclose(fp); 
 	return;

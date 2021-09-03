@@ -7,7 +7,6 @@
 #include "unihelpers.hpp"
 #include "CoCoPeLia.hpp"
 #include "cuBLASXtWrapped.hpp"
-//#include "testing.hpp"
 
 #define CBLASXT_MAX_SAFE_TILE 10000
 
@@ -28,9 +27,9 @@ int main(const int argc, const char *argv[]) {
 			if (predef_control_values->T > M || predef_control_values->T > N || predef_control_values->T > K) error("Given Tin=%d bigger than problem dim\n", predef_control_values->T); 
 			else if (predef_control_values->T > M/1.5 && predef_control_values->T > N/1.5 && predef_control_values->T > K/1.5) error("Given Tin=%d bigger than all problem dims/1.5\n", predef_control_values->T);
 		}
-		sprintf(filename, "%s/CoCopeLiaDgemmRunner_predefined_vals.log", TESTLIBDIR);	
+		sprintf(filename, "%s/CoCopeLiaDgemmRunner_predefined_vals_%s.log", TESTLIBDIR, VERSION);	
 	}
-	else sprintf(filename, "%s/CoCopeLiaDgemmRunner.log", TESTLIBDIR);
+	else sprintf(filename, "%s/CoCopeLiaDgemmRunner_%s.log", TESTLIBDIR, VERSION);
 
 	CheckLogLvl3(filename, predef_control_values, TransA, TransB, alpha, beta, M, N, K, A_loc, B_loc, C_loc, C_out_loc);
 	
@@ -65,25 +64,48 @@ int main(const int argc, const char *argv[]) {
 	cpu_timer  = csecond() - cpu_timer ;
 	fprintf(stderr, "done.\nInit time:\t%lf ms\n\n",  cpu_timer  * 1000);
 
-	double *C_out, *C_out1;
+#ifdef RUNVALIDATION
+	double *C_out, *C_out1, *C_buf;
 	C_out  = (double*) malloc(M * N*sizeof(double));
 	C_out1  = (double*) malloc(M * N*sizeof(double));
+	C_buf  = (double*) malloc(M * N*sizeof(double));
 
+	CoCoMemcpy(C_buf, C,  M * N *sizeof(double), -2, C_loc);
+
+	// Call for Validate
+	if (predef_control_values!= NULL) return_values = CoCopeLiaDgemmControled(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC, predef_control_values);
+	else return_values = CoCopeLiaDgemm(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC);
+	cudaCheckErrors();
+	for (int i = 0; i< return_values->dev_num; i++) CoCopeLiaDgemm_flush_gpu_mem_buf(return_values->dev_ids[i]);
+	
+ 	CoCoMemcpy(C_out, C,  M * N *sizeof(double), -2, C_loc);
+ 	CoCoMemcpy(C, C_buf,  M * N *sizeof(double), C_loc, -2);
+
+	// Validate with cuBLASXt (questionable but CPU validation can be slower by at least a factor)
+	int dev_ids[DEV_NUM];
+	for (int i = 0; i < DEV_NUM; i++) dev_ids[i] = i; 
+	cuBLASXtDgemmWrap(TransA,  TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC,  (size_t) fmin(fmin(fmin(M,N),K)/2,CBLASXT_MAX_SAFE_TILE), 0, DEV_NUM, dev_ids);
 	CoCoMemcpy(C_out1, C,  M * N *sizeof(double), -2, C_loc);
+ 	if(Dtest_equality(C_out1, C_out, M * N) < 9) error("Insufficient accuracy for benchmarks\n");
 
-	// First call for Validate and/or additional overhead counting
+ 	CoCoMemcpy(C, C_buf,  M * N *sizeof(double), C_loc, -2);
+	free(C_out);
+	free(C_out1);
+	free(C_buf);
+#endif
+
 	cpu_timer = csecond();
+	// First call for Validate
 	if (predef_control_values!= NULL) return_values = CoCopeLiaDgemmControled(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC, predef_control_values);
 	else return_values = CoCopeLiaDgemm(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC);
 	cudaCheckErrors();
 	cpu_timer  = csecond() - cpu_timer;
-	fprintf(stderr, "First call time:\t%lf ms ( %lf Gflops/s )\n\n", cpu_timer  * 1000, Gval_per_s(dgemm_flops(M,N,K),cpu_timer));
 
 	CheckLogLvl3(filename, return_values, TransA, TransB, alpha, beta, M, N, K, A_loc, B_loc, C_loc, C_out_loc);
+	// Store the time required for the first call (+ 1-time overheads etc)
+	StoreLogLvl3(filename, return_values, TransA, TransB, alpha, beta, M, N, K, A_loc, B_loc, C_loc, C_out_loc, cpu_timer); 
 
 	double first_over_t = cpu_timer; 
-
- 	CoCoMemcpy(C_out, C,  M * N *sizeof(double), -2, C_loc);
 
 	double min_t = first_over_t, max_t = 0, avg_t = 0;
 	cpu_timer = csecond();
@@ -95,29 +117,21 @@ int main(const int argc, const char *argv[]) {
 		else return_values = CoCopeLiaDgemm(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC);
 		cudaCheckErrors();
 		cpu_timer = csecond() - cpu_timer;
+		StoreLogLvl3(filename, return_values, TransA, TransB, alpha, beta, M, N, K, A_loc, B_loc, C_loc, C_out_loc, cpu_timer); 
 		if ( cpu_timer < min_t ) min_t = cpu_timer;
 		if ( cpu_timer > max_t ) max_t = cpu_timer;
 		avg_t += cpu_timer;
 	}
 	avg_t/=bench_it;
-	fprintf(stderr, "CoCopeLia (%s):\n\tavg_t = %lf ms ( %lf Gflops/s )\n\tmin_t = %lf ms ( %lf Gflops/s )\n\tmax_t = %lf ms ( %lf Gflops/s )\n", 
+	fprintf(stderr, "CoCopeLia (%s):\n\tfirst_it_t = %lf ms ( %lf Gflops/s )\n\tavg_t = %lf ms ( %lf Gflops/s )\n\tmin_t = %lf ms ( %lf Gflops/s )\n\tmax_t = %lf ms ( %lf Gflops/s )\n", 
 	CoControlPrint(return_values),
+	first_over_t  * 1000, Gval_per_s(dgemm_flops(M,N,K),first_over_t),
 	avg_t  * 1000, Gval_per_s(dgemm_flops(M,N,K),avg_t),
 	min_t  * 1000, Gval_per_s(dgemm_flops(M,N,K),min_t),
 	max_t  * 1000, Gval_per_s(dgemm_flops(M,N,K),max_t));
 
-
 	for (int i = 0; i< return_values->dev_num; i++) CoCopeLiaDgemm_flush_gpu_mem_buf(return_values->dev_ids[i]);
-	
- 	CoCoMemcpy(C, C_out1,  M * N *sizeof(double), C_loc, -2);
 
-	int dev_ids[DEV_NUM];
-	for (int i = 0; i < DEV_NUM; i++) dev_ids[i] = i; 
-	cuBLASXtDgemmWrap(TransA,  TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC,  (size_t) fmin(fmin(fmin(M,N),K)/2,CBLASXT_MAX_SAFE_TILE), 0, DEV_NUM, dev_ids);
-	CoCoMemcpy(C_out1, C,  M * N *sizeof(double), -2, C_loc);
- 	if(Dtest_equality(C_out1, C_out, M * N) < 9) error("Insufficient accuracy for benchmarks\n");
-
-	StoreLogLvl3(filename, return_values, TransA, TransB, alpha, beta, M, N, K, A_loc, B_loc, C_loc, C_out_loc, avg_t, min_t, max_t); 
 	cudaCheckErrors();
 	CoCoFree(A, A_loc);
 	CoCoFree(B, B_loc);

@@ -421,7 +421,7 @@ tunableParams_p CoCoPeLiaModelOptimizeTile(CoCoModel_p model, ModelType mode){
 	min_T = ((GPUexec3Model_p)model->GPUexec_model_ptr)->T_lookup_buf[0];
 	if (min_T > max_allowed_T){
 		outparams->T = max_allowed_T; 
-		// FIXME: Undifined performance for tiles < than the smaller microbenchmark
+		// FIXME: Undefined performance for tiles < than the smaller microbenchmark
 		outparams->pred_t = 0;
 		return outparams;
 	}

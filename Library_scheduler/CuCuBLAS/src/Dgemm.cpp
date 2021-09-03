@@ -25,6 +25,7 @@ void CoCopeLiaDgemm_flush_gpu_mem_buf(short dev_id){
 #endif
 	cudaFree(GloBuf[dev_id]->gpu_mem_buf);
 	free(GloBuf[dev_id]);
+	GloBuf[dev_id] = NULL;
 	cudaCheckErrors();
 }
 
@@ -47,9 +48,9 @@ void CoCopelia_split_dims(size_t* M_memparts, size_t* N_memparts, size_t* K_memp
 		if(A_loc || B_loc) candK = K/ *K_memparts;
 		else candK = 0; 
 
-		if (candM >= max(candN, candK)) *M_memparts+=1;
-		else if (candN >= max(candM, candK)) *N_memparts+=1;
-		else if (candK >= max(candM, candN)) *K_memparts+=1;
+		if (candM >= (size_t) fmax(candN, candK)) *M_memparts+=1;
+		else if (candN >= (size_t) fmax(candM, candK)) *N_memparts+=1;
+		else if (candK >= (size_t) fmax(candM, candN)) *K_memparts+=1;
 	}
 #ifdef DEBUG
 	lprintf(lvl-1, "<-----|\n"); 

@@ -77,7 +77,7 @@ done
 
 #exit 1
 
-LIBSC_DIR=$PROJECT_INSTALL_DIR/Library_scheduler
+LIBSC_DIR=$PROJECT_INSTALL_DIR/Benchmarking
 device_token=$((10**$device))
 cpu_ratio=0
 alpha=1.2345

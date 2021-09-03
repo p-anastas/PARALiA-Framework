@@ -2,8 +2,18 @@ cmake_minimum_required (VERSION 3.10)
 
 ## Define a name for the backened library wrappers/implementations used in this build, Currently implemented only with CuCuBLAS(==CUDA+CUBLAS)
 set(BACKENED "CuCuBLAS")
-project (CoCopeLia-Framework VERSION 0.0.1 DESCRIPTION "The complete CoCoPeLia Framework")
 message("CoCopeLia-Framework - BACKEND: " ${BACKENED})
+
+## Define the project version (used in logfiles for result testing)
+set(PROJECT_VERSION "0.1")
+message("CoCopeLia-Framework - PROJECT_VERSION: " ${PROJECT_VERSION})
+add_definitions(-DVERSION="${PROJECT_VERSION}")
+#Run in testing mode : details about models, decisions and time spend in operations.
+#add_definitions(-DTEST)
+#Run in debug mode, which includes detailed function calls and info for error-checking
+#add_definitions(-DDEBUG)
+
+project (CoCopeLia-Framework VERSION ${PROJECT_VERSION} DESCRIPTION "The complete CoCoPeLia Framework")
 
 ## Define a name for the testbed, to be used for the whole framework setup
 #set(TESTBED_NAME "dungani")
@@ -60,12 +70,6 @@ set (OPENBLAS_LD ${OPENBLAS_PREFIX}/lib)
 set (OPENBLAS_LINK  "-L${OPENBLAS_LD} -lopenblas" )
 message("CoCopeLia-Framework - Linking OpenBLAS: " ${OPENBLAS_LINK} )
 
-#Run in testing mode : details about models, decisions and time spend in operations.
-#add_definitions(-DTEST)
-
-#Run in debug mode, which includes detailed function calls and info for error-checking
-#add_definitions(-DDEBUG)
-
 if ("${CMAKE_INSTALL_PREFIX}" STREQUAL "/usr/local") 
 message("CoCopeLia-Framework - CMAKE_INSTALL_PREFIX not provided (with --install-prefix <directory>) - project will be installed at default build dir.")
  set (CMAKE_INSTALL_PREFIX ${CMAKE_CURRENT_BINARY_DIR}/${TESTBED_NAME}-install)
@@ -92,3 +96,5 @@ add_definitions(-DDEPLOYDB="${DEPLOYMENT_DIR_DB}")
 ADD_SUBDIRECTORY (Autotuning_runtime)
 
 ADD_SUBDIRECTORY (Library_scheduler)
+
+ADD_SUBDIRECTORY (Benchmarking)

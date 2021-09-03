@@ -6,7 +6,7 @@ PROJECT_INSTALL_DIR=@CMAKE_INSTALL_PROJECT@
 BACKEND=@BACKENED@
 machine=@TESTBED_NAME@
 
-LIBSC_DIR=$PROJECT_INSTALL_DIR/Library_scheduler
+LIBSC_DIR=$PROJECT_INSTALL_DIR/Benchmarking
 
 # Set to 0 for basic correctness testing or 1 for also testing huge sizes ( > GPU mem). Setting to 1 might lead to very long testing times depending on the system.
 RUN_LARGE_FLAG=0

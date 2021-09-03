@@ -6,12 +6,14 @@
 
 #include "unihelpers.hpp"
 #include "CoCoPeLia.hpp"
+#include "BLASxWrapped.hpp"
 #include "cuBLASXtWrapped.hpp"
 //#include "testing.hpp"
 
 #define CBLASXT_MAX_SAFE_TILE 10000
 
 int main(const int argc, const char *argv[]) {
+
 
 	char TransA, TransB; 
   	double alpha, beta;
@@ -26,14 +28,14 @@ int main(const int argc, const char *argv[]) {
 		if(predef_control_values->T > 0) {
 			if (predef_control_values->T > M || predef_control_values->T > N || predef_control_values->T > K) error("Given Tin=%d bigger than problem dim\n", predef_control_values->T); 
 			else if (predef_control_values->T > M/1.5 && predef_control_values->T > N/1.5 && predef_control_values->T > K/1.5) error("Given Tin=%d bigger than all problem dims/1.5\n", predef_control_values->T);
+			sprintf(filename, "%s/BLASxExDgemmRunner_predefined_vals_%s.log", TESTLIBDIR, VERSION);	
 		}
-		sprintf(filename, "%s/cuBLASXtDgemmRunner_predefined_vals.log", TESTLIBDIR);	
 	}
-	else sprintf(filename, "%s/cuBLASXtDgemmRunner.log", TESTLIBDIR);
+	else sprintf(filename, "%s/BLASxExDgemmRunner_%s.log", TESTLIBDIR, VERSION);
 
-	size_t cublasXt_tile;
-	if (predef_control_values!= NULL && predef_control_values->T > 0) return_values->T = cublasXt_tile = predef_control_values->T;
-	else return_values->T = cublasXt_tile = (size_t) fmin(fmin(fmin(M,N),K)/2,CBLASXT_MAX_SAFE_TILE); 
+	size_t BLASx_tile;
+	if (predef_control_values!= NULL && predef_control_values->T > 0) return_values->T = BLASx_tile = predef_control_values->T;
+	else return_values->T = BLASx_tile = 4096; // The best performing static tile for our machine
 	double cpu_ratio;
 	if (predef_control_values!= NULL && predef_control_values->cpu_ratio > 0) return_values->cpu_ratio = cpu_ratio = predef_control_values->cpu_ratio;
 	else return_values->cpu_ratio = cpu_ratio = 0; 
@@ -82,67 +84,69 @@ int main(const int argc, const char *argv[]) {
 	cpu_timer  = csecond() - cpu_timer ;
 	fprintf(stderr, "done.\nInit time:\t%lf ms\n\n",  cpu_timer  * 1000);
 
-	// First call for Validate and/or additional overhead counting
+#ifdef RUNVALIDATION
+	double *C_out, *C_out1, *C_buf;
+	C_out  = (double*) malloc(M * N*sizeof(double));
+	C_out1  = (double*) malloc(M * N*sizeof(double));
+	C_buf  = (double*) malloc(M * N*sizeof(double));
+
+	CoCoMemcpy(C_buf, C,  M * N *sizeof(double), -2, C_loc);
+
+	// Call for Validate
+	BLASxExDgemmWrap(TransA,  TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC,  BLASx_tile, cpu_ratio, dev_num, dev_ids);
+	cudaCheckErrors();
+
+	BLASxFlushGPUBuf(dev_num, dev_ids);
+	
+ 	CoCoMemcpy(C_out, C,  M * N *sizeof(double), -2, C_loc);
+ 	CoCoMemcpy(C, C_buf,  M * N *sizeof(double), C_loc, -2);
+
+	// Validate with cuBLASXt (questionable but CPU validation can be slower by at least a factor)
+	{
+	int dev_ids[DEV_NUM];
+	for (int i = 0; i < DEV_NUM; i++) dev_ids[i] = i; 
+	cuBLASXtDgemmWrap(TransA,  TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC,  (size_t) fmin(fmin(fmin(M,N),K)/2,CBLASXT_MAX_SAFE_TILE), 0, DEV_NUM, dev_ids);
+	}
+	CoCoMemcpy(C_out1, C,  M * N *sizeof(double), -2, C_loc);
+ 	if(Dtest_equality(C_out1, C_out, M * N) < 9) error("Insufficient accuracy for benchmarks\n");
+
+ 	CoCoMemcpy(C, C_buf,  M * N *sizeof(double), C_loc, -2);
+	free(C_out);
+	free(C_out1);
+	free(C_buf);
+#endif
+
+	// First call for additional overhead counting
 	cpu_timer = csecond();
-	cuBLASXtDgemmWrap(TransA,  TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC,  cublasXt_tile, cpu_ratio, dev_num, dev_ids);
+	BLASxExDgemmWrap(TransA,  TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC,  BLASx_tile, cpu_ratio, dev_num, dev_ids);
 	cudaCheckErrors();
 	cpu_timer  = csecond() - cpu_timer;
-	fprintf(stderr,"First CUBLASXT DGEMM call-> M = %zu, N = %zu, K = %zu, T = %zu\n", M, N, K, (size_t) cublasXt_tile);
-	fprintf(stderr, "Total time:\t%lf ms\n\n", cpu_timer  * 1000);
+	StoreLogLvl3(filename, return_values, TransA, TransB, alpha, beta, M, N, K, A_loc, B_loc, C_loc, C_out_loc, cpu_timer); 
+
 	double first_over_t = cpu_timer; 
 
-	double cublasXt_t = cpu_timer; 
-	if (predef_control_values!= NULL && predef_control_values->T > 0){
-		fprintf(stderr,"Running CUBLASXT DGEMM-> M = %zu, N = %zu, K = %zu, T = %zu\n", M, N, K, cublasXt_tile);
-		cpu_timer  = csecond();
-		cuBLASXtDgemmWrap(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC,  cublasXt_tile, cpu_ratio, dev_num, dev_ids);
-		cudaCheckErrors();
-		cpu_timer  = csecond() - cpu_timer;
-		fprintf(stderr, "Total time:\t%lf ms\n", cpu_timer  * 1000);
-		if (cublasXt_t > cpu_timer) cublasXt_t = cpu_timer; 
-	}
-	else {
-		for (size_t T_trial = (((size_t)fmax(fmin(fmin(M/8,N/8),K/8),1024))/1024)*1024; T_trial <= fmin(fmin(fmin(M,N),K),CBLASXT_MAX_SAFE_TILE); T_trial+=1024) if (M >= T_trial*1.5 || N >= T_trial*1.5 || K >= T_trial*1.5){
-			fprintf(stderr,"Running CUBLASXT DGEMM-> M = %zu, N = %zu, K = %zu, T = %zu\n", M, N, K, T_trial);
-			cpu_timer  = csecond();
-			cuBLASXtDgemmWrap(TransA,  TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC,  T_trial, cpu_ratio, dev_num, dev_ids);
-			cudaCheckErrors();
-			cpu_timer  = csecond() - cpu_timer;
-			fprintf(stderr, "Total time:\t%lf ms\n", cpu_timer  * 1000);
-			if (cpu_timer < cublasXt_t){
-				cublasXt_t = cpu_timer;
-				cublasXt_tile = T_trial;
-			}
-		}
-		fprintf(stderr, "\nCUBLASXT DGEMM T_best = %zu : t = %lf ms ( %lf Gflops/s )\n\n", cublasXt_tile, cublasXt_t  * 1000, Gval_per_s(dgemm_flops(M,N,K),cublasXt_t));
-	}
-	return_values->T = cublasXt_tile;
-	fprintf(stderr,"Running CUBLASXT DGEMM-> M = %zu, N = %zu, K = %zu T_best = %zu\n", M, N, K, cublasXt_tile);
-
-	CheckLogLvl3(filename, return_values, TransA, TransB, alpha, beta, M, N, K, A_loc, B_loc, C_loc, C_out_loc);
-
-	double min_t = cublasXt_t, max_t = 0, avg_t = 0;
+	double min_t = first_over_t, max_t = 0, avg_t = 0;
 	cpu_timer = csecond();
 	short bench_it = 100;
 	if ( M >= 8192 || N >= 8192 || K >= 8192) bench_it = 10; 
 	for(int it = 0; it < bench_it; it++){
 		cpu_timer = csecond();
-		cuBLASXtDgemmWrap(TransA,  TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC,  cublasXt_tile, cpu_ratio, dev_num, dev_ids);
+		BLASxExDgemmWrap(TransA,  TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC,  BLASx_tile, cpu_ratio, dev_num, dev_ids);
 		cudaCheckErrors();
 		cpu_timer = csecond() - cpu_timer;
+		StoreLogLvl3(filename, return_values, TransA, TransB, alpha, beta, M, N, K, A_loc, B_loc, C_loc, C_out_loc, cpu_timer); 
 		if ( cpu_timer < min_t ) min_t = cpu_timer;
 		if ( cpu_timer > max_t ) max_t = cpu_timer;
 		avg_t += cpu_timer;
 	}
 	avg_t/=bench_it;
-	fprintf(stderr, "cuBLASXt :\n\tavg_t = %lf ms ( %lf Gflops/s )\n\tmin_t = %lf ms ( %lf Gflops/s )\n\tmax_t = %lf ms ( %lf Gflops/s )\n", 
+	fprintf(stderr, "BLASx (%s):\n\tfirst_it_t = %lf ms ( %lf Gflops/s )\n\tavg_t = %lf ms ( %lf Gflops/s )\n\tmin_t = %lf ms ( %lf Gflops/s )\n\tmax_t = %lf ms ( %lf Gflops/s )\n", 
+	CoControlPrint(return_values),
+	first_over_t  * 1000, Gval_per_s(dgemm_flops(M,N,K),first_over_t),
 	avg_t  * 1000, Gval_per_s(dgemm_flops(M,N,K),avg_t),
 	min_t  * 1000, Gval_per_s(dgemm_flops(M,N,K),min_t),
 	max_t  * 1000, Gval_per_s(dgemm_flops(M,N,K),max_t));
-
-	CheckLogLvl3(filename, return_values, TransA, TransB, alpha, beta, M, N, K, A_loc, B_loc, C_loc, C_out_loc);
-	StoreLogLvl3(filename, return_values, TransA, TransB, alpha, beta, M, N, K, A_loc, B_loc, C_loc, C_out_loc, avg_t, min_t, max_t); 
-
+	
 	cudaCheckErrors();
 	CoCoFree(A, A_loc);
 	CoCoFree(B, B_loc);

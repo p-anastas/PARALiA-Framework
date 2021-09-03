@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 3.10)
 ### Initialize the project 
-project (CoCopeLia-Helpers VERSION 0.0.1 DESCRIPTION "Universal Helper function lib for CoCoPeLia" LANGUAGES CXX CUDA)
+project (CoCopeLia-Helpers VERSION ${PROJECT_VERSION} DESCRIPTION "Universal Helper function lib for CoCoPeLia" LANGUAGES CXX CUDA)
 message( "------------------------------------------------------------------------------------------------")
 message( "Universal Helpers - PROJECT_SOURCE_DIR: " ${PROJECT_SOURCE_DIR} )
 #message( "Universal Helpers - CMAKE_CURRENT_SOURCE_DIR: " ${CMAKE_CURRENT_SOURCE_DIR} )

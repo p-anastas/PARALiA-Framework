@@ -1,0 +1,103 @@
+cmake_minimum_required (VERSION 3.10)
+### Initialize the project 
+project (CoCopeLia-Benchmarks VERSION ${PROJECT_VERSION} DESCRIPTION "Library wrappers for performance comparisson with CoCoPeLia" LANGUAGES CXX) #CUDA
+message( "------------------------------------------------------------------------------------------------")
+message( "Benchmarking - PROJECT_SOURCE_DIR: " ${PROJECT_SOURCE_DIR} )
+#message( "Library Scheduler - CMAKE_CURRENT_SOURCE_DIR: " ${CMAKE_CURRENT_SOURCE_DIR} )
+#message( "Library Scheduler - CMAKE_CURRENT_BINARY_DIR: " ${CMAKE_CURRENT_BINARY_DIR} )
+
+set ( BENCH_DIR ${PROJECT_SOURCE_DIR}/${BACKENED} )
+message( "Benchmarking - LIBSC_DIR: " ${BENCH_DIR} )
+
+set (BENCH_DIR_INC ${BENCH_DIR}/include)
+include_directories( ${BENCH_DIR_INC})
+message( "Benchmarking - Included DIR: " ${BENCH_DIR_INC} )
+
+include_directories(${UNIHELP_INSTALL_INC})
+message( "Benchmarking - Included DIR: " ${UNIHELP_INSTALL_INC} )
+
+include_directories(${AUTOTUNE_INSTALL_INC})
+message( "Benchmarking - Included DIR: " ${AUTOTUNE_INSTALL_INC} )
+
+include_directories(${LIBSC_INSTALL_INC})
+message( "Benchmarking - Included DIR: " ${LIBSC_INSTALL_INC} )
+
+set (BENCH_DIR_SRC ${BENCH_DIR}/src)
+message( "Benchmarking - Source DIR: " ${BENCH_DIR_SRC} )
+
+set (BENCH_INSTALL ${CMAKE_INSTALL_PROJECT}/Benchmarking)
+file(MAKE_DIRECTORY ${BENCH_INSTALL})
+
+set (BENCH_INSTALL_INC ${BENCH_INSTALL}/include)
+file(MAKE_DIRECTORY ${BENCH_INSTALL_INC})
+
+#set (BENCH_INSTALL_LIB ${BENCH_INSTALL}/lib)
+#file(MAKE_DIRECTORY ${BENCH_INSTALL_LIB})
+#set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${LIBSC_INSTALL_LIB})
+
+set (BENCH_INSTALL_BIN ${BENCH_INSTALL}/testing-bin)
+file(MAKE_DIRECTORY ${BENCH_INSTALL_BIN})
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${BENCH_INSTALL_BIN})
+
+file(MAKE_DIRECTORY ${BENCH_INSTALL}/testLogs)
+add_definitions(-DTESTLIBDIR="${BENCH_INSTALL}/testLogs")
+
+#BLASX libs and includes 
+set (BLASX_PREFIX "/home/users/panastas/PhD_stuff/Other-libs/BLASX-pinned") #  (testbed-II-TeslaV100 build)
+#set (BLASX_PREFIX "/home/users/panastas/PhD_stuff/BLASX-dungani") (testbed-I-TeslaK40)
+set (BLASX_INCLUDE_DIRS ${BLASX_PREFIX}/include)
+include_directories(${BLASX_INCLUDE_DIRS} )
+message( "Benchmarking - Included BLASx: " ${BLASX_INCLUDE_DIRS} )
+set (BLASX_LD ${BLASX_PREFIX}/lib)
+set (BLASX_LINK  "-L${BLASX_LD} -lblasx" )
+message( "Benchmarking - Linking BLASx: " ${BLASX_LINK} )
+
+#XKBLAS libs and includes 
+set (XKBLAS_PREFIX "/home/users/panastas/PhD_stuff/Other-libs/xkblas-silver1/install") #  (testbed-II-TeslaV100 build)
+set (XKBLAS_INCLUDE_DIRS ${XKBLAS_PREFIX}/include)
+include_directories(${XKBLAS_INCLUDE_DIRS} )
+message( "Benchmarking - Included XKBLAS: " ${XKBLAS_INCLUDE_DIRS} )
+set (XKBLAS_LD ${XKBLAS_PREFIX}/lib)
+set (XKBLAS_LINK  "-L${XKBLAS_LD} -lkaapi -lxkblas -lm" )
+message( "Benchmarking - Linking XKBLAS: " ${XKBLAS_LINK} )
+
+add_library(benchcocopelia SHARED 
+${BENCH_DIR_SRC}/cuBLASXtWrappers.cpp
+${BENCH_DIR_SRC}/BLASXWrappers.cpp
+${BENCH_DIR_SRC}/testing.cpp
+)
+target_link_libraries(benchcocopelia cocopelia ${INTERNAL_LINK_LIB} ${BLASX_LINK} ${OBLAS_LINK} cocopelia autotuning_runtime unihelpers )
+configure_file(${BENCH_DIR_INC}/cuBLASXtWrapped.hpp ${BENCH_INSTALL_INC}/cuBLASXtWrapped.hpp COPYONLY)
+configure_file(${BENCH_DIR_INC}/BLASxWrapped.hpp ${BENCH_INSTALL_INC}/BLASxWrapped.hpp COPYONLY)
+configure_file(${BENCH_DIR_INC}/XKBLASWrapped.hpp ${BENCH_INSTALL_INC}/BLASxWrapped.hpp COPYONLY)
+
+#Enable results validation in "Runner" scripts (adds extra overhead, "Tester" scripts should be used for result validation)
+add_definitions(-DRUNVALIDATION)
+
+# ${BENCH_DIR_SRC}/XKBLASWrappers.cpp
+# 
+add_executable (CoCopeLiaDgemmTester ${BENCH_DIR_SRC}/CoCopeLiaDgemmTester.cpp )
+
+add_executable (CoCopeLiaDgemmRunner ${BENCH_DIR_SRC}/CoCopeLiaDgemmRunner.cpp )
+add_executable (cuBLASXtDgemmRunner ${BENCH_DIR_SRC}/cuBLASXtDgemmRunner.cpp )
+add_executable (BLASxDgemmRunner ${BENCH_DIR_SRC}/BLASxDgemmRunner.cpp )
+add_executable (BLASxExDgemmRunner ${BENCH_DIR_SRC}/BLASxExDgemmRunner.cpp )
+add_executable (XKBLASDgemmRunner ${BENCH_DIR_SRC}/XKBLASDgemmRunner.cpp ${BENCH_DIR_SRC}/XKBLASWrappers.cpp)
+
+
+target_link_libraries(CoCopeLiaDgemmTester ${INTERNAL_LINK_LIB} benchcocopelia)
+
+target_link_libraries(CoCopeLiaDgemmRunner ${INTERNAL_LINK_LIB} benchcocopelia unihelpers)
+target_link_libraries(cuBLASXtDgemmRunner ${INTERNAL_LINK_LIB} benchcocopelia unihelpers)
+target_link_libraries(BLASxDgemmRunner ${INTERNAL_LINK_LIB} benchcocopelia unihelpers)
+target_link_libraries(BLASxExDgemmRunner ${INTERNAL_LINK_LIB} benchcocopelia unihelpers)
+target_link_libraries(XKBLASDgemmRunner ${INTERNAL_LINK_LIB} benchcocopelia unihelpers ${XKBLAS_LINK} )
+
+
+set (BENCH_INSTALL_INC ${BENCH_INSTALL_INC} PARENT_SCOPE)
+#message( "->\nBenchmarking - Shared Library: " ${CMAKE_LIBRARY_OUTPUT_DIRECTORY} )
+#message( "Benchmarking - Shared Library headers: " ${BENCH_INSTALL_INC} )
+message( "Benchmarking - Library testing bin DIR: " ${BENCH_INSTALL_BIN} )
+message( "------------------------------------------------------------------------------------------------")
+
+
