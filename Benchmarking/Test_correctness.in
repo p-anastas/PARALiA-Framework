@@ -13,7 +13,7 @@ RUN_LARGE_FLAG=0
 
 for FUNC in Dgemm #Sgemm 
 do	
-	CoCopelia_test=$LIBSC_DIR/testing-bin/CoCopeLia${FUNC}Tester
+	CoCopelia_test=$LIBSC_DIR/testing-bin/CoCoPeLia${FUNC}Tester
 	$CoCopelia_test $RUN_LARGE_FLAG
 done
 

@@ -104,7 +104,7 @@ short Stest_equality(float* C_comp, float* C, long long size) {
   size_t acc = 4, failed;
   float eps = 1e-4;
   failed = Svec_diff(C_comp, C, size, eps);
-  while (eps > FLT_MIN && !failed) {
+  while (eps > FLT_MIN && !failed && acc < 30) {
     eps *= 0.1;
     acc++;
     failed = Svec_diff(C_comp, C, size, eps);
@@ -129,7 +129,7 @@ short Dtest_equality(double* C_comp, double* C, long long size) {
   size_t acc = 8, failed;
   double eps = 1e-8;
   failed = Dvec_diff(C_comp, C, size, eps);
-  while (eps > DBL_MIN && !failed) {
+  while (eps > DBL_MIN && !failed && acc < 30) {
     eps *= 0.1;
     acc++;
     failed = Dvec_diff(C_comp, C, size, eps);

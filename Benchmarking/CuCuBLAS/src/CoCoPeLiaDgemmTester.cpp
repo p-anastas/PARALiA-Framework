@@ -27,7 +27,7 @@ int main(const int argc, const char *argv[]) {
 
 	/// Local Timers 
 	double cpu_timer = csecond();
-	fprintf(stderr, "CoCopeLiaDgemmTester: Initallizing tests for CoCopeLiaDgemmTile with run_large_flag = %d\n", run_large_flag);
+	fprintf(stderr, "CoCoPeLiaDgemmTester: Initallizing tests for CoCopeLiaDgemmTile with run_large_flag = %d\n", run_large_flag);
 
 #ifndef DEV_NUM
 #define DEV_NUM 1
@@ -35,7 +35,7 @@ int main(const int argc, const char *argv[]) {
 	int dev_ids[DEV_NUM];
 	for(int i = 0; i< DEV_NUM; i++) dev_ids[i] = i;
 	fprintf(stderr, "\n==============================================================================================================================\n"); 
-	fprintf(stderr, "CoCopeLiaDgemmTester: Allocating CPU buffers...->100 MB...");
+	fprintf(stderr, "CoCoPeLiaDgemmTester: Allocating CPU buffers...->100 MB...");
 	ldA = ldB = ldC = M = N = K = 8192; 
 
 	A_loc = B_loc = C_loc = -1; 
@@ -61,7 +61,7 @@ int main(const int argc, const char *argv[]) {
 	CoCoMemcpy(C_comp, C,  M * N *sizeof(double), -2, -2);
 
 	fprintf(stderr, "\n==============================================================================================================================\n"); 
-	fprintf(stderr, "CoCopeLiaDgemmTester: Testing Square Problems < 100 MB:\n\n"); 
+	fprintf(stderr, "CoCoPeLiaDgemmTester: Testing Square Problems < 100 MB:\n\n"); 
 	TransA = TransB = 'N';
 	alpha = 1.23;
 	beta = 0.9876;
@@ -90,7 +90,7 @@ int main(const int argc, const char *argv[]) {
 	CoCoMemcpy(C_comp, C,  M * N *sizeof(double), -2, -2);
 
 	fprintf(stderr, "\n==============================================================================================================================\n"); 
-	fprintf(stderr, "CoCopeLiaDgemmTester: Testing Non-Square Problems < 100 MB:\n\n"); 
+	fprintf(stderr, "CoCoPeLiaDgemmTester: Testing Non-Square Problems < 100 MB:\n\n"); 
 	alpha = 1.23;
 	beta = 0.9876;
 	for (int dim1 = 256; dim1 <= M; dim1*=4) for (int dim2 = 256; dim2 <= N; dim2*=4) for (int dim3 = 256; dim3 <= K; dim3*=4) if ( dim1 != dim2 || dim2 != dim3 || dim1!= dim3){
@@ -116,7 +116,7 @@ int main(const int argc, const char *argv[]) {
 	CoCoMemcpy(C_comp, C,  M * N *sizeof(double), -2, -2);
 
 	fprintf(stderr, "\n==============================================================================================================================\n"); 
-	fprintf(stderr, "CoCopeLiaDgemmTester: Testing Weird Dimension Problems < 100 MB:\n\n"); 
+	fprintf(stderr, "CoCoPeLiaDgemmTester: Testing Weird Dimension Problems < 100 MB:\n\n"); 
 	alpha = 1.23;
 	beta = 0.9876;
 	for (int dim1 = 289; dim1 <= M; dim1*=4) for (int dim2 = 353; dim2 <= N; dim2*=4) for (int dim3 = 307; dim3 <= K; dim3*=4) if ( dim1 != dim2 || dim2 != dim3 || dim1!= dim3){
@@ -142,7 +142,7 @@ int main(const int argc, const char *argv[]) {
 	CoCoMemcpy(C_comp, C,  M * N *sizeof(double), -2, -2);
 
 	fprintf(stderr, "\n==============================================================================================================================\n"); 
-	fprintf(stderr, "CoCopeLiaDgemmTester: Testing Transpose < 100 MB:\n\n"); 
+	fprintf(stderr, "CoCoPeLiaDgemmTester: Testing Transpose < 100 MB:\n\n"); 
 	TransA = TransB = 'T';
 	alpha = 1.23;
 	beta = 0.9876;
@@ -175,7 +175,7 @@ int main(const int argc, const char *argv[]) {
 	for (int i = 0; i< DEV_NUM; i++){
 		short dev_id = dev_ids[i];
 		fprintf(stderr, "\n==============================================================================================================================\n"); 
-		fprintf(stderr, "CoCopeLiaDgemmTester: Allocating GPU buffers...->100 MB...");
+		fprintf(stderr, "CoCoPeLiaDgemmTester: Allocating GPU buffers...->100 MB...");
 		cpu_timer = csecond();
 		A_loc = B_loc = C_loc = dev_id;
 		A = (double*) CoCoMalloc(M * K*sizeof(double), A_loc);
@@ -202,7 +202,7 @@ int main(const int argc, const char *argv[]) {
 		fprintf(stderr, "done.\nInit time:\t%lf ms\n\n",  cpu_timer  * 1000);
 
 		fprintf(stderr, "\n==============================================================================================================================\n"); 
-		fprintf(stderr, "CoCopeLiaDgemmTester: Testing Matrices In GPU(%d) mem < 100 MB:\n\n", dev_id); 
+		fprintf(stderr, "CoCoPeLiaDgemmTester: Testing Matrices In GPU(%d) mem < 100 MB:\n\n", dev_id); 
 		TransA = TransB = 'N';
 		alpha = 1.23;
 		beta = 0.9876;
@@ -228,7 +228,7 @@ int main(const int argc, const char *argv[]) {
 		}
 
 		fprintf(stderr, "\n==============================================================================================================================\n"); 
-		fprintf(stderr, "CoCopeLiaDgemmTester: Testing Matrices In GPU(%d) mem + Transpose < 100 MB:\n\n", dev_id); 
+		fprintf(stderr, "CoCoPeLiaDgemmTester: Testing Matrices In GPU(%d) mem + Transpose < 100 MB:\n\n", dev_id); 
 		TransA = TransB = 'T';
 		alpha = 1.23;
 		beta = 0.9876;
@@ -263,7 +263,7 @@ int main(const int argc, const char *argv[]) {
 	if (run_large_flag){
 		ldA = ldB = ldC = M = N = K = (size_t) 1.5*CoCopeLiaGetMaxSqdimLvl3(3, sizeof(double), 256); 
 		fprintf(stderr, "\n==============================================================================================================================\n"); 
-		fprintf(stderr, "CoCopeLiaDgemmTester: Allocating CPU buffers...-> %.3lf GB:", dgemm_memory(M,N,K,1,1,2)/1e9);
+		fprintf(stderr, "CoCoPeLiaDgemmTester: Allocating CPU buffers...-> %.3lf GB:", dgemm_memory(M,N,K,1,1,2)/1e9);
 		cpu_timer = csecond();
 
 		A_loc = B_loc = C_loc = -1; 
@@ -289,7 +289,7 @@ int main(const int argc, const char *argv[]) {
 		CoCoMemcpy(C_comp, C,  M * N *sizeof(double), -2, -2);
 
 		fprintf(stderr, "\n==============================================================================================================================\n"); 
-		fprintf(stderr, "CoCopeLiaDgemmTester: Testing Square Problem: %.3lf GB:\n\n", dgemm_memory(M,N,K,1,1,1)/1e9); 
+		fprintf(stderr, "CoCoPeLiaDgemmTester: Testing Square Problem: %.3lf GB:\n\n", dgemm_memory(M,N,K,1,1,1)/1e9); 
 		TransA = TransB = 'N';
 		alpha = 1.23;
 		beta = 0.9876;
@@ -317,7 +317,7 @@ int main(const int argc, const char *argv[]) {
 		M = (size_t) M/1.24223;
 		N = (size_t) N/1.34645;
 		K = (size_t) K/2.18321;
-		fprintf(stderr, "CoCopeLiaDgemmTester: Testing Weird Non-Square Problem: %.3lf GB:\n\n", dgemm_memory(M,N,K,1,1,1)/1e9); 
+		fprintf(stderr, "CoCoPeLiaDgemmTester: Testing Weird Non-Square Problem: %.3lf GB:\n\n", dgemm_memory(M,N,K,1,1,1)/1e9); 
 		alpha = 1.23;
 		beta = 0.9876;
 		fprintf(stderr, "M=%zu, N=%zu, K=%zu: Gflops/s -> ", M, N, K); 
@@ -341,7 +341,7 @@ int main(const int argc, const char *argv[]) {
 		CoCoMemcpy(C_comp, C,  M * N *sizeof(double), -2, -2);
 
 		fprintf(stderr, "\n==============================================================================================================================\n"); 
-		fprintf(stderr, "CoCopeLiaDgemmTester: Testing Large Transpose\n\n"); 
+		fprintf(stderr, "CoCoPeLiaDgemmTester: Testing Large Transpose\n\n"); 
 		TransA = TransB = 'T';
 		alpha = 1.23;
 		beta = 0.9876;
@@ -385,7 +385,7 @@ int main(const int argc, const char *argv[]) {
 		}
 		
 		fprintf(stderr, "\n==============================================================================================================================\n"); 
-		fprintf(stderr, "CoCopeLiaDgemmTester: Allocating Mixed GPU buffers...-> A(dev=%d) : %.3lf GB, B(dev=%d) : %.3lf GB, C(dev=%d) : %.3lf GB(x2 for check):", A_loc, M*K*sizeof(double)/1e9, B_loc, K*N*sizeof(double)/1e9, C_loc, M*N*sizeof(double)/1e9);
+		fprintf(stderr, "CoCoPeLiaDgemmTester: Allocating Mixed GPU buffers...-> A(dev=%d) : %.3lf GB, B(dev=%d) : %.3lf GB, C(dev=%d) : %.3lf GB(x2 for check):", A_loc, M*K*sizeof(double)/1e9, B_loc, K*N*sizeof(double)/1e9, C_loc, M*N*sizeof(double)/1e9);
 		cpu_timer = csecond();
 
 		A = (double*) CoCoMalloc(M * K*sizeof(double), A_loc);
@@ -412,7 +412,7 @@ int main(const int argc, const char *argv[]) {
 		fprintf(stderr, "done.\nInit time:\t%lf ms\n\n",  cpu_timer  * 1000);
 
 		fprintf(stderr, "\n==============================================================================================================================\n"); 
-		fprintf(stderr, "CoCopeLiaDgemmTester: Testing Large Matrices In GPU\n\n"); 
+		fprintf(stderr, "CoCoPeLiaDgemmTester: Testing Large Matrices In GPU\n\n"); 
 		TransA = TransB = 'N';
 		alpha = 1.23;
 		beta = 0.9876;
@@ -436,7 +436,7 @@ int main(const int argc, const char *argv[]) {
 		cudaCheckErrors();
 
 		fprintf(stderr, "\n==============================================================================================================================\n"); 
-		fprintf(stderr, "CoCopeLiaDgemmTester: Testing Large Matrices In GPUmem + Transpose\n\n"); 
+		fprintf(stderr, "CoCoPeLiaDgemmTester: Testing Large Matrices In GPUmem + Transpose\n\n"); 
 		TransA = TransB = 'T';
 		alpha = 1.23;
 		beta = 0.9876;

@@ -27,12 +27,12 @@ int main(const int argc, const char *argv[]) {
 			if (predef_control_values->T > M || predef_control_values->T > N || predef_control_values->T > K) error("Given Tin=%d bigger than problem dim\n", predef_control_values->T); 
 			else if (predef_control_values->T > M/1.5 && predef_control_values->T > N/1.5 && predef_control_values->T > K/1.5) error("Given Tin=%d bigger than all problem dims/1.5\n", predef_control_values->T);
 		}
-		sprintf(filename, "%s/CoCopeLiaDgemmRunner_predefined_vals_%s.log", TESTLIBDIR, VERSION);	
+		sprintf(filename, "%s/CoCoPeLiaDgemmRunner_predefined_vals_%s.log", TESTLIBDIR, VERSION);	
 	}
-	else sprintf(filename, "%s/CoCopeLiaDgemmRunner_%s.log", TESTLIBDIR, VERSION);
-
+	else sprintf(filename, "%s/CoCoPeLiaDgemmRunner_%s.log", TESTLIBDIR, VERSION);
+#ifdef CHECKLOG
 	CheckLogLvl3(filename, predef_control_values, TransA, TransB, alpha, beta, M, N, K, A_loc, B_loc, C_loc, C_out_loc);
-	
+#endif
 	/// Matrix Layouts for CPU GEMM
 	CBLAS_TRANSPOSE cpu_op_A, cpu_op_B;    // CblasNoTrans, CblasTrans
 	cublasOperation_t gpu_op_A, gpu_op_B; // CUBLAS_OP_N, CUBLAS_OP_T
@@ -101,7 +101,9 @@ int main(const int argc, const char *argv[]) {
 	cudaCheckErrors();
 	cpu_timer  = csecond() - cpu_timer;
 
+#ifdef CHECKLOG
 	CheckLogLvl3(filename, return_values, TransA, TransB, alpha, beta, M, N, K, A_loc, B_loc, C_loc, C_out_loc);
+#endif
 	// Store the time required for the first call (+ 1-time overheads etc)
 	StoreLogLvl3(filename, return_values, TransA, TransB, alpha, beta, M, N, K, A_loc, B_loc, C_loc, C_out_loc, cpu_timer); 
 

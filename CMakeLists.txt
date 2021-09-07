@@ -68,7 +68,7 @@ set (INTERNAL_LINK_LIB "${CUDA_LINK} -lrt -ldl")
 message("CoCopeLia-Framework - INTERNAL_LINK_LIB: " ${INTERNAL_LINK_LIB})
 set (OPENBLAS_LD ${OPENBLAS_PREFIX}/lib)
 set (OPENBLAS_LINK  "-L${OPENBLAS_LD} -lopenblas" )
-message("CoCopeLia-Framework - Linking OpenBLAS: " ${OPENBLAS_LINK} )
+message("CoCopeLia-Framework - OPENBLAS_LINK: " ${OPENBLAS_LINK} )
 
 if ("${CMAKE_INSTALL_PREFIX}" STREQUAL "/usr/local") 
 message("CoCopeLia-Framework - CMAKE_INSTALL_PREFIX not provided (with --install-prefix <directory>) - project will be installed at default build dir.")

@@ -25,7 +25,7 @@ double XKBLASDgemmWrap(char TransA,  char TransB, size_t M, size_t N, size_t K, 
 	double cpu_timer = csecond();
 #endif
 	CBLAS_TRANSPOSE cpu_op_A = OpCharToCblas(TransA), cpu_op_B = OpCharToCblas(TransB);
-	xkblas_dgemm_async(cpu_op_A,cpu_op_B,M,N,K,&alpha,A,ldA, B,ldB, &beta,C, ldC); //, T, dev_num, dev_ids);
+	cblas_dgemm(CblasColMajor, cpu_op_A,cpu_op_B,M,N,K,alpha,A,ldA, B,ldB, beta,C, ldC); //, T, dev_num, dev_ids);
 	cudaCheckErrors();
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer; 

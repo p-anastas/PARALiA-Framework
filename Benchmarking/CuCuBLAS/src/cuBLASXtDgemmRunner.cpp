@@ -48,9 +48,9 @@ int main(const int argc, const char *argv[]) {
 		for (int i = 0; i < dev_num; i++) dev_ids[i] = i;
 		return_values->dev_ids = dev_ids;
 	}
-
+#ifdef CHECKLOG
 	CheckLogLvl3(filename, return_values, TransA, TransB, alpha, beta, M, N, K, A_loc, B_loc, C_loc, C_out_loc);
-	
+#endif
 	/// Matrix Layouts for CPU GEMM
 	CBLAS_TRANSPOSE cpu_op_A, cpu_op_B;    // CblasNoTrans, CblasTrans
 	cublasOperation_t gpu_op_A, gpu_op_B; // CUBLAS_OP_N, CUBLAS_OP_T
@@ -102,9 +102,9 @@ int main(const int argc, const char *argv[]) {
 		}
 			
 	}
-
+#ifdef CHECKLOG
 	CheckLogLvl3(filename, return_values, TransA, TransB, alpha, beta, M, N, K, A_loc, B_loc, C_loc, C_out_loc);
-
+#endif
 	double cublasXt_t = best_standard_tile_t; 
 	if (predef_control_values!= NULL && predef_control_values->T > 0){
 		fprintf(stderr,"Running CUBLASXT DGEMM-> M = %zu, N = %zu, K = %zu, T = %zu\n", M, N, K, cublasXt_tile);
@@ -132,9 +132,9 @@ int main(const int argc, const char *argv[]) {
 	}
 	return_values->T = cublasXt_tile;
 	fprintf(stderr,"Running CUBLASXT DGEMM-> M = %zu, N = %zu, K = %zu T_best = %zu\n", M, N, K, cublasXt_tile);
-
+#ifdef CHECKLOG
 	CheckLogLvl3(filename, return_values, TransA, TransB, alpha, beta, M, N, K, A_loc, B_loc, C_loc, C_out_loc);
-
+#endif
 	double min_t = cublasXt_t, max_t = 0, avg_t = 0;
 	cpu_timer = csecond();
 	short bench_it = 100;

@@ -21,10 +21,11 @@ do
 	perf_log="${LIBSC_TEST_LOG_DIR}/exec_logs/${FUNC}_perf_eval.log"
 	rm $perf_log
 
-	CoCopelia_run=$LIBSC_DIR/testing-bin/CoCopeLia${FUNC}Runner
+	CoCopelia_run=$LIBSC_DIR/testing-bin/CoCoPeLia${FUNC}Runner
 	cuBLASXt_run=$LIBSC_DIR/testing-bin/cuBLASXt${FUNC}Runner
 	BLASX_run=$LIBSC_DIR/testing-bin/BLASx${FUNC}Runner
 	BLASXEX_run=$LIBSC_DIR/testing-bin/BLASxEx${FUNC}Runner
+	XKBLAS_run=$LIBSC_DIR/testing-bin/XKBLAS${FUNC}Runner
 	echo "Performing Benchmarks for ${FUNC} evaluation..."
 	## A = Full offload scenario (Initially all data on CPU), B = Partial offload scenario
 	TransA=N
@@ -60,6 +61,8 @@ do
 			$BLASX_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $Sq $Sq $Sq $A_loc $B_loc $C_loc $C_loc &>> $perf_log
 			echo "$BLASXEX_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $Sq $Sq $Sq $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
 			$BLASXEX_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $Sq $Sq $Sq $A_loc $B_loc $C_loc $C_loc &>> $perf_log
+			echo "LD_PRELOAD=/home/users/panastas/PhD_stuff/Other-libs/xkblas-silver1/install/lib/libxkblas_blaswrapper.so XKBLAS_GPUSET=3 XKBLAS_CACHE_LIMIT=80  $XKBLAS_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $Sq $Sq $Sq $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
+			LD_PRELOAD=/home/users/panastas/PhD_stuff/Other-libs/xkblas-silver1/install/lib/libxkblas_blaswrapper.so XKBLAS_GPUSET=3 XKBLAS_CACHE_LIMIT=80  $XKBLAS_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $Sq $Sq $Sq $A_loc $B_loc $C_loc $C_loc &>> $perf_log
 		done
 		# II) Large-sized square problems (usually >> GPU memory)
 		for Sq in {16384..40000..4096}
@@ -72,12 +75,14 @@ do
 			$BLASX_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $Sq $Sq $Sq $A_loc $B_loc $C_loc $C_loc &>> $perf_log
 			echo "$BLASXEX_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $Sq $Sq $Sq $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
 			$BLASXEX_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $Sq $Sq $Sq $A_loc $B_loc $C_loc $C_loc &>> $perf_log
+			echo "LD_PRELOAD=/home/users/panastas/PhD_stuff/Other-libs/xkblas-silver1/install/lib/libxkblas_blaswrapper.so XKBLAS_GPUSET=3 XKBLAS_CACHE_LIMIT=80  $XKBLAS_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $Sq $Sq $Sq $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
+			LD_PRELOAD=/home/users/panastas/PhD_stuff/Other-libs/xkblas-silver1/install/lib/libxkblas_blaswrapper.so XKBLAS_GPUSET=3 XKBLAS_CACHE_LIMIT=80  $XKBLAS_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $Sq $Sq $Sq $A_loc $B_loc $C_loc $C_loc &>> $perf_log
 		done
 		# III) Non-square Problems
-		for inbalanced in 4096 8192 16384
+		for inbalanced in 8192 16384
 		do 
 			# K < M,N
-			for ctr in 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18;
+			for ctr in 3 4 5 6 7 8 9 10;
 			do 
 				fat=$(($inbalanced*$ctr/2))
 				double_thin=$(($inbalanced*4/$ctr/$ctr))
@@ -90,9 +95,11 @@ do
 				$BLASX_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $fat $fat $double_thin $A_loc $B_loc $C_loc $C_loc &>> $perf_log
 				echo "$BLASXEX_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $fat $fat $double_thin $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
 				$BLASXEX_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $fat $fat $double_thin $A_loc $B_loc $C_loc $C_loc &>> $perf_log
+				echo "LD_PRELOAD=/home/users/panastas/PhD_stuff/Other-libs/xkblas-silver1/install/lib/libxkblas_blaswrapper.so XKBLAS_GPUSET=3 XKBLAS_CACHE_LIMIT=80  $XKBLAS_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $fat $fat $double_thin $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
+				LD_PRELOAD=/home/users/panastas/PhD_stuff/Other-libs/xkblas-silver1/install/lib/libxkblas_blaswrapper.so XKBLAS_GPUSET=3 XKBLAS_CACHE_LIMIT=80  $XKBLAS_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $fat $fat $double_thin $A_loc $B_loc $C_loc $C_loc &>> $perf_log
 			done
 			# K > M,N
-			for ctr in 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18;
+			for ctr in 3 4 5 6 7 8 9 10;
 			do
 				double_fat=$(($inbalanced*$ctr*$ctr/4))
 				thin=$(($inbalanced*2/$ctr))
@@ -105,6 +112,8 @@ do
 				$BLASX_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $thin $thin $double_fat $A_loc $B_loc $C_loc $C_loc &>> $perf_log
 				echo "$BLASXEX_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $thin $thin $double_fat $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
 				$BLASXEX_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $thin $thin $double_fat $A_loc $B_loc $C_loc $C_loc &>> $perf_log
+				echo "LD_PRELOAD=/home/users/panastas/PhD_stuff/Other-libs/xkblas-silver1/install/lib/libxkblas_blaswrapper.so XKBLAS_GPUSET=3 XKBLAS_CACHE_LIMIT=80  $XKBLAS_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $thin $thin $double_fat $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
+				LD_PRELOAD=/home/users/panastas/PhD_stuff/Other-libs/xkblas-silver1/install/lib/libxkblas_blaswrapper.so XKBLAS_GPUSET=3 XKBLAS_CACHE_LIMIT=80  $XKBLAS_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $thin $thin $double_fat $A_loc $B_loc $C_loc $C_loc &>> $perf_log
 			done
 		done
 	done

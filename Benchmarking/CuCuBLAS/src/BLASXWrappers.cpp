@@ -8,7 +8,7 @@
 #include <cblas.h>
 
 #include <BLASxModifiedcblas.h>
-#include "CoCoPeLiaLibBackened.hpp"
+#include "CoCoPeLia.hpp"
 #include "unihelpers.hpp"
 
 void BLASxFlushGPUBuf(short dev_num, int dev_ids[] ){

@@ -19,7 +19,7 @@ do
 	perf_log="${LIBSC_TEST_LOG_DIR}/exec_logs/${FUNC}_perf_eval.log"
 	rm $perf_log
 
-	CoCopelia_run=$LIBSC_DIR/testing-bin/CoCopeLia${FUNC}Runner
+	CoCopelia_run=$LIBSC_DIR/testing-bin/CoCoPeLia${FUNC}Runner
 	cuBLASXt_run=$LIBSC_DIR/testing-bin/cuBLASXt${FUNC}Runner
 	BLASX_run=$LIBSC_DIR/testing-bin/BLASx${FUNC}Runner
 	BLASXEX_run=$LIBSC_DIR/testing-bin/BLASxEx${FUNC}Runner

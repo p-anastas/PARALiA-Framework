@@ -50,9 +50,9 @@ int main(const int argc, const char *argv[]) {
 		for (int i = 0; i < dev_num; i++) dev_ids[i] = i;
 		return_values->dev_ids = dev_ids;
 	}
-
+#ifdef CHECKLOG
 	CheckLogLvl3(filename, return_values, TransA, TransB, alpha, beta, M, N, K, A_loc, B_loc, C_loc, C_out_loc);
-	
+#endif
 	/// Matrix Layouts for CPU GEMM
 	CBLAS_TRANSPOSE cpu_op_A, cpu_op_B;    // CblasNoTrans, CblasTrans
 	cublasOperation_t gpu_op_A, gpu_op_B; // CUBLAS_OP_N, CUBLAS_OP_T

@@ -6,10 +6,53 @@
 
 #include "unihelpers.hpp"
 #include "CoCoPeLia.hpp"
-#include "XKBLASWrapped.hpp"
+//#include "XKBLASWrapped.hpp"
 #include "cuBLASXtWrapped.hpp"
 
+#define KAAPI_NO_DEFAULT_BLAS_ENUM
+#ifdef __cplusplus
+extern "C"{
+#endif 
+#include "xkblas.h" // Must be put after unihelpers cause of cblas def clashes...
+#ifdef __cplusplus
+}
+#endif
+
 #define CBLASXT_MAX_SAFE_TILE 10000
+
+double XKBLASDgemmWrap(char TransA,  char TransB, size_t M, size_t N, size_t K, double alpha, double* A, size_t ldA, double* B, size_t ldB, double beta, double* C, size_t ldC, size_t T, double cpu_ratio, short dev_num, int dev_ids[]){
+	short lvl = 1; 
+	double total_t = csecond();
+#ifdef DEBUG
+	lprintf(lvl-1, "|-----> BLASxDgemmWrap(%c,%c,%zu,%zu,%zu,%lf,A(%d),%zu,B(%d),%zu,%lf,C(%d),%zu)\n", 
+		TransA, TransB, M, N, K, alpha, CoCopeLia_ptr_check_cuda_9_2(A), ldA,
+		CoCopeLia_ptr_check_cuda_9_2(B), ldB, beta, CoCopeLia_ptr_check_cuda_9_2(C), ldC);
+#endif
+
+#ifdef TEST
+	lprintf(lvl-1, "|-----> BLASxDgemmWrap\n");
+	double cpu_timer = csecond();
+#endif
+	CBLAS_TRANSPOSE cpu_op_A = OpCharToCblas(TransA), cpu_op_B = OpCharToCblas(TransB);
+	//cblas_dgemm(CblasColMajor, cpu_op_A,cpu_op_B,M,N,K,alpha,A,ldA, B,ldB, beta,C, ldC); //, T, dev_num, dev_ids);
+	xkblas_dgemm_async(cpu_op_A,cpu_op_B,M,N,K,&alpha,A,ldA, B,ldB, &beta,C, ldC);
+	xkblas_memory_coherent_async(0, 0, M, N, C, ldC, sizeof(double));
+	xkblas_sync();
+	cudaCheckErrors();
+#ifdef TEST
+	cpu_timer = csecond() - cpu_timer;
+	lprintf(lvl, "BLASx execution time -> t_kernel = %lf ms\n", cpu_timer*1000);
+#endif
+
+	cudaCheckErrors();
+	total_t = csecond() - total_t;
+	return total_t;
+
+}
+
+void XKBLASFlushGPUBuf(short dev_num, int dev_ids[] ){
+	xkblas_memory_invalidate_caches();// TODO: Is there anything to flush actually?
+}
 
 int main(const int argc, const char *argv[]) {
 
@@ -32,26 +75,23 @@ int main(const int argc, const char *argv[]) {
 	}
 	else sprintf(filename, "%s/XKBLASDgemmRunner_%s.log", TESTLIBDIR, VERSION);
 
-	size_t BLASx_tile;
-	if (predef_control_values!= NULL && predef_control_values->T > 0) return_values->T = BLASx_tile = predef_control_values->T;
-	else return_values->T = BLASx_tile = 4096; // The best performing static tile for our machine
+	size_t XKBLAS_tile;
+	if (predef_control_values!= NULL && predef_control_values->T > 0) error("XKBLASDgemmRunner: XKBLAS not modified to accept T\n");
+	else return_values->T = XKBLAS_tile = -1; // The best performing static tile for our machine
 	double cpu_ratio;
-	if (predef_control_values!= NULL && predef_control_values->cpu_ratio > 0) return_values->cpu_ratio = cpu_ratio = predef_control_values->cpu_ratio;
-	else return_values->cpu_ratio = cpu_ratio = 0; 
+	if (predef_control_values!= NULL && predef_control_values->cpu_ratio > 0) error("XKBLASDgemmRunner: XKBLAS not modified to accept cpu_ratio\n");
+	else return_values->cpu_ratio = cpu_ratio = -1; 
 	int dev_num, *dev_ids;
-	if (predef_control_values!= NULL && predef_control_values->dev_num > 0){
-		return_values->dev_num = dev_num = predef_control_values->dev_num;
-		return_values->dev_ids = dev_ids = predef_control_values->dev_ids;
-	}
+	if (predef_control_values!= NULL && predef_control_values->dev_num > 0) error("XKBLASDgemmRunner: XKBLAS not modified to accept devices from within script\n");
 	else{
-		return_values->dev_num = dev_num = DEV_NUM;
+		return_values->dev_num = -1;
 		dev_ids = (int*) malloc(dev_num*sizeof(int));
-		for (int i = 0; i < dev_num; i++) dev_ids[i] = i;
+		for (int i = 0; i < dev_num; i++) dev_ids[i] = -1;
 		return_values->dev_ids = dev_ids;
 	}
-
+#ifdef CHECKLOG
 	CheckLogLvl3(filename, return_values, TransA, TransB, alpha, beta, M, N, K, A_loc, B_loc, C_loc, C_out_loc);
-	
+#endif
 	/// Matrix Layouts for CPU GEMM
 	CBLAS_TRANSPOSE cpu_op_A, cpu_op_B;    // CblasNoTrans, CblasTrans
 	cublasOperation_t gpu_op_A, gpu_op_B; // CUBLAS_OP_N, CUBLAS_OP_T
@@ -91,15 +131,6 @@ int main(const int argc, const char *argv[]) {
 
 	CoCoMemcpy(C_buf, C,  M * N *sizeof(double), -2, C_loc);
 
-	// Call for Validate
-	XKBLASDgemmWrap(TransA,  TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC,  BLASx_tile, cpu_ratio, dev_num, dev_ids);
-	cudaCheckErrors();
-
-	XKBLASFlushGPUBuf(dev_num, dev_ids);
-	
- 	CoCoMemcpy(C_out, C,  M * N *sizeof(double), -2, C_loc);
- 	CoCoMemcpy(C, C_buf,  M * N *sizeof(double), C_loc, -2);
-
 	// Validate with cuBLASXt (questionable but CPU validation can be slower by at least a factor)
 	{
 	int dev_ids[DEV_NUM];
@@ -107,6 +138,16 @@ int main(const int argc, const char *argv[]) {
 	cuBLASXtDgemmWrap(TransA,  TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC,  (size_t) fmin(fmin(fmin(M,N),K)/2,CBLASXT_MAX_SAFE_TILE), 0, DEV_NUM, dev_ids);
 	}
 	CoCoMemcpy(C_out1, C,  M * N *sizeof(double), -2, C_loc);
+ 	CoCoMemcpy(C, C_buf,  M * N *sizeof(double), C_loc, -2);
+
+	// Call for Validate
+	XKBLASDgemmWrap(TransA,  TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC,  XKBLAS_tile, cpu_ratio, dev_num, dev_ids);
+	cudaCheckErrors();
+
+	XKBLASFlushGPUBuf(dev_num, dev_ids);
+
+	CoCoMemcpy(C_out, C,  M * N *sizeof(double), -2, C_loc);
+
  	if(Dtest_equality(C_out1, C_out, M * N) < 9) error("Insufficient accuracy for benchmarks\n");
 
  	CoCoMemcpy(C, C_buf,  M * N *sizeof(double), C_loc, -2);
@@ -117,7 +158,7 @@ int main(const int argc, const char *argv[]) {
 
 	// First call for additional overhead counting
 	cpu_timer = csecond();
-	XKBLASDgemmWrap(TransA,  TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC,  BLASx_tile, cpu_ratio, dev_num, dev_ids);
+	XKBLASDgemmWrap(TransA,  TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC,  XKBLAS_tile, cpu_ratio, dev_num, dev_ids);
 	cudaCheckErrors();
 	cpu_timer  = csecond() - cpu_timer;
 	StoreLogLvl3(filename, return_values, TransA, TransB, alpha, beta, M, N, K, A_loc, B_loc, C_loc, C_out_loc, cpu_timer); 
@@ -130,7 +171,7 @@ int main(const int argc, const char *argv[]) {
 	if ( M >= 8192 || N >= 8192 || K >= 8192) bench_it = 10; 
 	for(int it = 0; it < bench_it; it++){
 		cpu_timer = csecond();
-		XKBLASDgemmWrap(TransA,  TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC,  BLASx_tile, cpu_ratio, dev_num, dev_ids);
+		XKBLASDgemmWrap(TransA,  TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC,  XKBLAS_tile, cpu_ratio, dev_num, dev_ids);
 		cudaCheckErrors();
 		cpu_timer = csecond() - cpu_timer;
 		StoreLogLvl3(filename, return_values, TransA, TransB, alpha, beta, M, N, K, A_loc, B_loc, C_loc, C_out_loc, cpu_timer); 
@@ -139,13 +180,14 @@ int main(const int argc, const char *argv[]) {
 		avg_t += cpu_timer;
 	}
 	avg_t/=bench_it;
-	fprintf(stderr, "BLASx (%s):\n\tfirst_it_t = %lf ms ( %lf Gflops/s )\n\tavg_t = %lf ms ( %lf Gflops/s )\n\tmin_t = %lf ms ( %lf Gflops/s )\n\tmax_t = %lf ms ( %lf Gflops/s )\n", 
+	fprintf(stderr, "XKBLAS (%s):\n\tfirst_it_t = %lf ms ( %lf Gflops/s )\n\tavg_t = %lf ms ( %lf Gflops/s )\n\tmin_t = %lf ms ( %lf Gflops/s )\n\tmax_t = %lf ms ( %lf Gflops/s )\n", 
 	CoControlPrint(return_values),
 	first_over_t  * 1000, Gval_per_s(dgemm_flops(M,N,K),first_over_t),
 	avg_t  * 1000, Gval_per_s(dgemm_flops(M,N,K),avg_t),
 	min_t  * 1000, Gval_per_s(dgemm_flops(M,N,K),min_t),
 	max_t  * 1000, Gval_per_s(dgemm_flops(M,N,K),max_t));
-	
+		
+	XKBLASFlushGPUBuf(dev_num, dev_ids);
 	cudaCheckErrors();
 	CoCoFree(A, A_loc);
 	CoCoFree(B, B_loc);
