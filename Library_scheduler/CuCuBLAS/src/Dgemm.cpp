@@ -82,6 +82,8 @@ void CoCopeLiaDgemmTile(kernel3_p in_kernel, int T){
 	timer = csecond() - timer;
 	lprintf(lvl, "Subkernel Grid created: t_grid = %lf ms\n" , timer*1000);
 	timer = csecond(); 
+#endif
+#ifdef DEBUG
 	cudaEvent_t start_firing; 
 	cudaEventCreateWithFlags(&start_firing, cudaEventDefault);
 	cudaEventRecord(start_firing);
@@ -99,6 +101,8 @@ void CoCopeLiaDgemmTile(kernel3_p in_kernel, int T){
 #ifdef TEST
 	timer = csecond() - timer;
 	lprintf(lvl, "Subkernels complete: t_comp = %lf ms\n" , timer*1000);
+#endif
+#ifdef DEBUG //TEST
 	cudaEvent_t prev_data_sent = start_firing, prev_exec =  kernels[0]->data_avail; 
 	for (int ker = 0; ker < kernel_num; ker++){
 		float t_send, t_exec, temp, t_gpu_idle = 0;
@@ -106,13 +110,15 @@ void CoCopeLiaDgemmTile(kernel3_p in_kernel, int T){
 		cudaEventElapsedTime(&temp, prev_exec, kernels[ker]->gemm_complete);
 		cudaEventElapsedTime(&t_exec, kernels[ker]->data_avail, kernels[ker]->gemm_complete);
 		if (!ker) t_gpu_idle = t_send; 
-		else if (t_exec <= temp) t_gpu_idle = max(0.0, temp - t_exec); 
-		t_exec = min(t_exec, temp); 
+		else if (t_exec <= temp) t_gpu_idle = fmax(0.0, temp - t_exec); 
+		t_exec = fmin(t_exec, temp); 
 		lprintf(lvl, "Subkernel(%d): t_h2d = %f ms, t_exec = %f ms, t_gpu_idle = %f ms\n" , ker, t_send, t_exec, t_gpu_idle);
 		//cudaCheckErrors();
 		prev_data_sent = kernels[ker]->data_avail; 
 		prev_exec = kernels[ker]->gemm_complete;
 	}
+#endif
+#ifdef TEST
 	timer = csecond(); 
 #endif
 	for (int ker = 0; ker < kernel_num; ker++)CoCopeLia_Dgemm_subkernel_destroy(kernels[ker]);

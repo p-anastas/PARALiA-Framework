@@ -12,49 +12,6 @@
 cudaStream_t h2d_stream[128] = {NULL}, d2h_stream[128] = {NULL}, exec_stream[128] = {NULL};
 cublasHandle_t handle[128] = {NULL};
 
-/// Checks if given ptr in CPU (pinned) or GPU. FIXME: See next function for CUDA > 10.2
-short CoCoPeLiaGetRemoteFlag(short data_loc, short dev_id)
-{
-	short remote = -1;
-	int devices;
-	cudaGetDeviceCount(&devices);
-	if (data_loc < -1 || data_loc >= devices) error("CoCoPeLiaGetRemoteFlag: Invalid data_loc %d", data_loc);
-	else if (data_loc != dev_id) remote = 1;	
-	else remote = 0; 
-	return remote; 
-}
-
-/// Checks if given ptr in CPU (pinned) or GPU. FIXME: See next function for CUDA > 10.2
-short CoCopeLia_ptr_check_cuda_9_2(const void * in_ptr)
-{
-	short loc = -2;
-	cudaPointerAttributes ptr_att; 
-	if (cudaSuccess != cudaPointerGetAttributes(&ptr_att, in_ptr)) warning("CoCoBLAS_ptr_check_cuda_9_2: Pointer not visible to CUDA, host alloc or error");
-	if (ptr_att.memoryType == cudaMemoryTypeHost) loc = -1; 
-	else if (ptr_att.memoryType == cudaMemoryTypeDevice) loc = ptr_att.device;
-	// TODO: Unified memory is considered available in the GPU as cuBLASXt ( not bad, not great) 
-	else if (ptr_att.isManaged) loc = ptr_att.device;
-	else error("CoCoBLAS_ptr_check_cuda_9_2: Invalid memory type");
-	return loc; 
-}
-
-short CoCopeLia_ptr_check_cuda_11(const void * in_ptr)
-{
-	short loc = -2;
-	cudaPointerAttributes ptr_att; 
-	if (cudaSuccess != cudaPointerGetAttributes(&ptr_att, in_ptr)) warning("CoCopeLia_ptr_check_cuda_11: Pointer not visible to CUDA, host alloc or error");
-	error("CoCoBLAS_ptr_check_cuda_11: Uncomment part in /lib/CoCopeLia_subkernels.cu to include unified memory flag for latest cuda");
-}
-/* Did you say "Backward compatibility"? Probably not! Use this for CUDA > 10.2
-	if (ptr_att.memoryType == cudaMemoryTypeHost) loc = -1; 
-	else if (ptr_att.memoryType == cudaMemoryTypeDevice) loc = ptr_att.device;
-	// TODO: Unified memory is considered available in the GPU as cuBLASXt ( not bad, not great) 
-	else if (ptr_att.type == cudaMemoryTypeManaged) loc = ptr_att.device;
-	else error("CoCoBLAS_ptr_check_cuda_11: Invalid memory type");
-	return loc; 
-}
-*/
-
 kernel3_p CoCopeLiaDgemmSubkernelInit(cublasOperation_t gpu_op_A, cublasOperation_t gpu_op_B, size_t Ms, size_t Ns, size_t Ks, double alpha, double* A, size_t ldA, double* B, size_t ldB, double beta, double* Cin, size_t ldCin, double* Cout, size_t ldCout, BLAS3GPUBufPtr GloBuf, short devId){
   	
   	
@@ -307,14 +264,11 @@ void CoCopeLia_Dgemm_subkernel_async(kernel3_p kernel){
 	if (!kernel->MgridIdx && kernel->Bsloc != kernel->devId && kernel->alpha){
 		if (kernel->gpu_op_B == CUBLAS_OP_N) CoCoMemcpy2DAsync(kernel->Bker, kernel->ldBker, kernel->Bs, kernel->ldBs, kernel->Ks, kernel->Ns, sizeof(double), kernel->devId, kernel->Bsloc, h2d_stream[kernel->devId]);
 		else CoCoMemcpy2DAsync(kernel->Bker, kernel->ldBker, kernel->Bs, kernel->ldBs, kernel->Ns, kernel->Ks, sizeof(double), kernel->devId, kernel->Bsloc, h2d_stream[kernel->devId]);
-		//if (kernel->gpu_op_B == CUBLAS_OP_N) assert(CUBLAS_STATUS_SUCCESS == cublasSetMatrixAsync(kernel->Ks, kernel->Ns, sizeof(double), kernel->Bs, kernel->ldBs, kernel->Bker, kernel->ldBker, h2d_stream[kernel->devId]));
-		//else assert(CUBLAS_STATUS_SUCCESS == cublasSetMatrixAsync(kernel->Ns, kernel->Ks, sizeof(double), kernel->Bs, kernel->ldBs, kernel->Bker, kernel->ldBker, h2d_stream[kernel->devId]));
 	}
 	//cudaCheckErrors();
 
 	if (!kernel->KgridIdx && kernel->Csloc != kernel->devId && kernel->beta){
 		CoCoMemcpy2DAsync(kernel->Cker, kernel->ldCker, kernel->CsIn, kernel->ldCsIn, kernel->Ms, kernel->Ns, sizeof(double), kernel->devId, kernel->Csloc, h2d_stream[kernel->devId]);
-		//assert(CUBLAS_STATUS_SUCCESS == cublasSetMatrixAsync(kernel->Ms, kernel->Ns, sizeof(double), kernel->CsIn, kernel->ldCsIn, kernel->Cker, kernel->ldCker, h2d_stream[kernel->devId]));
 	}
 	cudaEventRecord(kernel->data_avail, h2d_stream[kernel->devId]);
 	cudaStreamWaitEvent(exec_stream[kernel->devId], kernel->data_avail,0);
@@ -325,7 +279,7 @@ void CoCopeLia_Dgemm_subkernel_async(kernel3_p kernel){
 	if (kernel->CsOutMaster && kernel->CsOutloc != kernel->devId) {
 		cudaStreamWaitEvent(d2h_stream[kernel->devId], kernel->gemm_complete,0);
 		CoCoMemcpy2DAsync(kernel->CsOut, kernel->ldCsOut, kernel->Cker, kernel->ldCker, kernel->Ms, kernel->Ns, sizeof(double), kernel->CsOutloc, kernel->devId, d2h_stream[kernel->devId]);
-		//if (kernel->CsOutloc == -1) assert(CUBLAS_STATUS_SUCCESS == cublasGetMatrixAsync(kernel->Ms, kernel->Ns, sizeof(double), kernel->Cker, kernel->ldCker, kernel->CsOut, kernel->ldCsOut, d2h_stream[kernel->devId]));
+	
 	}
 	//cudaCheckErrors();
 #ifdef DEBUG

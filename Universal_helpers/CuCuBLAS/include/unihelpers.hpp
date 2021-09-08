@@ -109,4 +109,11 @@ cublasOperation_t OpCharToCublas(char src);
 CBLAS_TRANSPOSE OpCharToCblas(char src);
 char PrintCublasOp(cublasOperation_t src);
 
+/// Checks if given dataloc is remote to the dev_id (->translation between 'remote' and CUDA dev_ids).
+short CoCoPeLiaGetRemoteFlag(short data_loc, short dev_id);
+/// Checks if given ptr in CPU (pinned) or GPU. FIXME: See next function for CUDA > 10.2
+short CoCopeLia_ptr_check_cuda_9_2(const void * in_ptr);
+/// Same function for new cuda attributes, TODO: MUST Uncomment code to work. 
+short CoCopeLia_ptr_check_cuda_11(const void * in_ptr);
+
 #endif

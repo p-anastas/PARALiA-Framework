@@ -157,3 +157,45 @@ char PrintCublasOp(cublasOperation_t src)
 	else error("PrintCublasOp: Invalid Op\n"); 
 }
 
+
+short CoCoPeLiaGetRemoteFlag(short data_loc, short dev_id)
+{
+	short remote = -1;
+	int devices;
+	cudaGetDeviceCount(&devices);
+	if (data_loc < -1 || data_loc >= devices) error("CoCoPeLiaGetRemoteFlag: Invalid data_loc %d", data_loc);
+	else if (data_loc != dev_id) remote = 1;	
+	else remote = 0; 
+	return remote; 
+}
+
+short CoCopeLia_ptr_check_cuda_9_2(const void * in_ptr)
+{
+	short loc = -2;
+	cudaPointerAttributes ptr_att; 
+	if (cudaSuccess != cudaPointerGetAttributes(&ptr_att, in_ptr)) warning("CoCoBLAS_ptr_check_cuda_9_2: Pointer not visible to CUDA, host alloc or error");
+	if (ptr_att.memoryType == cudaMemoryTypeHost) loc = -1; 
+	else if (ptr_att.memoryType == cudaMemoryTypeDevice) loc = ptr_att.device;
+	// TODO: Unified memory is considered available in the GPU as cuBLASXt ( not bad, not great) 
+	else if (ptr_att.isManaged) loc = ptr_att.device;
+	else error("CoCoBLAS_ptr_check_cuda_9_2: Invalid memory type");
+	return loc; 
+}
+
+short CoCopeLia_ptr_check_cuda_11(const void * in_ptr)
+{
+	short loc = -2;
+	cudaPointerAttributes ptr_att; 
+	if (cudaSuccess != cudaPointerGetAttributes(&ptr_att, in_ptr)) warning("CoCopeLia_ptr_check_cuda_11: Pointer not visible to CUDA, host alloc or error");
+	error("CoCoBLAS_ptr_check_cuda_11: Uncomment part in /lib/CoCopeLia_subkernels.cu to include unified memory flag for latest cuda");
+}
+/* Did you say "Backward compatibility"? Probably not! Use this for CUDA > 10.2
+	if (ptr_att.memoryType == cudaMemoryTypeHost) loc = -1; 
+	else if (ptr_att.memoryType == cudaMemoryTypeDevice) loc = ptr_att.device;
+	// TODO: Unified memory is considered available in the GPU as cuBLASXt ( not bad, not great) 
+	else if (ptr_att.type == cudaMemoryTypeManaged) loc = ptr_att.device;
+	else error("CoCoBLAS_ptr_check_cuda_11: Invalid memory type");
+	return loc; 
+}
+*/
+

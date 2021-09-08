@@ -12,12 +12,6 @@
 
 #define NUM_DEVICES 1
 
-short CoCoPeLiaGetRemoteFlag(short data_loc, short dev_id);
-
-short CoCopeLia_ptr_check_cuda_9_2(const void * in_ptr);
-
-short CoCopeLia_ptr_check_cuda_11(const void * in_ptr);
-
 /* global variable declaration */
 typedef struct globuf{
 	short dev_id; 
