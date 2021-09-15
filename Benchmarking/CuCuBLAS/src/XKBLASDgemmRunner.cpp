@@ -50,8 +50,8 @@ double XKBLASDgemmWrap(char TransA,  char TransB, size_t M, size_t N, size_t K, 
 
 }
 
-void XKBLASFlushGPUBuf(short dev_num, int dev_ids[] ){
-	xkblas_memory_invalidate_caches();// TODO: Is there anything to flush actually?
+void XKBLASFlushGPUBuf(){
+	xkblas_memory_free();
 }
 
 int main(const int argc, const char *argv[]) {
@@ -141,10 +141,11 @@ int main(const int argc, const char *argv[]) {
  	CoCoMemcpy(C, C_buf,  M * N *sizeof(double), C_loc, -2);
 
 	// Call for Validate
+	cpu_timer = csecond();
 	XKBLASDgemmWrap(TransA,  TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC,  XKBLAS_tile, cpu_ratio, dev_num, dev_ids);
 	cudaCheckErrors();
-
-	XKBLASFlushGPUBuf(dev_num, dev_ids);
+	cpu_timer  = csecond() - cpu_timer;
+	XKBLASFlushGPUBuf();
 
 	CoCoMemcpy(C_out, C,  M * N *sizeof(double), -2, C_loc);
 
@@ -156,13 +157,14 @@ int main(const int argc, const char *argv[]) {
 	free(C_buf);
 #endif
 
+
 	// First call for additional overhead counting
 	cpu_timer = csecond();
 	XKBLASDgemmWrap(TransA,  TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC,  XKBLAS_tile, cpu_ratio, dev_num, dev_ids);
 	cudaCheckErrors();
 	cpu_timer  = csecond() - cpu_timer;
 	StoreLogLvl3(filename, return_values, TransA, TransB, alpha, beta, M, N, K, A_loc, B_loc, C_loc, C_out_loc, cpu_timer); 
-
+	xkblas_memory_invalidate_caches();
 	double first_over_t = cpu_timer; 
 
 	double min_t = first_over_t, max_t = 0, avg_t = 0;
@@ -174,6 +176,8 @@ int main(const int argc, const char *argv[]) {
 		XKBLASDgemmWrap(TransA,  TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC,  XKBLAS_tile, cpu_ratio, dev_num, dev_ids);
 		cudaCheckErrors();
 		cpu_timer = csecond() - cpu_timer;
+		xkblas_memory_invalidate_caches();
+		cudaCheckErrors();
 		StoreLogLvl3(filename, return_values, TransA, TransB, alpha, beta, M, N, K, A_loc, B_loc, C_loc, C_out_loc, cpu_timer); 
 		if ( cpu_timer < min_t ) min_t = cpu_timer;
 		if ( cpu_timer > max_t ) max_t = cpu_timer;
@@ -187,7 +191,7 @@ int main(const int argc, const char *argv[]) {
 	min_t  * 1000, Gval_per_s(dgemm_flops(M,N,K),min_t),
 	max_t  * 1000, Gval_per_s(dgemm_flops(M,N,K),max_t));
 		
-	XKBLASFlushGPUBuf(dev_num, dev_ids);
+	XKBLASFlushGPUBuf();
 	cudaCheckErrors();
 	CoCoFree(A, A_loc);
 	CoCoFree(B, B_loc);

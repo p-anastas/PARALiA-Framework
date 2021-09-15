@@ -573,7 +573,9 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 			Cout_remote_f = CoCoPeLiaGetRemoteFlag(C_loc, dev_id[i]);
 		CoCoModel_p model = CoCoPeLiaModelInit(dev_id[i], "Dgemm", 'X', TransA, TransB, M, N, K, A_remote_f, B_remote_f, C_remote_f, A_remote_f, B_remote_f, C_remote_f, ldA, ldB, ldC);
 		tunableParams_p pred_p = CoCoPeLiaModelOptimizeTile(model, COCOPELIA_REUSE);
-		t_total += t_pred[i] = pred_p->pred_t;
+		/// TODO: CHEAT (we hate doubles - if devices have nearly similar performance we might lose performant tile splits from 'near' times. e.g. a 4095/4097 tile split...
+		if( i>0 && abs(pred_p->pred_t - t_pred[i-1])/t_pred[i-1] < 0.1) t_total += t_pred[i] = t_pred[i-1];
+		else t_total += t_pred[i] = pred_p->pred_t;
 	}
 
     	// Initialize thread creation attributes.

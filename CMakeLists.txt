@@ -5,11 +5,11 @@ set(BACKENED "CuCuBLAS")
 message("CoCopeLia-Framework - BACKEND: " ${BACKENED})
 
 ## Define the project version (used in logfiles for result testing)
-set(PROJECT_VERSION "0.2")
+set(PROJECT_VERSION "0.1")
 message("CoCopeLia-Framework - PROJECT_VERSION: " ${PROJECT_VERSION})
 add_definitions(-DVERSION="${PROJECT_VERSION}")
 #Run in testing mode : details about models, decisions and time spend in operations.
-add_definitions(-DTEST)
+#add_definitions(-DTEST)
 #Run in debug mode, which includes detailed function calls and info for error-checking
 #add_definitions(-DDEBUG)
 
@@ -19,10 +19,17 @@ project (CoCopeLia-Framework VERSION ${PROJECT_VERSION} DESCRIPTION "The complet
 #set(TESTBED_NAME "dungani")
 set(TESTBED_NAME "silver1")
 message("CoCopeLia-Framework - TESTBED_NAME: " ${TESTBED_NAME})
+add_definitions(-DTESTBED="${TESTBED_NAME}")
 
 ## Define the number of devices for utilization (0-num_devices)
 set(NUM_DEVICES 2)
 message("CoCopeLia-Framework - NUM_DEVICES: " ${NUM_DEVICES})
+add_definitions(-DDEV_NUM=${NUM_DEVICES})
+
+## Define the number of silmuntaneous allowed CUDA streams for GPU execution.
+set(NUM_EXEC_STREAMS 4)
+message("CoCopeLia-Framework - NUM_EXEC_STREAMS: " ${NUM_EXEC_STREAMS})
+add_definitions(-DNUM_EXEC_STREAMS=${NUM_EXEC_STREAMS})
 
 ###TODO:Define specific compiler, flags, includes, libs for the target system (IF needed).
 
@@ -77,9 +84,6 @@ endif()
 set (CMAKE_INSTALL_PROJECT ${CMAKE_INSTALL_PREFIX})
 message("CoCopeLia-Framework - CMAKE_INSTALL_PROJECT: " ${CMAKE_INSTALL_PROJECT})
 
-add_definitions(-DTESTBED="${TESTBED_NAME}")
-add_definitions(-DDEV_NUM=${NUM_DEVICES})
-
 configure_file(${PROJECT_SOURCE_DIR}/Deploy.in ${CMAKE_INSTALL_PROJECT}/Deploy.sh @ONLY)
 
 set(PROJECT_BENCH_DIR ${PROJECT_SOURCE_DIR}/Benchmarking)
@@ -96,5 +100,6 @@ add_definitions(-DDEPLOYDB="${DEPLOYMENT_DIR_DB}")
 ADD_SUBDIRECTORY (Autotuning_runtime)
 
 ADD_SUBDIRECTORY (Library_scheduler)
+#ADD_SUBDIRECTORY (Library_scheduler_experimental)
 
 ADD_SUBDIRECTORY (Benchmarking)
