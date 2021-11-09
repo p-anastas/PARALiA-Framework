@@ -8,6 +8,8 @@
 #include "CoCoPeLia.hpp"
 #include "cuBLASXtWrapped.hpp"
 
+#include "backend_wrappers.hpp"
+
 #define CBLASXT_MAX_SAFE_TILE 10000
 
 int main(const int argc, const char *argv[]) {
@@ -52,7 +54,7 @@ int main(const int argc, const char *argv[]) {
 	B = (double*) CoCoMalloc(N * K*sizeof(double), B_loc);
 	C = (double*) CoCoMalloc(M * N*sizeof(double), C_loc);
 
-	cudaCheckErrors();
+	CoCoSyncCheckErr();
 	cpu_timer  = csecond() - cpu_timer;
 	fprintf(stderr, "done.\nAlloc time:\t%lf ms\n\n",  cpu_timer  * 1000);
 	cpu_timer = csecond();
@@ -60,7 +62,7 @@ int main(const int argc, const char *argv[]) {
 	CoCoVecInit(A, K * M, 42, A_loc);
 	CoCoVecInit(B, K * N, 43, B_loc);
 	CoCoVecInit(C, M * N, 44, C_loc);
-	cudaCheckErrors();
+	CoCoSyncCheckErr();
 	cpu_timer  = csecond() - cpu_timer ;
 	fprintf(stderr, "done.\nInit time:\t%lf ms\n\n",  cpu_timer  * 1000);
 
@@ -75,7 +77,7 @@ int main(const int argc, const char *argv[]) {
 	// Call for Validate
 	if (predef_control_values!= NULL) return_values = CoCopeLiaDgemmControled(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC, predef_control_values);
 	else return_values = CoCopeLiaDgemm(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC);
-	cudaCheckErrors();
+	CoCoSyncCheckErr();
 	for (int i = 0; i< return_values->dev_num; i++) CoCopeLiaDgemm_flush_gpu_mem_buf(return_values->dev_ids[i]);
 	
  	CoCoMemcpy(C_out, C,  M * N *sizeof(double), -2, C_loc);
@@ -98,7 +100,7 @@ int main(const int argc, const char *argv[]) {
 	// First call for Validate
 	if (predef_control_values!= NULL) return_values = CoCopeLiaDgemmControled(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC, predef_control_values);
 	else return_values = CoCopeLiaDgemm(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC);
-	cudaCheckErrors();
+	CoCoSyncCheckErr();
 	cpu_timer  = csecond() - cpu_timer;
 
 #ifdef CHECKLOG
@@ -117,7 +119,7 @@ int main(const int argc, const char *argv[]) {
 		cpu_timer = csecond();
 		if (predef_control_values!= NULL) return_values = CoCopeLiaDgemmControled(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC, predef_control_values);
 		else return_values = CoCopeLiaDgemm(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC);
-		cudaCheckErrors();
+		CoCoSyncCheckErr();
 		cpu_timer = csecond() - cpu_timer;
 		StoreLogLvl3(filename, return_values, TransA, TransB, alpha, beta, M, N, K, A_loc, B_loc, C_loc, C_out_loc, cpu_timer); 
 		if ( cpu_timer < min_t ) min_t = cpu_timer;
@@ -134,7 +136,7 @@ int main(const int argc, const char *argv[]) {
 
 	for (int i = 0; i< return_values->dev_num; i++) CoCopeLiaDgemm_flush_gpu_mem_buf(return_values->dev_ids[i]);
 
-	cudaCheckErrors();
+	CoCoSyncCheckErr();
 	CoCoFree(A, A_loc);
 	CoCoFree(B, B_loc);
 	CoCoFree(C, C_loc); 

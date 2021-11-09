@@ -6,7 +6,7 @@ message( "Benchmarking - PROJECT_SOURCE_DIR: " ${PROJECT_SOURCE_DIR} )
 #message( "Library Scheduler - CMAKE_CURRENT_SOURCE_DIR: " ${CMAKE_CURRENT_SOURCE_DIR} )
 #message( "Library Scheduler - CMAKE_CURRENT_BINARY_DIR: " ${CMAKE_CURRENT_BINARY_DIR} )
 
-set ( BENCH_DIR ${PROJECT_SOURCE_DIR}/${BACKENED} )
+set ( BENCH_DIR ${PROJECT_SOURCE_DIR}/${BACKEND} )
 message( "Benchmarking - LIBSC_DIR: " ${BENCH_DIR} )
 
 set (BENCH_DIR_INC ${BENCH_DIR}/include)
@@ -78,24 +78,35 @@ add_definitions(-DRUNVALIDATION)
 
 # ${BENCH_DIR_SRC}/XKBLASWrappers.cpp
 # 
-add_executable (CoCoPeLiaDgemmTester ${BENCH_DIR_SRC}/CoCoPeLiaDgemmTester.cpp )
 
-add_executable (CoCoPeLiaDgemmRunner ${BENCH_DIR_SRC}/CoCoPeLiaDgemmRunner.cpp )
-add_executable (CoCoPeLiaDgemmRunnerBest ${BENCH_DIR_SRC}/CoCoPeLiaDgemmRunnerBest.cpp )
 add_executable (cuBLASXtDgemmRunner ${BENCH_DIR_SRC}/cuBLASXtDgemmRunner.cpp )
 add_executable (BLASxDgemmRunner ${BENCH_DIR_SRC}/BLASxDgemmRunner.cpp ${BENCH_DIR_SRC}/BLASXWrappers.cpp)
 add_executable (BLASxExDgemmRunner ${BENCH_DIR_SRC}/BLASxExDgemmRunner.cpp ${BENCH_DIR_SRC}/BLASXWrappers.cpp)
 add_executable (XKBLASDgemmRunner ${BENCH_DIR_SRC}/XKBLASDgemmRunner.cpp)
 
-target_link_libraries(CoCoPeLiaDgemmTester ${INTERNAL_LINK_LIB} benchcocopelia)
-
-target_link_libraries(CoCoPeLiaDgemmRunner ${INTERNAL_LINK_LIB} benchcocopelia unihelpers)
-target_link_libraries(CoCoPeLiaDgemmRunnerBest ${INTERNAL_LINK_LIB} benchcocopelia unihelpers)
 target_link_libraries(cuBLASXtDgemmRunner ${INTERNAL_LINK_LIB} benchcocopelia unihelpers)
 target_link_libraries(BLASxDgemmRunner ${INTERNAL_LINK_LIB} benchcocopelia unihelpers ${BLASX_LINK})
 target_link_libraries(BLASxExDgemmRunner ${INTERNAL_LINK_LIB} benchcocopelia unihelpers ${BLASX_LINK})
 target_link_libraries(XKBLASDgemmRunner ${INTERNAL_LINK_LIB} benchcocopelia unihelpers ${XKBLAS_LINK} )
 
+if (${EXPERIMENTAL_VERSION} EQUAL 0)
+	add_executable (CoCoPeLiaDgemmTesterOld ${BENCH_DIR_SRC}/CoCoPeLiaDgemmTester.cpp )
+	add_executable (CoCoPeLiaDgemmRunnerOld ${BENCH_DIR_SRC}/CoCoPeLiaDgemmRunner.cpp )
+	add_executable (CoCoPeLiaDgemmRunnerBestOld ${BENCH_DIR_SRC}/CoCoPeLiaDgemmRunnerBest.cpp )
+	
+	target_link_libraries(CoCoPeLiaDgemmTesterOld ${INTERNAL_LINK_LIB} benchcocopelia)
+	target_link_libraries(CoCoPeLiaDgemmRunnerOld ${INTERNAL_LINK_LIB} benchcocopelia unihelpers)
+	target_link_libraries(CoCoPeLiaDgemmRunnerBestOld ${INTERNAL_LINK_LIB} benchcocopelia unihelpers)
+elseif(${EXPERIMENTAL_VERSION} EQUAL 1)
+	add_executable (CoCoPeLiaDgemmTester ${BENCH_DIR_SRC}/CoCoPeLiaDgemmTester.cpp )
+	add_executable (CoCoPeLiaDgemmRunner ${BENCH_DIR_SRC}/CoCoPeLiaDgemmRunner.cpp )
+	add_executable (CoCoPeLiaDgemmRunnerBest ${BENCH_DIR_SRC}/CoCoPeLiaDgemmRunnerBest.cpp )
+	
+	target_link_libraries(CoCoPeLiaDgemmTester ${INTERNAL_LINK_LIB} benchcocopelia)
+	target_link_libraries(CoCoPeLiaDgemmRunner ${INTERNAL_LINK_LIB} benchcocopelia unihelpers)
+	target_link_libraries(CoCoPeLiaDgemmRunnerBest ${INTERNAL_LINK_LIB} benchcocopelia unihelpers)
+else()
+endif()
 
 set (BENCH_INSTALL_INC ${BENCH_INSTALL_INC} PARENT_SCOPE)
 #message( "->\nBenchmarking - Shared Library: " ${CMAKE_LIBRARY_OUTPUT_DIRECTORY} )

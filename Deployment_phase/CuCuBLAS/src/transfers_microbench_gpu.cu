@@ -8,6 +8,11 @@
 #include <cassert>
 #include "microbenchmarks.hpp"
 
+/// TODO: This is the number of reverse-link transfers used for overlaping. 
+/// The benchmark results are correct ONLY if D2H_BW < MAX_ASSUMED_H2D_TIMES_SLOWER * H2D_BW. 
+/// For current systems 2-4 is sufficient - larger multipliers increase total benchmark time proportionally.
+#define MAX_ASSUMED_H2D_TIMES_SLOWER 2
+
 void report_run(char* filename, size_t dim_1, size_t dim_2, double mean_t, double margin_err, size_t sample_sz, double mean_t_bid, double margin_err_bid, size_t sample_sz_bid, double bench_t){
 
 	FILE* fp = fopen(filename,"a");
@@ -33,13 +38,13 @@ int main(const int argc, const char *argv[]) {
   	}
 
 	char *filename = (char *) malloc(256* sizeof(char));
-	sprintf(filename, "%s/Benchmark-Results/CoCoMemcpy2DAsync_to-%d_from-%d.log", DEPLOYDB, to, from);
+	sprintf(filename, "%s/Benchmark-Results/CoCoMemcpy2DAsync_to-%d_from-%d_%s.log", DEPLOYDB, to, from, VERSION);
 	check_benchmark(filename);
 
 	// Define the max size of a benchmark kernel to run on this machine. 
-	maxDim = CoCopeLiaGetMaxSqdimLvl3(3, sizeof(double), STEP_TRANS); 
+	maxDim = min(CoCoGetMaxDimSqAsset2D(3, sizeof(double), STEP_TRANS, to),CoCoGetMaxDimSqAsset2D(3, sizeof(double), STEP_TRANS, from)) ; 
 
-	fprintf(stderr,"\nTransfer benchmark@%s %s->%s : (%d,%d) with step %d\n", TESTBED, print_loc(from), print_loc(to), minDim, maxDim, step);
+	fprintf(stderr,"\nTransfer benchmark@%s %d->%d : (%d,%d) with step %d\n", TESTBED, from, to, minDim, maxDim, step);
 
 	cudaGetDeviceCount(&dev_count);
 
@@ -57,9 +62,9 @@ int main(const int argc, const char *argv[]) {
 		dev_id[0] = from;
 		dev_id[1] = to;
 		// Check/Enable peer access between participating GPUs
-		CoCoPeLiaEnableGPUPeer(0, dev_id, num_devices); 
+		CoCoEnableLinks(0, dev_id, num_devices); 
 		// Check/Enable peer access between participating GPUs
-		CoCoPeLiaEnableGPUPeer(1, dev_id, num_devices); 
+		CoCoEnableLinks(1, dev_id, num_devices); 
 	}
 	else if(from >= 0) cudaSetDevice(from);
 	else if(to >= 0) cudaSetDevice(to);
@@ -74,30 +79,29 @@ int main(const int argc, const char *argv[]) {
 	CoCoVecInit((double*)src, maxDim*(maxDim+1), 42, from);
 	CoCoVecInit((double*)rev_src, maxDim*(maxDim+1), 43, to);
 
-	cudaStream_t stream, reverse_stream;
-	cudaStreamCreate(&stream);
-	cudaStreamCreate(&reverse_stream);
-	cudaCheckErrors();
+	CQueue_p transfer_link = new CommandQueue(), reverse_link = new CommandQueue();
+	
+	CoCoSyncCheckErr();
 	fprintf(stderr, "Warming up...\n");
 	/// Warmup.
-	for (int it = 0; it < 10; it++) CoCoMemcpy2DAsync(dest, ldest, src, ldsrc, maxDim, maxDim, sizeof(double), to, from, stream);
-	cudaCheckErrors();
+	for (int it = 0; it < 10; it++) CoCoMemcpy2DAsync(dest, ldest, src, ldsrc, maxDim, maxDim, sizeof(double), to, from, transfer_link);
+	CoCoSyncCheckErr();
 #ifdef AUTO_BENCH_USE_BOOST
 	double cpu_timer, transfer_t_vals[MICRO_MAX_ITER], transfer_t_sum, transfer_t_mean, bench_t, error_margin; 
 	double transfer_t_bid_sum, transfer_t_bid_mean, error_margin_bid; 
 	size_t sample_sz, sample_sz_bid;
-	gpu_timer_p cuda_timer = gpu_timer_init();
+	Event_timer_p device_timer = new Event_timer();
 	for (size_t dim = minDim; dim < maxDim+1; dim+=step){
 		if (dim >= step * 16) step*=2;
 		transfer_t_sum = transfer_t_mean = bench_t = error_margin = 0;
-		fprintf(stderr, "Cublas-chunk Link %s->%s (Chunk %dx%d):\n", print_loc(from), print_loc(to), dim, dim);
+		fprintf(stderr, "Cublas-chunk Link %d->%d (Chunk %dx%d):\n", from, to, dim, dim);
 		sample_sz = 0; 
 		bench_t = csecond();
 		double std_dev = 0; 
 		for (sample_sz = 1; sample_sz < MICRO_MAX_ITER + 1; sample_sz++) {	
 			cpu_timer = csecond();
-			CoCoMemcpy2DAsync(dest, ldest, src, ldsrc, dim, dim, sizeof(double), to, from, stream);
-			cudaStreamSynchronize(stream);
+			CoCoMemcpy2DAsync(dest, ldest, src, ldsrc, dim, dim, sizeof(double), to, from, transfer_link);
+			transfer_link->sync_barrier();
 			cpu_timer  = csecond() - cpu_timer ;
 			transfer_t_vals[sample_sz-1] = cpu_timer;
 			transfer_t_sum += transfer_t_vals[sample_sz-1];
@@ -114,20 +118,20 @@ int main(const int argc, const char *argv[]) {
 		}
 		bench_t = csecond() - bench_t;
 		fprintf(stderr, "Microbenchmark (dim1 = dim2 = %zu) complete:\t mean_exec_t=%lf ms  ( %lf Gb/s), Error Margin (percentage of mean) = %lf %, Itter = %d, Microbench_t = %lf\n\n", dim, transfer_t_mean  * 1000, Gval_per_s(dim*dim*8, transfer_t_mean), error_margin/transfer_t_mean  * 100, sample_sz, bench_t);
-		cudaCheckErrors();
+		CoCoSyncCheckErr();
 
 		transfer_t_bid_sum = transfer_t_bid_mean = error_margin_bid = 0;
-		fprintf(stderr, "Reverse overlapped Link %s->%s (Chunk %dx%d):\n", print_loc(from), print_loc(to), dim, dim);
+		fprintf(stderr, "Reverse overlapped Link %d->%d (Chunk %dx%d):\n", from, to, dim, dim);
 		sample_sz_bid = 0; 
 		bench_t = csecond() - bench_t;
 		std_dev = 0; 
-		for (sample_sz_bid = 1; sample_sz_bid < MICRO_MAX_ITER + 1; sample_sz_bid++) {	
-			for (int rep = 0; rep < 10 ; rep++) CoCoMemcpy2DAsync(rev_dest, ldest, rev_src, ldsrc, dim, dim, sizeof(double), from, to, reverse_stream);
-			gpu_timer_start(cuda_timer, stream);
-			CoCoMemcpy2DAsync(dest, ldest, src, ldsrc, dim, dim, sizeof(double), to, from, stream);
-			gpu_timer_stop(cuda_timer, stream);
-			cudaCheckErrors();
-			transfer_t_vals[sample_sz_bid-1] = gpu_timer_get(cuda_timer)/1000;
+		for (sample_sz_bid = 1; sample_sz_bid < MICRO_MAX_ITER + 1; sample_sz_bid++) {
+			for (int rep = 0; rep < MAX_ASSUMED_H2D_TIMES_SLOWER; rep++) CoCoMemcpy2DAsync(rev_dest, ldest, rev_src, ldsrc, dim, dim, sizeof(double), from, to, reverse_link);
+			device_timer->start_point(transfer_link);
+			CoCoMemcpy2DAsync(dest, ldest, src, ldsrc, dim, dim, sizeof(double), to, from, transfer_link);
+			device_timer->stop_point(transfer_link);
+			CoCoSyncCheckErr();
+			transfer_t_vals[sample_sz_bid-1] = device_timer->sync_get_time()/1000;
 			transfer_t_bid_sum += transfer_t_vals[sample_sz_bid-1];
 			transfer_t_bid_mean = transfer_t_bid_sum/sample_sz_bid; 
 			if (sample_sz_bid < 2) continue;
@@ -142,45 +146,45 @@ int main(const int argc, const char *argv[]) {
 		}
 		bench_t = csecond() - bench_t;
 		fprintf(stderr, "Microbenchmark (dim1 = dim2 = %zu) complete:\t mean_exec_t=%lf ms  ( %lf Gb/s), Error Margin (percentage of mean) = %lf %, Itter = %d, Microbench_t = %lf\n\n", dim, transfer_t_bid_mean  * 1000, Gval_per_s(dim*dim*8, transfer_t_bid_mean), error_margin_bid/transfer_t_bid_mean  * 100, sample_sz_bid, bench_t);
-		cudaCheckErrors();
+		CoCoSyncCheckErr();
 
 		report_run(filename, dim, dim , transfer_t_mean, error_margin, sample_sz, transfer_t_bid_mean, error_margin_bid, sample_sz_bid, bench_t); 
 	}
 #else
 	/// Local Timers 
 	double cpu_timer, t_sq_av, t_sq_min, t_sq_max, t_sq_bid_av, t_sq_bid_min, t_sq_bid_max, bench_t;
-	gpu_timer_p cuda_timer = gpu_timer_init();
+	Event_timer_p device_timer = new Event_timer();
 	for (size_t dim = minDim; dim < maxDim+1; dim+=step){
 		if (dim >= step * 16) step*=2;
 		t_sq_av = t_sq_max = t_sq_bid_av = t_sq_bid_max = bench_t= 0;
 		t_sq_min = t_sq_bid_min = 1e9; 
-		fprintf(stderr, "Cublas-chunk Link %s->%s (Chunk %dx%d):\n", print_loc(from), print_loc(to), dim, dim);
+		fprintf(stderr, "Cublas-chunk Link %d->%d (Chunk %dx%d):\n", from, to, dim, dim);
 		bench_t = csecond();
 		for (int it = 0; it < ITER ; it++) {
 			cpu_timer = - csecond();
-			CoCoMemcpy2DAsync(dest, ldest, src, ldsrc, dim, dim, sizeof(double), to, from, stream);
-			cudaStreamSynchronize(stream);
+			CoCoMemcpy2DAsync(dest, ldest, src, ldsrc, dim, dim, sizeof(double), to, from, transfer_link);
+			transfer_link->sync_barrier();
 			cpu_timer = csecond() + cpu_timer;
 			t_sq_av += cpu_timer;
 			if (cpu_timer > t_sq_max) t_sq_max = cpu_timer; 
 			if (cpu_timer < t_sq_min) t_sq_min = cpu_timer; 
 		}
-		cudaCheckErrors();
+		CoCoSyncCheckErr();
 		t_sq_av = t_sq_av/ITER;
 		fprintf(stderr, "Transfer time:\t Average=%lf ms ( %lf Gb/s), Min = %lf ms, Max = %lf ms\n", t_sq_av  * 1000, Gval_per_s(dim*dim*8, t_sq_av), t_sq_min  * 1000, t_sq_max  * 1000);
 
-		fprintf(stderr, "Reverse overlapped Link %s->%s (Chunk %dx%d):\n", print_loc(from), print_loc(to), dim, dim);
+		fprintf(stderr, "Reverse overlapped Link %d->%d (Chunk %dx%d):\n", from, to, dim, dim);
 		for (int it = 0; it < ITER ; it++) {
-			for (int rep = 0; rep < 10 ; rep++) CoCoMemcpy2DAsync(rev_dest, ldest, rev_src, ldsrc, dim, dim, sizeof(double), from, to, reverse_stream);
-			gpu_timer_start(cuda_timer, stream);
-			CoCoMemcpy2DAsync(dest, ldest, src, ldsrc, dim, dim, sizeof(double), to, from, stream);
-			gpu_timer_stop(cuda_timer, stream);
-			cudaCheckErrors();
-			t_sq_bid_av += gpu_timer_get(cuda_timer);
-			if (gpu_timer_get(cuda_timer) > t_sq_bid_max) t_sq_bid_max = gpu_timer_get(cuda_timer); 
-			if (gpu_timer_get(cuda_timer) < t_sq_bid_min) t_sq_bid_min = gpu_timer_get(cuda_timer); 
+			for (int rep = 0; rep < MAX_ASSUMED_H2D_TIMES_SLOWER ; rep++) CoCoMemcpy2DAsync(rev_dest, ldest, rev_src, ldsrc, dim, dim, sizeof(double), from, to, reverse_link);
+			device_timer->start_point(transfer_link);
+			CoCoMemcpy2DAsync(dest, ldest, src, ldsrc, dim, dim, sizeof(double), to, from, transfer_link);
+			device_timer->stop_point(transfer_link);
+			CoCoSyncCheckErr();
+			t_sq_bid_av += device_timer->sync_get_time();
+			if (device_timer->sync_get_time() > t_sq_bid_max) t_sq_bid_max = device_timer->sync_get_time(); 
+			if (device_timer->sync_get_time() < t_sq_bid_min) t_sq_bid_min = device_timer->sync_get_time(); 
 		}
-		cudaCheckErrors();
+		CoCoSyncCheckErr();
 		t_sq_bid_av = t_sq_bid_av/ITER/1000;
 		t_sq_bid_min/= 1000;
 		t_sq_bid_max/= 1000;

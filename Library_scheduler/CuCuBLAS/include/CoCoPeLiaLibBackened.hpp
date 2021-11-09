@@ -10,7 +10,7 @@
 #include <cuda_runtime.h>
 #include <pthread.h>
 
-#define NUM_DEVICES 1
+#include "unihelpers.hpp"
 
 /* global variable declaration */
 typedef struct globuf{
@@ -44,7 +44,7 @@ typedef struct subkernel3_gen {
 	short AsMaster, BsMaster, CsMaster, CsOutMaster;
 
 	short devId; 
-	cudaEvent_t data_avail, gemm_complete;
+	Event_p data_avail, gemm_complete;
  
 	
 	

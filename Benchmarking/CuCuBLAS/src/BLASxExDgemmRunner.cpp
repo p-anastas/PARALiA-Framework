@@ -4,6 +4,8 @@
 /// \brief The start of Zawarudo
 ///
 
+#include "backend_wrappers.hpp"
+
 #include "unihelpers.hpp"
 #include "CoCoPeLia.hpp"
 #include "BLASxWrapped.hpp"
@@ -72,7 +74,7 @@ int main(const int argc, const char *argv[]) {
 	B = (double*) CoCoMalloc(N * K*sizeof(double), B_loc);
 	C = (double*) CoCoMalloc(M * N*sizeof(double), C_loc);
 
-	cudaCheckErrors();
+	CoCoSyncCheckErr();
 	cpu_timer  = csecond() - cpu_timer;
 	fprintf(stderr, "done.\nAlloc time:\t%lf ms\n\n",  cpu_timer  * 1000);
 	cpu_timer = csecond();
@@ -80,7 +82,7 @@ int main(const int argc, const char *argv[]) {
 	CoCoVecInit(A, K * M, 42, A_loc);
 	CoCoVecInit(B, K * N, 43, B_loc);
 	CoCoVecInit(C, M * N, 44, C_loc);
-	cudaCheckErrors();
+	CoCoSyncCheckErr();
 	cpu_timer  = csecond() - cpu_timer ;
 	fprintf(stderr, "done.\nInit time:\t%lf ms\n\n",  cpu_timer  * 1000);
 
@@ -94,7 +96,7 @@ int main(const int argc, const char *argv[]) {
 
 	// Call for Validate
 	BLASxExDgemmWrap(TransA,  TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC,  BLASx_tile, cpu_ratio, dev_num, dev_ids);
-	cudaCheckErrors();
+	CoCoSyncCheckErr();
 
 	BLASxFlushGPUBuf(dev_num, dev_ids);
 	
@@ -119,7 +121,7 @@ int main(const int argc, const char *argv[]) {
 	// First call for additional overhead counting
 	cpu_timer = csecond();
 	BLASxExDgemmWrap(TransA,  TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC,  BLASx_tile, cpu_ratio, dev_num, dev_ids);
-	cudaCheckErrors();
+	CoCoSyncCheckErr();
 	cpu_timer  = csecond() - cpu_timer;
 	StoreLogLvl3(filename, return_values, TransA, TransB, alpha, beta, M, N, K, A_loc, B_loc, C_loc, C_out_loc, cpu_timer); 
 
@@ -132,7 +134,7 @@ int main(const int argc, const char *argv[]) {
 	for(int it = 0; it < bench_it; it++){
 		cpu_timer = csecond();
 		BLASxExDgemmWrap(TransA,  TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC,  BLASx_tile, cpu_ratio, dev_num, dev_ids);
-		cudaCheckErrors();
+		CoCoSyncCheckErr();
 		cpu_timer = csecond() - cpu_timer;
 		StoreLogLvl3(filename, return_values, TransA, TransB, alpha, beta, M, N, K, A_loc, B_loc, C_loc, C_out_loc, cpu_timer); 
 		if ( cpu_timer < min_t ) min_t = cpu_timer;
@@ -147,7 +149,7 @@ int main(const int argc, const char *argv[]) {
 	min_t  * 1000, Gval_per_s(dgemm_flops(M,N,K),min_t),
 	max_t  * 1000, Gval_per_s(dgemm_flops(M,N,K),max_t));
 	
-	cudaCheckErrors();
+	CoCoSyncCheckErr();
 	CoCoFree(A, A_loc);
 	CoCoFree(B, B_loc);
 	CoCoFree(C, C_loc); 

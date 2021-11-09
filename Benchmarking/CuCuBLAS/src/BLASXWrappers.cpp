@@ -7,6 +7,7 @@
 #include <cublasXt.h>
 #include <cblas.h>
 
+#include "backend_wrappers.hpp"
 #include <BLASxModifiedcblas.h>
 #include "CoCoPeLia.hpp"
 #include "unihelpers.hpp"
@@ -20,8 +21,8 @@ double BLASxDgemmWrap(char TransA, char TransB, size_t M, size_t N, size_t K, do
 	double total_t = csecond();
 #ifdef DEBUG
 	lprintf(lvl-1, "|-----> BLASxDgemmWrap(%c,%c,%zu,%zu,%zu,%lf,A(%d),%zu,B(%d),%zu,%lf,C(%d),%zu)\n", 
-		TransA, TransB, M, N, K, alpha, CoCopeLia_ptr_check_cuda_9_2(A), ldA,
-		CoCopeLia_ptr_check_cuda_9_2(B), ldB, beta, CoCopeLia_ptr_check_cuda_9_2(C), ldC);
+		TransA, TransB, M, N, K, alpha, CoCoGetPtrLoc(A), ldA,
+		CoCoGetPtrLoc(B), ldB, beta, CoCoGetPtrLoc(C), ldC);
 #endif
 
 #ifdef TEST
@@ -30,13 +31,13 @@ double BLASxDgemmWrap(char TransA, char TransB, size_t M, size_t N, size_t K, do
 #endif
 	CBLAS_TRANSPOSE cpu_op_A = OpCharToCblas(TransA), cpu_op_B = OpCharToCblas(TransB);
 	BLASx_dgemm(CblasColMajor,cpu_op_A,cpu_op_B,M,N,K,alpha,A,ldA, B,ldB, beta,C, ldC, T, dev_num, dev_ids);
-	cudaCheckErrors();
+	CoCoSyncCheckErr();
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer; 
 	lprintf(lvl, "BLASx execution time -> t_kernel = %lf ms\n", cpu_timer*1000);
 #endif
 
-	cudaCheckErrors();
+	CoCoSyncCheckErr();
 	total_t = csecond() - total_t;
 	return total_t;
 
@@ -47,8 +48,8 @@ double BLASxExDgemmWrap(char TransA, char TransB, size_t M, size_t N, size_t K, 
 	double total_t = csecond();
 #ifdef DEBUG
 	lprintf(lvl-1, "|-----> BLASxExDgemmWrap(%c,%c,%zu,%zu,%zu,%lf,A(%d),%zu,B(%d),%zu,%lf,C(%d),%zu)\n", 
-		TransA, TransB, M, N, K, alpha, CoCopeLia_ptr_check_cuda_9_2(A), ldA,
-		CoCopeLia_ptr_check_cuda_9_2(B), ldB, beta, CoCopeLia_ptr_check_cuda_9_2(C), ldC);
+		TransA, TransB, M, N, K, alpha, CoCoGetPtrLoc(A), ldA,
+		CoCoGetPtrLoc(B), ldB, beta, CoCoGetPtrLoc(C), ldC);
 #endif
 
 #ifdef TEST
@@ -57,13 +58,13 @@ double BLASxExDgemmWrap(char TransA, char TransB, size_t M, size_t N, size_t K, 
 #endif
 	CBLAS_TRANSPOSE cpu_op_A = OpCharToCblas(TransA), cpu_op_B = OpCharToCblas(TransB);
 	BLASx_gpubuf_dgemm(CblasColMajor,cpu_op_A,cpu_op_B,M,N,K,alpha,A,ldA, B,ldB, beta,C, ldC, T, dev_num, dev_ids);
-	cudaCheckErrors();
+	CoCoSyncCheckErr();
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer; 
 	lprintf(lvl, "BLASx execution time -> t_kernel = %lf ms\n", cpu_timer*1000);
 #endif
 
-	cudaCheckErrors();
+	CoCoSyncCheckErr();
 	total_t = csecond() - total_t;
 	return total_t;
 

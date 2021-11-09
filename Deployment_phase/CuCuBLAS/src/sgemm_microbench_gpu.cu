@@ -6,6 +6,8 @@
 
 #include <cassert>
 #include "microbenchmarks.hpp"
+//TODO: This should at some point be removed (some fuctions require wrapping)
+#include "backend_wrappers.hpp"
 
 void report_run(char* filename, size_t M, size_t N, size_t K, double mean_t, double margin_err, size_t sample_sz, double bench_t){
 
@@ -34,10 +36,10 @@ int main(const int argc, const char *argv[]) {
   	}
 
 	// Define the max size of a benchmark kernel to run on this machine. 
-	size_t maxDim = CoCopeLiaGetMaxSqdimLvl3(3, sizeof(float), STEP_BLAS3); 
+	size_t maxDim = CoCoGetMaxDimSqAsset2D(3, sizeof(float), STEP_TRANS, dev_id);
 
 	char *filename = (char *) malloc(256* sizeof(char));
-	sprintf(filename, "%s/Benchmark-Results/cublasSgemm_dev-%d_TransA-%c_TransB-%c.log", DEPLOYDB, dev_id, TransA, TransB);
+	sprintf(filename, "%s/Benchmark-Results/cublasSgemm_dev-%d_TransA-%c_TransB-%c_%s.log", DEPLOYDB, dev_id, TransA, TransB, VERSION);
 	check_benchmark(filename);
 
 	size_t ldA = maxDim, ldB = maxDim, ldC = maxDim;
@@ -66,7 +68,7 @@ int main(const int argc, const char *argv[]) {
   	A_dev = (float*) CoCoMalloc(maxDim * maxDim * sizeof(float), dev_id);
   	B_dev = (float*) CoCoMalloc(maxDim * maxDim * sizeof(float), dev_id);
   	C_dev = (float*) CoCoMalloc(maxDim * maxDim * sizeof(float), dev_id);
-	cudaCheckErrors();
+	CoCoSyncCheckErr();
 
 	cpu_timer  = csecond() - cpu_timer ;
 	fprintf(stderr, "done.\nAlloc time:\t%lf ms\n\n",  cpu_timer  * 1000);
@@ -78,7 +80,7 @@ int main(const int argc, const char *argv[]) {
 	CoCoVecInit(B_dev, maxDim * maxDim, 42, dev_id);
 	CoCoVecInit(C_dev, maxDim * maxDim, 42, dev_id);
 
-	cudaCheckErrors();
+	CoCoSyncCheckErr();
 	cpu_timer  = csecond() - cpu_timer ;	
 	fprintf(stderr, "done.\nInit time:\t%lf ms\n\n",  cpu_timer  * 1000);
 
@@ -91,7 +93,7 @@ int main(const int argc, const char *argv[]) {
 		assert(CUBLAS_STATUS_SUCCESS == cublasSgemm(handle0, gpu_op_A, gpu_op_B, maxDim, maxDim, maxDim, &alpha, A_dev, ldA, B_dev, ldB, &beta, C_dev, ldC));
 		cudaStreamSynchronize(host_stream);
 	}
-	cudaCheckErrors();
+	CoCoSyncCheckErr();
 #ifdef AUTO_BENCH_USE_BOOST
 	double cublas_t_vals[MICRO_MAX_ITER], cublas_t_sum, cublas_t_mean, bench_t, error_margin; 
 	size_t bench_ctr = 0, sample_sz, step = STEP_BLAS3;
@@ -121,8 +123,8 @@ int main(const int argc, const char *argv[]) {
 			if (sample_sz > MICRO_MIN_ITER && error_margin/cublas_t_mean  * 100 <= 5) break; 
 		}
 		bench_t = csecond() - bench_t;
-		fprintf(stderr, "Microbenchmark (M = N = K = %zu) complete:\t mean_exec_t=%lf ms, Error Margin (percentage of mean) = %lf %, Itter = %d, Microbench_t = %lf\n\n", T, cublas_t_mean  * 1000, error_margin/cublas_t_mean  * 100, sample_sz, bench_t);
-		cudaCheckErrors();
+		fprintf(stderr, "Microbenchmark (M = N = K = %zu) complete:\t mean_exec_t=%lf ms ( %.1lf Gflops/s ), Error Margin (percentage of mean) = %lf %, Itter = %d, Microbench_t = %lf\n\n", T, cublas_t_mean  * 1000, Gval_per_s(dgemm_flops(T,T,T), cublas_t_mean), error_margin/cublas_t_mean  * 100, sample_sz, bench_t);
+		CoCoSyncCheckErr();
 
 		report_run(filename, T, T, T, cublas_t_mean, error_margin, sample_sz, bench_t); 
 		bench_ctr++;
@@ -148,7 +150,7 @@ int main(const int argc, const char *argv[]) {
 		bench_t = csecond() - bench_t;
 		cublas_t_av /= ITER;
 		fprintf(stderr, "GPU exec time:\t Average=%lf ms, Min = %lf ms, Max = %lf ms\n", cublas_t_av  * 1000, cublas_t_min  * 1000, cublas_t_max  * 1000);
-		cudaCheckErrors();
+		CoCoSyncCheckErr();
 
 		report_run(filename, T, T, T, cublas_t_av, fmax(cublas_t_max - cublas_t_av, cublas_t_av - cublas_t_min), ITER, bench_t); 
 		bench_ctr++;

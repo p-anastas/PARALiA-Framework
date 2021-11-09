@@ -5,7 +5,7 @@ message( "----------------------------------------------------------------------
 message( "Universal Helpers - PROJECT_SOURCE_DIR: " ${PROJECT_SOURCE_DIR} )
 #message( "Universal Helpers - CMAKE_CURRENT_SOURCE_DIR: " ${CMAKE_CURRENT_SOURCE_DIR} )
 
-set ( UNIHELP_DIR ${CMAKE_CURRENT_SOURCE_DIR}/CuCuBLAS )
+set ( UNIHELP_DIR ${CMAKE_CURRENT_SOURCE_DIR} )
 message( "Universal Helpers - UNIHELP_DIR: " ${UNIHELP_DIR} )
 
 set (UNIHELP_DIR_INC ${UNIHELP_DIR}/include)
@@ -14,6 +14,11 @@ include_directories(${UNIHELP_DIR_INC})
 
 set (UNIHELP_DIR_SRC ${UNIHELP_DIR}/src)
 message( "Universal Helpers - Source DIR: " ${UNIHELP_DIR_SRC} )
+
+set (BACKEND_UNIHELP_DIR_SRC ${UNIHELP_DIR}/${BACKEND})
+message( "Universal Helpers - BACKEND DIR: " ${BACKEND_UNIHELP_DIR_SRC} )
+message( "Universal Helpers - Included DIR: " ${BACKEND_UNIHELP_DIR_SRC} )
+include_directories(${BACKEND_UNIHELP_DIR_SRC})
 
 set (UNIHELP_INSTALL ${CMAKE_INSTALL_PROJECT}/Universal_helpers) 
 file(MAKE_DIRECTORY ${UNIHELP_INSTALL})
@@ -26,12 +31,17 @@ set (UNIHELP_INSTALL_INC ${UNIHELP_INSTALL}/include)
 file(MAKE_DIRECTORY ${UNIHELP_INSTALL_INC})
 
 add_library(unihelpers SHARED 
-${UNIHELP_DIR_SRC}/cpu_utils.cpp
-${UNIHELP_DIR_SRC}/gpu_utils.cu
-${UNIHELP_DIR_SRC}/data_management_wrappers.cu
+${UNIHELP_DIR_SRC}/general_utils.cpp
+#${UNIHELP_DIR_SRC}/data_management.cpp
+${BACKEND_UNIHELP_DIR_SRC}/backend_util_wrappers.cu
+${BACKEND_UNIHELP_DIR_SRC}/backend_data_wrappers.cu
+${BACKEND_UNIHELP_DIR_SRC}/backend_class_wrappers.cu
 )
 target_link_libraries(unihelpers ${INTERNAL_LINK_LIB})
 configure_file(${UNIHELP_DIR_INC}/unihelpers.hpp ${UNIHELP_INSTALL_INC}/unihelpers.hpp COPYONLY)
+
+## FIXME: This is a temporary cheat for deployment, must be removed at some point (?). It has to do with TransposeTranslate. 
+configure_file(${BACKEND_UNIHELP_DIR_SRC}/backend_wrappers.hpp ${UNIHELP_INSTALL_INC}/backend_wrappers.hpp COPYONLY)
 
 set (UNIHELP_INSTALL_INC ${UNIHELP_INSTALL_INC} PARENT_SCOPE)
 message( "->\nUniversal Helpers - Shared Library: " ${CMAKE_LIBRARY_OUTPUT_DIRECTORY} )

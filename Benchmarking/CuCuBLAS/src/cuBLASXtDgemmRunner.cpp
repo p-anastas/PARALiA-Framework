@@ -4,6 +4,7 @@
 /// \brief The start of Zawarudo
 ///
 
+#include "backend_wrappers.hpp"
 #include "unihelpers.hpp"
 #include "CoCoPeLia.hpp"
 #include "cuBLASXtWrapped.hpp"
@@ -70,7 +71,7 @@ int main(const int argc, const char *argv[]) {
 	B = (double*) CoCoMalloc(N * K*sizeof(double), B_loc);
 	C = (double*) CoCoMalloc(M * N*sizeof(double), C_loc);
 
-	cudaCheckErrors();
+	CoCoSyncCheckErr();
 	cpu_timer  = csecond() - cpu_timer;
 	fprintf(stderr, "done.\nAlloc time:\t%lf ms\n\n",  cpu_timer  * 1000);
 	cpu_timer = csecond();
@@ -78,14 +79,14 @@ int main(const int argc, const char *argv[]) {
 	CoCoVecInit(A, K * M, 42, A_loc);
 	CoCoVecInit(B, K * N, 43, B_loc);
 	CoCoVecInit(C, M * N, 44, C_loc);
-	cudaCheckErrors();
+	CoCoSyncCheckErr();
 	cpu_timer  = csecond() - cpu_timer ;
 	fprintf(stderr, "done.\nInit time:\t%lf ms\n\n",  cpu_timer  * 1000);
 
 	// First call with T set to half the smaller problem dim (unless predefined or larger than CBLASXT_MAX_SAFE_TILE) 
 	cpu_timer = csecond();
 	cuBLASXtDgemmWrap(TransA,  TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC,  cublasXt_tile, cpu_ratio, dev_num, dev_ids);
-	cudaCheckErrors();
+	CoCoSyncCheckErr();
 	cpu_timer  = csecond() - cpu_timer;
 	double best_standard_tile_t = cpu_timer; 
 
@@ -94,7 +95,7 @@ int main(const int argc, const char *argv[]) {
 		size_t cublasXt_min_dim = (size_t) fmin(fmin(fmin(M,N),K),CBLASXT_MAX_SAFE_TILE); 
 		cpu_timer = csecond();
 		cuBLASXtDgemmWrap(TransA,  TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC,  cublasXt_min_dim, cpu_ratio, dev_num, dev_ids);
-		cudaCheckErrors();
+		CoCoSyncCheckErr();
 		cpu_timer  = csecond() - cpu_timer;
 		if ( cpu_timer < best_standard_tile_t) {
 			cublasXt_tile = cublasXt_min_dim;
@@ -110,7 +111,7 @@ int main(const int argc, const char *argv[]) {
 		fprintf(stderr,"Running CUBLASXT DGEMM-> M = %zu, N = %zu, K = %zu, T = %zu\n", M, N, K, cublasXt_tile);
 		cpu_timer  = csecond();
 		cuBLASXtDgemmWrap(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC,  cublasXt_tile, cpu_ratio, dev_num, dev_ids);
-		cudaCheckErrors();
+		CoCoSyncCheckErr();
 		cpu_timer  = csecond() - cpu_timer;
 		fprintf(stderr, "Total time:\t%lf ms\n", cpu_timer  * 1000);
 		if (cublasXt_t > cpu_timer) cublasXt_t = cpu_timer; 
@@ -120,7 +121,7 @@ int main(const int argc, const char *argv[]) {
 			fprintf(stderr,"Running CUBLASXT DGEMM-> M = %zu, N = %zu, K = %zu, T = %zu\n", M, N, K, T_trial);
 			cpu_timer  = csecond();
 			cuBLASXtDgemmWrap(TransA,  TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC,  T_trial, cpu_ratio, dev_num, dev_ids);
-			cudaCheckErrors();
+			CoCoSyncCheckErr();
 			cpu_timer  = csecond() - cpu_timer;
 			fprintf(stderr, "Total time:\t%lf ms\n", cpu_timer  * 1000);
 			if (cpu_timer < cublasXt_t){
@@ -142,7 +143,7 @@ int main(const int argc, const char *argv[]) {
 	for(int it = 0; it < bench_it; it++){
 		cpu_timer = csecond();
 		cuBLASXtDgemmWrap(TransA,  TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC,  cublasXt_tile, cpu_ratio, dev_num, dev_ids);
-		cudaCheckErrors();
+		CoCoSyncCheckErr();
 		cpu_timer = csecond() - cpu_timer;
 		StoreLogLvl3(filename, return_values, TransA, TransB, alpha, beta, M, N, K, A_loc, B_loc, C_loc, C_out_loc, cpu_timer); 
 		if ( cpu_timer < min_t ) min_t = cpu_timer;
@@ -156,7 +157,7 @@ int main(const int argc, const char *argv[]) {
 	min_t  * 1000, Gval_per_s(dgemm_flops(M,N,K),min_t),
 	max_t  * 1000, Gval_per_s(dgemm_flops(M,N,K),max_t));
 
-	cudaCheckErrors();
+	CoCoSyncCheckErr();
 	CoCoFree(A, A_loc);
 	CoCoFree(B, B_loc);
 	CoCoFree(C, C_loc); 

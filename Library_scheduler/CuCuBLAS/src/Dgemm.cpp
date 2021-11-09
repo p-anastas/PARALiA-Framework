@@ -11,6 +11,8 @@
 #include "CoCoPeLia.hpp"
 #include "unihelpers.hpp"
 
+#include "backend_wrappers.hpp"
+
 /// TODO: Works for systems with up to 128 devices, not 'completely' future-proof
 BLAS3GPUBufPtr GloBuf[128];
 CoCoModel_p glob_model;
@@ -26,7 +28,7 @@ void CoCopeLiaDgemm_flush_gpu_mem_buf(short dev_id){
 	cudaFree(GloBuf[dev_id]->gpu_mem_buf);
 	free(GloBuf[dev_id]);
 	GloBuf[dev_id] = NULL;
-	cudaCheckErrors();
+	CoCoSyncCheckErr();
 }
 
 void CoCopelia_split_dims(size_t* M_memparts, size_t* N_memparts, size_t* K_memparts, size_t M, size_t N, size_t K, long long avail_bytes, short A_loc, short B_loc, short C_loc)
@@ -77,7 +79,7 @@ void CoCopeLiaDgemmTile(kernel3_p in_kernel, int T){
 	size_t kernel_num; 
 
 	kernel3_p* kernels = CoCopeLiaDgemmSubkernelCreateGrid(in_kernel, T, T, T, &kernel_num);
-	cudaCheckErrors();
+	CoCoSyncCheckErr();
 #ifdef TEST
 	timer = csecond() - timer;
 	lprintf(lvl, "Subkernel Grid created: t_grid = %lf ms\n" , timer*1000);
@@ -97,32 +99,32 @@ void CoCopeLiaDgemmTile(kernel3_p in_kernel, int T){
 			}
 		}
 	}
-	cudaCheckErrors();
+	CoCoSyncCheckErr();
 #ifdef TEST
 	timer = csecond() - timer;
 	lprintf(lvl, "Subkernels complete: t_comp = %lf ms\n" , timer*1000);
 #endif
 #ifdef DEBUG //TEST
-	cudaEvent_t prev_data_sent = start_firing, prev_exec =  kernels[0]->data_avail; 
+	cudaEvent_t prev_data_sent = start_firing, prev_exec =  *(cudaEvent_t*) kernels[0]->data_avail->event_backend_ptr; 
 	for (int ker = 0; ker < kernel_num; ker++){
 		float t_send, t_exec, temp, t_gpu_idle = 0;
-		cudaEventElapsedTime(&t_send, prev_data_sent, kernels[ker]->data_avail);
-		cudaEventElapsedTime(&temp, prev_exec, kernels[ker]->gemm_complete);
-		cudaEventElapsedTime(&t_exec, kernels[ker]->data_avail, kernels[ker]->gemm_complete);
+		cudaEventElapsedTime(&t_send, prev_data_sent,  *(cudaEvent_t*) kernels[ker]->data_avail->event_backend_ptr);
+		cudaEventElapsedTime(&temp, prev_exec, *(cudaEvent_t*) kernels[ker]->gemm_complete->event_backend_ptr);
+		cudaEventElapsedTime(&t_exec, *(cudaEvent_t*) kernels[ker]->data_avail->event_backend_ptr, *(cudaEvent_t*) kernels[ker]->gemm_complete->event_backend_ptr);
 		if (!ker) t_gpu_idle = t_send; 
 		else if (t_exec <= temp) t_gpu_idle = fmax(0.0, temp - t_exec); 
 		t_exec = fmin(t_exec, temp); 
 		lprintf(lvl, "Subkernel(%d): t_h2d = %f ms, t_exec = %f ms, t_gpu_idle = %f ms\n" , ker, t_send, t_exec, t_gpu_idle);
-		//cudaCheckErrors();
-		prev_data_sent = kernels[ker]->data_avail; 
-		prev_exec = kernels[ker]->gemm_complete;
+		//CoCoSyncCheckErr();
+		prev_data_sent = *(cudaEvent_t*) kernels[ker]->data_avail->event_backend_ptr; 
+		prev_exec = *(cudaEvent_t*) kernels[ker]->gemm_complete->event_backend_ptr;
 	}
 #endif
 #ifdef TEST
 	timer = csecond(); 
 #endif
 	for (int ker = 0; ker < kernel_num; ker++)CoCopeLia_Dgemm_subkernel_destroy(kernels[ker]);
-	cudaCheckErrors();
+	CoCoSyncCheckErr();
 #ifdef TEST
 	timer = csecond() - timer;
 	lprintf(lvl, "Subkernels destroyed: t_dest = %lf ms\n" , timer*1000);
@@ -140,18 +142,18 @@ void CoCopeLiaDgemmDevice(cublasOperation_t gpu_op_A,  cublasOperation_t gpu_op_
 	short lvl = 2; 
 
 	short A_loc, B_loc, C_loc; 
-	A_loc = CoCopeLia_ptr_check_cuda_9_2(A);
-	B_loc = CoCopeLia_ptr_check_cuda_9_2(B);
-	C_loc = CoCopeLia_ptr_check_cuda_9_2(C);	
+	A_loc = CoCoGetPtrLoc(A);
+	B_loc = CoCoGetPtrLoc(B);
+	C_loc = CoCoGetPtrLoc(C);	
 	cudaGetLastError();
-	short A_remote_f = CoCoPeLiaGetRemoteFlag(A_loc, dev_id), 
-		B_remote_f = CoCoPeLiaGetRemoteFlag(B_loc, dev_id), 
-		C_remote_f = CoCoPeLiaGetRemoteFlag(C_loc, dev_id), 
-		Cout_remote_f = CoCoPeLiaGetRemoteFlag(C_loc, dev_id);
+	short A_remote_f = (A_loc == dev_id) ? 0 : 1, 
+		B_remote_f = (B_loc == dev_id) ? 0 : 1, 
+		C_remote_f = (C_loc == dev_id) ? 0 : 1, 
+		Cout_remote_f = (C_loc == dev_id) ? 0 : 1;
 #ifdef DEBUG
 	lprintf(lvl-1, "|-----> CoCopeLiaDgemmDevice(%c,%c,%zu,%zu,%zu,%lf,A(%d),%zu,B(%d),%zu,%lf,C(%d),%zu,Globuf[%d]=%s,%d)\n", 
-		PrintCublasOp(gpu_op_A), PrintCublasOp(gpu_op_B), M, N, K, alpha, CoCopeLia_ptr_check_cuda_9_2(A), ldA,
-		CoCopeLia_ptr_check_cuda_9_2(B), ldB, beta, CoCopeLia_ptr_check_cuda_9_2(C), ldC, 
+		PrintCublasOp(gpu_op_A), PrintCublasOp(gpu_op_B), M, N, K, alpha, CoCoGetPtrLoc(A), ldA,
+		CoCoGetPtrLoc(B), ldB, beta, CoCoGetPtrLoc(C), ldC, 
 		dev_id, NULL == GloBuf[dev_id] ? "uninitialized" : "initialized", dev_id);
 #endif
 
@@ -195,7 +197,7 @@ void CoCopeLiaDgemmDevice(cublasOperation_t gpu_op_A,  cublasOperation_t gpu_op_
 		if (A_remote_f) GloBuf[dev_id]->dgemm_A_offset = 0;
 		if (B_remote_f) GloBuf[dev_id]->dgemm_B_offset = (A_remote_f)*M*K*sizeof(double);  
 		if (C_remote_f) GloBuf[dev_id]->dgemm_C_offset = (A_remote_f)*M*K*sizeof(double)+ (B_remote_f)*N*K*sizeof(double); 
-		cudaCheckErrors();
+		CoCoSyncCheckErr();
 #ifdef TEST
 		cpu_timer = csecond() - cpu_timer; 
 		lprintf(lvl, "Memory management: t_mem = %lf ms\n", dev_id, cpu_timer*1000);
@@ -257,14 +259,14 @@ void CoCopeLiaDgemmDevice(cublasOperation_t gpu_op_A,  cublasOperation_t gpu_op_
 		used_vals->T = T;
 
 		kernel3_p kernel = CoCopeLiaDgemmSubkernelInit(gpu_op_A, gpu_op_B, M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC, C, ldC, GloBuf[dev_id], dev_id);
-		cudaCheckErrors();
+		CoCoSyncCheckErr();
 #ifdef TEST
 		cpu_timer = csecond() - cpu_timer; 
 		lprintf(lvl, "Subkernel Initialization: t_subker_init = %lf ms\n", dev_id, cpu_timer*1000);
 		cpu_timer = csecond(); 
 #endif
 		CoCopeLiaDgemmTile(kernel, T);
-		cudaCheckErrors();
+		CoCoSyncCheckErr();
 #ifdef TEST
 		cpu_timer = csecond() - cpu_timer; 
 		lprintf(lvl, "Subkernel offload: t_offload = %lf ms\n", dev_id, cpu_timer*1000);
@@ -295,7 +297,7 @@ void CoCopeLiaDgemmDevice(cublasOperation_t gpu_op_A,  cublasOperation_t gpu_op_
 		if (A_remote_f) GloBuf[dev_id]->dgemm_A_offset = 0;
 		if (B_remote_f) GloBuf[dev_id]->dgemm_B_offset = (A_remote_f)*(M/Mp + M%Mp)*(K/Kp + K%Kp)*sizeof(double);  
 		if (C_remote_f) GloBuf[dev_id]->dgemm_C_offset = (A_remote_f)*(M/Mp + M%Mp)*(K/Kp + K%Kp)*sizeof(double)+ (B_remote_f)*(N/Np + N%Np)*(K/Kp + K%Kp)*sizeof(double); 
-		cudaCheckErrors();
+		CoCoSyncCheckErr();
 #ifdef TEST
 
 		cpu_timer = csecond() - cpu_timer; 
@@ -424,14 +426,14 @@ void CoCopeLiaDgemmDevice(cublasOperation_t gpu_op_A,  cublasOperation_t gpu_op_
 			}
 
 			kernel3_p kernel = CoCopeLiaDgemmSubkernelInit(gpu_op_A, gpu_op_B, tempM, tempN, tempK, alpha, A_in, tempLdA, B_in, tempLdB, use_beta, C_in, tempLdC, C_out, tempOutLdC, GloBuf[dev_id], dev_id);
-			cudaCheckErrors();
+			CoCoSyncCheckErr();
 #ifdef TEST
 			cpu_timer = csecond() - cpu_timer; 
 			lprintf(lvl, "Subkernel Initialization: t_init = %lf ms\n", cpu_timer*1000);
 			cpu_timer = csecond(); 
 #endif
 			CoCopeLiaDgemmTile(kernel, T);
-			cudaCheckErrors();
+			CoCoSyncCheckErr();
 #ifdef TEST
 			cpu_timer = csecond() - cpu_timer; 
 			lprintf(lvl, "Subkernel Offload: t_offload = %lf ms\n", cpu_timer*1000);
@@ -488,8 +490,8 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 	short lvl = 1; 
 #ifdef DEBUG
 	lprintf(lvl-1, "|-----> CoCopeLiaDgemm(%c,%c,%zu,%zu,%zu,%lf,A(%d),%zu,B(%d),%zu,%lf,C(%d),%zu)\n", 
-		TransA, TransB, M, N, K, alpha, CoCopeLia_ptr_check_cuda_9_2(A), ldA,
-		CoCopeLia_ptr_check_cuda_9_2(B), ldB, beta, CoCopeLia_ptr_check_cuda_9_2(C), ldC);
+		TransA, TransB, M, N, K, alpha, CoCoGetPtrLoc(A), ldA,
+		CoCoGetPtrLoc(B), ldB, beta, CoCoGetPtrLoc(C), ldC);
 #endif
 
 #ifdef TEST
@@ -563,14 +565,14 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 	//. TODO: Naive split way which assumes cutting will not effect performance differently for devices. Naive but sufficient.
 	for(int i=0; i<num_devices;i++){
 		short A_loc, B_loc, C_loc; 
-		A_loc = CoCopeLia_ptr_check_cuda_9_2(A);
-		B_loc = CoCopeLia_ptr_check_cuda_9_2(B);
-		C_loc = CoCopeLia_ptr_check_cuda_9_2(C);	
+		A_loc = CoCoGetPtrLoc(A);
+		B_loc = CoCoGetPtrLoc(B);
+		C_loc = CoCoGetPtrLoc(C);	
 		cudaGetLastError();
-		short A_remote_f = CoCoPeLiaGetRemoteFlag(A_loc, dev_id[i]), 
-			B_remote_f = CoCoPeLiaGetRemoteFlag(B_loc, dev_id[i]), 
-			C_remote_f = CoCoPeLiaGetRemoteFlag(C_loc, dev_id[i]), 
-			Cout_remote_f = CoCoPeLiaGetRemoteFlag(C_loc, dev_id[i]);
+	short A_remote_f = (A_loc == dev_id[i]) ? 0 : 1, 
+		B_remote_f = (B_loc == dev_id[i]) ? 0 : 1, 
+		C_remote_f = (C_loc == dev_id[i]) ? 0 : 1, 
+		Cout_remote_f = (C_loc == dev_id[i]) ? 0 : 1;
 		CoCoModel_p model = CoCoPeLiaModelInit(dev_id[i], "Dgemm", 'X', TransA, TransB, M, N, K, A_remote_f, B_remote_f, C_remote_f, A_remote_f, B_remote_f, C_remote_f, ldA, ldB, ldC);
 		tunableParams_p pred_p = CoCoPeLiaModelOptimizeTile(model, COCOPELIA_REUSE);
 		/// TODO: CHEAT (we hate doubles - if devices have nearly similar performance we might lose performant tile splits from 'near' times. e.g. a 4095/4097 tile split...
@@ -592,7 +594,7 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 	for(int i=0; i<num_devices;i++){
 
 		// Check/Enable peer access between participating GPUs
-		CoCoPeLiaEnableGPUPeer(i, dev_id, num_devices); 
+		CoCoEnableLinks(i, dev_id, num_devices); 
 
 		/// Split M dim.
 		temp_M = (size_t) M*t_pred[i]/t_total; 

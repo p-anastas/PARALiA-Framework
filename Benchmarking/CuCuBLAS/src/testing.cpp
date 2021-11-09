@@ -5,6 +5,7 @@
 ///
 
 #include <cstdlib>
+#include <cmath>
 #include "unihelpers.hpp"
 #include "CoCoPeLia.hpp"
 

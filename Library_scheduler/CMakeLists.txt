@@ -6,7 +6,7 @@ message( "Library Scheduler - PROJECT_SOURCE_DIR: " ${PROJECT_SOURCE_DIR} )
 #message( "Library Scheduler - CMAKE_CURRENT_SOURCE_DIR: " ${CMAKE_CURRENT_SOURCE_DIR} )
 #message( "Library Scheduler - CMAKE_CURRENT_BINARY_DIR: " ${CMAKE_CURRENT_BINARY_DIR} )
 
-set ( LIBSC_DIR ${PROJECT_SOURCE_DIR}/${BACKENED} )
+set ( LIBSC_DIR ${PROJECT_SOURCE_DIR}/${BACKEND} )
 message( "Library Scheduler - LIBSC_DIR: " ${LIBSC_DIR} )
 
 set (LIBSC_DIR_INC ${LIBSC_DIR}/include)

@@ -1,11 +1,11 @@
 cmake_minimum_required (VERSION 3.10)
 
-## Define a name for the backened library wrappers/implementations used in this build, Currently implemented only with CuCuBLAS(==CUDA+CUBLAS)
-set(BACKENED "CuCuBLAS")
-message("CoCopeLia-Framework - BACKEND: " ${BACKENED})
-
+## Define a name for the backend library wrappers/implementations used in this build, Currently implemented only with CuCuBLAS(==CUDA+CUBLAS)
+set(BACKEND "CuCuBLAS")
+message("CoCopeLia-Framework - BACKEND: " ${BACKEND})
+add_definitions(-DBACKEND="${BACKEND}")
 ## Define the project version (used in logfiles for result testing)
-set(PROJECT_VERSION "0.1")
+set(PROJECT_VERSION "0.21")
 message("CoCopeLia-Framework - PROJECT_VERSION: " ${PROJECT_VERSION})
 add_definitions(-DVERSION="${PROJECT_VERSION}")
 #Run in testing mode : details about models, decisions and time spend in operations.
@@ -21,7 +21,7 @@ set(TESTBED_NAME "silver1")
 message("CoCopeLia-Framework - TESTBED_NAME: " ${TESTBED_NAME})
 add_definitions(-DTESTBED="${TESTBED_NAME}")
 
-## Define the number of devices for utilization (0-num_devices)
+## Define the (max) number of devices for utilization (0-num_devices)
 set(NUM_DEVICES 2)
 message("CoCopeLia-Framework - NUM_DEVICES: " ${NUM_DEVICES})
 add_definitions(-DDEV_NUM=${NUM_DEVICES})
@@ -30,6 +30,11 @@ add_definitions(-DDEV_NUM=${NUM_DEVICES})
 set(NUM_EXEC_STREAMS 4)
 message("CoCopeLia-Framework - NUM_EXEC_STREAMS: " ${NUM_EXEC_STREAMS})
 add_definitions(-DNUM_EXEC_STREAMS=${NUM_EXEC_STREAMS})
+
+## Define the max GPU memory percentage (%) a problem can use ( not accounting for streams and other control structs; e.g. only the problem data ).
+set(PROBLEM_GPU_PERCENTAGE 90)
+message("CoCopeLia-Framework - PROBLEM_GPU_PERCENTAGE: " ${PROBLEM_GPU_PERCENTAGE})
+add_definitions(-DPROBLEM_GPU_PERCENTAGE=${PROBLEM_GPU_PERCENTAGE})
 
 ###TODO:Define specific compiler, flags, includes, libs for the target system (IF needed).
 
@@ -46,7 +51,8 @@ message("CoCopeLia-Framework - CMAKE_CXX_FLAGS: " ${CMAKE_CXX_FLAGS})
 #	d) auto
 
 ## 2) CUCUBLAS TODO: Other backends?
-set (CUDA_PREFIX "/usr/local/cuda-9.2")
+set (CUDA_PREFIX "/usr/local/cuda-11.0")
+add_definitions(-DCUDA_VER=1100)
 if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
   set(CMAKE_CUDA_ARCHITECTURES 70) #35 for Tesla K40, 70 for V100, 61 for GTX 1060/70
 endif()
@@ -99,7 +105,12 @@ add_definitions(-DDEPLOYDB="${DEPLOYMENT_DIR_DB}")
 
 ADD_SUBDIRECTORY (Autotuning_runtime)
 
-ADD_SUBDIRECTORY (Library_scheduler)
-#ADD_SUBDIRECTORY (Library_scheduler_experimental)
+set(EXPERIMENTAL_VERSION 0) 
+if (${EXPERIMENTAL_VERSION} EQUAL 0)
+	ADD_SUBDIRECTORY (Library_scheduler)
+elseif(${EXPERIMENTAL_VERSION} EQUAL 1)
+    ADD_SUBDIRECTORY (Library_scheduler_experimental)
+else()
+endif()
 
 ADD_SUBDIRECTORY (Benchmarking)

@@ -33,7 +33,7 @@ int main(const int argc, const char *argv[]) {
   	}
 
 	char *filename = (char *) malloc(256* sizeof(char));
-	sprintf(filename, "%s/Benchmark-Results/cublasDaxpy_dev-%d_min-%d_step-%d.log", DEPLOYDB, dev_id, MIN_DIM_BLAS1, STEP_BLAS1);
+	sprintf(filename, "%s/Benchmark-Results/cublasDaxpy_dev-%d_min-%d_step-%d_%s.log", DEPLOYDB, dev_id, MIN_DIM_BLAS1, STEP_BLAS1, VERSION);
 	check_benchmark(filename);
 
 	size_t free_cuda_mem, max_cuda_mem; 
@@ -41,7 +41,7 @@ int main(const int argc, const char *argv[]) {
 	if (free_cuda_mem*1.2 < 1.0*max_cuda_mem) error("dgemm_microbench_gpu: Free memory is much less than max ( Free: %d, Max: %d ), device under utilization", free_cuda_mem, max_cuda_mem);
 
 	// Define the max size of a benchmark kernel to run on this machine. 
-	size_t maxDim = CoCopeLiaGetMaxVecdimLvl1(2, sizeof(double), STEP_BLAS1);
+	size_t maxDim = CoCoGetMaxDimAsset1D(2, sizeof(double), STEP_BLAS1, dev_id);
 
 	/// Set device 
 	cudaSetDevice(dev_id);
@@ -60,7 +60,7 @@ int main(const int argc, const char *argv[]) {
   	x_dev = (double*) CoCoMalloc(maxDim * sizeof(double), dev_id);
   	y_dev = (double*) CoCoMalloc(maxDim * sizeof(double), dev_id);
 
-	cudaCheckErrors();
+	CoCoSyncCheckErr();
 	cpu_timer  = csecond() - cpu_timer ;
 	fprintf(stderr, "done.\nAlloc time:\t%lf ms\n\n",  cpu_timer  * 1000);
 
@@ -70,7 +70,7 @@ int main(const int argc, const char *argv[]) {
 	CoCoVecInit(x_dev, maxDim, 42, dev_id);
 	CoCoVecInit(y_dev, maxDim, 43, dev_id);
 
-	cudaCheckErrors();
+	CoCoSyncCheckErr();
 	cpu_timer  = csecond() - cpu_timer ;	
 	fprintf(stderr, "done.\nInit time:\t%lf ms\n\n",  cpu_timer  * 1000);
 
@@ -83,7 +83,7 @@ int main(const int argc, const char *argv[]) {
 		assert(CUBLAS_STATUS_SUCCESS == cublasDaxpy(handle0, maxDim, &alpha, x_dev, incx, y_dev, incy));
 		cudaStreamSynchronize(host_stream);
 	}
-	cudaCheckErrors();
+	CoCoSyncCheckErr();
 #ifdef AUTO_BENCH_USE_BOOST
 	double cublas_t_vals[MICRO_MAX_ITER], cublas_t_sum, cublas_t_mean, bench_t, error_margin; 
 	size_t bench_ctr = 0, sample_sz, step = STEP_BLAS1;
@@ -113,8 +113,8 @@ int main(const int argc, const char *argv[]) {
 			if (sample_sz > MICRO_MIN_ITER && error_margin/cublas_t_mean  * 100 <= 5) break; 
 		}
 		bench_t = csecond() - bench_t;
-		fprintf(stderr, "Microbenchmark (M = N = K = %zu) complete:\t mean_exec_t=%lf ms, Error Margin (percentage of mean) = %lf %, Itter = %d, Microbench_t = %lf\n\n", T, cublas_t_mean  * 1000, error_margin/cublas_t_mean  * 100, sample_sz, bench_t);
-		cudaCheckErrors();
+		fprintf(stderr, "Microbenchmark (M = N = K = %zu) complete:\t mean_exec_t=%lf ms ( %.1lf Gflops/s ), Error Margin (percentage of mean) = %lf %, Itter = %d, Microbench_t = %lf\n\n", T, cublas_t_mean  * 1000, Gval_per_s(daxpy_flops(T), cublas_t_mean), error_margin/cublas_t_mean  * 100, sample_sz, bench_t);
+		CoCoSyncCheckErr();
 
 		report_run(filename, dev_id, T, cublas_t_mean, error_margin, sample_sz, bench_t); 
 		bench_ctr++;
@@ -140,7 +140,7 @@ int main(const int argc, const char *argv[]) {
 		bench_t = csecond() - bench_t;
 		cublas_t_av /= ITER;
 		fprintf(stderr, "GPU exec time:\t Average=%lf ms, Min = %lf ms, Max = %lf ms\n", cublas_t_av  * 1000, cublas_t_min  * 1000, cublas_t_max  * 1000);
-		cudaCheckErrors();
+		CoCoSyncCheckErr();
 
 		report_run(filename, dev_id, T, cublas_t_av, fmax(cublas_t_max - cublas_t_av, cublas_t_av - cublas_t_min), ITER, cublas_t_max); 
 		bench_ctr++;

@@ -7,6 +7,8 @@
 #include <cassert>
 #include "microbenchmarks.hpp"
 #include <cblas.h>
+//TODO: This should at some point be removed (some fuctions require wrapping)
+#include "backend_wrappers.hpp"
 
 void report_run(char* filename, size_t M, size_t N, size_t K, double mean_t, double margin_err, size_t sample_sz, double bench_t){
 
@@ -33,11 +35,11 @@ int main(const int argc, const char *argv[]) {
 		error("Incorrect input arguments. Usage: ./correct_run TransA TransB\n");
   	}
 
-	// Define the max size of a benchmark kernel to run on this machine. FIXME: currently defined by largest GPU Tile allowed, totaly inefficient
-	size_t maxDim = CoCopeLiaGetMaxSqdimLvl3(3, sizeof(double), STEP_BLAS3); 
+	// Define the max size of a benchmark kernel to run on this machine. FIXME: currently defined by GPU device 0, totaly inefficient
+	size_t maxDim = CoCoGetMaxDimSqAsset2D(3, sizeof(double), STEP_TRANS, 0);
 
 	char *filename = (char *) malloc(256* sizeof(char));
-	sprintf(filename, "%s/Benchmark-Results/cblasDgemm_TransA-%c_TransB-%c.log", DEPLOYDB, TransA, TransB);
+	sprintf(filename, "%s/Benchmark-Results/cblasDgemm_TransA-%c_TransB-%c_%s.log", DEPLOYDB, TransA, TransB, VERSION);
 	check_benchmark(filename);
 
 	size_t ldA = maxDim, ldB = maxDim, ldC = maxDim;
@@ -57,7 +59,7 @@ int main(const int argc, const char *argv[]) {
   	A_p = (double*) CoCoMalloc(maxDim * maxDim * sizeof(double), -1);
   	B_p = (double*) CoCoMalloc(maxDim * maxDim * sizeof(double), -1);
   	C_p = (double*) CoCoMalloc(maxDim * maxDim * sizeof(double), -1);
-	cudaCheckErrors();
+	CoCoSyncCheckErr();
 
 	cpu_timer  = csecond() - cpu_timer ;
 	fprintf(stderr, "done.\nAlloc time:\t%lf ms\n\n",  cpu_timer  * 1000);
@@ -70,7 +72,7 @@ int main(const int argc, const char *argv[]) {
 	CoCoVecInit(C_p, maxDim * maxDim, 42, -1);
 
 
-	cudaCheckErrors();
+	CoCoSyncCheckErr();
 	cpu_timer  = csecond() - cpu_timer ;	
 	fprintf(stderr, "done.\nInit time:\t%lf ms\n\n",  cpu_timer  * 1000);
 
@@ -81,7 +83,7 @@ int main(const int argc, const char *argv[]) {
 	// Warmup 
 	for ( int itt = 0; itt <1; itt++) cblas_dgemm(CblasColMajor, cpu_op_A, cpu_op_B, maxDim, maxDim, maxDim, alpha, A_p, ldA, B_p, ldB, beta, C_p, ldC);
 
-	cudaCheckErrors();
+	CoCoSyncCheckErr();
 #ifdef AUTO_BENCH_USE_BOOST
 	double cblas_t_vals[MICRO_MAX_ITER], cblas_t_sum, cblas_t_mean, bench_t, error_margin; 
 	size_t bench_ctr = 0, sample_sz, step = STEP_BLAS3;
@@ -110,8 +112,8 @@ int main(const int argc, const char *argv[]) {
 			if (sample_sz > MICRO_MIN_ITER && error_margin/cblas_t_mean  * 100 <= 5) break; 
 		}
 		bench_t = csecond() - bench_t;
-		fprintf(stderr, "Microbenchmark (M = N = K = %zu) complete:\t mean_exec_t=%lf ms, Error Margin (percentage of mean) = %lf %%, Itter = %zu, Microbench_t = %lf\n\n", T, cblas_t_mean  * 1000, error_margin/cblas_t_mean  * 100, sample_sz, bench_t);
-		cudaCheckErrors();
+		fprintf(stderr, "Microbenchmark (M = N = K = %zu) complete:\t mean_exec_t=%lf ms ( %.1lf Gflops/s ), Error Margin (percentage of mean) = %lf %%, Itter = %zu, Microbench_t = %lf\n\n", T, cblas_t_mean  * 1000, Gval_per_s(dgemm_flops(T,T,T), cblas_t_mean), error_margin/cblas_t_mean  * 100, sample_sz, bench_t);
+		CoCoSyncCheckErr();
 
 		report_run(filename, T, T, T, cblas_t_mean, error_margin, sample_sz, bench_t); 
 		bench_ctr++;
@@ -136,7 +138,7 @@ int main(const int argc, const char *argv[]) {
 		bench_t = csecond() - bench_t;
 		cblas_t_av /= ITER;
 		fprintf(stderr, "GPU exec time:\t Average=%lf ms, Min = %lf ms, Max = %lf ms\n", cblas_t_av  * 1000, cblas_t_min  * 1000, cblas_t_max  * 1000);
-		cudaCheckErrors();
+		CoCoSyncCheckErr();
 
 		report_run(filename, T, T, T, cblas_t_av, fmax(cblas_t_max - cblas_t_av, cblas_t_av - cblas_t_min), ITER, bench_t); 
 		bench_ctr++;

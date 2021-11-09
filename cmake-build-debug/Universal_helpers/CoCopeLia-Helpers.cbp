@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6"/>
+	<Project>
+		<Option title="CoCopeLia-Helpers"/>
+		<Option makefile_is_custom="1"/>
+		<Option compiler="gcc"/>
+		<Option virtualFolders="CMake Files\;CMake Files\Autotuning_runtime\;CMake Files\Autotuning_runtime\include\;CMake Files\Benchmarking\;CMake Files\Benchmarking\CuCuBLAS\;CMake Files\Benchmarking\CuCuBLAS\include\;CMake Files\Deployment_phase\;CMake Files\Universal_helpers\;CMake Files\Universal_helpers\CuCuBLAS\;CMake Files\Universal_helpers\CuCuBLAS\include\;CMake Files\Library_scheduler_experimental\;CMake Files\Library_scheduler_experimental\include\;"/>
+		<Build>
+			<Target title="all">
+				<Option working_dir="/tmp/tmp.YXAEzsRmOZ/cmake-build-debug/Universal_helpers"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j40 -f &quot;/tmp/tmp.YXAEzsRmOZ/cmake-build-debug/Universal_helpers/Makefile&quot;  VERBOSE=1 all"/>
+					<CompileFile command="/usr/bin/make -j40 -f &quot;/tmp/tmp.YXAEzsRmOZ/cmake-build-debug/Universal_helpers/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j40 -f &quot;/tmp/tmp.YXAEzsRmOZ/cmake-build-debug/Universal_helpers/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j40 -f &quot;/tmp/tmp.YXAEzsRmOZ/cmake-build-debug/Universal_helpers/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="unihelpers">
+				<Option output="/tmp/tmp.YXAEzsRmOZ/cmake-build-debug/silver1-install/Universal_helpers/lib/libunihelpers.so" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/tmp/tmp.YXAEzsRmOZ/cmake-build-debug/Universal_helpers"/>
+				<Option object_output="./"/>
+				<Option type="3"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add option="-DVERSION=&quot;0.1&quot;"/>
+					<Add option="-DTESTBED=&quot;silver1&quot;"/>
+					<Add option="-DDEV_NUM=2"/>
+					<Add option="-DNUM_EXEC_STREAMS=4"/>
+					<Add directory="/usr/local/cuda-9.2/include"/>
+					<Add directory="/usr/local/cuda-9.2/samples/common/inc"/>
+					<Add directory="/home/users/panastas/Lib_install/OpenBLAS/include"/>
+					<Add directory="/tmp/tmp.YXAEzsRmOZ/Universal_helpers/CuCuBLAS/include"/>
+					<Add directory="/usr/include/c++/7"/>
+					<Add directory="/usr/include/x86_64-linux-gnu/c++/7"/>
+					<Add directory="/usr/include/c++/7/backward"/>
+					<Add directory="/usr/lib/gcc/x86_64-linux-gnu/7/include"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="/usr/lib/gcc/x86_64-linux-gnu/7/include-fixed"/>
+					<Add directory="/usr/include/x86_64-linux-gnu"/>
+					<Add directory="/usr/include"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j40 -f &quot;/tmp/tmp.YXAEzsRmOZ/cmake-build-debug/Universal_helpers/Makefile&quot;  VERBOSE=1 unihelpers"/>
+					<CompileFile command="/usr/bin/make -j40 -f &quot;/tmp/tmp.YXAEzsRmOZ/cmake-build-debug/Universal_helpers/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j40 -f &quot;/tmp/tmp.YXAEzsRmOZ/cmake-build-debug/Universal_helpers/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j40 -f &quot;/tmp/tmp.YXAEzsRmOZ/cmake-build-debug/Universal_helpers/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="unihelpers/fast">
+				<Option output="/tmp/tmp.YXAEzsRmOZ/cmake-build-debug/silver1-install/Universal_helpers/lib/libunihelpers.so" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/tmp/tmp.YXAEzsRmOZ/cmake-build-debug/Universal_helpers"/>
+				<Option object_output="./"/>
+				<Option type="3"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add option="-DVERSION=&quot;0.1&quot;"/>
+					<Add option="-DTESTBED=&quot;silver1&quot;"/>
+					<Add option="-DDEV_NUM=2"/>
+					<Add option="-DNUM_EXEC_STREAMS=4"/>
+					<Add directory="/usr/local/cuda-9.2/include"/>
+					<Add directory="/usr/local/cuda-9.2/samples/common/inc"/>
+					<Add directory="/home/users/panastas/Lib_install/OpenBLAS/include"/>
+					<Add directory="/tmp/tmp.YXAEzsRmOZ/Universal_helpers/CuCuBLAS/include"/>
+					<Add directory="/usr/include/c++/7"/>
+					<Add directory="/usr/include/x86_64-linux-gnu/c++/7"/>
+					<Add directory="/usr/include/c++/7/backward"/>
+					<Add directory="/usr/lib/gcc/x86_64-linux-gnu/7/include"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="/usr/lib/gcc/x86_64-linux-gnu/7/include-fixed"/>
+					<Add directory="/usr/include/x86_64-linux-gnu"/>
+					<Add directory="/usr/include"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j40 -f &quot;/tmp/tmp.YXAEzsRmOZ/cmake-build-debug/Universal_helpers/Makefile&quot;  VERBOSE=1 unihelpers/fast"/>
+					<CompileFile command="/usr/bin/make -j40 -f &quot;/tmp/tmp.YXAEzsRmOZ/cmake-build-debug/Universal_helpers/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j40 -f &quot;/tmp/tmp.YXAEzsRmOZ/cmake-build-debug/Universal_helpers/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j40 -f &quot;/tmp/tmp.YXAEzsRmOZ/cmake-build-debug/Universal_helpers/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+		</Build>
+		<Unit filename="/tmp/tmp.YXAEzsRmOZ/Universal_helpers/CuCuBLAS/src/cpu_utils.cpp">
+			<Option target="unihelpers"/>
+		</Unit>
+		<Unit filename="/tmp/tmp.YXAEzsRmOZ/Universal_helpers/CuCuBLAS/src/data_management_wrappers.cu">
+			<Option target="unihelpers"/>
+		</Unit>
+		<Unit filename="/tmp/tmp.YXAEzsRmOZ/Universal_helpers/CuCuBLAS/src/gpu_utils.cu">
+			<Option target="unihelpers"/>
+		</Unit>
+		<Unit filename="/tmp/tmp.YXAEzsRmOZ/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\"/>
+		</Unit>
+		<Unit filename="/tmp/tmp.YXAEzsRmOZ/Deploy.in">
+			<Option virtualFolder="CMake Files\"/>
+		</Unit>
+		<Unit filename="/tmp/tmp.YXAEzsRmOZ/Autotuning_runtime/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\Autotuning_runtime\"/>
+		</Unit>
+		<Unit filename="/tmp/tmp.YXAEzsRmOZ/Autotuning_runtime/include/CoCoPeLiaCoModel.hpp">
+			<Option virtualFolder="CMake Files\Autotuning_runtime\include\"/>
+		</Unit>
+		<Unit filename="/tmp/tmp.YXAEzsRmOZ/Autotuning_runtime/include/CoCoPeLiaModel.hpp">
+			<Option virtualFolder="CMake Files\Autotuning_runtime\include\"/>
+		</Unit>
+		<Unit filename="/tmp/tmp.YXAEzsRmOZ/Benchmarking/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\Benchmarking\"/>
+		</Unit>
+		<Unit filename="/tmp/tmp.YXAEzsRmOZ/Benchmarking/Full_model_validation.in">
+			<Option virtualFolder="CMake Files\Benchmarking\"/>
+		</Unit>
+		<Unit filename="/tmp/tmp.YXAEzsRmOZ/Benchmarking/Full_performance_evaluation.in">
+			<Option virtualFolder="CMake Files\Benchmarking\"/>
+		</Unit>
+		<Unit filename="/tmp/tmp.YXAEzsRmOZ/Benchmarking/Targeted_performance_evaluation.in">
+			<Option virtualFolder="CMake Files\Benchmarking\"/>
+		</Unit>
+		<Unit filename="/tmp/tmp.YXAEzsRmOZ/Benchmarking/Test_correctness.in">
+			<Option virtualFolder="CMake Files\Benchmarking\"/>
+		</Unit>
+		<Unit filename="/tmp/tmp.YXAEzsRmOZ/Benchmarking/CuCuBLAS/include/BLASxWrapped.hpp">
+			<Option virtualFolder="CMake Files\Benchmarking\CuCuBLAS\include\"/>
+		</Unit>
+		<Unit filename="/tmp/tmp.YXAEzsRmOZ/Benchmarking/CuCuBLAS/include/cuBLASXtWrapped.hpp">
+			<Option virtualFolder="CMake Files\Benchmarking\CuCuBLAS\include\"/>
+		</Unit>
+		<Unit filename="/tmp/tmp.YXAEzsRmOZ/Deployment_phase/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\Deployment_phase\"/>
+		</Unit>
+		<Unit filename="/tmp/tmp.YXAEzsRmOZ/Deployment_phase/ProcessDatabase.in">
+			<Option virtualFolder="CMake Files\Deployment_phase\"/>
+		</Unit>
+		<Unit filename="/tmp/tmp.YXAEzsRmOZ/Deployment_phase/RunMicrobenchmarks.in">
+			<Option virtualFolder="CMake Files\Deployment_phase\"/>
+		</Unit>
+		<Unit filename="/tmp/tmp.YXAEzsRmOZ/Universal_helpers/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\Universal_helpers\"/>
+		</Unit>
+		<Unit filename="/tmp/tmp.YXAEzsRmOZ/Universal_helpers/CuCuBLAS/include/unihelpers.hpp">
+			<Option virtualFolder="CMake Files\Universal_helpers\CuCuBLAS\include\"/>
+		</Unit>
+		<Unit filename="/tmp/tmp.YXAEzsRmOZ/Library_scheduler_experimental/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\Library_scheduler_experimental\"/>
+		</Unit>
+		<Unit filename="/tmp/tmp.YXAEzsRmOZ/Library_scheduler_experimental/include/CoCoPeLia.hpp">
+			<Option virtualFolder="CMake Files\Library_scheduler_experimental\include\"/>
+		</Unit>
+	</Project>
+</CodeBlocks_project_file>

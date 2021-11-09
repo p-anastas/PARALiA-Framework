@@ -4,7 +4,7 @@ project (CoCopeLia-Deployment VERSION ${PROJECT_VERSION} DESCRIPTION "The Deploy
 message( "------------------------------------------------------------------------------------------------")
 message( "Deployment Phase - PROJECT_SOURCE_DIR: " ${PROJECT_SOURCE_DIR} )
 
-set ( DEPLOYMENT_DIR ${PROJECT_SOURCE_DIR}/${BACKENED} )
+set ( DEPLOYMENT_DIR ${PROJECT_SOURCE_DIR}/${BACKEND} )
 message( "Deployment Phase - DEPLOYMENT_DIR: " ${DEPLOYMENT_DIR} )
 
 include_directories( ${DEPLOYMENT_DIR}/include)

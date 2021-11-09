@@ -4,6 +4,7 @@
 /// \brief The start of Zawarudo
 ///
 
+#include "backend_wrappers.hpp"
 #include "unihelpers.hpp"
 #include "CoCoPeLia.hpp"
 //#include "XKBLASWrapped.hpp"
@@ -25,8 +26,8 @@ double XKBLASDgemmWrap(char TransA,  char TransB, size_t M, size_t N, size_t K, 
 	double total_t = csecond();
 #ifdef DEBUG
 	lprintf(lvl-1, "|-----> BLASxDgemmWrap(%c,%c,%zu,%zu,%zu,%lf,A(%d),%zu,B(%d),%zu,%lf,C(%d),%zu)\n", 
-		TransA, TransB, M, N, K, alpha, CoCopeLia_ptr_check_cuda_9_2(A), ldA,
-		CoCopeLia_ptr_check_cuda_9_2(B), ldB, beta, CoCopeLia_ptr_check_cuda_9_2(C), ldC);
+		TransA, TransB, M, N, K, alpha, CoCoGetPtrLoc(A), ldA,
+		CoCoGetPtrLoc(B), ldB, beta, CoCoGetPtrLoc(C), ldC);
 #endif
 
 #ifdef TEST
@@ -38,13 +39,13 @@ double XKBLASDgemmWrap(char TransA,  char TransB, size_t M, size_t N, size_t K, 
 	xkblas_dgemm_async(cpu_op_A,cpu_op_B,M,N,K,&alpha,A,ldA, B,ldB, &beta,C, ldC);
 	xkblas_memory_coherent_async(0, 0, M, N, C, ldC, sizeof(double));
 	xkblas_sync();
-	cudaCheckErrors();
+	CoCoSyncCheckErr();
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer;
 	lprintf(lvl, "BLASx execution time -> t_kernel = %lf ms\n", cpu_timer*1000);
 #endif
 
-	cudaCheckErrors();
+	CoCoSyncCheckErr();
 	total_t = csecond() - total_t;
 	return total_t;
 
@@ -111,7 +112,7 @@ int main(const int argc, const char *argv[]) {
 	B = (double*) CoCoMalloc(N * K*sizeof(double), B_loc);
 	C = (double*) CoCoMalloc(M * N*sizeof(double), C_loc);
 
-	cudaCheckErrors();
+	CoCoSyncCheckErr();
 	cpu_timer  = csecond() - cpu_timer;
 	fprintf(stderr, "done.\nAlloc time:\t%lf ms\n\n",  cpu_timer  * 1000);
 	cpu_timer = csecond();
@@ -119,7 +120,7 @@ int main(const int argc, const char *argv[]) {
 	CoCoVecInit(A, K * M, 42, A_loc);
 	CoCoVecInit(B, K * N, 43, B_loc);
 	CoCoVecInit(C, M * N, 44, C_loc);
-	cudaCheckErrors();
+	CoCoSyncCheckErr();
 	cpu_timer  = csecond() - cpu_timer ;
 	fprintf(stderr, "done.\nInit time:\t%lf ms\n\n",  cpu_timer  * 1000);
 
@@ -143,7 +144,7 @@ int main(const int argc, const char *argv[]) {
 	// Call for Validate
 	cpu_timer = csecond();
 	XKBLASDgemmWrap(TransA,  TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC,  XKBLAS_tile, cpu_ratio, dev_num, dev_ids);
-	cudaCheckErrors();
+	CoCoSyncCheckErr();
 	cpu_timer  = csecond() - cpu_timer;
 	XKBLASFlushGPUBuf();
 
@@ -161,7 +162,7 @@ int main(const int argc, const char *argv[]) {
 	// First call for additional overhead counting
 	cpu_timer = csecond();
 	XKBLASDgemmWrap(TransA,  TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC,  XKBLAS_tile, cpu_ratio, dev_num, dev_ids);
-	cudaCheckErrors();
+	CoCoSyncCheckErr();
 	cpu_timer  = csecond() - cpu_timer;
 	StoreLogLvl3(filename, return_values, TransA, TransB, alpha, beta, M, N, K, A_loc, B_loc, C_loc, C_out_loc, cpu_timer); 
 	xkblas_memory_invalidate_caches();
@@ -174,10 +175,10 @@ int main(const int argc, const char *argv[]) {
 	for(int it = 0; it < bench_it; it++){
 		cpu_timer = csecond();
 		XKBLASDgemmWrap(TransA,  TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC,  XKBLAS_tile, cpu_ratio, dev_num, dev_ids);
-		cudaCheckErrors();
+		CoCoSyncCheckErr();
 		cpu_timer = csecond() - cpu_timer;
 		xkblas_memory_invalidate_caches();
-		cudaCheckErrors();
+		CoCoSyncCheckErr();
 		StoreLogLvl3(filename, return_values, TransA, TransB, alpha, beta, M, N, K, A_loc, B_loc, C_loc, C_out_loc, cpu_timer); 
 		if ( cpu_timer < min_t ) min_t = cpu_timer;
 		if ( cpu_timer > max_t ) max_t = cpu_timer;
@@ -192,7 +193,7 @@ int main(const int argc, const char *argv[]) {
 	max_t  * 1000, Gval_per_s(dgemm_flops(M,N,K),max_t));
 		
 	XKBLASFlushGPUBuf();
-	cudaCheckErrors();
+	CoCoSyncCheckErr();
 	CoCoFree(A, A_loc);
 	CoCoFree(B, B_loc);
 	CoCoFree(C, C_loc); 

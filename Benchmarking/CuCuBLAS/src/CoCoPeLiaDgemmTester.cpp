@@ -4,6 +4,7 @@
 /// \brief The start of Zawarudo
 ///
 
+#include "backend_wrappers.hpp"
 #include "unihelpers.hpp"
 #include "CoCoPeLia.hpp"
 #include "cuBLASXtWrapped.hpp"
@@ -45,7 +46,7 @@ int main(const int argc, const char *argv[]) {
 	B = (double*) CoCoMalloc(N * K*sizeof(double), B_loc);
 	C = (double*) CoCoMalloc(M * N*sizeof(double), C_loc);
 
-	cudaCheckErrors();
+	CoCoSyncCheckErr();
 	cpu_timer  = csecond() - cpu_timer;
 	fprintf(stderr, "done.\nAlloc time:\t%lf ms\n\n",  cpu_timer  * 1000);
 	cpu_timer = csecond();
@@ -53,7 +54,7 @@ int main(const int argc, const char *argv[]) {
 	CoCoVecInit(A, K * M, 42, A_loc);
 	CoCoVecInit(B, K * N, 43, B_loc);
 	CoCoVecInit(C, M * N, 44, C_loc);
-	cudaCheckErrors();
+	CoCoSyncCheckErr();
 	cpu_timer  = csecond() - cpu_timer ;
 	fprintf(stderr, "done.\nInit time:\t%lf ms\n\n",  cpu_timer  * 1000);
 		
@@ -69,7 +70,7 @@ int main(const int argc, const char *argv[]) {
 		fprintf(stderr, "M=N=K=%d: Gflops/s -> ", dim); 
 		cpu_timer = csecond();
 		CoCopeLiaDgemm(TransA, TransB, dim, dim, dim, alpha, A, ldA, B, ldB, beta, C , ldC);
-		cudaCheckErrors();
+		CoCoSyncCheckErr();
 		cpu_timer  = csecond() - cpu_timer;
 		double comp_flops = Gval_per_s(dgemm_flops(dim,dim,dim),cpu_timer);
 		fprintf(stderr, "CoCopeLia: %.1lf, ", comp_flops);
@@ -77,13 +78,13 @@ int main(const int argc, const char *argv[]) {
 		T = fmin(dim,fmin(dim,dim))/2; 
 
 		cuBLASXtDgemmWrap(TransA, TransB, dim, dim, dim, alpha, A, ldA, B, ldB, beta, C_comp, ldC,  T, cpu_ratio, DEV_NUM, dev_ids);	
-		cudaCheckErrors();
+		CoCoSyncCheckErr();
 		cpu_timer  = csecond() - cpu_timer;
 		fprintf(stderr, "cuBLASXT: %.1lf\n", Gval_per_s(dgemm_flops(dim,dim,dim),cpu_timer));
 		if (comp_flops < Gval_per_s(dgemm_flops(dim,dim,dim),cpu_timer)) warning("Inferior Perf to cublasXt\n");
 		if(Dtest_equality(C, C_comp, dim * dim) < 5) error("Insufficient accuracy for benchmarks\n");
 
-		cudaCheckErrors();
+		CoCoSyncCheckErr();
 	}
 
 	CoCoVecInit(C, M * N, 44, C_loc);
@@ -97,19 +98,19 @@ int main(const int argc, const char *argv[]) {
 		fprintf(stderr, "M=%d,N=%d,K=%d: Gflops/s -> ", dim1, dim2, dim3); 
 		cpu_timer = csecond();
 		CoCopeLiaDgemm(TransA, TransB, dim1, dim2, dim3, alpha, A, ldA, B, ldB, beta, C , ldC);
-		cudaCheckErrors();
+		CoCoSyncCheckErr();
 		cpu_timer  = csecond() - cpu_timer;
 		double comp_flops =  Gval_per_s(dgemm_flops(dim1,dim2,dim3),cpu_timer); 
 		fprintf(stderr, "CoCopeLia: %.1lf, ", comp_flops);
 		cpu_timer = csecond();
 		T = fmin(dim1,fmin(dim2,dim3))/2; 
 		cuBLASXtDgemmWrap(TransA, TransB, dim1, dim2, dim3, alpha, A, ldA, B, ldB, beta, C_comp, ldC,  T, cpu_ratio, DEV_NUM, dev_ids);	
-		cudaCheckErrors();
+		CoCoSyncCheckErr();
 		cpu_timer  = csecond() - cpu_timer;
 		fprintf(stderr, "cuBLASXT: %.1lf\n", Gval_per_s(dgemm_flops(dim1,dim2,dim3),cpu_timer));
 		if (comp_flops < Gval_per_s(dgemm_flops(dim1,dim2,dim3),cpu_timer)) warning("Inferior Perf to cublasXt\n");
 		if(Dtest_equality(C, C_comp, dim1 * dim2) < 5) error("Insufficient accuracy for benchmarks\n");
-		cudaCheckErrors();
+		CoCoSyncCheckErr();
 	}
 
 	CoCoVecInit(C, M * N, 44, C_loc);
@@ -123,19 +124,19 @@ int main(const int argc, const char *argv[]) {
 		fprintf(stderr, "M=%d,N=%d,K=%d: Gflops/s -> ", dim1, dim2, dim3); 
 		cpu_timer = csecond();
 		CoCopeLiaDgemm(TransA, TransB, dim1, dim2, dim3, alpha, A, ldA, B, ldB, beta, C , ldC);
-		cudaCheckErrors();
+		CoCoSyncCheckErr();
 		cpu_timer  = csecond() - cpu_timer;
 		double comp_flops =  Gval_per_s(dgemm_flops(dim1,dim2,dim3),cpu_timer); 
 		fprintf(stderr, "CoCopeLia: %.1lf, ", comp_flops);
 		cpu_timer = csecond();
 		T = fmin(dim1,fmin(dim2,dim3))/2; 
 		cuBLASXtDgemmWrap(TransA, TransB, dim1, dim2, dim3, alpha, A, ldA, B, ldB, beta, C_comp, ldC,  T, cpu_ratio, DEV_NUM, dev_ids);	
-		cudaCheckErrors();
+		CoCoSyncCheckErr();
 		cpu_timer  = csecond() - cpu_timer;
 		fprintf(stderr, "cuBLASXT: %.1lf\n", Gval_per_s(dgemm_flops(dim1,dim2,dim3),cpu_timer));
 		if (comp_flops < Gval_per_s(dgemm_flops(dim1,dim2,dim3),cpu_timer)) warning("Inferior Perf to cublasXt\n");
 		if(Dtest_equality(C, C_comp, dim1 * dim2) < 5) error("Insufficient accuracy for benchmarks\n");
-		cudaCheckErrors();
+		CoCoSyncCheckErr();
 	}
 
 	CoCoVecInit(C, M * N, 44, C_loc);
@@ -150,25 +151,25 @@ int main(const int argc, const char *argv[]) {
 		fprintf(stderr, "M=%d,N=%d,K=%d: Gflops/s -> ", dim1, dim2, dim3); 
 		cpu_timer = csecond();
 		CoCopeLiaDgemm(TransA, TransB, dim1, dim2, dim3, alpha, A, ldA, B, ldB, beta, C , ldC);
-		cudaCheckErrors();
+		CoCoSyncCheckErr();
 		cpu_timer  = csecond() - cpu_timer;
 		double comp_flops =  Gval_per_s(dgemm_flops(dim1,dim2,dim3),cpu_timer); 
 		fprintf(stderr, "CoCopeLia: %.1lf, ", comp_flops);
 		cpu_timer = csecond();
 		T = fmin(dim1,fmin(dim2,dim3))/2; 
 		cuBLASXtDgemmWrap(TransA, TransB, dim1, dim2, dim3, alpha, A, ldA, B, ldB, beta, C_comp, ldC,  T, cpu_ratio, DEV_NUM, dev_ids);	
-		cudaCheckErrors();
+		CoCoSyncCheckErr();
 		cpu_timer  = csecond() - cpu_timer;
 		fprintf(stderr, "cuBLASXT: %.1lf\n", Gval_per_s(dgemm_flops(dim1,dim2,dim3),cpu_timer));
 		if (comp_flops < Gval_per_s(dgemm_flops(dim1,dim2,dim3),cpu_timer)) warning("Inferior Perf to cublasXt\n");
 		if(Dtest_equality(C, C_comp, dim1 * dim2) < 5) error("Insufficient accuracy for benchmarks\n");
-		cudaCheckErrors();
+		CoCoSyncCheckErr();
 	}
 	CoCoFree(A, A_loc);
 	CoCoFree(B, B_loc);
 	CoCoFree(C, C_loc); 
 	CoCoFree(C_comp, -2); 
-	cudaCheckErrors();
+	CoCoSyncCheckErr();
 
 	cpu_timer = csecond();
 	// allocate in device GPU memory for benchmarks
@@ -186,7 +187,7 @@ int main(const int argc, const char *argv[]) {
 		double* C_host_buf, * C_host_comp_buf;
 		C_host_buf =  (double*) CoCoMalloc(M * N*sizeof(double), -2);
 		C_host_comp_buf =  (double*) CoCoMalloc(M * N*sizeof(double), -2);
-		cudaCheckErrors();
+		CoCoSyncCheckErr();
 		cpu_timer  = csecond() - cpu_timer;
 		fprintf(stderr, "done.\nAlloc time:\t%lf ms\n\n",  cpu_timer  * 1000);
 
@@ -197,7 +198,7 @@ int main(const int argc, const char *argv[]) {
 		CoCoVecInit(C, M * N, 44, C_loc);
 		CoCoMemcpy(C_host_comp_buf, C,  M * N *sizeof(double), -2, C_loc);
 		CoCoMemcpy(C_comp, C_host_comp_buf,  M * N *sizeof(double), C_loc, -2);
-		cudaCheckErrors();
+		CoCoSyncCheckErr();
 		cpu_timer  = csecond() - cpu_timer ;
 		fprintf(stderr, "done.\nInit time:\t%lf ms\n\n",  cpu_timer  * 1000);
 
@@ -210,21 +211,21 @@ int main(const int argc, const char *argv[]) {
 			fprintf(stderr, "M=%d,N=%d,K=%d: Gflops/s -> ", dim1, dim2, dim3); 
 			cpu_timer = csecond();
 			CoCopeLiaDgemm(TransA, TransB, dim1, dim2, dim3, alpha, A, ldA, B, ldB, beta, C , ldC);
-			cudaCheckErrors();
+			CoCoSyncCheckErr();
 			cpu_timer  = csecond() - cpu_timer;
 			double comp_flops =  Gval_per_s(dgemm_flops(dim1,dim2,dim3),cpu_timer); 
 			fprintf(stderr, "CoCopeLia: %.1lf, ", comp_flops);
 			cpu_timer = csecond();
 			T = fmin(dim1,fmin(dim2,dim3))/2; 
 			cuBLASXtDgemmWrap(TransA, TransB, dim1, dim2, dim3, alpha, A, ldA, B, ldB, beta, C_comp, ldC,  T, cpu_ratio, DEV_NUM, dev_ids);	
-			cudaCheckErrors();
+			CoCoSyncCheckErr();
 			cpu_timer  = csecond() - cpu_timer;
 			fprintf(stderr, "cuBLASXT: %.1lf\n", Gval_per_s(dgemm_flops(dim1,dim2,dim3),cpu_timer));
 			if (comp_flops < Gval_per_s(dgemm_flops(dim1,dim2,dim3),cpu_timer)) warning("Inferior Perf to cublasXt\n");
 			CoCoMemcpy(C_host_buf, C,  dim1 * dim2 *sizeof(double), -2, C_loc);
 			CoCoMemcpy(C_host_comp_buf, C_comp,  dim1 * dim2 *sizeof(double), -2, C_loc);
 			if(Dtest_equality(C_host_buf, C_host_comp_buf, dim1 * dim2) < 5) error("Insufficient accuracy for benchmarks\n");
-			cudaCheckErrors();
+			CoCoSyncCheckErr();
 		}
 
 		fprintf(stderr, "\n==============================================================================================================================\n"); 
@@ -236,21 +237,21 @@ int main(const int argc, const char *argv[]) {
 			fprintf(stderr, "M=%d,N=%d,K=%d: Gflops/s -> ", dim1, dim2, dim3); 
 			cpu_timer = csecond();
 			CoCopeLiaDgemm(TransA, TransB, dim1, dim2, dim3, alpha, A, ldA, B, ldB, beta, C , ldC);
-			cudaCheckErrors();
+			CoCoSyncCheckErr();
 			cpu_timer  = csecond() - cpu_timer;
 			double comp_flops =  Gval_per_s(dgemm_flops(dim1,dim2,dim3),cpu_timer); 
 			fprintf(stderr, "CoCopeLia: %.1lf, ", comp_flops);
 			cpu_timer = csecond();
 			T = fmin(dim1,fmin(dim2,dim3))/2; 
 			cuBLASXtDgemmWrap(TransA, TransB, dim1, dim2, dim3, alpha, A, ldA, B, ldB, beta, C_comp, ldC,  T, cpu_ratio, DEV_NUM, dev_ids);	
-			cudaCheckErrors();
+			CoCoSyncCheckErr();
 			cpu_timer  = csecond() - cpu_timer;
 			fprintf(stderr, "cuBLASXT: %.1lf\n", Gval_per_s(dgemm_flops(dim1,dim2,dim3),cpu_timer));
 			if (comp_flops < Gval_per_s(dgemm_flops(dim1,dim2,dim3),cpu_timer)) warning("Inferior Perf to cublasXt\n");
 			CoCoMemcpy(C_host_buf, C,  dim1 * dim2 *sizeof(double), -2, C_loc);
 			CoCoMemcpy(C_host_comp_buf, C_comp,  dim1 * dim2 *sizeof(double), -2, C_loc);
 			if(Dtest_equality(C_host_buf, C_host_comp_buf, dim1 * dim2) < 5) error("Insufficient accuracy for benchmarks\n");
-			cudaCheckErrors();
+			CoCoSyncCheckErr();
 		}
 
 		CoCoFree(A, A_loc);
@@ -261,7 +262,7 @@ int main(const int argc, const char *argv[]) {
 		CoCoFree(C_host_comp_buf, -2);
 	}
 	if (run_large_flag){
-		ldA = ldB = ldC = M = N = K = (size_t) 1.5*CoCopeLiaGetMaxSqdimLvl3(3, sizeof(double), 256); 
+		ldA = ldB = ldC = M = N = K = (size_t) 1.5*CoCoGetMaxDimSqAsset2D(3, sizeof(double), 256, 0); 
 		fprintf(stderr, "\n==============================================================================================================================\n"); 
 		fprintf(stderr, "CoCoPeLiaDgemmTester: Allocating CPU buffers...-> %.3lf GB:", dgemm_memory(M,N,K,1,1,2)/1e9);
 		cpu_timer = csecond();
@@ -273,7 +274,7 @@ int main(const int argc, const char *argv[]) {
 		B = (double*) CoCoMalloc(N * K*sizeof(double), B_loc);
 		C = (double*) CoCoMalloc(M * N*sizeof(double), C_loc);
 
-		cudaCheckErrors();
+		CoCoSyncCheckErr();
 		cpu_timer  = csecond() - cpu_timer;
 		fprintf(stderr, "done.\nAlloc time:\t%lf ms\n\n",  cpu_timer  * 1000);
 		cpu_timer = csecond();
@@ -281,7 +282,7 @@ int main(const int argc, const char *argv[]) {
 		CoCoVecInit(A, K * M, 42, A_loc);
 		CoCoVecInit(B, K * N, 43, B_loc);
 		CoCoVecInit(C, M * N, 44, C_loc);
-		cudaCheckErrors();
+		CoCoSyncCheckErr();
 		cpu_timer  = csecond() - cpu_timer ;
 		fprintf(stderr, "done.\nInit time:\t%lf ms\n\n",  cpu_timer  * 1000);
 			
@@ -295,20 +296,23 @@ int main(const int argc, const char *argv[]) {
 		beta = 0.9876;
 		fprintf(stderr, "M=%zu, N=%zu, K=%zu: Gflops/s -> ", M, N, K); 
 		cpu_timer = csecond();
-		CoCopeLiaDgemm(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC);
-		cudaCheckErrors();
+		CoControl_p return_values = NULL;
+		return_values = CoCopeLiaDgemm(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC);
+		CoCoSyncCheckErr();
 		cpu_timer  = csecond() - cpu_timer;
+		for (int i = 0; i< return_values->dev_num; i++) CoCopeLiaDgemm_flush_gpu_mem_buf(return_values->dev_ids[i]);
+		CoCoSyncCheckErr();
 		double comp_flops = Gval_per_s(dgemm_flops(M,N,K),cpu_timer);
 		fprintf(stderr, "CoCopeLia: %.1lf, ", comp_flops);
 		cpu_timer = csecond();
-		T = fmin(M,fmin(N,K))/2; 
+		T = fmin(M,fmin(N,K))/4; 
 		cuBLASXtDgemmWrap(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C_comp, ldC,  T, cpu_ratio, DEV_NUM, dev_ids);	
-		cudaCheckErrors();
+		CoCoSyncCheckErr();
 		cpu_timer  = csecond() - cpu_timer;
 		fprintf(stderr, "cuBLASXT: %.1lf\n", Gval_per_s(dgemm_flops(M,N,K),cpu_timer));
 		if (comp_flops < Gval_per_s(dgemm_flops(M,N,K),cpu_timer)) warning("Inferior Perf to cublasXt\n");
 		if(Dtest_equality(C, C_comp, M * N) < 5) error("Insufficient accuracy for benchmarks\n");
-		cudaCheckErrors();
+		CoCoSyncCheckErr();
 
 		CoCoVecInit(C, M * N, 44, C_loc);
 		CoCoMemcpy(C_comp, C,  M * N *sizeof(double), -2, -2);
@@ -322,20 +326,22 @@ int main(const int argc, const char *argv[]) {
 		beta = 0.9876;
 		fprintf(stderr, "M=%zu, N=%zu, K=%zu: Gflops/s -> ", M, N, K); 
 		cpu_timer = csecond();
-		CoCopeLiaDgemm(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC);
-		cudaCheckErrors();
+		return_values = CoCopeLiaDgemm(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC);
+		CoCoSyncCheckErr();
 		cpu_timer  = csecond() - cpu_timer;
+		for (int i = 0; i< return_values->dev_num; i++) CoCopeLiaDgemm_flush_gpu_mem_buf(return_values->dev_ids[i]);
+		CoCoSyncCheckErr();
 		comp_flops = Gval_per_s(dgemm_flops(M,N,K),cpu_timer);
 		fprintf(stderr, "CoCopeLia: %.1lf, ", comp_flops);
 		cpu_timer = csecond();
-		T = fmin(M,fmin(N,K))/2; 
+		T = fmin(M,fmin(N,K))/4; 
 		cuBLASXtDgemmWrap(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C_comp, ldC,  T, cpu_ratio, DEV_NUM, dev_ids);	
-		cudaCheckErrors();
+		CoCoSyncCheckErr();
 		cpu_timer  = csecond() - cpu_timer;
 		fprintf(stderr, "cuBLASXT: %.1lf\n", Gval_per_s(dgemm_flops(M,N,K),cpu_timer));
 		if (comp_flops < Gval_per_s(dgemm_flops(M,N,K),cpu_timer)) warning("Inferior Perf to cublasXt\n");
 		if(Dtest_equality(C, C_comp, M * N) < 5) error("Insufficient accuracy for benchmarks\n");
-		cudaCheckErrors();
+		CoCoSyncCheckErr();
 
 		CoCoVecInit(C, M * N, 44, C_loc);
 		CoCoMemcpy(C_comp, C,  M * N *sizeof(double), -2, -2);
@@ -347,41 +353,43 @@ int main(const int argc, const char *argv[]) {
 		beta = 0.9876;
 		fprintf(stderr, "M=%zu, N=%zu, K=%zu: Gflops/s -> ", M, N, K); 
 		cpu_timer = csecond();
-		CoCopeLiaDgemm(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC);
-		cudaCheckErrors();
+		return_values = CoCopeLiaDgemm(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC);
+		CoCoSyncCheckErr();
 		cpu_timer  = csecond() - cpu_timer;
+		for (int i = 0; i< return_values->dev_num; i++) CoCopeLiaDgemm_flush_gpu_mem_buf(return_values->dev_ids[i]);
+		CoCoSyncCheckErr();
 		comp_flops = Gval_per_s(dgemm_flops(M,N,K),cpu_timer);
 		fprintf(stderr, "CoCopeLia: %.1lf, ", comp_flops);
 		cpu_timer = csecond();
-		T = fmin(M,fmin(N,K))/2; 
+		T = fmin(M,fmin(N,K))/4; 
 		cuBLASXtDgemmWrap(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C_comp, ldC,  T, cpu_ratio, DEV_NUM, dev_ids);	
-		cudaCheckErrors();
+		CoCoSyncCheckErr();
 		cpu_timer  = csecond() - cpu_timer;
 		fprintf(stderr, "cuBLASXT: %.1lf\n", Gval_per_s(dgemm_flops(M,N,K),cpu_timer));
 		if (comp_flops < Gval_per_s(dgemm_flops(M,N,K),cpu_timer)) warning("Inferior Perf to cublasXt\n");
 		if(Dtest_equality(C, C_comp, M * N) < 5) error("Insufficient accuracy for benchmarks\n");
-		cudaCheckErrors();
+		CoCoSyncCheckErr();
 
 		CoCoFree(A, A_loc);
 		CoCoFree(B, B_loc);
 		CoCoFree(C, C_loc); 
 		CoCoFree(C_comp, -2); 
-		cudaCheckErrors();
+		CoCoSyncCheckErr();
 
 		A_loc = 0;
 		if (DEV_NUM == 1){
 			B_loc = C_loc = 0;
-			ldA = ldB = ldC = M = N = K = (size_t) CoCopeLiaGetMaxSqdimLvl3(4, sizeof(double), 256); 
+			ldA = ldB = ldC = M = N = K = (size_t) CoCoGetMaxDimSqAsset2D(4, sizeof(double), 256, 0); 
 		}
 		else if (DEV_NUM == 2){
 			B_loc = 0;
 			C_loc = 1;
-			ldA = ldB = ldC = M = N = K = (size_t) CoCopeLiaGetMaxSqdimLvl3(2, sizeof(double), 256); 
+			ldA = ldB = ldC = M = N = K = (size_t) CoCoGetMaxDimSqAsset2D(2, sizeof(double), 256, 0); 
 		}
 		else if (DEV_NUM > 2){
 			B_loc = 1;
 			C_loc = 2;
-			ldA = ldB = ldC = M = N = K = (size_t) CoCopeLiaGetMaxSqdimLvl3(2, sizeof(double), 256); 
+			ldA = ldB = ldC = M = N = K = (size_t) CoCoGetMaxDimSqAsset2D(2, sizeof(double), 256, 0); 
 		}
 		
 		fprintf(stderr, "\n==============================================================================================================================\n"); 
@@ -396,7 +404,7 @@ int main(const int argc, const char *argv[]) {
 		double* C_host_buf, * C_host_comp_buf;
 		C_host_buf =  (double*) CoCoMalloc(M * N*sizeof(double), -2);
 		C_host_comp_buf =  (double*) CoCoMalloc(M * N*sizeof(double), -2);
-		cudaCheckErrors();
+		CoCoSyncCheckErr();
 		cpu_timer  = csecond() - cpu_timer;
 		fprintf(stderr, "done.\nAlloc time:\t%lf ms\n\n",  cpu_timer  * 1000);
 
@@ -407,7 +415,7 @@ int main(const int argc, const char *argv[]) {
 		CoCoVecInit(C, M * N, 44, C_loc);
 		CoCoMemcpy(C_host_comp_buf, C,  M * N *sizeof(double), -2, C_loc);
 		CoCoMemcpy(C_comp, C_host_comp_buf,  M * N *sizeof(double), C_loc, -2);
-		cudaCheckErrors();
+		CoCoSyncCheckErr();
 		cpu_timer  = csecond() - cpu_timer ;
 		fprintf(stderr, "done.\nInit time:\t%lf ms\n\n",  cpu_timer  * 1000);
 
@@ -418,22 +426,24 @@ int main(const int argc, const char *argv[]) {
 		beta = 0.9876;
 		fprintf(stderr, "M=%zu,N=%zu,K=%zu: Gflops/s -> ", M, N, K); 
 		cpu_timer = csecond();
-		CoCopeLiaDgemm(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC);
-		cudaCheckErrors();
+		return_values = CoCopeLiaDgemm(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC);
+		CoCoSyncCheckErr();
 		cpu_timer  = csecond() - cpu_timer;
+		for (int i = 0; i< return_values->dev_num; i++) CoCopeLiaDgemm_flush_gpu_mem_buf(return_values->dev_ids[i]);
+		CoCoSyncCheckErr();
 		comp_flops =  Gval_per_s(dgemm_flops(M,N,K),cpu_timer); 
 		fprintf(stderr, "CoCopeLia: %.1lf, ", comp_flops);
 		cpu_timer = csecond();
-		T = fmin(M,fmin(N,K))/2; 
+		T = fmin(M,fmin(N,K))/4; 
 		cuBLASXtDgemmWrap(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C_comp, ldC,  T, cpu_ratio, DEV_NUM, dev_ids);	
-		cudaCheckErrors();
+		CoCoSyncCheckErr();
 		cpu_timer  = csecond() - cpu_timer;
 		fprintf(stderr, "cuBLASXT: %.1lf\n", Gval_per_s(dgemm_flops(M, N, K),cpu_timer));
 		if (comp_flops < Gval_per_s(dgemm_flops(M, N, K),cpu_timer)) warning("Inferior Perf to cublasXt\n");
 		CoCoMemcpy(C_host_buf, C,  M * N *sizeof(double), -2, C_loc);
 		CoCoMemcpy(C_host_comp_buf, C_comp,  M * N  *sizeof(double), -2, C_loc);
 		if(Dtest_equality(C_host_buf, C_host_comp_buf, M * N ) < 5) error("Insufficient accuracy for benchmarks\n");
-		cudaCheckErrors();
+		CoCoSyncCheckErr();
 
 		fprintf(stderr, "\n==============================================================================================================================\n"); 
 		fprintf(stderr, "CoCoPeLiaDgemmTester: Testing Large Matrices In GPUmem + Transpose\n\n"); 
@@ -442,22 +452,24 @@ int main(const int argc, const char *argv[]) {
 		beta = 0.9876;
 		fprintf(stderr, "M=%zu,N=%zu,K=%zu: Gflops/s -> ", M, N, K); 
 		cpu_timer = csecond();
-		CoCopeLiaDgemm(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC);
-		cudaCheckErrors();
+		return_values = CoCopeLiaDgemm(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC);
+		CoCoSyncCheckErr();
 		cpu_timer  = csecond() - cpu_timer;
+		for (int i = 0; i< return_values->dev_num; i++) CoCopeLiaDgemm_flush_gpu_mem_buf(return_values->dev_ids[i]);
+		CoCoSyncCheckErr();
 		comp_flops =  Gval_per_s(dgemm_flops(M,N,K),cpu_timer); 
 		fprintf(stderr, "CoCopeLia: %.1lf, ", comp_flops);
 		cpu_timer = csecond();
-		T = fmin(M,fmin(N,K))/2; 
+		T = fmin(M,fmin(N,K))/4; 
 		cuBLASXtDgemmWrap(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C_comp, ldC,  T, cpu_ratio, DEV_NUM, dev_ids);	
-		cudaCheckErrors();
+		CoCoSyncCheckErr();
 		cpu_timer  = csecond() - cpu_timer;
 		fprintf(stderr, "cuBLASXT: %.1lf\n", Gval_per_s(dgemm_flops(M, N, K),cpu_timer));
 		if (comp_flops < Gval_per_s(dgemm_flops(M, N, K),cpu_timer)) warning("Inferior Perf to cublasXt\n");
 		CoCoMemcpy(C_host_buf, C,  M * N *sizeof(double), -2, C_loc);
 		CoCoMemcpy(C_host_comp_buf, C_comp,  M * N  *sizeof(double), -2, C_loc);
 		if(Dtest_equality(C_host_buf, C_host_comp_buf, M * N ) < 5) error("Insufficient accuracy for benchmarks\n");
-		cudaCheckErrors();
+		CoCoSyncCheckErr();
 
 		CoCoFree(A, A_loc);
 		CoCoFree(B, B_loc);

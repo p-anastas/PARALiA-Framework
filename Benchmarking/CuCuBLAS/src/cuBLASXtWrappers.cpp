@@ -10,6 +10,7 @@
 
 #include "CoCoPeLia.hpp"
 #include "unihelpers.hpp"
+#include "backend_wrappers.hpp"
 
 void cblas_dgemm_wrap_for_cublasXt(char* gpu_op_A, char* gpu_op_B, int* M, int* N, int* K, double* alpha, double* A, int* ldA, double* B, int* ldB, double* beta, double* C, int* ldC){ 
   CBLAS_TRANSPOSE cpu_op_A, cpu_op_B;    // CblasNoTrans, CblasTrans
@@ -31,8 +32,8 @@ double cuBLASXtDgemmWrap(char TransA, char TransB, size_t M, size_t N, size_t K,
 	double total_t = csecond();
 #ifdef DEBUG
 	lprintf(lvl-1, "|-----> cuBLASXtDgemmWrap(%c,%c,%zu,%zu,%zu,%lf,A(%d),%zu,B(%d),%zu,%lf,C(%d),%zu)\n", 
-		TransA, TransB, M, N, K, alpha, CoCopeLia_ptr_check_cuda_9_2(A), ldA,
-		CoCopeLia_ptr_check_cuda_9_2(B), ldB, beta, CoCopeLia_ptr_check_cuda_9_2(C), ldC);
+		TransA, TransB, M, N, K, alpha, CoCoGetPtrLoc(A), ldA,
+		CoCoGetPtrLoc(B), ldB, beta, CoCoGetPtrLoc(C), ldC);
 #endif
 
 #ifdef TEST
@@ -57,7 +58,7 @@ double cuBLASXtDgemmWrap(char TransA, char TransB, size_t M, size_t N, size_t K,
     	cpu_timer = csecond();
 #endif
 	assert(CUBLAS_STATUS_SUCCESS == cublasXtDgemm(handle0, gpu_op_A, gpu_op_B, M, N, K, &alpha, A, ldA, B, ldB, &beta, C, ldC));
-	cudaCheckErrors();
+	CoCoSyncCheckErr();
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer; 
 	lprintf(lvl, "cuBLASXt execution time -> t_kernel = %lf ms\n", cpu_timer*1000);
@@ -65,7 +66,7 @@ double cuBLASXtDgemmWrap(char TransA, char TransB, size_t M, size_t N, size_t K,
 
 	/// Free local buffers
 	cublasXtDestroy(handle0);
-	cudaCheckErrors();
+	CoCoSyncCheckErr();
 	total_t = csecond() - total_t;
 	return total_t;
 
@@ -91,8 +92,8 @@ double cuBLASXtSgemmWrap(char TransA, char TransB, size_t M, size_t N, size_t K,
 	double total_t = csecond();
 #ifdef DEBUG
 	lprintf(lvl-1, "|-----> cuBLASXtSgemmWrap(%c,%c,%zu,%zu,%zu,%lf,A(%d),%zu,B(%d),%zu,%lf,C(%d),%zu)\n", 
-		TransA, TransB, M, N, K, alpha, CoCopeLia_ptr_check_cuda_9_2(A), ldA,
-		CoCopeLia_ptr_check_cuda_9_2(B), ldB, beta, CoCopeLia_ptr_check_cuda_9_2(C), ldC);
+		TransA, TransB, M, N, K, alpha, CoCoGetPtrLoc(A), ldA,
+		CoCoGetPtrLoc(B), ldB, beta, CoCoGetPtrLoc(C), ldC);
 #endif
 
 #ifdef TEST
@@ -124,7 +125,7 @@ double cuBLASXtSgemmWrap(char TransA, char TransB, size_t M, size_t N, size_t K,
 #endif
 
 	assert(CUBLAS_STATUS_SUCCESS == cublasXtSgemm(handle0, gpu_op_A, gpu_op_B, M, N, K, &alpha, A, ldA, B, ldB, &beta, C, ldC));
-	cudaCheckErrors();
+	CoCoSyncCheckErr();
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer; 
 	lprintf(lvl, "cuBLASXt execution time -> t_kernel = %lf ms\n", cpu_timer*1000);
@@ -132,7 +133,7 @@ double cuBLASXtSgemmWrap(char TransA, char TransB, size_t M, size_t N, size_t K,
 
 	/// Free local buffers
 	cublasXtDestroy(handle0);
-	cudaCheckErrors();
+	CoCoSyncCheckErr();
 	total_t = csecond() - total_t;
 	return total_t;
 

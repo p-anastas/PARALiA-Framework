@@ -9,7 +9,9 @@
 #include "CoCoPeLiaLibBackened.hpp"
 #include "unihelpers.hpp"
 
-cudaStream_t h2d_stream[128] = {NULL}, d2h_stream[128] = {NULL}, exec_stream[128] = {NULL};
+#include "backend_wrappers.hpp"
+
+CQueue_p h2d_queue[128] = {NULL}, d2h_queue[128] = {NULL}, exec_queue[128] = {NULL};
 cublasHandle_t handle[128] = {NULL};
 
 kernel3_p CoCopeLiaDgemmSubkernelInit(cublasOperation_t gpu_op_A, cublasOperation_t gpu_op_B, size_t Ms, size_t Ns, size_t Ks, double alpha, double* A, size_t ldA, double* B, size_t ldB, double beta, double* Cin, size_t ldCin, double* Cout, size_t ldCout, BLAS3GPUBufPtr GloBuf, short devId){
@@ -23,9 +25,9 @@ kernel3_p CoCopeLiaDgemmSubkernelInit(cublasOperation_t gpu_op_A, cublasOperatio
 
 #ifdef DEBUG
 	lprintf(lvl-1, "|-----> CoCopeLiaDgemmSubkernelInit(%c,%c,%zu,%zu,%zu,%lf,A(%d),%zu,B(%d),%zu,%lf,Cin(%d),%zu,Cout(%d),%zu,Globuf(sz=%zuMB),%d)\n", 
-		PrintCublasOp(gpu_op_A), PrintCublasOp(gpu_op_B), Ms, Ns, Ks, alpha, CoCopeLia_ptr_check_cuda_9_2(A), ldA,
-		CoCopeLia_ptr_check_cuda_9_2(B), ldB, beta, CoCopeLia_ptr_check_cuda_9_2(Cin), ldCin, 
-		CoCopeLia_ptr_check_cuda_9_2(Cout), ldCout, NULL == GloBuf ? 0 : (size_t)GloBuf->gpu_mem_buf_sz/1024/1024, kernel->devId);
+		PrintCublasOp(gpu_op_A), PrintCublasOp(gpu_op_B), Ms, Ns, Ks, alpha, CoCoGetPtrLoc(A), ldA,
+		CoCoGetPtrLoc(B), ldB, beta, CoCoGetPtrLoc(Cin), ldCin, 
+		CoCoGetPtrLoc(Cout), ldCout, NULL == GloBuf ? 0 : (size_t)GloBuf->gpu_mem_buf_sz/1024/1024, kernel->devId);
 #endif
 
 	kernel->gpu_op_A = gpu_op_A;
@@ -47,10 +49,10 @@ kernel3_p CoCopeLiaDgemmSubkernelInit(cublasOperation_t gpu_op_A, cublasOperatio
 	kernel->ldCsIn = ldCin;
 	kernel->ldCsOut = ldCout;
 
-	kernel->Asloc = CoCopeLia_ptr_check_cuda_9_2(A);
-	kernel->Bsloc = CoCopeLia_ptr_check_cuda_9_2(B);
-	kernel->Csloc = CoCopeLia_ptr_check_cuda_9_2(Cin);
-	kernel->CsOutloc = CoCopeLia_ptr_check_cuda_9_2(Cout);
+	kernel->Asloc = CoCoGetPtrLoc(A);
+	kernel->Bsloc = CoCoGetPtrLoc(B);
+	kernel->Csloc = CoCoGetPtrLoc(Cin);
+	kernel->CsOutloc = CoCoGetPtrLoc(Cout);
 
 	if(kernel->Asloc != kernel->devId && GloBuf) kernel->AdevBuf = (double*) (GloBuf->gpu_mem_buf + GloBuf->dgemm_A_offset);
 	else kernel->AdevBuf = NULL; 
@@ -90,16 +92,15 @@ kernel3_p CoCopeLiaDgemmSubkernelInit(cublasOperation_t gpu_op_A, cublasOperatio
 
 	}
 
-  	if (!h2d_stream[devId]) cudaStreamCreate(&h2d_stream[devId]);
-  	if (!d2h_stream[devId]) cudaStreamCreate(&d2h_stream[devId]);
-  	if (!exec_stream[devId]) cudaStreamCreate(&exec_stream[devId]);
+  	if (!h2d_queue[devId]) h2d_queue[devId] = new CommandQueue();
+  	if (!d2h_queue[devId])  d2h_queue[devId] = new CommandQueue();
+  	if (!exec_queue[devId])  exec_queue[devId] = new CommandQueue();
 	if (!handle[devId]){
 		assert(CUBLAS_STATUS_SUCCESS == cublasCreate(&(handle[devId])));
-		assert(CUBLAS_STATUS_SUCCESS == cublasSetStream(handle[devId], exec_stream[devId]));
+		assert(CUBLAS_STATUS_SUCCESS == cublasSetStream(handle[devId], *(cudaStream_t*) (exec_queue[devId]->cqueue_backend_ptr)));
 	}
-
-	cudaEventCreateWithFlags(&kernel->data_avail, cudaEventDefault);
-	cudaEventCreateWithFlags(&kernel->gemm_complete, cudaEventDefault);
+	kernel->data_avail = new Event();
+	kernel->gemm_complete = new Event();
 
 #ifdef DEBUG
 	lprintf(lvl-1, "<-----|\n"); 
@@ -238,8 +239,8 @@ kernel3_p CoCopeLiaDgemmSubkernelClone(const kernel3_p in_kernel, size_t MgridId
 	lprintf(lvl, "NgridIdx=%d, MgridIdx=%d, KgridIdx=%d, CsOutMaster=%d\n", out_kernel->NgridIdx, out_kernel->MgridIdx, out_kernel->KgridIdx, out_kernel->CsOutMaster);
 #endif
 
-	cudaEventCreateWithFlags(&out_kernel->data_avail, cudaEventDefault);
-	cudaEventCreateWithFlags(&out_kernel->gemm_complete, cudaEventDefault);
+	out_kernel->data_avail = new Event();
+	out_kernel->gemm_complete = new Event();
 
 
 #ifdef DEBUG
@@ -256,32 +257,32 @@ void CoCopeLia_Dgemm_subkernel_async(kernel3_p kernel){
 	lprintf(lvl, "NgridIdx=%d, MgridIdx=%d, KgridIdx=%d, CsOutMaster=%d\n", kernel->NgridIdx, kernel->MgridIdx, kernel->KgridIdx, kernel->CsOutMaster);
 #endif
 	if (!kernel->NgridIdx && kernel->Asloc != kernel->devId && kernel->alpha){ 
-		if (kernel->gpu_op_A == CUBLAS_OP_N) CoCoMemcpy2DAsync(kernel->Aker, kernel->ldAker, kernel->As, kernel->ldAs, kernel->Ms, kernel->Ks, sizeof(double), kernel->devId, kernel->Asloc, h2d_stream[kernel->devId]);	
-		else CoCoMemcpy2DAsync(kernel->Aker, kernel->ldAker, kernel->As, kernel->ldAs, kernel->Ks, kernel->Ms, sizeof(double), kernel->devId, kernel->Asloc, h2d_stream[kernel->devId]);	
+		if (kernel->gpu_op_A == CUBLAS_OP_N) CoCoMemcpy2DAsync(kernel->Aker, kernel->ldAker, kernel->As, kernel->ldAs, kernel->Ms, kernel->Ks, sizeof(double), kernel->devId, kernel->Asloc, h2d_queue[kernel->devId]);	
+		else CoCoMemcpy2DAsync(kernel->Aker, kernel->ldAker, kernel->As, kernel->ldAs, kernel->Ks, kernel->Ms, sizeof(double), kernel->devId, kernel->Asloc, h2d_queue[kernel->devId]);	
 	}
-	//cudaCheckErrors();
+	//CoCoSyncCheckErr();
 
 	if (!kernel->MgridIdx && kernel->Bsloc != kernel->devId && kernel->alpha){
-		if (kernel->gpu_op_B == CUBLAS_OP_N) CoCoMemcpy2DAsync(kernel->Bker, kernel->ldBker, kernel->Bs, kernel->ldBs, kernel->Ks, kernel->Ns, sizeof(double), kernel->devId, kernel->Bsloc, h2d_stream[kernel->devId]);
-		else CoCoMemcpy2DAsync(kernel->Bker, kernel->ldBker, kernel->Bs, kernel->ldBs, kernel->Ns, kernel->Ks, sizeof(double), kernel->devId, kernel->Bsloc, h2d_stream[kernel->devId]);
+		if (kernel->gpu_op_B == CUBLAS_OP_N) CoCoMemcpy2DAsync(kernel->Bker, kernel->ldBker, kernel->Bs, kernel->ldBs, kernel->Ks, kernel->Ns, sizeof(double), kernel->devId, kernel->Bsloc, h2d_queue[kernel->devId]);
+		else CoCoMemcpy2DAsync(kernel->Bker, kernel->ldBker, kernel->Bs, kernel->ldBs, kernel->Ns, kernel->Ks, sizeof(double), kernel->devId, kernel->Bsloc, h2d_queue[kernel->devId]);
 	}
-	//cudaCheckErrors();
+	//CoCoSyncCheckErr();
 
 	if (!kernel->KgridIdx && kernel->Csloc != kernel->devId && kernel->beta){
-		CoCoMemcpy2DAsync(kernel->Cker, kernel->ldCker, kernel->CsIn, kernel->ldCsIn, kernel->Ms, kernel->Ns, sizeof(double), kernel->devId, kernel->Csloc, h2d_stream[kernel->devId]);
+		CoCoMemcpy2DAsync(kernel->Cker, kernel->ldCker, kernel->CsIn, kernel->ldCsIn, kernel->Ms, kernel->Ns, sizeof(double), kernel->devId, kernel->Csloc, h2d_queue[kernel->devId]);
 	}
-	cudaEventRecord(kernel->data_avail, h2d_stream[kernel->devId]);
-	cudaStreamWaitEvent(exec_stream[kernel->devId], kernel->data_avail,0);
+	kernel->data_avail->record_to_queue(h2d_queue[kernel->devId]);
+	exec_queue[kernel->devId]->wait_for_event(kernel->data_avail);
 	
 
 	assert(CUBLAS_STATUS_SUCCESS == cublasDgemm(handle[kernel->devId], kernel->gpu_op_A, kernel->gpu_op_B, kernel->Ms, kernel->Ns, kernel->Ks, &kernel->alpha, kernel->Aker, kernel->ldAker, kernel->Bker, kernel->ldBker, &kernel->beta, kernel->Cker, kernel->ldCker));
-	cudaEventRecord(kernel->gemm_complete, exec_stream[kernel->devId]);
+	kernel->gemm_complete->record_to_queue(exec_queue[kernel->devId]);
 	if (kernel->CsOutMaster && kernel->CsOutloc != kernel->devId) {
-		cudaStreamWaitEvent(d2h_stream[kernel->devId], kernel->gemm_complete,0);
-		CoCoMemcpy2DAsync(kernel->CsOut, kernel->ldCsOut, kernel->Cker, kernel->ldCker, kernel->Ms, kernel->Ns, sizeof(double), kernel->CsOutloc, kernel->devId, d2h_stream[kernel->devId]);
+		d2h_queue[kernel->devId]->wait_for_event(kernel->gemm_complete);
+		CoCoMemcpy2DAsync(kernel->CsOut, kernel->ldCsOut, kernel->Cker, kernel->ldCker, kernel->Ms, kernel->Ns, sizeof(double), kernel->CsOutloc, kernel->devId, d2h_queue[kernel->devId]);
 	
 	}
-	//cudaCheckErrors();
+	//CoCoSyncCheckErr();
 #ifdef DEBUG
 	lprintf(lvl-1, "<-----|\n");
 #endif
@@ -290,8 +291,8 @@ void CoCopeLia_Dgemm_subkernel_async(kernel3_p kernel){
 
 /// Destroys given Dgemm subkernel.
 void CoCopeLia_Dgemm_subkernel_destroy(kernel3_p kernel){
-	assert(CUBLAS_STATUS_SUCCESS == cudaEventDestroy(kernel->data_avail));
-	assert(CUBLAS_STATUS_SUCCESS == cudaEventDestroy(kernel->gemm_complete));
+	delete kernel->data_avail;
+	delete kernel->gemm_complete;
 
 	free(kernel);
 	

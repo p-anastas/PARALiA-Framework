@@ -9,7 +9,62 @@
 #include <float.h>
 #include <curand.h>
 
-#include "unihelpers.hpp"
+#include "backend_wrappers.hpp"
+
+size_t CoCoGetMaxDimSqAsset2D(short Asset2DNum, short dsize, size_t step, short loc){
+	size_t free_cuda_mem, max_cuda_mem; 
+	int prev_loc; cudaGetDevice(&prev_loc);	
+    /// TODO: Can this ever happen in a healthy scenario?
+    //if (prev_loc != loc) warning("CoCoMalloc: Malloc'ed memory in other device (Previous device: %d, Malloc in: %d)\n", prev_loc, loc);
+    cudaSetDevice(loc);
+	massert(cudaSuccess == cudaMemGetInfo(&free_cuda_mem, &max_cuda_mem), "backend_get_max_dim_sq_Asset2D: cudaMemGetInfo failed"); 
+
+	// Define the max size of a benchmark kernel to run on this machine.
+	size_t maxDim = (( (size_t) sqrt((free_cuda_mem*PROBLEM_GPU_PERCENTAGE/100.0)/(Asset2DNum*dsize))) / step) * step;
+	cudaSetDevice(prev_loc);
+	return maxDim;
+}
+
+size_t CoCoGetMaxDimAsset1D(short Asset1DNum, short dsize, size_t step, short loc){
+	size_t free_cuda_mem, max_cuda_mem; 
+	int prev_loc; cudaGetDevice(&prev_loc);	
+    /// TODO: Can this ever happen in a healthy scenario?
+    //if (prev_loc != loc) warning("CoCoMalloc: Malloc'ed memory in other device (Previous device: %d, Malloc in: %d)\n", prev_loc, loc);
+    cudaSetDevice(loc);
+	massert(cudaSuccess == cudaMemGetInfo(&free_cuda_mem, &max_cuda_mem), "backend_get_max_dim_Asset1D: cudaMemGetInfo failed"); 
+
+	size_t maxDim = (( (size_t) (free_cuda_mem*PROBLEM_GPU_PERCENTAGE/100.0)/(Asset1DNum*dsize)) / step) * step;
+	cudaSetDevice(prev_loc);
+	return maxDim;
+}
+
+short CoCoGetPtrLoc(const void * in_ptr)
+{
+#ifndef CUDA_VER
+#error CUDA_VER Undefined!
+#elif (CUDA_VER == 920)
+	short loc = -2;
+	cudaPointerAttributes ptr_att; 
+	if (cudaSuccess != cudaPointerGetAttributes(&ptr_att, in_ptr)) warning("CoCoBLAS_ptr_check_cuda_9_2: Pointer not visible to CUDA, host alloc or error");
+	if (ptr_att.memoryType == cudaMemoryTypeHost) loc = -1; 
+	else if (ptr_att.memoryType == cudaMemoryTypeDevice) loc = ptr_att.device;
+	else if (ptr_att.isManaged) loc = ptr_att.device;
+	else error("CoCoBLAS_ptr_check_cuda_9_2: Invalid memory type");
+	return loc; 
+#elif (CUDA_VER == 1100)
+	short loc = -2;
+	cudaPointerAttributes ptr_att; 
+	if (cudaSuccess != cudaPointerGetAttributes(&ptr_att, in_ptr)) warning("CoCopeLia_ptr_check_cuda_11: Pointer not visible to CUDA, host alloc or error");
+	if (ptr_att.type == cudaMemoryTypeHost) loc = -1; 
+	else if (ptr_att.type == cudaMemoryTypeDevice) loc = ptr_att.device;
+	// TODO: Unified memory is considered available in the GPU as cuBLASXt ( not bad, not great) 
+	else if (ptr_att.type == cudaMemoryTypeManaged) loc = ptr_att.device;
+	else error("CoCoBLAS_ptr_check_cuda_11: Invalid memory type");
+	return loc; 
+#else
+#error Unknown CUDA_VER!
+#endif
+}
 
 void *gpu_malloc(long long count) {
   void *ret;
@@ -106,8 +161,9 @@ void CoCoMemcpy(void* dest, void* src, long long bytes, short loc_dest, short lo
 	cudaCheckErrors();
 }
 
-void CoCoMemcpyAsync(void* dest, void* src, long long bytes, short loc_dest, short loc_src, cudaStream_t stream)
+void CoCoMemcpyAsync(void* dest, void* src, long long bytes, short loc_dest, short loc_src, CQueue_p transfer_queue)
 {
+	cudaStream_t stream = *((cudaStream_t*)transfer_queue->cqueue_backend_ptr);
 	int count = 42;
 	massert(CUBLAS_STATUS_SUCCESS == cudaGetDeviceCount(&count), "CoCoMemcpyAsync: cudaGetDeviceCount failed\n");
 	massert(-2 < loc_dest && loc_dest < count, "CoCoMemcpyAsync: Invalid destination device: %d\n", loc_dest);
@@ -121,6 +177,42 @@ void CoCoMemcpyAsync(void* dest, void* src, long long bytes, short loc_dest, sho
 
 	cudaMemcpyAsync(dest, src, bytes, kind, stream);
 	//cudaCheckErrors();
+}
+
+void CoCoMemcpy2D(void* dest, size_t ldest, void* src, size_t lsrc, size_t rows, size_t cols, short elemSize, short loc_dest, short loc_src){
+	int count = 42;
+	massert(CUBLAS_STATUS_SUCCESS == cudaGetDeviceCount(&count), "CoCoMemcpy2D: cudaGetDeviceCount failed\n");
+	massert(-2 < loc_dest && loc_dest < count, "CoCoMemcpy2D: Invalid destination device: %d\n", loc_dest);
+	massert(-2 < loc_src && loc_src < count, "CoCoMemcpy2D: Invalid source device: %d\n", loc_src);
+
+	enum cudaMemcpyKind kind;
+	if (loc_src < 0 && loc_dest < 0) kind = cudaMemcpyHostToHost;
+	else if (loc_dest < 0) kind = cudaMemcpyDeviceToHost;
+	else if (loc_src < 0) kind = cudaMemcpyHostToDevice;
+	else kind = cudaMemcpyDeviceToDevice;
+
+	massert(cudaSuccess == cudaMemcpy2D(dest, ldest*elemSize, src, lsrc*elemSize, rows*elemSize, cols, kind),  "CoCoMemcpy2D: cudaMemcpy2D failed\n");
+	//if (loc_src == -1 && loc_dest >=0) massert(CUBLAS_STATUS_SUCCESS == cublasSetMatrix(rows, cols, elemSize, src, lsrc, dest, ldest), "CoCoMemcpy2DAsync: cublasSetMatrix failed\n");
+	//else if (loc_src >=0 && loc_dest == -1) massert(CUBLAS_STATUS_SUCCESS == cublasGetMatrix(rows, cols, elemSize, src, lsrc, dest, ldest),  "CoCoMemcpy2DAsync: cublasGetMatrix failed");
+
+}
+
+void CoCoMemcpy2DAsync(void* dest, size_t ldest, void* src, size_t lsrc, size_t rows, size_t cols, short elemSize, short loc_dest, short loc_src, CQueue_p transfer_queue){
+	cudaStream_t stream = *((cudaStream_t*)transfer_queue->cqueue_backend_ptr);
+	int count = 42;
+	massert(CUBLAS_STATUS_SUCCESS == cudaGetDeviceCount(&count), "CoCoMemcpy2DAsync: cudaGetDeviceCount failed\n");
+	massert(-2 < loc_dest && loc_dest < count, "CoCoMemcpyAsync2D: Invalid destination device: %d\n", loc_dest);
+	massert(-2 < loc_src && loc_src < count, "CoCoMemcpyAsync2D: Invalid source device: %d\n", loc_src);
+
+	enum cudaMemcpyKind kind;
+	if (loc_src < 0 && loc_dest < 0) kind = cudaMemcpyHostToHost;
+	else if (loc_dest < 0) kind = cudaMemcpyDeviceToHost;
+	else if (loc_src < 0) kind = cudaMemcpyHostToDevice;
+	else kind = cudaMemcpyDeviceToDevice;
+
+	cudaMemcpy2DAsync(dest, ldest*elemSize, src, lsrc*elemSize, rows*elemSize, cols, kind, stream);
+	//if (loc_src == -1 && loc_dest >=0) massert(CUBLAS_STATUS_SUCCESS == cublasSetMatrixAsync(rows, cols, elemSize, src, lsrc, dest, ldest, stream), "CoCoMemcpy2DAsync: cublasSetMatrixAsync failed\n");
+	//else if (loc_src >=0 && loc_dest == -1) massert(CUBLAS_STATUS_SUCCESS == cublasGetMatrixAsync(rows, cols, elemSize, src, lsrc, dest, ldest, stream),  "CoCoMemcpy2DAsync: cublasGetMatrixAsync failed");
 }
 
 template<typename VALUETYPE>
@@ -161,42 +253,18 @@ void CoCoVecInit(VALUETYPE *vec, long long length, int seed, short loc)
 template void CoCoVecInit<double>(double *vec, long long length, int seed, short loc);
 template void CoCoVecInit<float>(float *vec, long long length, int seed, short loc);
 
-void CoCoMemcpy2D(void* dest, size_t ldest, void* src, size_t lsrc, size_t rows, size_t cols, short elemSize, short loc_dest, short loc_src){
-	int count = 42;
-	massert(CUBLAS_STATUS_SUCCESS == cudaGetDeviceCount(&count), "CoCoMemcpy2D: cudaGetDeviceCount failed\n");
-	massert(-2 < loc_dest && loc_dest < count, "CoCoMemcpy2D: Invalid destination device: %d\n", loc_dest);
-	massert(-2 < loc_src && loc_src < count, "CoCoMemcpy2D: Invalid source device: %d\n", loc_src);
-
-	enum cudaMemcpyKind kind;
-	if (loc_src < 0 && loc_dest < 0) kind = cudaMemcpyHostToHost;
-	else if (loc_dest < 0) kind = cudaMemcpyDeviceToHost;
-	else if (loc_src < 0) kind = cudaMemcpyHostToDevice;
-	else kind = cudaMemcpyDeviceToDevice;
-
-	massert(cudaSuccess == cudaMemcpy2D(dest, ldest*elemSize, src, lsrc*elemSize, rows*elemSize, cols, kind),  "CoCoMemcpy2D: cudaMemcpy2D failed\n");
-	//if (loc_src == -1 && loc_dest >=0) massert(CUBLAS_STATUS_SUCCESS == cublasSetMatrix(rows, cols, elemSize, src, lsrc, dest, ldest), "CoCoMemcpy2DAsync: cublasSetMatrix failed\n");
-	//else if (loc_src >=0 && loc_dest == -1) massert(CUBLAS_STATUS_SUCCESS == cublasGetMatrix(rows, cols, elemSize, src, lsrc, dest, ldest),  "CoCoMemcpy2DAsync: cublasGetMatrix failed");
-
+template<typename VALUETYPE>
+void CoCoParallelVecInitHost(VALUETYPE *vec, long long length, int seed)
+{
+	srand(seed);
+	//#pragma omp parallel for
+	for (long long i = 0; i < length; i++) vec[i] = (VALUETYPE) Drandom();
 }
 
-void CoCoMemcpy2DAsync(void* dest, size_t ldest, void* src, size_t lsrc, size_t rows, size_t cols, short elemSize, short loc_dest, short loc_src, cudaStream_t stream){
-	int count = 42;
-	massert(CUBLAS_STATUS_SUCCESS == cudaGetDeviceCount(&count), "CoCoMemcpy2DAsync: cudaGetDeviceCount failed\n");
-	massert(-2 < loc_dest && loc_dest < count, "CoCoMemcpyAsync2D: Invalid destination device: %d\n", loc_dest);
-	massert(-2 < loc_src && loc_src < count, "CoCoMemcpyAsync2D: Invalid source device: %d\n", loc_src);
+template void CoCoParallelVecInitHost<double>(double *vec, long long length, int seed);
+template void CoCoParallelVecInitHost<float>(float *vec, long long length, int seed);
 
-	enum cudaMemcpyKind kind;
-	if (loc_src < 0 && loc_dest < 0) kind = cudaMemcpyHostToHost;
-	else if (loc_dest < 0) kind = cudaMemcpyDeviceToHost;
-	else if (loc_src < 0) kind = cudaMemcpyHostToDevice;
-	else kind = cudaMemcpyDeviceToDevice;
-
-	cudaMemcpy2DAsync(dest, ldest*elemSize, src, lsrc*elemSize, rows*elemSize, cols, kind, stream);
-	//if (loc_src == -1 && loc_dest >=0) massert(CUBLAS_STATUS_SUCCESS == cublasSetMatrixAsync(rows, cols, elemSize, src, lsrc, dest, ldest, stream), "CoCoMemcpy2DAsync: cublasSetMatrixAsync failed\n");
-	//else if (loc_src >=0 && loc_dest == -1) massert(CUBLAS_STATUS_SUCCESS == cublasGetMatrixAsync(rows, cols, elemSize, src, lsrc, dest, ldest, stream),  "CoCoMemcpy2DAsync: cublasGetMatrixAsync failed");
-}
-
-void CoCoPeLiaEnableGPUPeer(short target_dev_i, short dev_ids[], short num_devices){
+void backend_enableGPUPeer(short target_dev_i, short dev_ids[], short num_devices){
 	short lvl = 2;
 #ifdef DEBUG
 	lprintf(lvl-1, "|-----> CoCoPeLiaEnableGPUPeer(%d,dev_ids,%d)\n", target_dev_i, num_devices);
@@ -236,6 +304,10 @@ void CoCoPeLiaEnableGPUPeer(short target_dev_i, short dev_ids[], short num_devic
 #ifdef DEBUG
 	lprintf(lvl-1, "<-----|\n"); 
 #endif
+}
+
+void CoCoEnableLinks(short target_dev_i, short dev_ids[], short num_devices){
+	backend_enableGPUPeer(target_dev_i, dev_ids, num_devices);
 }
 
 

@@ -13,39 +13,6 @@
 #include <omp.h>
 #include <math.h>
 
-/*
-long long dgemv_flops(size_t M, size_t N){
-	return (long long) M * (2 * N + 1);
-}
-
-long long dgemv_bytes(size_t M, size_t N){
-	return (M * N + N + M * 2)*sizeof(double) ; 
-}
-
-
-long long dgemm_bytes(size_t M, size_t N, size_t K){
-	return (M * K + K * N + M * N * 2)*sizeof(double) ; 
-}
-
-long long sgemm_bytes(size_t M, size_t N, size_t K){
-	return (M * K + K * N + M * N * 2)*sizeof(float) ; 
-}
-*/
-
-long long dgemm_flops(size_t M, size_t N, size_t K){
-	return (long long) M * K * (2 * N + 1);
-}
-
-
-long long dgemm_memory(size_t M, size_t N, size_t K, size_t A_loc, size_t B_loc, size_t C_loc){
-	return (M * K * A_loc + K * N * B_loc + M * N * C_loc)*sizeof(double); 
-}
-
-
-double Gval_per_s(long long value, double time){
-  return value / (time * 1e9);
-}
-
 double csecond(void) {
   struct timespec tms;
 
@@ -61,6 +28,60 @@ double csecond(void) {
     ++micros;
   }
   return ((double)micros / 1000000.0);
+}
+
+void tab_print(int lvl){
+	for (int rep=0;rep<lvl;rep++) fprintf(stderr, "\t");
+}
+
+void _printf(const char *fmt, va_list ap)
+{
+    if (fmt) vfprintf(stderr, fmt, ap);
+    //putc('\n', stderr);
+}
+
+void warning(const char *fmt, ...) {
+	fprintf(stderr, "WARNING -> ");
+	va_list ap;
+	va_start(ap, fmt);
+	_printf(fmt, ap);
+	va_end(ap);
+}
+
+void error(const char *fmt, ...) {
+	fprintf(stderr, "ERROR ->");
+	va_list ap;
+	va_start(ap, fmt);
+	_printf(fmt, ap);
+	va_end(ap);
+	exit(1);
+}
+
+void massert(bool condi, const char *fmt, ...) {
+	if (!condi) {
+		va_list ap;
+		va_start(ap, fmt);
+		_printf(fmt, ap);
+		va_end(ap);
+		exit(1);
+  	}
+}
+
+void lprintf(short lvl, const char *fmt, ...){
+	tab_print(lvl);
+	va_list ap;
+	va_start(ap, fmt);
+	_printf(fmt, ap);
+	va_end(ap);
+}
+
+const char *print_mem(mem_layout mem) {
+  if (mem == ROW_MAJOR)
+    return "Row major";
+  else if (mem == COL_MAJOR)
+    return "Col major";
+  else
+    return "ERROR";
 }
 
 double dabs(double x){
@@ -150,62 +171,6 @@ short Dtest_equality(double* C_comp, double* C, long long size) {
   return (short) acc; 
 }
 
-template<typename VALUETYPE>
-void CoCoParallelVecInitHost(VALUETYPE *vec, long long length, int seed)
-{
-	srand(seed);
-	//#pragma omp parallel for
-	for (long long i = 0; i < length; i++) vec[i] = (VALUETYPE) Drandom();
-}
-
-template void CoCoParallelVecInitHost<double>(double *vec, long long length, int seed);
-template void CoCoParallelVecInitHost<float>(float *vec, long long length, int seed);
-
-void tab_print(int lvl){
-	for (int rep=0;rep<lvl;rep++) fprintf(stderr, "\t");
-}
-
-void _printf(const char *fmt, va_list ap)
-{
-    if (fmt) vfprintf(stderr, fmt, ap);
-    //putc('\n', stderr);
-}
-
-void warning(const char *fmt, ...) {
-	fprintf(stderr, "WARNING -> ");
-	va_list ap;
-	va_start(ap, fmt);
-	_printf(fmt, ap);
-	va_end(ap);
-}
-
-void error(const char *fmt, ...) {
-	fprintf(stderr, "ERROR ->");
-	va_list ap;
-	va_start(ap, fmt);
-	_printf(fmt, ap);
-	va_end(ap);
-	exit(1);
-}
-
-void massert(bool condi, const char *fmt, ...) {
-	if (!condi) {
-		va_list ap;
-		va_start(ap, fmt);
-		_printf(fmt, ap);
-		va_end(ap);
-		exit(1);
-  	}
-}
-
-void lprintf(short lvl, const char *fmt, ...){
-	tab_print(lvl);
-	va_list ap;
-	va_start(ap, fmt);
-	_printf(fmt, ap);
-	va_end(ap);
-}
-
 size_t count_lines(FILE* fp){
 	if (!fp) error("count_lines: fp = 0 ");
 	int ctr = 0; 
@@ -219,7 +184,6 @@ size_t count_lines(FILE* fp){
 	fseek(fp, 0, SEEK_SET);;
 	return ctr;
 }
-
 
 void check_benchmark(char *filename){
 	FILE* fp = fopen(filename,"r");
@@ -236,6 +200,42 @@ void check_benchmark(char *filename){
 	}
 	return;		  	
 }
+
+double Gval_per_s(long long value, double time){
+  return value / (time * 1e9);
+}
+
+long long dgemm_flops(size_t M, size_t N, size_t K){
+	return (long long) M * K * (2 * N + 1);
+}
+
+long long dgemm_memory(size_t M, size_t N, size_t K, size_t A_loc, size_t B_loc, size_t C_loc){
+	return (M * K * A_loc + K * N * B_loc + M * N * C_loc)*sizeof(double); 
+}
+
+long long daxpy_flops(size_t N){
+	return (long long) 2* N;
+}
+
+
+/*
+long long dgemv_flops(size_t M, size_t N){
+	return (long long) M * (2 * N + 1);
+}
+
+long long dgemv_bytes(size_t M, size_t N){
+	return (M * N + N + M * 2)*sizeof(double) ; 
+}
+
+
+long long dgemm_bytes(size_t M, size_t N, size_t K){
+	return (M * K + K * N + M * N * 2)*sizeof(double) ; 
+}
+
+long long sgemm_bytes(size_t M, size_t N, size_t K){
+	return (M * K + K * N + M * N * 2)*sizeof(float) ; 
+}
+*/
 
 
 
