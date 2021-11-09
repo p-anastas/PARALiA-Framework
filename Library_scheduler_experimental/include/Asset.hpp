@@ -68,12 +68,15 @@ class Asset2D
     	
 		// Constructor, sets dim1, dim2, ldim, adrs and derives loc from get_loc(adr)
         Asset2D<dtype>(void* adrr, int in_dim1, int in_dim2, int in_ldim);
-           
-        // Functions
+        
+        // General Functions
     	Datum2D<dtype> getTile(int iloc1, int iloc2);
     	int dtypesize() { return sizeof(dtype); }
     	int size() { return dtypesize()*dim1*dim2; }
     	void print() { std::cout << "Asset2D : " << name; }
+    	
+    	// Backend Functions
+    	void* prepareAsync(pthread_t* thread_id, pthread_attr_t attr);
 
 };
 

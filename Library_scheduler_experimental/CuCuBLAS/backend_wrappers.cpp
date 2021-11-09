@@ -6,7 +6,7 @@
 
 #include <cblas.h>
 
-#include "backend_wrappers.hpp"
+#include "backend_lib_wrappers.hpp"
 
 int CoCoPeLiaBackendGetDevID();
 void CoCoPeLiaBackendSetDevID(int devID);

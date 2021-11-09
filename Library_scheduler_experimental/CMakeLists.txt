@@ -44,6 +44,7 @@ ${LIBSC_DIR_SRC}/Asset.cpp
 ${LIBSC_DIR_SRC}/Operative.cpp
 ${LIBSC_DIR_SRC}/Missions/Dgemm.cpp
 ${BACKEND_LIBSC_DIR}/backend_wrappers.cpp
+${BACKEND_LIBSC_DIR}/Asset_backend.cpp
 )
 target_link_libraries(cocopelia ${INTERNAL_LINK_LIB} autotuning_runtime unihelpers )
 configure_file(${LIBSC_DIR_INC}/CoCoPeLia.hpp ${LIBSC_INSTALL_INC}/CoCoPeLia.hpp COPYONLY)

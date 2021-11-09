@@ -22,5 +22,6 @@ template<typename dtype> Asset2D<dtype>::Asset2D( void* in_adr, int in_dim1, int
     dim1 = in_dim1;
     dim2 = in_dim2;
     adrs = (dtype*) in_adr;
-    loc = CoCoPeLia_ptr_check_cuda_9_2(in_adr);
+    loc = CoCoGetPtrLoc(in_adr);
 }
+
