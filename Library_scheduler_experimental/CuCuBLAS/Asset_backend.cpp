@@ -18,15 +18,16 @@ typedef struct pthread_data_in{
 }* pthread_data_in_p;
 
 void* prepareAsync_backend(void* compressed_data){
+	short lvl = 2;
 	pthread_data_in_p prep_data = (pthread_data_in_p)compressed_data;
 	cudaPointerAttributes attributes;
-    short pin = 0; 
+    short pin = 0;
     // TODO: This is a cheat to understand if memory is pinned (to avoid trying to pin it if it already is)
-	if (cudaSuccess!=cudaPointerGetAttributes(&attributes, prep_data->adrs)) pin = 1; 
+	if (cudaSuccess!=cudaPointerGetAttributes(&attributes, prep_data->adrs)) pin = 1;
 	cudaGetLastError();
 	if(pin) cudaHostRegister(prep_data->adrs,prep_data->dim1*prep_data->ldim*prep_data->dsize,cudaHostRegisterPortable);
 #ifdef DEBUG
-	lprintf(lvl, "pin asset= %d", pin);
+	lprintf(lvl, "pin asset= %d\n", pin);
 #endif
 }
 
