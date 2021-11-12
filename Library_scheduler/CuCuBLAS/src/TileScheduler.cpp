@@ -1,7 +1,7 @@
 ///
 /// \author Anastasiadis Petros (panastas@cslab.ece.ntua.gr)
 ///
-/// \brief The CoCopeLia sub-kernel Tile scheduler functions. 
+/// \brief The CoCopeLia sub-kernel Tile scheduler functions.
 ///
 
 #include <cassert>
@@ -14,36 +14,69 @@
 CQueue_p h2d_queue[128] = {NULL}, d2h_queue[128] = {NULL}, exec_queue[128] = {NULL};
 cublasHandle_t handle[128] = {NULL};
 
+typedef struct pthread_data_in{
+	void* adrs;
+	size_t dim1, ldim;
+	short dsize, pin;
+}* pthread_data_in_p;
+
+void* prepareAsync_backend(void* compressed_data){
+	short lvl = 2;
+	pthread_data_in_p prep_data = (pthread_data_in_p)compressed_data;
+	if(prep_data->pin) cudaHostRegister(prep_data->adrs,prep_data->dim1*prep_data->ldim*prep_data->dsize,cudaHostRegisterPortable);
+#ifdef DEBUG
+	lprintf(lvl, "pin memory= %d\n", prep_data->pin);
+#endif
+}
+
+short CoCoPeLiaPrepareAsync(void* adrs, int dim1, int dim2, short dsize, pthread_t* thread_id, pthread_attr_t attr){
+	pthread_data_in_p prep_data = (pthread_data_in_p) malloc(sizeof(struct pthread_data_in));
+	prep_data-> adrs = adrs;
+	// FIXME: is dim1*dim2 correct in cases where only part of the Matrix is input initially?
+	prep_data->dim1 = dim1;
+	prep_data->ldim = dim2;
+	prep_data->dsize = dsize;
+
+  // TODO: This is a cheat to understand if memory is pinned (to avoid trying to pin it if it already is)
+  cudaPointerAttributes attributes;
+  if (cudaSuccess!=cudaPointerGetAttributes(&attributes, prep_data->adrs)) prep_data->pin = 1;
+  else prep_data->pin = 0;
+  cudaGetLastError();
+	int s = pthread_create(thread_id, &attr, &prepareAsync_backend, (void*) prep_data);
+	if (s != 0) error("CoCoPrepareAsync: pthread_create failed s=%d\n", s);
+  return prep_data->pin;
+}
+
 kernel3_p CoCopeLiaDgemmSubkernelInit(cublasOperation_t gpu_op_A, cublasOperation_t gpu_op_B, size_t Ms, size_t Ns, size_t Ks, double alpha, double* A, size_t ldA, double* B, size_t ldB, double beta, double* Cin, size_t ldCin, double* Cout, size_t ldCout, BLAS3GPUBufPtr GloBuf, short devId){
-  	
-  	
-	short lvl = 3; 
+
+
+	short lvl = 3;
 
 	kernel3_p kernel = (kernel3_p)malloc(sizeof(struct subkernel3_gen));
 
 	kernel->devId = devId;
 
 #ifdef DEBUG
-	lprintf(lvl-1, "|-----> CoCopeLiaDgemmSubkernelInit(%c,%c,%zu,%zu,%zu,%lf,A(%d),%zu,B(%d),%zu,%lf,Cin(%d),%zu,Cout(%d),%zu,Globuf(sz=%zuMB),%d)\n", 
+	lprintf(lvl-1, "|-----> CoCopeLiaDgemmSubkernelInit(%c,%c,%zu,%zu,%zu,%lf,A(%d),%zu,B(%d),%zu,%lf,Cin(%d),%zu,Cout(%d),%zu,Globuf(sz=%zuMB),%d)\n",
 		PrintCublasOp(gpu_op_A), PrintCublasOp(gpu_op_B), Ms, Ns, Ks, alpha, CoCoGetPtrLoc(A), ldA,
-		CoCoGetPtrLoc(B), ldB, beta, CoCoGetPtrLoc(Cin), ldCin, 
+		CoCoGetPtrLoc(B), ldB, beta, CoCoGetPtrLoc(Cin), ldCin,
 		CoCoGetPtrLoc(Cout), ldCout, NULL == GloBuf ? 0 : (size_t)GloBuf->gpu_mem_buf_sz/1024/1024, kernel->devId);
 #endif
 
 	kernel->gpu_op_A = gpu_op_A;
 	kernel->gpu_op_B = gpu_op_B;
 
-  	kernel->Ms = Ms;
-  	kernel->Ns = Ns;
-  	kernel->Ks = Ks;
+	kernel->Ms = Ms;
+	kernel->Ns = Ns;
+	kernel->Ks = Ks;
 
-	kernel->alpha = alpha; 
-	kernel->beta = beta; 
+	kernel->alpha = alpha;
+	kernel->beta = beta;
 
-	kernel->As = A; 
-	kernel->Bs = B; 
-	kernel->CsIn = Cin; 
-	kernel->CsOut = Cout; 
+	kernel->As = A;
+	kernel->Bs = B;
+	kernel->CsIn = Cin;
+	kernel->CsOut = Cout;
 	kernel->ldAs = ldA;
 	kernel->ldBs = ldB;
 	kernel->ldCsIn = ldCin;
@@ -55,12 +88,12 @@ kernel3_p CoCopeLiaDgemmSubkernelInit(cublasOperation_t gpu_op_A, cublasOperatio
 	kernel->CsOutloc = CoCoGetPtrLoc(Cout);
 
 	if(kernel->Asloc != kernel->devId && GloBuf) kernel->AdevBuf = (double*) (GloBuf->gpu_mem_buf + GloBuf->dgemm_A_offset);
-	else kernel->AdevBuf = NULL; 
+	else kernel->AdevBuf = NULL;
 	if(kernel->Bsloc != kernel->devId && GloBuf) kernel->BdevBuf = (double*) (GloBuf->gpu_mem_buf + GloBuf->dgemm_B_offset);
-	else kernel->BdevBuf = NULL; 
+	else kernel->BdevBuf = NULL;
 	//FIXME: why the || kernel->CsOutloc? Seems wrong
 	if((kernel->Csloc != kernel->devId || kernel->CsOutloc) && GloBuf) kernel->CdevBuf = (double*) (GloBuf->gpu_mem_buf + GloBuf->dgemm_C_offset);
-	else kernel->CdevBuf = NULL; 
+	else kernel->CdevBuf = NULL;
 
 	if (devId == kernel->Asloc){
 		kernel->Aker = kernel->As;
@@ -103,16 +136,16 @@ kernel3_p CoCopeLiaDgemmSubkernelInit(cublasOperation_t gpu_op_A, cublasOperatio
 	kernel->gemm_complete = new Event();
 
 #ifdef DEBUG
-	lprintf(lvl-1, "<-----|\n"); 
+	lprintf(lvl-1, "<-----|\n");
 #endif
 	return kernel;
 }
 
 kernel3_p* CoCopeLiaDgemmSubkernelCreateGrid(kernel3_p kernel, size_t MblockSz, size_t NblockSz, size_t KblockSz, size_t* kernelNum){
 
-	short lvl = 4; 
+	short lvl = 4;
 	/// Generalize for not exact tiles
-	size_t Mlast = kernel->Ms%MblockSz, Nlast = kernel->Ns%NblockSz, Klast= kernel->Ks%KblockSz; 
+	size_t Mlast = kernel->Ms%MblockSz, Nlast = kernel->Ns%NblockSz, Klast= kernel->Ks%KblockSz;
 	kernel->MblockSz = MblockSz;
 	kernel->NblockSz = NblockSz;
 	kernel->KblockSz = KblockSz;
@@ -135,21 +168,21 @@ kernel3_p* CoCopeLiaDgemmSubkernelCreateGrid(kernel3_p kernel, size_t MblockSz, 
 
 	*kernelNum = kernel->MgridSz*kernel->NgridSz*kernel->KgridSz;
 
-	kernel3_p* kernels = (kernel3_p*) malloc(*kernelNum*sizeof(kernel3_p)); 
+	kernel3_p* kernels = (kernel3_p*) malloc(*kernelNum*sizeof(kernel3_p));
 
 	size_t MtempSz = kernel->MblockSz, NtempSz = kernel->NblockSz, KtempSz = kernel->KblockSz;
 
 	for (int mi = 0; mi < kernel->MgridSz; mi++)
 	{
 		if ( mi == kernel->MgridSz - 1) MtempSz = Mlast;
-		else MtempSz = kernel->MblockSz; 
+		else MtempSz = kernel->MblockSz;
 		for (int ni = 0 ; ni < kernel->NgridSz; ni++){
 			if ( ni == kernel->NgridSz - 1) NtempSz = Nlast;
-			else NtempSz = kernel->NblockSz; 
+			else NtempSz = kernel->NblockSz;
 			for (int ki = 0; ki < kernel->KgridSz; ki++){
         			if ( ki == kernel->KgridSz - 1) KtempSz = Klast;
-				else KtempSz = kernel->KblockSz; 
-        			current_ctr = mi*kernel->NgridSz*kernel->KgridSz + ni*kernel->KgridSz + ki; 
+				else KtempSz = kernel->KblockSz;
+        			current_ctr = mi*kernel->NgridSz*kernel->KgridSz + ni*kernel->KgridSz + ki;
 				kernels[current_ctr] = CoCopeLiaDgemmSubkernelClone(kernel, mi, ni, ki, MtempSz, NtempSz, KtempSz);
 			}
 		}
@@ -157,13 +190,13 @@ kernel3_p* CoCopeLiaDgemmSubkernelCreateGrid(kernel3_p kernel, size_t MblockSz, 
 #ifdef DEBUG
 	lprintf(lvl-1, "<-----|\n");
 #endif
-	return kernels; 
+	return kernels;
 }
 
 kernel3_p CoCopeLiaDgemmSubkernelClone(const kernel3_p in_kernel, size_t MgridIdx, size_t NgridIdx, size_t KgridIdx, size_t Ms, size_t Ns, size_t Ks){
 	kernel3_p out_kernel = (kernel3_p)malloc(sizeof(struct subkernel3_gen));
 
-	short lvl = 5; 
+	short lvl = 5;
 
 #ifdef DEBUG
 	lprintf(lvl-1, "|-----> CoCopeLiaDgemmSubkernelClone(in_kernel, %zu,%zu,%zu,%zu,%zu,%zu)\n", MgridIdx, NgridIdx, KgridIdx, Ms, Ns, Ks);
@@ -251,14 +284,15 @@ kernel3_p CoCopeLiaDgemmSubkernelClone(const kernel3_p in_kernel, size_t MgridId
 
 void CoCopeLia_Dgemm_subkernel_async(kernel3_p kernel){
 
-	short lvl = 4; 
+	short lvl = 4;
 #ifdef DEBUG
 	lprintf(lvl-1, "|-----> CoCopeLia_Dgemm_subkernel_async(kernel)\n");
 	lprintf(lvl, "NgridIdx=%d, MgridIdx=%d, KgridIdx=%d, CsOutMaster=%d\n", kernel->NgridIdx, kernel->MgridIdx, kernel->KgridIdx, kernel->CsOutMaster);
 #endif
-	if (!kernel->NgridIdx && kernel->Asloc != kernel->devId && kernel->alpha){ 
-		if (kernel->gpu_op_A == CUBLAS_OP_N) CoCoMemcpy2DAsync(kernel->Aker, kernel->ldAker, kernel->As, kernel->ldAs, kernel->Ms, kernel->Ks, sizeof(double), kernel->devId, kernel->Asloc, h2d_queue[kernel->devId]);	
-		else CoCoMemcpy2DAsync(kernel->Aker, kernel->ldAker, kernel->As, kernel->ldAs, kernel->Ks, kernel->Ms, sizeof(double), kernel->devId, kernel->Asloc, h2d_queue[kernel->devId]);	
+	if (!kernel->NgridIdx && kernel->Asloc != kernel->devId && kernel->alpha){
+    //short Asloc_closest_cached = CoCoClosestMem();
+		if (kernel->gpu_op_A == CUBLAS_OP_N) CoCoMemcpy2DAsync(kernel->Aker, kernel->ldAker, kernel->As, kernel->ldAs, kernel->Ms, kernel->Ks, sizeof(double), kernel->devId, kernel->Asloc, h2d_queue[kernel->devId]);
+		else CoCoMemcpy2DAsync(kernel->Aker, kernel->ldAker, kernel->As, kernel->ldAs, kernel->Ks, kernel->Ms, sizeof(double), kernel->devId, kernel->Asloc, h2d_queue[kernel->devId]);
 	}
 	//CoCoSyncCheckErr();
 
@@ -273,14 +307,14 @@ void CoCopeLia_Dgemm_subkernel_async(kernel3_p kernel){
 	}
 	kernel->data_avail->record_to_queue(h2d_queue[kernel->devId]);
 	exec_queue[kernel->devId]->wait_for_event(kernel->data_avail);
-	
 
 	assert(CUBLAS_STATUS_SUCCESS == cublasDgemm(handle[kernel->devId], kernel->gpu_op_A, kernel->gpu_op_B, kernel->Ms, kernel->Ns, kernel->Ks, &kernel->alpha, kernel->Aker, kernel->ldAker, kernel->Bker, kernel->ldBker, &kernel->beta, kernel->Cker, kernel->ldCker));
-	kernel->gemm_complete->record_to_queue(exec_queue[kernel->devId]);
+  //if CoCoLog
+  kernel->gemm_complete->record_to_queue(exec_queue[kernel->devId]);
 	if (kernel->CsOutMaster && kernel->CsOutloc != kernel->devId) {
 		d2h_queue[kernel->devId]->wait_for_event(kernel->gemm_complete);
 		CoCoMemcpy2DAsync(kernel->CsOut, kernel->ldCsOut, kernel->Cker, kernel->ldCker, kernel->Ms, kernel->Ns, sizeof(double), kernel->CsOutloc, kernel->devId, d2h_queue[kernel->devId]);
-	
+
 	}
 	//CoCoSyncCheckErr();
 #ifdef DEBUG
@@ -295,5 +329,5 @@ void CoCopeLia_Dgemm_subkernel_destroy(kernel3_p kernel){
 	delete kernel->gemm_complete;
 
 	free(kernel);
-	
+
 }

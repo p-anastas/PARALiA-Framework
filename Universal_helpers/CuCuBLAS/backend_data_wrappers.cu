@@ -12,12 +12,12 @@
 #include "backend_wrappers.hpp"
 
 size_t CoCoGetMaxDimSqAsset2D(short Asset2DNum, short dsize, size_t step, short loc){
-	size_t free_cuda_mem, max_cuda_mem; 
-	int prev_loc; cudaGetDevice(&prev_loc);	
+	size_t free_cuda_mem, max_cuda_mem;
+	int prev_loc; cudaGetDevice(&prev_loc);
     /// TODO: Can this ever happen in a healthy scenario?
     //if (prev_loc != loc) warning("CoCoMalloc: Malloc'ed memory in other device (Previous device: %d, Malloc in: %d)\n", prev_loc, loc);
     cudaSetDevice(loc);
-	massert(cudaSuccess == cudaMemGetInfo(&free_cuda_mem, &max_cuda_mem), "backend_get_max_dim_sq_Asset2D: cudaMemGetInfo failed"); 
+	massert(cudaSuccess == cudaMemGetInfo(&free_cuda_mem, &max_cuda_mem), "backend_get_max_dim_sq_Asset2D: cudaMemGetInfo failed");
 
 	// Define the max size of a benchmark kernel to run on this machine.
 	size_t maxDim = (( (size_t) sqrt((free_cuda_mem*PROBLEM_GPU_PERCENTAGE/100.0)/(Asset2DNum*dsize))) / step) * step;
@@ -26,12 +26,12 @@ size_t CoCoGetMaxDimSqAsset2D(short Asset2DNum, short dsize, size_t step, short 
 }
 
 size_t CoCoGetMaxDimAsset1D(short Asset1DNum, short dsize, size_t step, short loc){
-	size_t free_cuda_mem, max_cuda_mem; 
-	int prev_loc; cudaGetDevice(&prev_loc);	
+	size_t free_cuda_mem, max_cuda_mem;
+	int prev_loc; cudaGetDevice(&prev_loc);
     /// TODO: Can this ever happen in a healthy scenario?
     //if (prev_loc != loc) warning("CoCoMalloc: Malloc'ed memory in other device (Previous device: %d, Malloc in: %d)\n", prev_loc, loc);
     cudaSetDevice(loc);
-	massert(cudaSuccess == cudaMemGetInfo(&free_cuda_mem, &max_cuda_mem), "backend_get_max_dim_Asset1D: cudaMemGetInfo failed"); 
+	massert(cudaSuccess == cudaMemGetInfo(&free_cuda_mem, &max_cuda_mem), "backend_get_max_dim_Asset1D: cudaMemGetInfo failed");
 
 	size_t maxDim = (( (size_t) (free_cuda_mem*PROBLEM_GPU_PERCENTAGE/100.0)/(Asset1DNum*dsize)) / step) * step;
 	cudaSetDevice(prev_loc);
@@ -44,23 +44,23 @@ short CoCoGetPtrLoc(const void * in_ptr)
 #error CUDA_VER Undefined!
 #elif (CUDA_VER == 920)
 	short loc = -2;
-	cudaPointerAttributes ptr_att; 
+	cudaPointerAttributes ptr_att;
 	if (cudaSuccess != cudaPointerGetAttributes(&ptr_att, in_ptr)) warning("CoCoBLAS_ptr_check_cuda_9_2: Pointer not visible to CUDA, host alloc or error");
-	if (ptr_att.memoryType == cudaMemoryTypeHost) loc = -1; 
+	if (ptr_att.memoryType == cudaMemoryTypeHost) loc = -1;
 	else if (ptr_att.memoryType == cudaMemoryTypeDevice) loc = ptr_att.device;
 	else if (ptr_att.isManaged) loc = ptr_att.device;
 	else error("CoCoBLAS_ptr_check_cuda_9_2: Invalid memory type");
-	return loc; 
+	return loc;
 #elif (CUDA_VER == 1100)
 	short loc = -2;
-	cudaPointerAttributes ptr_att; 
+	cudaPointerAttributes ptr_att;
 	if (cudaSuccess != cudaPointerGetAttributes(&ptr_att, in_ptr)) warning("CoCopeLia_ptr_check_cuda_11: Pointer not visible to CUDA, host alloc or error");
-	if (ptr_att.type == cudaMemoryTypeHost) loc = -1; 
+	if (ptr_att.type == cudaMemoryTypeHost) loc = -1;
 	else if (ptr_att.type == cudaMemoryTypeDevice) loc = ptr_att.device;
-	// TODO: Unified memory is considered available in the GPU as cuBLASXt ( not bad, not great) 
+	// TODO: Unified memory is considered available in the GPU as cuBLASXt ( not bad, not great)
 	else if (ptr_att.type == cudaMemoryTypeManaged) loc = ptr_att.device;
 	else error("CoCoBLAS_ptr_check_cuda_11: Invalid memory type");
-	return loc; 
+	return loc;
 #else
 #error Unknown CUDA_VER!
 #endif
@@ -83,7 +83,7 @@ void *pin_malloc(long long count) {
 void* CoCoMalloc(long long bytes, short loc){
   int count = 42;
   massert(CUBLAS_STATUS_SUCCESS == cudaGetDeviceCount(&count), "CoCoMalloc: cudaGetDeviceCount failed");
-  void *ptr = NULL; 
+  void *ptr = NULL;
 
   if (-2 == loc) {
     //fprintf(stderr, "Allocating %lld bytes to host...\n", bytes);
@@ -97,14 +97,14 @@ void* CoCoMalloc(long long bytes, short loc){
     error("CoCoMalloc: Invalid device id/location\n");
   else {
     //fprintf(stderr, "Allocating %lld bytes to device(%d)...\n", bytes, loc);
-    int prev_loc; cudaGetDevice(&prev_loc);	
+    int prev_loc; cudaGetDevice(&prev_loc);
     /// TODO: Can this ever happen in a healthy scenario?
     //if (prev_loc != loc) warning("CoCoMalloc: Malloc'ed memory in other device (Previous device: %d, Malloc in: %d)\n", prev_loc, loc);
     cudaSetDevice(loc);
     ptr = gpu_malloc(bytes);
-  
+
 	cudaCheckErrors();
-    	if (prev_loc != loc){ 
+    	if (prev_loc != loc){
 		//warning("CoCoMalloc: Reseting device to previous: %d\n", prev_loc);
 		cudaSetDevice(prev_loc);
 	}
@@ -131,12 +131,12 @@ void CoCoFree(void * ptr, short loc){
   else if (-1 == loc) pin_free(ptr);
   else if (loc >= count || loc < 0) error("CoCoFree: Invalid device id/location\n");
   else {
-	int prev_loc; cudaGetDevice(&prev_loc);	
+	int prev_loc; cudaGetDevice(&prev_loc);
 	//if (prev_loc != loc) warning("CoCoFree: Freed memory in other device (Previous device: %d, Free in: %d)\n", prev_loc, loc);
     	cudaSetDevice(loc);
 	gpu_free(ptr);
 	cudaCheckErrors();
-    	if (prev_loc != loc){ 
+    	if (prev_loc != loc){
 		//warning("CoCoFree: Reseting device to previous: %d\n", prev_loc);
 		cudaSetDevice(prev_loc);
 	}
@@ -150,7 +150,7 @@ void CoCoMemcpy(void* dest, void* src, long long bytes, short loc_dest, short lo
 	massert(CUBLAS_STATUS_SUCCESS == cudaGetDeviceCount(&count), "CoCoMemcpy: cudaGetDeviceCount failed");
 	massert(-3 < loc_dest && loc_dest < count, "CoCoMemcpy: Invalid destination device: %d/n", loc_dest);
 	massert(-3 < loc_src && loc_src < count, "CoCoMemcpy: Invalid source device: %d/n", loc_src);
-	
+
 	enum cudaMemcpyKind kind = cudaMemcpyHostToHost;
 	if (loc_src < 0 && loc_dest < 0) memcpy(dest, src, bytes);
 	else if (loc_dest < 0) kind = cudaMemcpyDeviceToHost;
@@ -168,7 +168,7 @@ void CoCoMemcpyAsync(void* dest, void* src, long long bytes, short loc_dest, sho
 	massert(CUBLAS_STATUS_SUCCESS == cudaGetDeviceCount(&count), "CoCoMemcpyAsync: cudaGetDeviceCount failed\n");
 	massert(-2 < loc_dest && loc_dest < count, "CoCoMemcpyAsync: Invalid destination device: %d\n", loc_dest);
 	massert(-2 < loc_src && loc_src < count, "CoCoMemcpyAsync: Invalid source device: %d\n", loc_src);
-	
+
 	enum cudaMemcpyKind kind;
 	if (loc_src < 0 && loc_dest < 0) kind = cudaMemcpyHostToHost;
 	else if (loc_dest < 0) kind = cudaMemcpyDeviceToHost;
@@ -224,7 +224,7 @@ void CoCoVecInit(VALUETYPE *vec, long long length, int seed, short loc)
   if (-2 == loc || -1 == loc) CoCoParallelVecInitHost(vec, length, seed);
   else if (loc >= count || loc < 0) error("CoCoVecInit: Invalid device id/location\n");
   else {
-	int prev_loc; cudaGetDevice(&prev_loc);	
+	int prev_loc; cudaGetDevice(&prev_loc);
 
 	//if (prev_loc != loc) warning("CoCoVecInit: Initialized vector in other device (Previous device: %d, init in: %d)\n", prev_loc, loc);
     	cudaSetDevice(loc);
@@ -235,14 +235,14 @@ void CoCoVecInit(VALUETYPE *vec, long long length, int seed, short loc)
 	/* Set seed */
 	massert(curandSetPseudoRandomGeneratorSeed(gen, seed) == cudaSuccess,
           cudaGetErrorString(cudaGetLastError()));
-	if (typeid(VALUETYPE) == typeid(float)) 
+	if (typeid(VALUETYPE) == typeid(float))
 	  massert(curandGenerateUniform(gen, (float*) vec, length) == cudaSuccess,
             cudaGetErrorString(cudaGetLastError()));
-	else if (typeid(VALUETYPE) == typeid(double)) 
+	else if (typeid(VALUETYPE) == typeid(double))
 	  massert(curandGenerateUniformDouble(gen, (double*) vec, length) == cudaSuccess,
             cudaGetErrorString(cudaGetLastError()));
 	cudaCheckErrors();
-    	if (prev_loc != loc){ 
+    	if (prev_loc != loc){
 		//warning("CoCoVecInit: Reseting device to previous: %d\n", prev_loc);
 		cudaSetDevice(prev_loc);
 	}
@@ -277,9 +277,9 @@ void backend_enableGPUPeer(short target_dev_i, short dev_ids[], short num_device
 	cudaSetDevice(dev_ids[target_dev_i]);
 	for(int j=0; j<num_devices;j++){
 		if (dev_ids[target_dev_i] == dev_ids[j]) continue;
-		int can_access_peer; 
+		int can_access_peer;
 		massert(cudaSuccess == cudaDeviceCanAccessPeer(&can_access_peer, dev_ids[target_dev_i], dev_ids[j]), "CoCopeLiaDgemm: cudaDeviceCanAccessPeer failed\n");
-		if(can_access_peer){ 
+		if(can_access_peer){
 			cudaError_t check_peer = cudaDeviceEnablePeerAccess(dev_ids[j], 0);
 			if(check_peer == cudaSuccess){ ;
 #ifdef DEBUG
@@ -296,18 +296,16 @@ void backend_enableGPUPeer(short target_dev_i, short dev_ids[], short num_device
 		}
 	}
 #ifdef TEST
-	cpu_timer = csecond() - cpu_timer; 
+	cpu_timer = csecond() - cpu_timer;
 	lprintf(lvl, "Utiilizing Peer access for dev %d -> t_enable =%lf ms\n", dev_ids[target_dev_i], 1000*cpu_timer);
 	cpu_timer = csecond();
-	lprintf(lvl-1, "<-----|\n"); 
+	lprintf(lvl-1, "<-----|\n");
 #endif
 #ifdef DEBUG
-	lprintf(lvl-1, "<-----|\n"); 
+	lprintf(lvl-1, "<-----|\n");
 #endif
 }
 
 void CoCoEnableLinks(short target_dev_i, short dev_ids[], short num_devices){
 	backend_enableGPUPeer(target_dev_i, dev_ids, num_devices);
 }
-
-

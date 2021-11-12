@@ -20,7 +20,7 @@ struct CoControl predef_vals;
 CoControl_p used_vals = NULL;
 
 void CoCopeLiaDgemm_flush_gpu_mem_buf(short dev_id){
-	short lvl = 3; 
+	short lvl = 3;
 #ifdef DEBUG
 	lprintf(lvl-1, "|-----> CoCopeLiaDgemm_flush_gpu_mem_buf(dev_id=%d)\n", dev_id);
 	lprintf(lvl, "Clearing (presumably) %zu MB\n\n", (size_t) GloBuf[dev_id]->gpu_mem_buf_sz/1024/1024);
@@ -33,35 +33,35 @@ void CoCopeLiaDgemm_flush_gpu_mem_buf(short dev_id){
 
 void CoCopelia_split_dims(size_t* M_memparts, size_t* N_memparts, size_t* K_memparts, size_t M, size_t N, size_t K, long long avail_bytes, short A_loc, short B_loc, short C_loc)
 {
-	short lvl = 3; 
+	short lvl = 3;
 #ifdef DEBUG
 	lprintf(lvl-1, "|-----> CoCopelia_split_dims(&M_memparts,&N_memparts,&K_memparts,%zu,%zu,%zu,%zu MB,%d,%d,%d)\n", M, N, K, avail_bytes/1024/1024, A_loc, B_loc, C_loc);
 #endif
 #ifdef TEST
 	lprintf(lvl-1, "|-----> CoCopelia_split_dims\n");
 #endif
-	if (!(A_loc || B_loc || C_loc)) return; 
-	size_t candM = M/ *M_memparts, candN = N/ *N_memparts, candK = K/ *K_memparts; 
+	if (!(A_loc || B_loc || C_loc)) return;
+	size_t candM = M/ *M_memparts, candN = N/ *N_memparts, candK = K/ *K_memparts;
 	while (avail_bytes < dgemm_memory(candM, candN, candK,A_loc,B_loc,C_loc)){
 		if(A_loc || C_loc) candM = M/ *M_memparts;
-		else candM = 0; 
+		else candM = 0;
 		if(B_loc || C_loc) candN = N/ *N_memparts;
-		else candN = 0; 
+		else candN = 0;
 		if(A_loc || B_loc) candK = K/ *K_memparts;
-		else candK = 0; 
+		else candK = 0;
 
 		if (candM >= (size_t) fmax(candN, candK)) *M_memparts+=1;
 		else if (candN >= (size_t) fmax(candM, candK)) *N_memparts+=1;
 		else if (candK >= (size_t) fmax(candM, candN)) *K_memparts+=1;
 	}
 #ifdef DEBUG
-	lprintf(lvl-1, "<-----|\n"); 
+	lprintf(lvl-1, "<-----|\n");
 #endif
 	return;
 }
 
 void CoCopeLiaDgemmTile(kernel3_p in_kernel, int T){
-	short lvl = 3; 
+	short lvl = 3;
 	int curId; cudaGetDevice(&curId);
 	massert(T > 0, "CoCopeLiaDgemmTile: invalid T=%d\n", T);
 #ifdef DEBUG
@@ -70,31 +70,31 @@ void CoCopeLiaDgemmTile(kernel3_p in_kernel, int T){
 #endif
 #ifdef TEST
 	lprintf(lvl-1, "|-----> CoCopeLiaDgemmTile\n");
-	double timer = csecond(); 
+	double timer = csecond();
 #endif
 	//cudaSetDevice(in_kernel->devId);
 
-	if (T > in_kernel->Ms || T > in_kernel->Ns || T > in_kernel->Ks) error("CoCopeLiaDgemmTile: T greater than dim"); 
+	if (T > in_kernel->Ms || T > in_kernel->Ns || T > in_kernel->Ks) error("CoCopeLiaDgemmTile: T greater than dim");
 
-	size_t kernel_num; 
+	size_t kernel_num;
 
 	kernel3_p* kernels = CoCopeLiaDgemmSubkernelCreateGrid(in_kernel, T, T, T, &kernel_num);
 	CoCoSyncCheckErr();
 #ifdef TEST
 	timer = csecond() - timer;
 	lprintf(lvl, "Subkernel Grid created: t_grid = %lf ms\n" , timer*1000);
-	timer = csecond(); 
+	timer = csecond();
 #endif
 #ifdef DEBUG
-	cudaEvent_t start_firing; 
+	cudaEvent_t start_firing;
 	cudaEventCreateWithFlags(&start_firing, cudaEventDefault);
 	cudaEventRecord(start_firing);
 #endif
 	size_t ker, Mp = in_kernel->MgridSz, Np = in_kernel->NgridSz, Kp = in_kernel->KgridSz;
 	for (int mi = 0; mi < Mp; mi++){
-		for (int ni = 0; ni< Np; ni++){ 
+		for (int ni = 0; ni< Np; ni++){
 			for (int ki = 0; ki < Kp; ki++){
-				ker = mi*Np*Kp + ni*Kp + ki;  
+				ker = mi*Np*Kp + ni*Kp + ki;
 				CoCopeLia_Dgemm_subkernel_async(kernels[ker]);
 			}
 		}
@@ -105,30 +105,30 @@ void CoCopeLiaDgemmTile(kernel3_p in_kernel, int T){
 	lprintf(lvl, "Subkernels complete: t_comp = %lf ms\n" , timer*1000);
 #endif
 #ifdef DEBUG //TEST
-	cudaEvent_t prev_data_sent = start_firing, prev_exec =  *(cudaEvent_t*) kernels[0]->data_avail->event_backend_ptr; 
+	cudaEvent_t prev_data_sent = start_firing, prev_exec =  *(cudaEvent_t*) kernels[0]->data_avail->event_backend_ptr;
 	for (int ker = 0; ker < kernel_num; ker++){
 		float t_send, t_exec, temp, t_gpu_idle = 0;
 		cudaEventElapsedTime(&t_send, prev_data_sent,  *(cudaEvent_t*) kernels[ker]->data_avail->event_backend_ptr);
 		cudaEventElapsedTime(&temp, prev_exec, *(cudaEvent_t*) kernels[ker]->gemm_complete->event_backend_ptr);
 		cudaEventElapsedTime(&t_exec, *(cudaEvent_t*) kernels[ker]->data_avail->event_backend_ptr, *(cudaEvent_t*) kernels[ker]->gemm_complete->event_backend_ptr);
-		if (!ker) t_gpu_idle = t_send; 
-		else if (t_exec <= temp) t_gpu_idle = fmax(0.0, temp - t_exec); 
-		t_exec = fmin(t_exec, temp); 
+		if (!ker) t_gpu_idle = t_send;
+		else if (t_exec <= temp) t_gpu_idle = fmax(0.0, temp - t_exec);
+		t_exec = fmin(t_exec, temp);
 		lprintf(lvl, "Subkernel(%d): t_h2d = %f ms, t_exec = %f ms, t_gpu_idle = %f ms\n" , ker, t_send, t_exec, t_gpu_idle);
 		//CoCoSyncCheckErr();
-		prev_data_sent = *(cudaEvent_t*) kernels[ker]->data_avail->event_backend_ptr; 
+		prev_data_sent = *(cudaEvent_t*) kernels[ker]->data_avail->event_backend_ptr;
 		prev_exec = *(cudaEvent_t*) kernels[ker]->gemm_complete->event_backend_ptr;
 	}
 #endif
 #ifdef TEST
-	timer = csecond(); 
+	timer = csecond();
 #endif
 	for (int ker = 0; ker < kernel_num; ker++)CoCopeLia_Dgemm_subkernel_destroy(kernels[ker]);
 	CoCoSyncCheckErr();
 #ifdef TEST
 	timer = csecond() - timer;
 	lprintf(lvl, "Subkernels destroyed: t_dest = %lf ms\n" , timer*1000);
-	lprintf(lvl-1, "<-----|\n"); 
+	lprintf(lvl-1, "<-----|\n");
 #endif
 #ifdef DEBUG
 	lprintf(lvl-1, "<-----|\n");
@@ -136,24 +136,24 @@ void CoCopeLiaDgemmTile(kernel3_p in_kernel, int T){
 	return;
 }
 
-void CoCopeLiaDgemmDevice(cublasOperation_t gpu_op_A,  cublasOperation_t gpu_op_B, size_t M, size_t N, size_t K, double alpha, double* A, size_t ldA, double* B, size_t ldB, double beta, double* C, size_t ldC, short dev_id){ 
+void CoCopeLiaDgemmDevice(cublasOperation_t gpu_op_A,  cublasOperation_t gpu_op_B, size_t M, size_t N, size_t K, double alpha, double* A, size_t ldA, double* B, size_t ldB, double beta, double* C, size_t ldC, short dev_id){
 
 	cudaSetDevice(dev_id);
-	short lvl = 2; 
+	short lvl = 2;
 
-	short A_loc, B_loc, C_loc; 
+	short A_loc, B_loc, C_loc;
 	A_loc = CoCoGetPtrLoc(A);
 	B_loc = CoCoGetPtrLoc(B);
-	C_loc = CoCoGetPtrLoc(C);	
+	C_loc = CoCoGetPtrLoc(C);
 	cudaGetLastError();
-	short A_remote_f = (A_loc == dev_id) ? 0 : 1, 
-		B_remote_f = (B_loc == dev_id) ? 0 : 1, 
-		C_remote_f = (C_loc == dev_id) ? 0 : 1, 
+	short A_remote_f = (A_loc == dev_id) ? 0 : 1,
+		B_remote_f = (B_loc == dev_id) ? 0 : 1,
+		C_remote_f = (C_loc == dev_id) ? 0 : 1,
 		Cout_remote_f = (C_loc == dev_id) ? 0 : 1;
 #ifdef DEBUG
-	lprintf(lvl-1, "|-----> CoCopeLiaDgemmDevice(%c,%c,%zu,%zu,%zu,%lf,A(%d),%zu,B(%d),%zu,%lf,C(%d),%zu,Globuf[%d]=%s,%d)\n", 
+	lprintf(lvl-1, "|-----> CoCopeLiaDgemmDevice(%c,%c,%zu,%zu,%zu,%lf,A(%d),%zu,B(%d),%zu,%lf,C(%d),%zu,Globuf[%d]=%s,%d)\n",
 		PrintCublasOp(gpu_op_A), PrintCublasOp(gpu_op_B), M, N, K, alpha, CoCoGetPtrLoc(A), ldA,
-		CoCoGetPtrLoc(B), ldB, beta, CoCoGetPtrLoc(C), ldC, 
+		CoCoGetPtrLoc(B), ldB, beta, CoCoGetPtrLoc(C), ldC,
 		dev_id, NULL == GloBuf[dev_id] ? "uninitialized" : "initialized", dev_id);
 #endif
 
@@ -163,7 +163,7 @@ void CoCopeLiaDgemmDevice(cublasOperation_t gpu_op_A,  cublasOperation_t gpu_op_
 #endif
 	if (NULL == GloBuf[dev_id]){
 		GloBuf[dev_id] = (BLAS3GPUBufPtr) malloc(sizeof(struct globuf));
-		GloBuf[dev_id]->gpu_mem_buf_sz = 0; 
+		GloBuf[dev_id]->gpu_mem_buf_sz = 0;
 	}
 
 	long long mem_foot = dgemm_memory(M,N,K,A_remote_f,B_remote_f,C_remote_f);
@@ -172,8 +172,8 @@ void CoCopeLiaDgemmDevice(cublasOperation_t gpu_op_A,  cublasOperation_t gpu_op_
 	lprintf(lvl, "GPU mem management:\n", (size_t) mem_foot/1024/1024);
 	lprintf(lvl, " -Mem required for matrices: %zu MB\n", (size_t) mem_foot/1024/1024);
 #endif
-	size_t free_cuda_mem, max_cuda_mem; 
-	massert(cudaSuccess == cudaMemGetInfo(&free_cuda_mem, &max_cuda_mem), "CoCopeLiaDgemm: cudaMemGetInfo failed"); 
+	size_t free_cuda_mem, max_cuda_mem;
+	massert(cudaSuccess == cudaMemGetInfo(&free_cuda_mem, &max_cuda_mem), "CoCopeLiaDgemm: cudaMemGetInfo failed");
 	size_t problem_avail_mem = free_cuda_mem + GloBuf[dev_id]->gpu_mem_buf_sz;
 	// Problem Fits-in-GPU case
 	if (mem_foot < problem_avail_mem){
@@ -187,41 +187,41 @@ void CoCopeLiaDgemmDevice(cublasOperation_t gpu_op_A,  cublasOperation_t gpu_op_
 		else if (GloBuf[dev_id]->gpu_mem_buf_sz > 0){
 			CoCoFree(GloBuf[dev_id]->gpu_mem_buf, dev_id);
 			GloBuf[dev_id]->gpu_mem_buf = CoCoMalloc(mem_foot, dev_id);
-			GloBuf[dev_id]->gpu_mem_buf_sz = mem_foot; 
+			GloBuf[dev_id]->gpu_mem_buf_sz = mem_foot;
 		}
 		else if (GloBuf[dev_id]->gpu_mem_buf_sz == 0){
 			GloBuf[dev_id]->gpu_mem_buf = CoCoMalloc(mem_foot, dev_id);
-			GloBuf[dev_id]->gpu_mem_buf_sz = mem_foot; 
+			GloBuf[dev_id]->gpu_mem_buf_sz = mem_foot;
 		}
 		else error("Unknown memory case");
 		if (A_remote_f) GloBuf[dev_id]->dgemm_A_offset = 0;
-		if (B_remote_f) GloBuf[dev_id]->dgemm_B_offset = (A_remote_f)*M*K*sizeof(double);  
-		if (C_remote_f) GloBuf[dev_id]->dgemm_C_offset = (A_remote_f)*M*K*sizeof(double)+ (B_remote_f)*N*K*sizeof(double); 
+		if (B_remote_f) GloBuf[dev_id]->dgemm_B_offset = (A_remote_f)*M*K*sizeof(double);
+		if (C_remote_f) GloBuf[dev_id]->dgemm_C_offset = (A_remote_f)*M*K*sizeof(double)+ (B_remote_f)*N*K*sizeof(double);
 		CoCoSyncCheckErr();
 #ifdef TEST
-		cpu_timer = csecond() - cpu_timer; 
+		cpu_timer = csecond() - cpu_timer;
 		lprintf(lvl, "Memory management: t_mem = %lf ms\n", dev_id, cpu_timer*1000);
-		cpu_timer = csecond(); 
+		cpu_timer = csecond();
 #endif
 
 		CoCoModel_p model = NULL;
 
 		size_t T = 0;
-		if(predef_vals.T <= 0){ 
+		if(predef_vals.T <= 0){
 			model = CoCoPeLiaModelInit(dev_id, "Dgemm", 'X', PrintCublasOp(gpu_op_A), PrintCublasOp(gpu_op_B), M, N, K, A_remote_f, B_remote_f, C_remote_f, A_remote_f, B_remote_f, C_remote_f, ldA, ldB, ldC);
 #ifdef TEST
-			cpu_timer = csecond() - cpu_timer; 
+			cpu_timer = csecond() - cpu_timer;
 			lprintf(lvl, "Model Initialization: t_mod_init = %lf ms\n", dev_id, cpu_timer*1000);
-			cpu_timer = csecond(); 
+			cpu_timer = csecond();
 #endif
 			tunableParams_p pred_p = CoCoPeLiaModelOptimizeTile(model, COCOPELIA_REUSE);
 			T = pred_p->T;
 
 #ifdef TEST
 
-			cpu_timer = csecond() - cpu_timer; 
+			cpu_timer = csecond() - cpu_timer;
 			lprintf(lvl, "Model Selected T=%zu with t_predicted = %lf ms : t_mod_opt = %lf ms\n", T, pred_p->pred_t*1000, cpu_timer*1000);
-			cpu_timer = csecond(); 
+			cpu_timer = csecond();
 #endif
 
 #ifdef DEBUG
@@ -232,10 +232,10 @@ void CoCopeLiaDgemmDevice(cublasOperation_t gpu_op_A,  cublasOperation_t gpu_op_
 			pred_p = CoCoPeLiaModelOptimizeTile(model, COCOPELIA_PIPELINE_EMULATE);
 			T = pred_p->T;
 #ifdef TEST
-			cpu_timer = csecond() - cpu_timer; 
+			cpu_timer = csecond() - cpu_timer;
 			lprintf(lvl, "Pipeline Sim. selected T=%zu : t_predicted = %lf ms\n", T, pred_p->pred_t*1000);
 			lprintf(lvl, "Pipeline Optimize: t_pipe_opt = %lf ms\n", dev_id, cpu_timer*1000);
-			cpu_timer = csecond(); 
+			cpu_timer = csecond();
 #endif
 #ifdef DEBUG
 			lprintf(lvl, "Pipeline Sim. selected T=%zu : t_predicted = %lf ms\n", T, pred_p->pred_t*1000);
@@ -244,7 +244,7 @@ void CoCopeLiaDgemmDevice(cublasOperation_t gpu_op_A,  cublasOperation_t gpu_op_
 */
 		}
 		else{
-			T = predef_vals.T; 
+			T = predef_vals.T;
 #ifdef DEBUG
 			lprintf(lvl, "====================================\n");
 			lprintf(lvl, "Using predefined T=%zu\n", T);
@@ -261,48 +261,48 @@ void CoCopeLiaDgemmDevice(cublasOperation_t gpu_op_A,  cublasOperation_t gpu_op_
 		kernel3_p kernel = CoCopeLiaDgemmSubkernelInit(gpu_op_A, gpu_op_B, M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC, C, ldC, GloBuf[dev_id], dev_id);
 		CoCoSyncCheckErr();
 #ifdef TEST
-		cpu_timer = csecond() - cpu_timer; 
+		cpu_timer = csecond() - cpu_timer;
 		lprintf(lvl, "Subkernel Initialization: t_subker_init = %lf ms\n", dev_id, cpu_timer*1000);
-		cpu_timer = csecond(); 
+		cpu_timer = csecond();
 #endif
 		CoCopeLiaDgemmTile(kernel, T);
 		CoCoSyncCheckErr();
 #ifdef TEST
-		cpu_timer = csecond() - cpu_timer; 
+		cpu_timer = csecond() - cpu_timer;
 		lprintf(lvl, "Subkernel offload: t_offload = %lf ms\n", dev_id, cpu_timer*1000);
 #endif
 	}
 	else{
-		size_t Mp, Np, Kp = Mp = Np = 1; 
+		size_t Mp, Np, Kp = Mp = Np = 1;
 		CoCopelia_split_dims(&Mp, &Np, &Kp, M, N, K, problem_avail_mem,A_remote_f,B_remote_f,C_remote_f);
 		long long adjusted_mem_foot = dgemm_memory(M/Mp + M%Mp,N/Np + N%Np,K/Kp + K%Kp,A_remote_f,B_remote_f,C_remote_f);
 #ifdef DEBUG
 		lprintf(lvl, " -Problem does not fit in GPU: %d MB required vs %d MB available\n", (size_t) mem_foot/1024/1024, (size_t) problem_avail_mem/1024/1024);
 		if (GloBuf[dev_id]->gpu_mem_buf_sz >= adjusted_mem_foot)lprintf(lvl, " -GPU buf available: %zu MB\n", (size_t) adjusted_mem_foot/1024/1024);
 		else if (GloBuf[dev_id]->gpu_mem_buf_sz == 0) lprintf(lvl, " -Initalizing partial buffer : %zu MB\n", (size_t) adjusted_mem_foot/1024/1024);
-		else if (GloBuf[dev_id]->gpu_mem_buf_sz > 0) lprintf(lvl, " -Smaller GPU buf available -> resizing : %zu -> %zu MB\n", 
+		else if (GloBuf[dev_id]->gpu_mem_buf_sz > 0) lprintf(lvl, " -Smaller GPU buf available -> resizing : %zu -> %zu MB\n",
 								(size_t) GloBuf[dev_id]->gpu_mem_buf_sz/1024/1024, (size_t) adjusted_mem_foot/1024/1024);
 #endif
 		if (GloBuf[dev_id]->gpu_mem_buf_sz >= adjusted_mem_foot);
-		else if (GloBuf[dev_id]->gpu_mem_buf_sz == 0){	 
+		else if (GloBuf[dev_id]->gpu_mem_buf_sz == 0){
 			GloBuf[dev_id]->gpu_mem_buf = CoCoMalloc(adjusted_mem_foot, dev_id);
-			GloBuf[dev_id]->gpu_mem_buf_sz = adjusted_mem_foot; 
+			GloBuf[dev_id]->gpu_mem_buf_sz = adjusted_mem_foot;
 		}
 		else if (GloBuf[dev_id]->gpu_mem_buf_sz > 0){
 			CoCoFree(GloBuf[dev_id]->gpu_mem_buf, dev_id);
 			GloBuf[dev_id]->gpu_mem_buf = CoCoMalloc(adjusted_mem_foot, dev_id);
-			GloBuf[dev_id]->gpu_mem_buf_sz = adjusted_mem_foot; 
+			GloBuf[dev_id]->gpu_mem_buf_sz = adjusted_mem_foot;
 		}
 		else error("Unknown memory case");
 		if (A_remote_f) GloBuf[dev_id]->dgemm_A_offset = 0;
-		if (B_remote_f) GloBuf[dev_id]->dgemm_B_offset = (A_remote_f)*(M/Mp + M%Mp)*(K/Kp + K%Kp)*sizeof(double);  
-		if (C_remote_f) GloBuf[dev_id]->dgemm_C_offset = (A_remote_f)*(M/Mp + M%Mp)*(K/Kp + K%Kp)*sizeof(double)+ (B_remote_f)*(N/Np + N%Np)*(K/Kp + K%Kp)*sizeof(double); 
+		if (B_remote_f) GloBuf[dev_id]->dgemm_B_offset = (A_remote_f)*(M/Mp + M%Mp)*(K/Kp + K%Kp)*sizeof(double);
+		if (C_remote_f) GloBuf[dev_id]->dgemm_C_offset = (A_remote_f)*(M/Mp + M%Mp)*(K/Kp + K%Kp)*sizeof(double)+ (B_remote_f)*(N/Np + N%Np)*(K/Kp + K%Kp)*sizeof(double);
 		CoCoSyncCheckErr();
 #ifdef TEST
 
-		cpu_timer = csecond() - cpu_timer; 
+		cpu_timer = csecond() - cpu_timer;
 		lprintf(lvl, "Memory management for dev_id = %d : t_mem = %lf ms\n", dev_id, cpu_timer*1000);
-		cpu_timer = csecond(); 
+		cpu_timer = csecond();
 #endif
 
 #ifdef DEBUG
@@ -311,7 +311,7 @@ void CoCopeLiaDgemmDevice(cublasOperation_t gpu_op_A,  cublasOperation_t gpu_op_
 
 		CoCoModel_p model = NULL;
 
-		long long A_ptr_offset, B_ptr_offset, C_ptr_offset; 	
+		long long A_ptr_offset, B_ptr_offset, C_ptr_offset;
 		long long prev_A_ptr_offset = -1 , prev_B_ptr_offset = -1, prev_C_ptr_offset = -1;
 		double t_pred_total_model = 0, t_pred_total_pipe = 0;
 		double t_total = csecond();
@@ -321,18 +321,18 @@ void CoCopeLiaDgemmDevice(cublasOperation_t gpu_op_A,  cublasOperation_t gpu_op_
 		if(predef_vals.T <= 0){
 			model = CoCoPeLiaModelInit(dev_id, "Dgemm", 'X', PrintCublasOp(gpu_op_A), PrintCublasOp(gpu_op_B), M/Mp, N/Np, K/Kp, A_remote_f, B_remote_f, C_remote_f, A_remote_f, B_remote_f, C_remote_f, ldA, ldB, ldC);
 #ifdef TEST
-			cpu_timer = csecond() - cpu_timer; 
+			cpu_timer = csecond() - cpu_timer;
 			lprintf(lvl, "Model Initialization: t_mod_init = %lf ms\n", dev_id, cpu_timer*1000);
-			cpu_timer = csecond(); 
+			cpu_timer = csecond();
 #endif
 			size_t T_model, T_pipeline;
 			tunableParams_p pred_p = CoCoPeLiaModelOptimizeTile(model, COCOPELIA_REUSE);
 			T_model = pred_p->T;
-			
+
 #ifdef TEST
-			cpu_timer = csecond() - cpu_timer; 
+			cpu_timer = csecond() - cpu_timer;
 			lprintf(lvl, "Model Selected T=%zu with t_predicted = %lf ms : t_mod_opt = %lf ms\n", T_model, pred_p->pred_t*1000, cpu_timer*1000);
-			cpu_timer = csecond(); 
+			cpu_timer = csecond();
 #endif
 #ifdef DEBUG
 			lprintf(lvl, "Model Selected T=%zu : t_predicted = %lf ms\n", T_model, pred_p->pred_t*1000);
@@ -340,10 +340,10 @@ void CoCopeLiaDgemmDevice(cublasOperation_t gpu_op_A,  cublasOperation_t gpu_op_
 #endif
 			t_pred_total_model = pred_p->pred_t*(Mp*Np*Kp);
 /* TODO: Pipeline emulation takes time currently, must optimize or stick to prediction model as initially (D) intended
-			pred_p = CoCoPeLiaModelOptimizeTile(model, COCOPELIA_REUSE);
+			pred_p = CoCoPeLiaModelOptimizeTile(model, COCOPELIA_PIPELINE_EMULATE);
 			T_pipeline = pred_p->T;
 #ifdef TEST
-			cpu_timer = csecond() - cpu_timer; 
+			cpu_timer = csecond() - cpu_timer;
 			lprintf(lvl, "Pipeline Sim. selected T=%zu : t_predicted = %lf ms\n", T_pipeline, pred_p->pred_t*1000);
 			lprintf(lvl, "Pipeline Optimize: t_pipe_opt = %lf ms\n", dev_id, cpu_timer*1000);
 #endif
@@ -351,12 +351,12 @@ void CoCopeLiaDgemmDevice(cublasOperation_t gpu_op_A,  cublasOperation_t gpu_op_
 			lprintf(lvl, "Pipeline Sim. selected T=%zu : t_predicted = %lf ms\n", T_pipeline, pred_p->pred_t*1000);
 #endif
 			t_pred_total_pipe= pred_p->pred_t*(Mp*Np*Kp);
-			T = T_pipeline; 
+			T = T_pipeline;
 */
 			T = T_model;
 		}
 		else{
-			T = predef_vals.T; 
+			T = predef_vals.T;
 #ifdef DEBUG
 			lprintf(lvl, "Using predefined T=%zu\n", T);
 #endif
@@ -369,73 +369,73 @@ void CoCopeLiaDgemmDevice(cublasOperation_t gpu_op_A,  cublasOperation_t gpu_op_
 		used_vals->T = T;
 
 		/// Flag which is used to ALWAYS include reuse
-		short reverseK = 0, reverseN = 0; 
+		short reverseK = 0, reverseN = 0;
 		for (int mi = 0; mi < Mp; mi++){
-		for (int ni_lie = 0; ni_lie < Np; ni_lie++){ 
-			int ni; 
-			if(reverseN) ni = Np-1 -ni_lie; 
+		for (int ni_lie = 0; ni_lie < Np; ni_lie++){
+			int ni;
+			if(reverseN) ni = Np-1 -ni_lie;
 			else ni = ni_lie;
 		for (int ki_lie = 0; ki_lie < Kp; ki_lie++){
-			int ki; 
-			if(reverseK) ki = Kp-1 -ki_lie; 
-			else ki = ki_lie; 
+			int ki;
+			if(reverseK) ki = Kp-1 -ki_lie;
+			else ki = ki_lie;
 #ifdef TEST
-			cpu_timer = csecond(); 
+			cpu_timer = csecond();
 #endif
-			size_t tempM = M/Mp, tempN = N/Np, tempK = K/Kp, tempLdA = ldA, tempLdB = ldB, tempLdC = ldC, tempOutLdC = ldC; 
+			size_t tempM = M/Mp, tempN = N/Np, tempK = K/Kp, tempLdA = ldA, tempLdB = ldB, tempLdC = ldC, tempOutLdC = ldC;
 
         		if (gpu_op_A == CUBLAS_OP_N) A_ptr_offset = mi*tempM + ki*tempK*ldA;
 			else A_ptr_offset = mi*tempM*ldA + ki*tempK;
-        		
+
 			if (gpu_op_B == CUBLAS_OP_N) B_ptr_offset = ni*tempN*ldB + tempK*ki;
 			else B_ptr_offset = ni*tempN + tempK*ki*ldB;
 
         		C_ptr_offset = ni*tempN*ldC + mi*tempM;
-	
-			double use_beta = beta, *A_in, *B_in, *C_in, *C_out; 
-			if (mi == Mp - 1) tempM = M/Mp+M%Mp; 
-			if (ni == Np - 1) tempN = N/Np+N%Np; 
+
+			double use_beta = beta, *A_in, *B_in, *C_in, *C_out;
+			if (mi == Mp - 1) tempM = M/Mp+M%Mp;
+			if (ni == Np - 1) tempN = N/Np+N%Np;
 			if (ki == Kp - 1) tempK = K/Kp+K%Kp;
 
 			if (A_remote_f && prev_A_ptr_offset == A_ptr_offset){
 				A_in = (double*) (GloBuf[dev_id]->gpu_mem_buf + GloBuf[dev_id]->dgemm_A_offset);
-				if (gpu_op_A == CUBLAS_OP_N) tempLdA = tempM; 
-				else tempLdA = tempK; 
+				if (gpu_op_A == CUBLAS_OP_N) tempLdA = tempM;
+				else tempLdA = tempK;
 			}
-			else A_in = A+A_ptr_offset; 
+			else A_in = A+A_ptr_offset;
 
 			if (B_remote_f && prev_B_ptr_offset == B_ptr_offset){
 				B_in = (double*) (GloBuf[dev_id]->gpu_mem_buf + GloBuf[dev_id]->dgemm_B_offset);
-				if (gpu_op_B == CUBLAS_OP_N) tempLdB = tempK; 
-				else tempLdB = tempN; 
+				if (gpu_op_B == CUBLAS_OP_N) tempLdB = tempK;
+				else tempLdB = tempN;
 			}
-			else B_in = B+B_ptr_offset; 
+			else B_in = B+B_ptr_offset;
 
 			if ( C_remote_f && prev_C_ptr_offset == C_ptr_offset){
 				C_in = (double*) (GloBuf[dev_id]->gpu_mem_buf + GloBuf[dev_id]->dgemm_C_offset);
-				tempLdC = tempM; 		
+				tempLdC = tempM;
 			}
-			else C_in = C+C_ptr_offset; 
+			else C_in = C+C_ptr_offset;
 
-			if (prev_C_ptr_offset == C_ptr_offset) use_beta = 1; 
-			if (ki_lie == Kp - 1 || !C_remote_f) C_out = C+C_ptr_offset; 
-			else{ 
+			if (prev_C_ptr_offset == C_ptr_offset) use_beta = 1;
+			if (ki_lie == Kp - 1 || !C_remote_f) C_out = C+C_ptr_offset;
+			else{
 				C_out = (double*) (GloBuf[dev_id]->gpu_mem_buf + GloBuf[dev_id]->dgemm_C_offset);
-				tempOutLdC = tempM; 
+				tempOutLdC = tempM;
 
 			}
 
 			kernel3_p kernel = CoCopeLiaDgemmSubkernelInit(gpu_op_A, gpu_op_B, tempM, tempN, tempK, alpha, A_in, tempLdA, B_in, tempLdB, use_beta, C_in, tempLdC, C_out, tempOutLdC, GloBuf[dev_id], dev_id);
 			CoCoSyncCheckErr();
 #ifdef TEST
-			cpu_timer = csecond() - cpu_timer; 
+			cpu_timer = csecond() - cpu_timer;
 			lprintf(lvl, "Subkernel Initialization: t_init = %lf ms\n", cpu_timer*1000);
-			cpu_timer = csecond(); 
+			cpu_timer = csecond();
 #endif
 			CoCopeLiaDgemmTile(kernel, T);
 			CoCoSyncCheckErr();
 #ifdef TEST
-			cpu_timer = csecond() - cpu_timer; 
+			cpu_timer = csecond() - cpu_timer;
 			lprintf(lvl, "Subkernel Offload: t_offload = %lf ms\n", cpu_timer*1000);
 #endif
 #ifdef DEBUG
@@ -445,17 +445,17 @@ void CoCopeLiaDgemmDevice(cublasOperation_t gpu_op_A,  cublasOperation_t gpu_op_
 			prev_B_ptr_offset = B_ptr_offset;
 			prev_C_ptr_offset = C_ptr_offset;
 		}
-		if(reverseK) reverseK = 0; 
-		else reverseK = 1; 
+		if(reverseK) reverseK = 0;
+		else reverseK = 1;
 		}
-		if(reverseN) reverseN = 0; 
-		else reverseN = 1; 
+		if(reverseN) reverseN = 0;
+		else reverseN = 1;
 		}
 
-		t_total = csecond() - t_total; 
+		t_total = csecond() - t_total;
 #ifdef TEST
-		lprintf(lvl, "Total time: t_total = %lf ms\n", t_total*1000); 
-#endif	
+		lprintf(lvl, "Total time: t_total = %lf ms\n", t_total*1000);
+#endif
 #ifdef DEBUG
 		lprintf(lvl, "====================================\n");
 		//if(!predef_vals.T) lprintf(lvl, "Model vs Pipeline: Error %lf vs %lf\n", (t_pred_total_model - t_total)/t_total, (t_pred_total_pipe - t_total)/t_total);
@@ -464,9 +464,9 @@ void CoCopeLiaDgemmDevice(cublasOperation_t gpu_op_A,  cublasOperation_t gpu_op_
 	}
 #ifdef DEBUG
 	lprintf(lvl-1, "<-----|\n");
-#endif 
+#endif
 #ifdef TEST
-	lprintf(lvl-1, "<-----|\n"); 
+	lprintf(lvl-1, "<-----|\n");
 #endif
 	return;
 }
@@ -480,16 +480,16 @@ typedef struct gemm_in{
 
 void* CoCopeLiaDgemmDeviceVoid(void* compressed_gemm_data){
 	pthread_gemm_data_p gemm_data = (pthread_gemm_data_p)compressed_gemm_data;
-	CoCopeLiaDgemmDevice(gemm_data->gpu_op_A,  gemm_data->gpu_op_B, gemm_data->M, gemm_data->N, gemm_data->K, gemm_data->alpha, gemm_data->A, gemm_data->ldA, 
+	CoCopeLiaDgemmDevice(gemm_data->gpu_op_A,  gemm_data->gpu_op_B, gemm_data->M, gemm_data->N, gemm_data->K, gemm_data->alpha, gemm_data->A, gemm_data->ldA,
 	gemm_data->B, gemm_data->ldB, gemm_data->beta, gemm_data->C, gemm_data->ldC, gemm_data->dev_id);
 }
 
 /// A dgemm wrapper including auto-tuning of T and cpu_ratio, as well as device management
 CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t K, double alpha, double* A, size_t ldA, double* B, size_t ldB, double beta, double* C, size_t ldC)
 {
-	short lvl = 1; 
+	short lvl = 1;
 #ifdef DEBUG
-	lprintf(lvl-1, "|-----> CoCopeLiaDgemm(%c,%c,%zu,%zu,%zu,%lf,A(%d),%zu,B(%d),%zu,%lf,C(%d),%zu)\n", 
+	lprintf(lvl-1, "|-----> CoCopeLiaDgemm(%c,%c,%zu,%zu,%zu,%lf,A(%d),%zu,B(%d),%zu,%lf,C(%d),%zu)\n",
 		TransA, TransB, M, N, K, alpha, CoCoGetPtrLoc(A), ldA,
 		CoCoGetPtrLoc(B), ldB, beta, CoCoGetPtrLoc(C), ldC);
 #endif
@@ -500,31 +500,29 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 #endif
 	CoControl_p used_params;
 
-	cudaPointerAttributes attributes;
-	short pinA, pinB, pinC = pinB = pinA = 0;
-	/// If CUDA does not recognise ptr, its not pinned (neither in GPU)
-	if (cudaSuccess!=cudaPointerGetAttributes(&attributes, A)) pinA = 1; 
-	if (cudaSuccess!=cudaPointerGetAttributes(&attributes, B)) pinB = 1;
-	if (cudaSuccess!=cudaPointerGetAttributes(&attributes, C)) pinC = 1;
-	cudaGetLastError();
+	pthread_attr_t attr;
+	int s = pthread_attr_init(&attr);
+	if (s != 0) error("CoCopeLiaDgemm: pthread_attr_init failed s=%d\n", s);
 
-	/// Pin any un-pinned host pointer
-        if(pinA) cudaHostRegister(A,sizeof(double)*M*K,cudaHostRegisterPortable);
-        if(pinB) cudaHostRegister(B,sizeof(double)*K*N,cudaHostRegisterPortable);
-        if(pinC) cudaHostRegister(C,sizeof(double)*M*N,cudaHostRegisterPortable);
+	pthread_t asset_thread_id[3];
+	short pinA =CoCoPeLiaPrepareAsync((void*) A, M, K, sizeof(double), &asset_thread_id[0], attr);
+	short pinB = CoCoPeLiaPrepareAsync((void*) B, K, N, sizeof(double), &asset_thread_id[1], attr);
+	short pinC = CoCoPeLiaPrepareAsync((void*) C, M, N, sizeof(double), &asset_thread_id[2], attr);
 
-#ifdef DEBUG
-	lprintf(lvl, "pinA=%d, pinB=%d, pinC=%d\n", pinA, pinB, pinC);
-#endif
+	void* res;
+	for(int i=0; i<3;i++){
+		s = pthread_join(asset_thread_id[i], &res);
+		if (s != 0) error("CoCopeLiaDgemm: pthread_join failed with exit value %d", s);
+	}
 
 #ifdef TEST
-	cpu_timer = csecond() - cpu_timer; 
+	cpu_timer = csecond() - cpu_timer;
 	lprintf(lvl, "Pinning host matrices -> t_pin = %lf ms\n", cpu_timer*1000);
 	cpu_timer = csecond();
 #endif
 
-	int prev_devID; 
-	cudaGetDevice(&prev_devID); 
+	int prev_devID;
+	cudaGetDevice(&prev_devID);
 	cublasOperation_t gpu_op_A  = OpCharToCublas(TransA),  gpu_op_B = OpCharToCublas(TransB);
 
 	short num_devices, *dev_id = NULL;
@@ -553,7 +551,7 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 	if(used_vals->dev_ids != NULL)  free(used_vals->dev_ids);
 	used_vals->dev_ids = (int*) malloc(num_devices*sizeof(int));
 	for (int d = 0; d< num_devices; d++) used_vals->dev_ids[d] = dev_id[d];
-	
+
 	pthread_t thread_id[num_devices];
 	pthread_gemm_data_p gemm_data_tmp[num_devices];
 
@@ -562,16 +560,18 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 	//t_pred[1] = 0.5;
 	//t_total = 1;
 
+	short A_loc, B_loc, C_loc;
+	A_loc = CoCoGetPtrLoc(A);
+	B_loc = CoCoGetPtrLoc(B);
+	C_loc = CoCoGetPtrLoc(C);
+	cudaGetLastError();
+
 	//. TODO: Naive split way which assumes cutting will not effect performance differently for devices. Naive but sufficient.
 	for(int i=0; i<num_devices;i++){
-		short A_loc, B_loc, C_loc; 
-		A_loc = CoCoGetPtrLoc(A);
-		B_loc = CoCoGetPtrLoc(B);
-		C_loc = CoCoGetPtrLoc(C);	
-		cudaGetLastError();
-	short A_remote_f = (A_loc == dev_id[i]) ? 0 : 1, 
-		B_remote_f = (B_loc == dev_id[i]) ? 0 : 1, 
-		C_remote_f = (C_loc == dev_id[i]) ? 0 : 1, 
+
+	short A_remote_f = (A_loc == dev_id[i]) ? 0 : 1,
+		B_remote_f = (B_loc == dev_id[i]) ? 0 : 1,
+		C_remote_f = (C_loc == dev_id[i]) ? 0 : 1,
 		Cout_remote_f = (C_loc == dev_id[i]) ? 0 : 1;
 		CoCoModel_p model = CoCoPeLiaModelInit(dev_id[i], "Dgemm", 'X', TransA, TransB, M, N, K, A_remote_f, B_remote_f, C_remote_f, A_remote_f, B_remote_f, C_remote_f, ldA, ldB, ldC);
 		tunableParams_p pred_p = CoCoPeLiaModelOptimizeTile(model, COCOPELIA_REUSE);
@@ -580,33 +580,24 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 		else t_total += t_pred[i] = pred_p->pred_t;
 	}
 
-    	// Initialize thread creation attributes.
-	pthread_attr_t attr;
-	int s = pthread_attr_init(&attr);
-	if (s != 0) error("CoCopeLiaDgemm: pthread_attr_init failed s=%d\n", s);
-	//if (stack_size > 0) { 
-	//s = pthread_attr_setstacksize(&attr, stack_size);
-        //       if (s != 0)handle_error_en(s, "pthread_attr_setstacksize");
-        //}
-
-	size_t temp_M = M, M_sum = 0, temp_N = N, N_sum = 0; 
+	size_t temp_M = M, M_sum = 0, temp_N = N, N_sum = 0;
 	long long A_ptr_offset_dev = 0, B_ptr_offset_dev = 0, C_ptr_offset_dev = 0;
 	for(int i=0; i<num_devices;i++){
 
 		// Check/Enable peer access between participating GPUs
-		CoCoEnableLinks(i, dev_id, num_devices); 
+		CoCoEnableLinks(i, dev_id, num_devices);
 
 		/// Split M dim.
-		temp_M = (size_t) M*t_pred[i]/t_total; 
-		if ( i == num_devices - 1) temp_M = M - M_sum; 
+		temp_M = (size_t) M*t_pred[i]/t_total;
+		if ( i == num_devices - 1) temp_M = M - M_sum;
         	if (gpu_op_A == CUBLAS_OP_N) A_ptr_offset_dev = M_sum;
 		else A_ptr_offset_dev = M_sum*ldA;
         	C_ptr_offset_dev = M_sum;
-		M_sum += temp_M;		
+		M_sum += temp_M;
 /*
 		/// Split N dim.
-		temp_N = (size_t) N*t_pred[i]/t_total; 
-		if ( i == num_devices - 1) temp_N = N - N_sum; 
+		temp_N = (size_t) N*t_pred[i]/t_total;
+		if ( i == num_devices - 1) temp_N = N - N_sum;
         	if (gpu_op_B == CUBLAS_OP_N) B_ptr_offset_dev = N_sum*ldB;
 		else B_ptr_offset_dev = N_sum;
 		C_ptr_offset_dev = N_sum*ldC;
@@ -628,11 +619,22 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 		gemm_data_tmp[i]->ldC = ldC;
 		gemm_data_tmp[i]->dev_id = dev_id[i];
 
+		/// FIXME: Forcing common T between devices to check tile caching
+		if (predef_vals.T <= 0 && i == 0){
+			short A_remote_f = (A_loc == dev_id[i]) ? 0 : 1,
+				B_remote_f = (B_loc == dev_id[i]) ? 0 : 1,
+				C_remote_f = (C_loc == dev_id[i]) ? 0 : 1,
+				Cout_remote_f = (C_loc == dev_id[i]) ? 0 : 1;
+			CoCoModel_p model = CoCoPeLiaModelInit(dev_id[i], "Dgemm", 'X', TransA, TransB, gemm_data_tmp[i]->M, gemm_data_tmp[i]->N, gemm_data_tmp[i]->K, A_remote_f, B_remote_f, C_remote_f, A_remote_f, B_remote_f, C_remote_f, ldA, ldB, ldC);
+			tunableParams_p pred_p = CoCoPeLiaModelOptimizeTile(model, COCOPELIA_REUSE);
+			predef_vals.T = pred_p->T;
+			printf("Forcing T = %d for all devices\n", predef_vals.T);
+		}
+
 		s = pthread_create(&thread_id[i], &attr,
                                   &CoCopeLiaDgemmDeviceVoid, gemm_data_tmp[i]);
-		
+
 	}
-	void* res;
 	for(int i=0; i<num_devices;i++){
 		s = pthread_join(thread_id[i], &res);
 		if (s != 0) error("CoCopeLiaDgemm: pthread_join failed with exit value %d", s);
@@ -648,15 +650,15 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
         if(pinB) cudaHostUnregister(B);
         if(pinC) cudaHostUnregister(C);
 #ifdef TEST
-	cpu_timer = csecond() - cpu_timer; 
+	cpu_timer = csecond() - cpu_timer;
 	lprintf(lvl, "Unregistering matrices -> t_unpin = %lf ms\n", cpu_timer*1000);
 #endif
 
 #ifdef DEBUG
-	lprintf(lvl-1, "<-----|\n"); 
+	lprintf(lvl-1, "<-----|\n");
 #endif
 #ifdef TEST
-	lprintf(lvl-1, "<-----|\n"); 
+	lprintf(lvl-1, "<-----|\n");
 #endif
 	return used_vals;
 }
@@ -664,10 +666,9 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 /// A modification of CoCopeLiaDgemm but with given parameters (mainly for performance/debug purposes)
 CoControl_p CoCopeLiaDgemmControled(char TransA,  char TransB, size_t M, size_t N, size_t K, double alpha, double* A, size_t ldA, double* B, size_t ldB, double beta, double* C, size_t ldC, CoControl_p predef_control_values){
 	if (predef_control_values == NULL) return CoCopeLiaDgemm(TransA, TransB,  M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC);
-	predef_vals.T = predef_control_values->T; 
-	predef_vals.dev_ids = predef_control_values->dev_ids; 
-	predef_vals.dev_num = predef_control_values->dev_num; 
-	predef_vals.cpu_ratio = predef_control_values->cpu_ratio; 
+	predef_vals.T = predef_control_values->T;
+	predef_vals.dev_ids = predef_control_values->dev_ids;
+	predef_vals.dev_num = predef_control_values->dev_num;
+	predef_vals.cpu_ratio = predef_control_values->cpu_ratio;
 	return CoCopeLiaDgemm(TransA, TransB,  M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC);
 }
-

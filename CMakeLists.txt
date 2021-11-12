@@ -26,11 +26,6 @@ set(NUM_DEVICES 2)
 message("CoCopeLia-Framework - NUM_DEVICES: " ${NUM_DEVICES})
 add_definitions(-DDEV_NUM=${NUM_DEVICES})
 
-## Define the number of silmuntaneous allowed CUDA streams for GPU execution.
-set(NUM_EXEC_STREAMS 4)
-message("CoCopeLia-Framework - NUM_EXEC_STREAMS: " ${NUM_EXEC_STREAMS})
-add_definitions(-DNUM_EXEC_STREAMS=${NUM_EXEC_STREAMS})
-
 ## Define the max GPU memory percentage (%) a problem can use ( not accounting for streams and other control structs; e.g. only the problem data ).
 set(PROBLEM_GPU_PERCENTAGE 90)
 message("CoCopeLia-Framework - PROBLEM_GPU_PERCENTAGE: " ${PROBLEM_GPU_PERCENTAGE})
@@ -38,12 +33,12 @@ add_definitions(-DPROBLEM_GPU_PERCENTAGE=${PROBLEM_GPU_PERCENTAGE})
 
 ###TODO:Define specific compiler, flags, includes, libs for the target system (IF needed).
 
-## 1) C++ 
+## 1) C++
 
 #	a) auto
 
 #	b) compile flags
-set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -fopenmp -lm -Wuninitialized") # -std=gnu89 TODO:needed? 
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -fopenmp -lm -Wuninitialized") # -std=gnu89 TODO:needed?
 message("CoCopeLia-Framework - CMAKE_CXX_FLAGS: " ${CMAKE_CXX_FLAGS})
 
 #	c) auto
@@ -75,7 +70,7 @@ message("CoCopeLia-Framework - OPENBLAS_INCLUDE_DIRS: " ${OPENBLAS_INCLUDE_DIRS}
 
 # 	d) Link Libraries
 set (CUDA_LD ${CUDA_PREFIX}/lib64) # or /lib depending on system
-set (CUDA_LINK "-L${CUDA_LD} -lcudart -lcublas -lcurand") #  
+set (CUDA_LINK "-L${CUDA_LD} -lcudart -lcublas -lcurand") #
 message("CoCopeLia-Framework - CUDA_LINK: " ${CUDA_LINK} )
 set (INTERNAL_LINK_LIB "${CUDA_LINK} -lrt -ldl")
 message("CoCopeLia-Framework - INTERNAL_LINK_LIB: " ${INTERNAL_LINK_LIB})
@@ -83,7 +78,7 @@ set (OPENBLAS_LD ${OPENBLAS_PREFIX}/lib)
 set (OPENBLAS_LINK  "-L${OPENBLAS_LD} -lopenblas" )
 message("CoCopeLia-Framework - OPENBLAS_LINK: " ${OPENBLAS_LINK} )
 
-if ("${CMAKE_INSTALL_PREFIX}" STREQUAL "/usr/local") 
+if ("${CMAKE_INSTALL_PREFIX}" STREQUAL "/usr/local")
 message("CoCopeLia-Framework - CMAKE_INSTALL_PREFIX not provided (with --install-prefix <directory>) - project will be installed at default build dir.")
  set (CMAKE_INSTALL_PREFIX ${CMAKE_CURRENT_BINARY_DIR}/${TESTBED_NAME}-install)
 endif()
@@ -105,11 +100,11 @@ add_definitions(-DDEPLOYDB="${DEPLOYMENT_DIR_DB}")
 
 ADD_SUBDIRECTORY (Autotuning_runtime)
 
-set(EXPERIMENTAL_VERSION 1) 
+set(EXPERIMENTAL_VERSION 1)
 if (${EXPERIMENTAL_VERSION} EQUAL 0)
 	ADD_SUBDIRECTORY (Library_scheduler)
 elseif(${EXPERIMENTAL_VERSION} EQUAL 1)
-    ADD_SUBDIRECTORY (Library_scheduler_experimental)
+  ADD_SUBDIRECTORY (Library_scheduler_experimental)
 else()
 endif()
 

@@ -14,26 +14,27 @@
 
 /* global variable declaration */
 typedef struct globuf{
-	short dev_id; 
+	short dev_id;
 	void * gpu_mem_buf = NULL;
-	long long gpu_mem_buf_sz = 0; 
+	long long gpu_mem_buf_sz = 0;
 	long long dgemm_A_offset = -1, dgemm_B_offset = -1, dgemm_C_offset = -1;
+	short* tilemap_A, *tilemap_B, *tilemap_C; 
 }* BLAS3GPUBufPtr;
 
 typedef struct subkernel3_gen {
-	cublasOperation_t gpu_op_A, gpu_op_B; 
+	cublasOperation_t gpu_op_A, gpu_op_B;
 	size_t Ms, Ns, Ks;
-	double alpha, beta; 
-	/// The initial (->start) Subkernel Matrices. 
+	double alpha, beta;
+	/// The initial (->start) Subkernel Matrices.
 	double* As, *Bs, *CsIn, *CsOut;
-	size_t ldAs, ldBs, ldCsIn, ldCsOut; 
+	size_t ldAs, ldBs, ldCsIn, ldCsOut;
 
-	/// The GPU buffers for each matrix, if required. 
+	/// The GPU buffers for each matrix, if required.
 	double * AdevBuf, * BdevBuf, *CdevBuf;
 
-	/// The GPU pointers used in the actual kernel calls (Xker infered from Xs, XdevBuf). 
+	/// The GPU pointers used in the actual kernel calls (Xker infered from Xs, XdevBuf).
 	double * Aker, * Bker, *Cker;
-	size_t ldAker, ldBker, ldCker; 
+	size_t ldAker, ldBker, ldCker;
 
 	short Asloc, Bsloc, Csloc, CsOutloc;
 
@@ -43,14 +44,16 @@ typedef struct subkernel3_gen {
 	short MgridIdx, NgridIdx, KgridIdx;
 	short AsMaster, BsMaster, CsMaster, CsOutMaster;
 
-	short devId; 
+	short devId;
 	Event_p data_avail, gemm_complete;
- 
-	
-	
+
+
+
 } * kernel3_p;
 
-void CoCopeLiaDgemmTile(kernel3_p in_kernel, int T); 
+short CoCoPeLiaPrepareAsync(void* adrs, int dim1, int dim2, short dsize, pthread_t* thread_id, pthread_attr_t attr);
+
+void CoCopeLiaDgemmTile(kernel3_p in_kernel, int T);
 
 kernel3_p CoCopeLiaDgemmSubkernelInit(cublasOperation_t gpu_op_A, cublasOperation_t gpu_op_B, size_t M, size_t N, size_t K, double alpha, double* A, size_t ldA, double* B, size_t ldB, double beta, double* Cin, size_t ldCin, double* Cout, size_t ldCout, BLAS3GPUBufPtr GloBuf, short dev_id);
 

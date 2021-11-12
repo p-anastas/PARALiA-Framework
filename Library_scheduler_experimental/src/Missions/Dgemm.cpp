@@ -14,6 +14,7 @@
 #include "CoCoPeLia.hpp"
 #include "unihelpers.hpp"
 #include "Asset.hpp"
+#include "Operative.hpp"
 
 /// TODO: Works for systems with up to 128 devices, not 'completely' future-proof
 BLAS3GPUBufPtr GloBuf[128];
@@ -133,7 +134,7 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 			/// 3) Interesting point for exploration (how to find datum, performance impact etc.)
 			/// 4)  Basically its the tile selection part of CoCoPeLia, but for multiple devices.
 			/// Use static tiles until implementation is complete.
-			size_t T = fmin(1024, fmin(M, fmin(N, K)));
+			T = fmin(1024, fmin(M, fmin(N, K)));
 		}
 		else{
 			T = predef_vals.T;
@@ -165,7 +166,8 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 	// Here would be the place for Agent distribution to devices.
 	// Working implementation similar to old : Each agent works on part of the problem, asigns to opperatives subproblems
 	// TODO: Idea 1 - Simulate the full execution step to step using thew expected times (instead of runtime scheduler), and asign operatives TO agents respectively to minimize communication.
-
+	int operative_num;
+	Operative* Operative_list = CoCoAsignTilesToOperativesGemm(A_asset, B_asset, C_asset, T, &operative_num);
 	double t_pred[num_devices], t_total = 0;
  	t_pred[0] = 0.5;
 	t_pred[1] = 0.5;
