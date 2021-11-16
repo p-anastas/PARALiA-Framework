@@ -505,7 +505,7 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 	if (s != 0) error("CoCopeLiaDgemm: pthread_attr_init failed s=%d\n", s);
 
 	pthread_t asset_thread_id[3];
-	short pinA =CoCoPeLiaPrepareAsync((void*) A, M, K, sizeof(double), &asset_thread_id[0], attr);
+	short pinA = CoCoPeLiaPrepareAsync((void*) A, M, K, sizeof(double), &asset_thread_id[0], attr);
 	short pinB = CoCoPeLiaPrepareAsync((void*) B, K, N, sizeof(double), &asset_thread_id[1], attr);
 	short pinC = CoCoPeLiaPrepareAsync((void*) C, M, N, sizeof(double), &asset_thread_id[2], attr);
 

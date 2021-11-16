@@ -33,6 +33,13 @@ enum state{
 	BUSY = 3  /// Tile is being modified (or transefered) by somebody in this location. Not sure this state is required.
 };
 
+enum DTYPE_SUP{
+	FLOAT = 0, /// The Tile is in its initial memory location and should NEVER be deleted internally in CoCoPeLia.
+	DOUBLE = 1, /// Tile does not exist in this location.
+	/*INT = 2, /// Tile exists in this location and is available for reading.
+	INT8 = 3  /// Tile is being modified (or transefered) by somebody in this location. Not sure this state is required.*/
+};
+
 template <typename dtype>
 class Tile2D
 {
@@ -61,12 +68,13 @@ class Asset2D
 {
 	// Variables
 	private:
-	int GridSz1, GridSz2;
 	public:
+	int GridSz1, GridSz2;
 	int loc;
 	dtype *adrs;
 	int ldim;
 	int dim1, dim2;
+	short pin_internally;
 	Tile2D<dtype> **Tile_map;
 	std::string name;
 
@@ -82,6 +90,7 @@ class Asset2D
 
 	// Backend Functions
 	void* prepareAsync(pthread_t* thread_id, pthread_attr_t attr);
+	void resetProperties();
 };
 
 #endif

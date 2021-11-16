@@ -7,8 +7,3 @@
 #include <cblas.h>
 
 #include "backend_lib_wrappers.hpp"
-
-int CoCoPeLiaBackendGetDevID();
-void CoCoPeLiaBackendSetDevID(int devID);
-void CoCoPeLiaBackendSync();
-

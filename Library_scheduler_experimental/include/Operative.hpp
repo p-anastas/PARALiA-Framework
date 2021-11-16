@@ -16,19 +16,25 @@ class Operative
 	private:
 	public:
 		std::string name;
-		Agent Manager;
-		int* Datum1D_iloc_list, Datum1D_iloc_list_len;
-		int* Datum2D_iloc_list[2], Datum2D_iloc_list_len;
-		Event Datum_requests_status, operation_status;
+		Agent* Manager;
+		short TileNum, *TileDimlist;
+		DTYPE_SUP *TileDtypeList;
+		void** TileList;
+		Event* data_available, *operation_complete;
 		void* operation_params;
 		void* operation;
+
+		/// Constructors
+		Operative(short TileNum);
+
+		/// Functions
 		void request_data();
 		void run_operation();
 		void print() { std::cout << "Operative : " << name; }
 
 };
 
-Operative* CoCoAsignTilesToOperativesGemm(Asset2D<double>* A_asset, Asset2D<double>* B_asset, Asset2D<double>* C_asset, int T, int* kernelNum);
+Operative** CoCoAsignTilesToOperativesGemm(Asset2D<double>* A_asset, Asset2D<double>* B_asset, Asset2D<double>* C_asset, int T, int* kernelNum);
 
 /*
 

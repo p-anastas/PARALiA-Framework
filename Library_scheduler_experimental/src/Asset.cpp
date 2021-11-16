@@ -28,7 +28,7 @@ template<typename dtype> void Asset2D<dtype>::InitTileMap(int T1, int T2){
   short lvl = 2;
 
   #ifdef DEBUG
-  	lprintf(lvl-1, "|-----> Asset2D<dtype>::InitTileMap(%zu,%zu)\n", T1, T2);
+  	lprintf(lvl-1, "|-----> Asset2D<dtype>::InitTileMap(%d,%d)\n", T1, T2);
   #endif
 
   GridSz1 = dim1/T1;

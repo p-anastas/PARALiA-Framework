@@ -290,7 +290,6 @@ void CoCopeLia_Dgemm_subkernel_async(kernel3_p kernel){
 	lprintf(lvl, "NgridIdx=%d, MgridIdx=%d, KgridIdx=%d, CsOutMaster=%d\n", kernel->NgridIdx, kernel->MgridIdx, kernel->KgridIdx, kernel->CsOutMaster);
 #endif
 	if (!kernel->NgridIdx && kernel->Asloc != kernel->devId && kernel->alpha){
-    //short Asloc_closest_cached = CoCoClosestMem();
 		if (kernel->gpu_op_A == CUBLAS_OP_N) CoCoMemcpy2DAsync(kernel->Aker, kernel->ldAker, kernel->As, kernel->ldAs, kernel->Ms, kernel->Ks, sizeof(double), kernel->devId, kernel->Asloc, h2d_queue[kernel->devId]);
 		else CoCoMemcpy2DAsync(kernel->Aker, kernel->ldAker, kernel->As, kernel->ldAs, kernel->Ks, kernel->Ms, sizeof(double), kernel->devId, kernel->Asloc, h2d_queue[kernel->devId]);
 	}
@@ -309,7 +308,6 @@ void CoCopeLia_Dgemm_subkernel_async(kernel3_p kernel){
 	exec_queue[kernel->devId]->wait_for_event(kernel->data_avail);
 
 	assert(CUBLAS_STATUS_SUCCESS == cublasDgemm(handle[kernel->devId], kernel->gpu_op_A, kernel->gpu_op_B, kernel->Ms, kernel->Ns, kernel->Ks, &kernel->alpha, kernel->Aker, kernel->ldAker, kernel->Bker, kernel->ldBker, &kernel->beta, kernel->Cker, kernel->ldCker));
-  //if CoCoLog
   kernel->gemm_complete->record_to_queue(exec_queue[kernel->devId]);
 	if (kernel->CsOutMaster && kernel->CsOutloc != kernel->devId) {
 		d2h_queue[kernel->devId]->wait_for_event(kernel->gemm_complete);
