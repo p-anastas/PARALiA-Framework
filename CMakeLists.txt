@@ -9,7 +9,7 @@ set(PROJECT_VERSION "0.21")
 message("CoCopeLia-Framework - PROJECT_VERSION: " ${PROJECT_VERSION})
 add_definitions(-DVERSION="${PROJECT_VERSION}")
 #Run in testing mode : details about models, decisions and time spend in operations.
-#add_definitions(-DTEST)
+add_definitions(-DTEST)
 #Run in debug mode, which includes detailed function calls and info for error-checking
 add_definitions(-DDEBUG)
 
@@ -22,7 +22,7 @@ message("CoCopeLia-Framework - TESTBED_NAME: " ${TESTBED_NAME})
 add_definitions(-DTESTBED="${TESTBED_NAME}")
 
 ## Define the (max) number of devices for utilization (0-num_devices)
-set(NUM_DEVICES 2)
+set(NUM_DEVICES 1)
 message("CoCopeLia-Framework - NUM_DEVICES: " ${NUM_DEVICES})
 add_definitions(-DDEV_NUM=${NUM_DEVICES})
 
@@ -92,6 +92,14 @@ configure_file(${PROJECT_BENCH_DIR}/Test_correctness.in ${CMAKE_INSTALL_PROJECT}
 configure_file(${PROJECT_BENCH_DIR}/Targeted_performance_evaluation.in ${CMAKE_INSTALL_PROJECT}/Targeted_performance_evaluation.sh @ONLY)
 configure_file(${PROJECT_BENCH_DIR}/Full_model_validation.in ${CMAKE_INSTALL_PROJECT}/Full_model_validation.sh @ONLY)
 configure_file(${PROJECT_BENCH_DIR}/Full_performance_evaluation.in ${CMAKE_INSTALL_PROJECT}/Full_performance_evaluation.sh @ONLY)
+
+set(VALUETYPEID 1)
+if (${VALUETYPEID} EQUAL 0)
+  add_definitions(-DVALUE_TYPE=float)
+elseif(${VALUETYPEID} EQUAL 1)
+  add_definitions(-DVALUE_TYPE=double)
+else()
+endif()
 
 ADD_SUBDIRECTORY (Universal_helpers)
 

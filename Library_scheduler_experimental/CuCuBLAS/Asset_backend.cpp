@@ -48,3 +48,5 @@ template void* Asset2D<double>::prepareAsync(pthread_t* thread_id, pthread_attr_
 template<typename dtype> void Asset2D<dtype>::resetProperties(){
 	if (pin_internally) cudaHostUnregister(adrs);
 }
+
+template void Asset2D<double>::resetProperties();

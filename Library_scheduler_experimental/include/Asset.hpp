@@ -33,13 +33,6 @@ enum state{
 	BUSY = 3  /// Tile is being modified (or transefered) by somebody in this location. Not sure this state is required.
 };
 
-enum DTYPE_SUP{
-	FLOAT = 0, /// The Tile is in its initial memory location and should NEVER be deleted internally in CoCoPeLia.
-	DOUBLE = 1, /// Tile does not exist in this location.
-	/*INT = 2, /// Tile exists in this location and is available for reading.
-	INT8 = 3  /// Tile is being modified (or transefered) by somebody in this location. Not sure this state is required.*/
-};
-
 template <typename dtype>
 class Tile2D
 {
@@ -48,7 +41,8 @@ class Tile2D
 	public:
 		std::string name;
 		int dim1, dim2;
-
+		short writeback;
+		
 		void *adrs[LOC_NUM];
 		int ldim[LOC_NUM];
 		state cachemap[LOC_NUM];

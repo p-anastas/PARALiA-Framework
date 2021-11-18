@@ -1,5 +1,5 @@
 cmake_minimum_required (VERSION 3.10)
-### Initialize the project 
+### Initialize the project
 project (CoCopeLia-Library VERSION ${PROJECT_VERSION} DESCRIPTION "Experiments for advancing Library wrappers & Tile scheduler for CoCoPeLia" LANGUAGES CXX CUDA)
 message( "------------------------------------------------------------------------------------------------")
 message( "Library Scheduler exp - PROJECT_SOURCE_DIR: " ${PROJECT_SOURCE_DIR} )
@@ -41,7 +41,7 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${LIBSC_INSTALL_LIB})
 add_library(cocopelia SHARED
 ${LIBSC_DIR_SRC}/Agent.cpp
 ${LIBSC_DIR_SRC}/Asset.cpp
-${LIBSC_DIR_SRC}/Operative.cpp
+${LIBSC_DIR_SRC}/Subkernel.cpp
 ${LIBSC_DIR_SRC}/Missions/Dgemm.cpp
 ${BACKEND_LIBSC_DIR}/backend_wrappers.cpp
 ${BACKEND_LIBSC_DIR}/Asset_backend.cpp
@@ -53,5 +53,3 @@ set (LIBSC_INSTALL_INC ${LIBSC_INSTALL_INC} PARENT_SCOPE)
 message( "->\nLibrary Scheduler exp - Shared Library: " ${CMAKE_LIBRARY_OUTPUT_DIRECTORY} )
 message( "Library Scheduler exp - Shared Library headers: " ${LIBSC_INSTALL_INC} )
 message( "------------------------------------------------------------------------------------------------")
-
-

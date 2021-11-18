@@ -10,15 +10,15 @@
 #include <cuda_runtime.h>
 #include <pthread.h>
 
-#define NUM_DEVICES 1
+//#define NUM_DEVICES 1
 
 /* global variable declaration */
 typedef struct globuf{
 	short dev_id;
 	void * gpu_mem_buf = NULL;
 	long long gpu_mem_buf_sz = 0;
-	long long dgemm_A_offset = -1, dgemm_B_offset = -1, dgemm_C_offset = -1;
-}* BLAS3GPUBufPtr;
+	long long gpu_mem_offset = 0;
+}* DevBufPtr;
 
 typedef struct gemm_backend_in{
 	char TransA,  TransB;
@@ -27,4 +27,9 @@ typedef struct gemm_backend_in{
 	short dev_id;
 }* gemm_backend_in_p;
 
+void CoCoPeLiaSelectDevice(short dev_id);
+void CoCoPeLiaDevGetMemInfo(long long* free_dev_mem, long long* max_dev_mem);
+DevBufPtr CoCoPeLiaBufferInit(short dev_id);
+void CoCoPeLiaRequestBuffer(short dev_id, long long size);
+void* CoCoPeLiaAsignBuffer(short dev_id, long long size);
 #endif

@@ -14,32 +14,17 @@
 #include "CoCoPeLia.hpp"
 #include "unihelpers.hpp"
 #include "Asset.hpp"
-#include "Operative.hpp"
+#include "Subkernel.hpp"
 
 gemm_backend_in_p initial_gemm = NULL;
-cublasHandle_t handle[128] = {NULL};
 
-/// TODO: Works for systems with up to 128 devices, not 'completely' future-proof
-BLAS3GPUBufPtr GloBuf[128];
 CoCoModel_p glob_model;
 struct CoControl predef_vals;
 CoControl_p used_vals = NULL;
 
-typedef struct gemm_pthread_wrap{
-	short devId;
-	Operative** OperativeListDev;
-	int operativeNumDev;
-}* gemm_pthread_wrap_p;
+Subkernel** CoCoAsignTilesToSubkernelsGemm(Asset2D<VALUE_TYPE>* A_asset, Asset2D<VALUE_TYPE>* B_asset, Asset2D<VALUE_TYPE>* C_asset, int T, int* kernelNum){
 
-void CoCopeLiaDgemm_flush_gpu_mem_buf(short dev_id)
-{}
-
-void* CoCopeLiaDgemmAgentVoid(void* gemm_pthread_wrapped){
-}
-
-Operative** CoCoAsignTilesToOperativesGemm(Asset2D<double>* A_asset, Asset2D<double>* B_asset, Asset2D<double>* C_asset, int T, int* kernelNum){
-
-	short lvl = 4;
+	short lvl = 2;
 	/// Check Assets satisfy GEMM dim criteria
 	massert(A_asset->GridSz1 == C_asset->GridSz1 &&
 					A_asset->Tile_map[0]->dim1 == C_asset->Tile_map[0]->dim1 &&
@@ -57,8 +42,9 @@ Operative** CoCoAsignTilesToOperativesGemm(Asset2D<double>* A_asset, Asset2D<dou
 					== B_asset->Tile_map[B_asset->GridSz1*B_asset->GridSz2-1]->dim1,
 					"K dim does not mach between assets for GEMM\n");
 	int MGridSz = A_asset->GridSz1, NGridSz = B_asset->GridSz2, KGridSz = A_asset->GridSz2;
+	*kernelNum = MGridSz*NGridSz*KGridSz;
 #ifdef DEBUG
-	lprintf(lvl-1, "|-----> CoCoAsignTilesToOperativesGemm(A_asset,B_asset,C_asset,%d,%d)\n", T, *kernelNum);
+	lprintf(lvl-1, "|-----> CoCoAsignTilesToSubkernelsGemm(A_asset,B_asset,C_asset,%d,%d)\n", T, *kernelNum);
 	lprintf(lvl,"MgridSz = %d, NgridSz = %d, KgridSz = %d\n", MGridSz, NGridSz, KGridSz);
 	lprintf(lvl,"Mlast = %d, Nlast = %d, Klast = %d\n",
 	A_asset->Tile_map[A_asset->GridSz1*A_asset->GridSz2-1]->dim1,
@@ -66,37 +52,37 @@ Operative** CoCoAsignTilesToOperativesGemm(Asset2D<double>* A_asset, Asset2D<dou
 	A_asset->Tile_map[A_asset->GridSz1*A_asset->GridSz2-1]->dim2);
 #endif
 
-*kernelNum = MGridSz*NGridSz*KGridSz;
-Operative** kernels = (Operative**) malloc(*kernelNum*sizeof(Operative*));
+Subkernel** kernels = (Subkernel**) malloc(*kernelNum*sizeof(Subkernel*));
 int current_ctr = 0;
 	for (int mi = 0; mi < MGridSz; mi++)
 		for (int ni = 0 ; ni < NGridSz; ni++)
 			for (int ki = 0; ki < KGridSz; ki++){
 	      current_ctr = mi*NGridSz*KGridSz + ni*KGridSz + ki;
-				kernels[current_ctr] = new Operative(3);
+				kernels[current_ctr] = new Subkernel(3);
 				kernels[current_ctr]->TileDimlist[0] = kernels[current_ctr]->TileDimlist[1]
 				= kernels[current_ctr]->TileDimlist[2] = 2;
-				kernels[current_ctr]->TileDtypeList[0] = kernels[current_ctr]->TileDtypeList[1]
-				= kernels[current_ctr]->TileDtypeList[2] = DOUBLE;
 				kernels[current_ctr]->TileList[0] = A_asset->getTile(mi,ki);
 				kernels[current_ctr]->TileList[1] = B_asset->getTile(ki,ni);
 				kernels[current_ctr]->TileList[2] = C_asset->getTile(mi,ni);
+				((Tile2D<VALUE_TYPE>*)kernels[current_ctr]->TileList[2])->writeback = 1;
 				kernels[current_ctr]->operation_params = (void*) malloc(sizeof(struct gemm_backend_in));
 				gemm_backend_in_p ptr_ker_translate = (gemm_backend_in_p) kernels[current_ctr]->operation_params;
 				ptr_ker_translate->TransA = initial_gemm->TransA;
 				ptr_ker_translate->TransB = initial_gemm->TransB;
-				ptr_ker_translate->M = ((Tile2D<double>*) kernels[current_ctr]->TileList[0])->dim1;
-				ptr_ker_translate->N = ((Tile2D<double>*) kernels[current_ctr]->TileList[1])->dim2;
-				ptr_ker_translate->K = ((Tile2D<double>*) kernels[current_ctr]->TileList[0])->dim2;
+				ptr_ker_translate->M = ((Tile2D<VALUE_TYPE>*) kernels[current_ctr]->TileList[0])->dim1;
+				ptr_ker_translate->N = ((Tile2D<VALUE_TYPE>*) kernels[current_ctr]->TileList[1])->dim2;
+				ptr_ker_translate->K = ((Tile2D<VALUE_TYPE>*) kernels[current_ctr]->TileList[0])->dim2;
 				ptr_ker_translate->A = NULL;
 				ptr_ker_translate->B = NULL;
 				ptr_ker_translate->C = NULL;
 				ptr_ker_translate->alpha = initial_gemm->alpha;
 				if (ki == 0) ptr_ker_translate->beta = initial_gemm->beta;
 				else ptr_ker_translate->beta = 1.0;
-				ptr_ker_translate->ldA = ((Tile2D<double>*) kernels[current_ctr]->TileList[0])->dim2;
-				ptr_ker_translate->ldB = ((Tile2D<double>*) kernels[current_ctr]->TileList[1])->dim2;
-				ptr_ker_translate->ldC = ((Tile2D<double>*) kernels[current_ctr]->TileList[2])->dim2;
+				if (ki == KGridSz - 1) kernels[current_ctr]->writeback_master = 1;
+				else kernels[current_ctr]->writeback_master = 0;
+				ptr_ker_translate->ldA = ((Tile2D<VALUE_TYPE>*) kernels[current_ctr]->TileList[0])->dim2;
+				ptr_ker_translate->ldB = ((Tile2D<VALUE_TYPE>*) kernels[current_ctr]->TileList[1])->dim2;
+				ptr_ker_translate->ldC = ((Tile2D<VALUE_TYPE>*) kernels[current_ctr]->TileList[2])->dim2;
 				ptr_ker_translate->dev_id = initial_gemm->dev_id;
 			}
 
@@ -106,8 +92,80 @@ int current_ctr = 0;
 	return kernels;
 }
 
+void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
+	short lvl = 2;
+
+	kernel_pthread_wrap_p gemm_subkernel_data = (kernel_pthread_wrap_p)kernel_pthread_wrapped;
+	short dev_id = gemm_subkernel_data->devId;
+#ifdef DEBUG
+	lprintf(lvl-1, "|-----> CoCopeLiaDgemmAgentVoid(gemm_subkernel_data: dev_id = %d, SubkernelNumDev = %d)\n",
+		dev_id, gemm_subkernel_data->SubkernelNumDev);
+#endif
+#ifdef TEST
+		double cpu_timer = csecond();
+#endif
+
+	CoCoPeLiaSelectDevice(dev_id);
+	long long buff_req_sz = CoCoPeLiaDevBuffSz(gemm_subkernel_data);
+#ifdef DEBUG
+	lprintf(lvl, "====================================\n");
+	lprintf(lvl, "GPU mem management:\n");
+	lprintf(lvl, " -Mem required for matrices: %zu MB\n", (size_t) buff_req_sz/1024/1024);
+#endif
+  CoCoPeLiaRequestBuffer(dev_id, buff_req_sz);
+	CoCoPeLiaInitStreams(dev_id);
+#ifdef TEST
+	cpu_timer = csecond() - cpu_timer;
+	lprintf(lvl, "Memory management(%d): t_mem = %lf ms\n", dev_id, cpu_timer*1000);
+	cpu_timer = csecond();
+#endif
+#ifdef DEBUG
+	cudaEvent_t start_firing;
+	cudaEventCreateWithFlags(&start_firing, cudaEventDefault);
+	cudaEventRecord(start_firing);
+#endif
+
+	for (int keri = 0; keri < gemm_subkernel_data->SubkernelNumDev; keri++){
+		gemm_subkernel_data->SubkernelListDev[keri]->run_dev_id = dev_id;
+		//CoCoPeLiaSubkernelFireAsync(gemm_subkernel_data->SubkernelListDev[keri]);
+		gemm_subkernel_data->SubkernelListDev[keri]->request_data();
+		gemm_backend_in_p ptr_ker_translate = (gemm_backend_in_p) gemm_subkernel_data->SubkernelListDev[keri]->operation_params;
+		ptr_ker_translate->A = (VALUE_TYPE*) ((Tile2D<VALUE_TYPE>*) gemm_subkernel_data->SubkernelListDev[keri]->TileList[0])->adrs[dev_id];
+		ptr_ker_translate->B = (VALUE_TYPE*) ((Tile2D<VALUE_TYPE>*) gemm_subkernel_data->SubkernelListDev[keri]->TileList[1])->adrs[dev_id];
+		ptr_ker_translate->C = (VALUE_TYPE*) ((Tile2D<VALUE_TYPE>*) gemm_subkernel_data->SubkernelListDev[keri]->TileList[2])->adrs[dev_id];
+		gemm_subkernel_data->SubkernelListDev[keri]->run_operation();
+		if (gemm_subkernel_data->SubkernelListDev[keri]->writeback_master) gemm_subkernel_data->SubkernelListDev[keri]->writeback_data();
+	}
+	CoCoSyncCheckErr();
+#ifdef TEST
+	cpu_timer = csecond() - cpu_timer;
+	lprintf(lvl, "Subkernels complete: t_comp = %lf ms\n" , cpu_timer*1000);
+#endif
+#ifdef DEBUG //TEST
+	cudaEvent_t prev_data_sent = start_firing, prev_exec =  *(cudaEvent_t*) gemm_subkernel_data->SubkernelListDev[0]->data_available->event_backend_ptr;
+	for (int keri = 0; keri < gemm_subkernel_data->SubkernelNumDev; keri++){
+		float t_send, t_exec, temp, t_gpu_idle = 0;
+		cudaEventElapsedTime(&t_send, prev_data_sent,  *(cudaEvent_t*) gemm_subkernel_data->SubkernelListDev[keri]->data_available->event_backend_ptr);
+		cudaEventElapsedTime(&temp, prev_exec, *(cudaEvent_t*) gemm_subkernel_data->SubkernelListDev[keri]->operation_complete->event_backend_ptr);
+		cudaEventElapsedTime(&t_exec, *(cudaEvent_t*) gemm_subkernel_data->SubkernelListDev[keri]->data_available->event_backend_ptr, *(cudaEvent_t*) gemm_subkernel_data->SubkernelListDev[keri]->operation_complete->event_backend_ptr);
+		if (!keri) t_gpu_idle = t_send;
+		else if (t_exec <= temp) t_gpu_idle = fmax(0.0, temp - t_exec);
+		t_exec = fmin(t_exec, temp);
+		lprintf(lvl, "Subkernel(%d): t_h2d = %f ms, t_exec = %f ms, t_gpu_idle = %f ms\n" , keri, t_send, t_exec, t_gpu_idle);
+		//CoCoSyncCheckErr();
+		prev_data_sent = *(cudaEvent_t*) gemm_subkernel_data->SubkernelListDev[keri]->data_available->event_backend_ptr;
+		prev_exec = *(cudaEvent_t*) gemm_subkernel_data->SubkernelListDev[keri]->operation_complete->event_backend_ptr;
+	}
+#endif
+
+#ifdef DEBUG
+	lprintf(lvl-1, "<-----|\n");
+#endif
+	return NULL;
+}
+
 /// A dgemm wrapper including auto-tuning of T and cpu_ratio, as well as device management
-CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t K, double alpha, double* A, size_t ldA, double* B, size_t ldB, double beta, double* C, size_t ldC)
+CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t K, VALUE_TYPE alpha, VALUE_TYPE* A, size_t ldA, VALUE_TYPE* B, size_t ldB, VALUE_TYPE beta, VALUE_TYPE* C, size_t ldC)
 {
 	short lvl = 1;
 #ifdef DEBUG
@@ -140,14 +198,14 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 	initial_gemm->ldC = ldC;
 	initial_gemm->dev_id = -1;
 
-	Asset2D<double>* A_asset, *B_asset, *C_asset;
+	Asset2D<VALUE_TYPE>* A_asset, *B_asset, *C_asset;
 	/// Prepare Assets in parallel( e.g. initialize asset classes, pin memory with pthreads)
 	/// return: A_asset, B_asset, C_asset initialized and pinned
 	/// FIXME: high probability the M, N etc dims are reverse (cause of column major stuff)
 	{
-		A_asset = new Asset2D<double>( A, M, K, ldA);
-		B_asset = new Asset2D<double>( B, K, N, ldB);
-		C_asset = new Asset2D<double>( B, M, N, ldC);
+		A_asset = new Asset2D<VALUE_TYPE>( A, M, K, ldA);
+		B_asset = new Asset2D<VALUE_TYPE>( B, K, N, ldB);
+		C_asset = new Asset2D<VALUE_TYPE>( B, M, N, ldC);
 
 		pthread_attr_t attr;
 		int s = pthread_attr_init(&attr);
@@ -174,7 +232,7 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 
 	/// Read predefined values for device selection or use default.
 	/// return: num_devices, dev_id initialized, update used_vals
-	short num_devices, *dev_id = NULL;
+	short num_devices = 0, *dev_id = NULL;
 	{
 		if (predef_vals.dev_num > 0){
 			num_devices = predef_vals.dev_num;
@@ -190,7 +248,7 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 		else{
 			num_devices = DEV_NUM;
 			dev_id = (short*) malloc (num_devices*sizeof(short));
-			for (int i =0; i < num_devices; i++) dev_id[i] = i;
+			for (int i =0; i < num_devices; i++) dev_id[i] = (short) i;
 		}
 
 		if(used_vals == NULL) {
@@ -237,33 +295,33 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 	C_asset->InitTileMap(T, T);
 
 	// Here would be the place for Agent distribution to devices.
-	// Working implementation similar to old : Each agent works on part of the problem, asigns to operatives subproblems
-	// TODO: Idea 1 - Simulate the full execution step to step using thew expected times (instead of runtime scheduler), and asign operatives TO agents respectively to minimize communication.
-	int operative_num;
-	Operative** Operative_list = CoCoAsignTilesToOperativesGemm(A_asset, B_asset, C_asset, T, &operative_num);
+	// Working implementation similar to old : Each agent works on part of the problem, asigns to Subkernels subproblems
+	// TODO: Idea 1 - Simulate the full execution step to step using thew expected times (instead of runtime scheduler), and asign Subkernels TO agents respectively to minimize communication.
+	int Subkernel_num;
+	Subkernel** Subkernel_list = CoCoAsignTilesToSubkernelsGemm(A_asset, B_asset, C_asset, T, &Subkernel_num);
 
-	/// TODO: Split operatives equally on devices. Naive, questinable and kinda pointless, for test purposes only.
-	int operatives_per_dev = operative_num/num_devices;
-
+	/// TODO: Split Subkernels equally on devices. Naive, questionable and kinda pointless, for test purposes only.
+	int Subkernels_per_dev = Subkernel_num/num_devices;
+	#ifdef DEBUG
+			lprintf(lvl, "Subkernel_num = %d, num_devices = %d\n\n", Subkernel_num, num_devices);
+	#endif
 	pthread_attr_t attr;
 	int s = pthread_attr_init(&attr);
 	if (s != 0) error("CoCopeLiaDgemm: pthread_attr_init failed s=%d\n", s);
 	void* res;
-
 	pthread_t thread_id[num_devices];
-	gemm_pthread_wrap_p thread_dev_data[num_devices];
-	Operative** Operative_list_dev[num_devices];
+	kernel_pthread_wrap_p thread_dev_data[num_devices];
 
 	for(int i=0; i<num_devices;i++){
 
 		// Check/Enable peer access between participating GPUs
 		CoCoEnableLinks(i, dev_id, num_devices);
 
-		thread_dev_data[i] = (gemm_pthread_wrap_p) malloc(sizeof(gemm_pthread_wrap_p*));
+		thread_dev_data[i] = (kernel_pthread_wrap_p) malloc(sizeof(struct kernel_pthread_wrap));
 		thread_dev_data[i]->devId = dev_id[i];
-		thread_dev_data[i]->OperativeListDev = &(Operative_list[i*operatives_per_dev]);
-		thread_dev_data[i]->operativeNumDev = operatives_per_dev;
-		if (i = num_devices - 1) thread_dev_data[i]->operativeNumDev+= operative_num%num_devices;
+		thread_dev_data[i]->SubkernelListDev = &(Subkernel_list[i*Subkernels_per_dev]);
+		thread_dev_data[i]->SubkernelNumDev = Subkernels_per_dev;
+		if (i == (num_devices - 1)) thread_dev_data[i]->SubkernelNumDev+= Subkernel_num%num_devices;
 
 		s = pthread_create(&thread_id[i], &attr,
                                   &CoCopeLiaDgemmAgentVoid, thread_dev_data[i]);
@@ -274,7 +332,6 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 		if (s != 0) error("CoCopeLiaDgemm: pthread_join failed with exit value %d", s);
 		free(res);      /* Free memory allocated by thread */
 	}
-	exit(0);
 
 	cudaSetDevice(prev_devID);
 #ifdef TEST
@@ -298,7 +355,7 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 }
 
 /// A modification of CoCopeLiaDgemm but with given parameters (mainly for performance/debug purposes)
-CoControl_p CoCopeLiaDgemmControled(char TransA,  char TransB, size_t M, size_t N, size_t K, double alpha, double* A, size_t ldA, double* B, size_t ldB, double beta, double* C, size_t ldC, CoControl_p predef_control_values){
+CoControl_p CoCopeLiaDgemmControled(char TransA,  char TransB, size_t M, size_t N, size_t K, VALUE_TYPE alpha, VALUE_TYPE* A, size_t ldA, VALUE_TYPE* B, size_t ldB, VALUE_TYPE beta, VALUE_TYPE* C, size_t ldC, CoControl_p predef_control_values){
 	if (predef_control_values == NULL) return CoCopeLiaDgemm(TransA, TransB,  M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC);
 	predef_vals.T = predef_control_values->T;
 	predef_vals.dev_ids = predef_control_values->dev_ids;

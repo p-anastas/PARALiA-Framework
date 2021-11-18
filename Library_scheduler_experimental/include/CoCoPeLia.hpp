@@ -11,7 +11,7 @@ typedef struct CoControl{
 	int* dev_ids = NULL;
 	int dev_num = -1;
 	float cpu_ratio = 0.0;
-}* CoControl_p; 
+}* CoControl_p;
 
 char* CoControlPrint(CoControl_p input);
 /// The CoCopeLia Dgemm implementation. A prediction model is used to select a tile from the micro-benchmarked tile candidates with CoCopeLia_optimize3.

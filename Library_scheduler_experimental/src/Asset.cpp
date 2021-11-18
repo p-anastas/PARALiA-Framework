@@ -74,7 +74,7 @@ template<typename dtype>  Tile2D<dtype>::Tile2D(void * in_addr, int in_dim1, int
   short init_loc = CoCoGetPtrLoc(in_addr);
   if (init_loc < 0) init_loc = LOC_NUM -1;
   for (int iloc = 0; iloc < LOC_NUM; iloc++){
-    if (iloc = init_loc){
+    if (iloc == init_loc){
        adrs[iloc] = in_addr;
        ldim[iloc] = in_ldim;
        cachemap[iloc] = MASTER;
@@ -85,6 +85,7 @@ template<typename dtype>  Tile2D<dtype>::Tile2D(void * in_addr, int in_dim1, int
       cachemap[iloc] = INVALID;
     }
   }
+  writeback = 0;
   #ifdef DEBUG
   	lprintf(lvl-1, "<-----|\n");
   #endif
