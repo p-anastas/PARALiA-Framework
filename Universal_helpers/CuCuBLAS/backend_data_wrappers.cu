@@ -198,6 +198,11 @@ void CoCoMemcpy2D(void* dest, size_t ldest, void* src, size_t lsrc, size_t rows,
 }
 
 void CoCoMemcpy2DAsync(void* dest, size_t ldest, void* src, size_t lsrc, size_t rows, size_t cols, short elemSize, short loc_dest, short loc_src, CQueue_p transfer_queue){
+	short lvl = 6;
+#ifdef DDEBUG
+	lprintf(lvl, "CoCoMemcpy2DAsync(dest=%p, ldest =%zu, src=%p, lsrc = %zu, rows = %zu, cols = %zu, elemsize = %d, loc_dest = %d, loc_src = %d)\n",
+		dest, ldest, src, lsrc, rows, cols, elemSize, loc_dest, loc_src);
+#endif
 	cudaStream_t stream = *((cudaStream_t*)transfer_queue->cqueue_backend_ptr);
 	int count = 42;
 	massert(CUBLAS_STATUS_SUCCESS == cudaGetDeviceCount(&count), "CoCoMemcpy2DAsync: cudaGetDeviceCount failed\n");

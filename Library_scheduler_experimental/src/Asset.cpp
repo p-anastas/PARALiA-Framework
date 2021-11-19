@@ -50,7 +50,8 @@ template<typename dtype> void Asset2D<dtype>::InitTileMap(int T1, int T2){
       if ( itt2 == GridSz2 - 1) T2tmp = T2Last;
       else  T2tmp = T2;
       current_ctr = itt1*GridSz2 + itt2;
-      tile_addr = adrs + itt1*T1tmp + itt2*T2tmp*ldim;
+      /// For column major format assumed with T1tmp = rows and T2tmp = cols
+      tile_addr = adrs + itt1*T1 + itt2*T2*ldim;
       Tile_map[current_ctr] = new Tile2D<dtype>(tile_addr, T1tmp, T2tmp, ldim);
      }
    }
@@ -81,7 +82,8 @@ template<typename dtype>  Tile2D<dtype>::Tile2D(void * in_addr, int in_dim1, int
     }
     else{
       adrs[iloc] = NULL;
-      ldim[iloc] = in_dim2;
+      /// For column major format assumed = in_dim1, else in_dim2
+      ldim[iloc] = in_dim1;
       cachemap[iloc] = INVALID;
     }
   }

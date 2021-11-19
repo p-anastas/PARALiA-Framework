@@ -6,6 +6,8 @@
 
 #include "Subkernel.hpp"
 #include "unihelpers.hpp"
+#include "Asset.hpp"
+#include "DataCaching.hpp"
 #include "backend_lib_wrappers.hpp"
 #include "backend_wrappers.hpp"
 
@@ -14,13 +16,17 @@ CQueue_p h2d_queue[128] = {NULL}, d2h_queue[128] = {NULL}, exec_queue[128] = {NU
 cublasHandle_t handle[128] = {NULL};
 
 Subkernel::Subkernel(short TileNum_in){
-	data_available = new Event();
-	operation_complete = new Event();
+	//data_available = new Event();
+	//operation_complete = new Event();
 	TileNum = TileNum_in;
 	TileDimlist = (short*) malloc(TileNum*sizeof(short));
 	TileList = (void**) malloc(TileNum*sizeof(void*));
 }
 
+void Subkernel::init_events(){
+	data_available = new Event();
+	operation_complete = new Event();
+}
 void Subkernel::request_data(){
 	short lvl = 4;
 #ifdef DEBUG
@@ -43,7 +49,7 @@ void Subkernel::request_data(){
 				}
 		}
 		else error("Subkernel::request_data: Not implemented for TileDim=%d\n", TileDimlist[j]);
-		CoCoSyncCheckErr();
+		//CoCoSyncCheckErr();
 	}
 	data_available->record_to_queue(h2d_queue[run_dev_id]);
 	#ifdef DEBUG
@@ -58,15 +64,21 @@ void Subkernel::run_operation(){
 #endif
 	exec_queue[run_dev_id]->wait_for_event(data_available);
 	gemm_backend_in_p ptr_ker_translate = (gemm_backend_in_p) operation_params;
+#ifdef DDEBUG
+	lprintf(lvl, "cublasDgemm(handle[%d], TransA = %c, TransB = %c, M = %d, N = %d, K = %d, alpha = %lf, A = %p, lda = %d, \n\
+	B = %p, ldb = %d, beta = %lf, C = %p, ldC = %d)\n", run_dev_id, ptr_ker_translate->TransA, ptr_ker_translate->TransB,
+		ptr_ker_translate->M, ptr_ker_translate->N, ptr_ker_translate->K, ptr_ker_translate->alpha, (VALUE_TYPE*) *ptr_ker_translate->A, ptr_ker_translate->ldA,
+		(VALUE_TYPE*) *ptr_ker_translate->B, ptr_ker_translate->ldB, ptr_ker_translate->beta, (VALUE_TYPE*) *ptr_ker_translate->C, ptr_ker_translate->ldC);
+#endif
 	massert(CUBLAS_STATUS_SUCCESS == cublasDgemm(handle[run_dev_id], OpCharToCublas(ptr_ker_translate->TransA), OpCharToCublas(ptr_ker_translate->TransB),
-		ptr_ker_translate->M, ptr_ker_translate->N, ptr_ker_translate->K, &ptr_ker_translate->alpha, ptr_ker_translate->A, ptr_ker_translate->ldA,
-		ptr_ker_translate->B, ptr_ker_translate->ldB, &ptr_ker_translate->beta, ptr_ker_translate->C, ptr_ker_translate->ldC),
+		ptr_ker_translate->M, ptr_ker_translate->N, ptr_ker_translate->K, &ptr_ker_translate->alpha, (VALUE_TYPE*) *ptr_ker_translate->A, ptr_ker_translate->ldA,
+		(VALUE_TYPE*) *ptr_ker_translate->B, ptr_ker_translate->ldB, &ptr_ker_translate->beta, (VALUE_TYPE*) *ptr_ker_translate->C, ptr_ker_translate->ldC),
 		"CoCoPeLiaSubkernelFireAsync: cublasDgemm failed\n");
 	operation_complete->record_to_queue(exec_queue[run_dev_id]);
 #ifdef DEBUG
 	lprintf(lvl-1, "<-----|\n");
 #endif
-  CoCoSyncCheckErr();
+  //CoCoSyncCheckErr();
 }
 
 void Subkernel::writeback_data(){
@@ -86,7 +98,7 @@ void Subkernel::writeback_data(){
 				}
 		}
 		else error("Subkernel::writeback_data: Not implemented for TileDim=%d\n", TileDimlist[j]);
-		CoCoSyncCheckErr();
+		//CoCoSyncCheckErr();
 	}
 }
 
@@ -98,41 +110,6 @@ void 	CoCoPeLiaInitStreams(short dev_id){
     massert(CUBLAS_STATUS_SUCCESS == cublasCreate(&(handle[dev_id])), "cublasCreate failed\n");
     massert(CUBLAS_STATUS_SUCCESS == cublasSetStream(handle[dev_id], *(cudaStream_t*) (exec_queue[dev_id]->cqueue_backend_ptr)), "cublasSetStream failed\n");
   }
-}
-
-void CoCoPeLiaDevCacheInvalidate(kernel_pthread_wrap_p subkernel_data){
-	for (int i = 0; i < subkernel_data->SubkernelNumDev; i++){
-		Subkernel* curr = subkernel_data->SubkernelListDev[i];
-		for (int j = 0; j < curr->TileNum; j++){
-			if (curr->TileDimlist[j] == 1) error("CoCoPeLiaDevCacheInvalidate: Tile1D not implemented\n");
-			else if (curr->TileDimlist[j] == 2){
-					Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) curr->TileList[j];
-					if (tmp->cachemap[subkernel_data->devId] != MASTER) tmp->cachemap[subkernel_data->devId] = INVALID;
-			}
-			else error("CoCoPeLiaDevCacheInvalidate: Not implemented for TileDim=%d\n", curr->TileDimlist[j]);
-		}
-	}
-}
-
-long long CoCoPeLiaDevBuffSz(kernel_pthread_wrap_p subkernel_data){
-	long long result = 0;
-	for (int i = 0; i < subkernel_data->SubkernelNumDev; i++){
-		Subkernel* curr = subkernel_data->SubkernelListDev[i];
-		for (int j = 0; j < curr->TileNum; j++){
-			if (curr->TileDimlist[j] == 1) error("CoCoPeLiaDevBuffSz: Tile1D not implemented\n");
-			else if (curr->TileDimlist[j] == 2){
-					Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) curr->TileList[j];
-					if (tmp->cachemap[subkernel_data->devId] == INVALID){
-						tmp->cachemap[subkernel_data->devId] = AVAILABLE;
-						//printf("Found Tile with INVALID entry, adding %d to result", tmp->size());
-						result+= tmp->size();
-					}
-			}
-			else error("CoCoPeLiaDevBuffSz: Not implemented for TileDim=%d\n", curr->TileDimlist[j]);
-		}
-	}
-	CoCoPeLiaDevCacheInvalidate(subkernel_data);
-	return result;
 }
 
 void CoCoPeLiaSubkernelFireAsync(Subkernel* subkernel){

@@ -15,6 +15,7 @@
 #include "unihelpers.hpp"
 #include "Asset.hpp"
 #include "Subkernel.hpp"
+#include "DataCaching.hpp"
 
 gemm_backend_in_p initial_gemm = NULL;
 
@@ -80,9 +81,9 @@ int current_ctr = 0;
 				else ptr_ker_translate->beta = 1.0;
 				if (ki == KGridSz - 1) kernels[current_ctr]->writeback_master = 1;
 				else kernels[current_ctr]->writeback_master = 0;
-				ptr_ker_translate->ldA = ((Tile2D<VALUE_TYPE>*) kernels[current_ctr]->TileList[0])->dim2;
-				ptr_ker_translate->ldB = ((Tile2D<VALUE_TYPE>*) kernels[current_ctr]->TileList[1])->dim2;
-				ptr_ker_translate->ldC = ((Tile2D<VALUE_TYPE>*) kernels[current_ctr]->TileList[2])->dim2;
+				ptr_ker_translate->ldA = ((Tile2D<VALUE_TYPE>*) kernels[current_ctr]->TileList[0])->dim1;
+				ptr_ker_translate->ldB = ((Tile2D<VALUE_TYPE>*) kernels[current_ctr]->TileList[1])->dim1;
+				ptr_ker_translate->ldC = ((Tile2D<VALUE_TYPE>*) kernels[current_ctr]->TileList[2])->dim1;
 				ptr_ker_translate->dev_id = initial_gemm->dev_id;
 			}
 
@@ -126,15 +127,22 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 #endif
 
 	for (int keri = 0; keri < gemm_subkernel_data->SubkernelNumDev; keri++){
+		gemm_subkernel_data->SubkernelListDev[keri]->init_events();
 		gemm_subkernel_data->SubkernelListDev[keri]->run_dev_id = dev_id;
+		gemm_backend_in_p ptr_ker_translate = (gemm_backend_in_p)
+			gemm_subkernel_data->SubkernelListDev[keri]->operation_params;
+		ptr_ker_translate->A = &((Tile2D<VALUE_TYPE>*)
+		gemm_subkernel_data->SubkernelListDev[keri]->TileList[0])->adrs[dev_id];
+		ptr_ker_translate->B = &((Tile2D<VALUE_TYPE>*)
+		gemm_subkernel_data->SubkernelListDev[keri]->TileList[1])->adrs[dev_id];
+		ptr_ker_translate->C = &((Tile2D<VALUE_TYPE>*)
+		gemm_subkernel_data->SubkernelListDev[keri]->TileList[2])->adrs[dev_id];
+		ptr_ker_translate->dev_id = dev_id;
 		//CoCoPeLiaSubkernelFireAsync(gemm_subkernel_data->SubkernelListDev[keri]);
 		gemm_subkernel_data->SubkernelListDev[keri]->request_data();
-		gemm_backend_in_p ptr_ker_translate = (gemm_backend_in_p) gemm_subkernel_data->SubkernelListDev[keri]->operation_params;
-		ptr_ker_translate->A = (VALUE_TYPE*) ((Tile2D<VALUE_TYPE>*) gemm_subkernel_data->SubkernelListDev[keri]->TileList[0])->adrs[dev_id];
-		ptr_ker_translate->B = (VALUE_TYPE*) ((Tile2D<VALUE_TYPE>*) gemm_subkernel_data->SubkernelListDev[keri]->TileList[1])->adrs[dev_id];
-		ptr_ker_translate->C = (VALUE_TYPE*) ((Tile2D<VALUE_TYPE>*) gemm_subkernel_data->SubkernelListDev[keri]->TileList[2])->adrs[dev_id];
 		gemm_subkernel_data->SubkernelListDev[keri]->run_operation();
-		if (gemm_subkernel_data->SubkernelListDev[keri]->writeback_master) gemm_subkernel_data->SubkernelListDev[keri]->writeback_data();
+		if (gemm_subkernel_data->SubkernelListDev[keri]->writeback_master)
+			gemm_subkernel_data->SubkernelListDev[keri]->writeback_data();
 	}
 	CoCoSyncCheckErr();
 #ifdef TEST
@@ -157,7 +165,7 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 		prev_exec = *(cudaEvent_t*) gemm_subkernel_data->SubkernelListDev[keri]->operation_complete->event_backend_ptr;
 	}
 #endif
-
+	CoCoPeLiaDevCacheInvalidate(gemm_subkernel_data);
 #ifdef DEBUG
 	lprintf(lvl-1, "<-----|\n");
 #endif
@@ -169,9 +177,9 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 {
 	short lvl = 1;
 #ifdef DEBUG
-	lprintf(lvl-1, "|-----> CoCopeLiaDgemm(%c,%c,%zu,%zu,%zu,%lf,A(%d),%zu,B(%d),%zu,%lf,C(%d),%zu)\n",
-		TransA, TransB, M, N, K, alpha, CoCoGetPtrLoc(A), ldA,
-		CoCoGetPtrLoc(B), ldB, beta, CoCoGetPtrLoc(C), ldC);
+	lprintf(lvl-1, "|-----> CoCopeLiaDgemm(%c,%c,%zu,%zu,%zu,%lf,A=%p(%d),%zu,B=%p(%d),%zu,%lf,C=%p(%d),%zu)\n",
+		TransA, TransB, M, N, K, alpha, A, CoCoGetPtrLoc(A), ldA,
+		B, CoCoGetPtrLoc(B), ldB, beta, C, CoCoGetPtrLoc(C), ldC);
 #endif
 
 #ifdef TEST
@@ -188,9 +196,9 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 	initial_gemm->M = M;
 	initial_gemm->N = N;
 	initial_gemm->K = K;
-	initial_gemm->A = A;
-	initial_gemm->B = B;
-	initial_gemm->C = C;
+	initial_gemm->A = (void**) &A;
+	initial_gemm->B = (void**) &B;
+	initial_gemm->C = (void**) &C;
 	initial_gemm->alpha = alpha;
 	initial_gemm->beta = beta;
 	initial_gemm->ldA = ldA;
@@ -205,7 +213,7 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 	{
 		A_asset = new Asset2D<VALUE_TYPE>( A, M, K, ldA);
 		B_asset = new Asset2D<VALUE_TYPE>( B, K, N, ldB);
-		C_asset = new Asset2D<VALUE_TYPE>( B, M, N, ldC);
+		C_asset = new Asset2D<VALUE_TYPE>( C, M, N, ldC);
 
 		pthread_attr_t attr;
 		int s = pthread_attr_init(&attr);
@@ -220,7 +228,7 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 		for(int i=0; i<3;i++){
 			s = pthread_join(asset_thread_id[i], &res);
 			if (s != 0) error("CoCopeLiaDgemm: pthread_join failed with exit value %d", s);
-			free(res);      /* Free memory allocated by thread */
+			//free(res);      /* Free memory allocated by thread */
 		}
 
 #ifdef TEST
@@ -330,7 +338,7 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 	for(int i=0; i<num_devices;i++){
 		s = pthread_join(thread_id[i], &res);
 		if (s != 0) error("CoCopeLiaDgemm: pthread_join failed with exit value %d", s);
-		free(res);      /* Free memory allocated by thread */
+		//free(res);      /* Free memory allocated by thread */
 	}
 
 	cudaSetDevice(prev_devID);

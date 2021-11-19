@@ -9,7 +9,7 @@
 #include<iostream>
 #include <string>
 
-#include "Agent.hpp"
+#include "unihelpers.hpp"
 
 class Subkernel
 {
@@ -27,6 +27,7 @@ class Subkernel
 		Subkernel(short TileNum);
 
 		/// Functions
+		void init_events();
 		void request_data();
 		void run_operation();
 		void writeback_data();
@@ -40,7 +41,7 @@ typedef struct kernel_pthread_wrap{
 	int SubkernelNumDev;
 }* kernel_pthread_wrap_p;
 
-Subkernel** CoCoAsignTilesToSubkernelsGemm(Asset2D<double>* A_asset, Asset2D<double>* B_asset, Asset2D<double>* C_asset, int T, int* kernelNum);
+//Subkernel** CoCoAsignTilesToSubkernelsGemm(Asset2D<double>* A_asset, Asset2D<double>* B_asset, Asset2D<double>* C_asset, int T, int* kernelNum);
 
 void CoCoPeLiaDevCacheInvalidate(kernel_pthread_wrap_p subkernel_data);
 
