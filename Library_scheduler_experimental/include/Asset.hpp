@@ -42,7 +42,7 @@ class Tile2D
 		std::string name;
 		int dim1, dim2;
 		short writeback;
-		
+
 		void *adrs[LOC_NUM];
 		int ldim[LOC_NUM];
 		state cachemap[LOC_NUM];
@@ -53,6 +53,7 @@ class Tile2D
     // General Functions
 		int dtypesize() { return sizeof(dtype); }
 		int size() { return dtypesize()*dim1*dim2; }
+		short getId(state first_appearance);
 		void print() { std::cout << "Asset2D : " << name; }
 
 };

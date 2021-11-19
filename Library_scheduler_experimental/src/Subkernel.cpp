@@ -37,7 +37,8 @@ void Subkernel::request_data(){
 		else if (TileDimlist[j] == 2){
 				Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) TileList[j];
 				if (tmp->cachemap[run_dev_id] == INVALID){
-					short FetchFromId = -1, FetchFromIdCAdr; //CoCoReturnClosestLoc(tmp->cachemap, run_dev_id);
+					short FetchFromIdCAdr, FetchFromId = tmp->getId(MASTER); //CoCoReturnClosestLoc(tmp->cachemap, run_dev_id);
+					if (FetchFromId!= -1) printf("Fetched from other device1!1\n");
 					if (FetchFromId == -1) FetchFromIdCAdr = LOC_NUM - 1;
 					else FetchFromIdCAdr = FetchFromId;
 					tmp->adrs[run_dev_id] = CoCoPeLiaAsignBuffer(run_dev_id, tmp->size());
@@ -88,7 +89,7 @@ void Subkernel::writeback_data(){
 		else if (TileDimlist[j] == 2){
 				Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) TileList[j];
 				if (tmp->writeback){
-					short WritebackId = -1, WritebackIdCAdr; //to MASTER
+					short WritebackIdCAdr, WritebackId = tmp->getId(MASTER); //to MASTER
 					if (WritebackId == -1) WritebackIdCAdr = LOC_NUM - 1;
 					else WritebackIdCAdr = WritebackId;
 					CoCoMemcpy2DAsync(tmp->adrs[WritebackIdCAdr], tmp->ldim[WritebackIdCAdr],

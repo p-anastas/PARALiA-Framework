@@ -92,3 +92,11 @@ template<typename dtype>  Tile2D<dtype>::Tile2D(void * in_addr, int in_dim1, int
   	lprintf(lvl-1, "<-----|\n");
   #endif
 }
+
+template<typename dtype>  short Tile2D<dtype>::getId(state first_appearance){
+  short pos = 0;
+  while (pos < LOC_NUM && cachemap[pos] != first_appearance) pos++;
+  if (pos >= LOC_NUM) return -2;
+  else if (pos = LOC_NUM - 1) return -1;
+  else return pos;
+}
