@@ -43,7 +43,7 @@ ${LIBSC_DIR_SRC}/DataCaching.cpp
 ${LIBSC_DIR_SRC}/Asset.cpp
 ${LIBSC_DIR_SRC}/Subkernel.cpp
 ${LIBSC_DIR_SRC}/Missions/Dgemm.cpp
-${BACKEND_LIBSC_DIR}/backend_wrappers.cpp
+${BACKEND_LIBSC_DIR}/backend_wrappers.cu
 ${BACKEND_LIBSC_DIR}/Asset_backend.cpp
 )
 target_link_libraries(cocopelia ${INTERNAL_LINK_LIB} autotuning_runtime unihelpers )

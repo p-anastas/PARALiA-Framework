@@ -32,21 +32,30 @@ void Subkernel::request_data(){
 #ifdef DEBUG
 	lprintf(lvl-1, "|-----> Subkernel::request_data()\n");
 #endif
+	if (prev!= NULL){
+		prev->data_available->sync_barrier();
+		for (int j = 0; j < prev->TileNum; j++){
+			if (prev->TileDimlist[j] == 1) error("Subkernel::request_data: Tile1D not implemented\n");
+			else if (prev->TileDimlist[j] == 2){
+					Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) prev->TileList[j];
+					if (tmp->cachemap[run_dev_id] == INVALID) tmp->cachemap[run_dev_id] = AVAILABLE;
+			}
+		}
+	}
 	for (int j = 0; j < TileNum; j++){
 		if (TileDimlist[j] == 1) error("Subkernel::request_data: Tile1D not implemented\n");
 		else if (TileDimlist[j] == 2){
 				Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) TileList[j];
 				if (tmp->cachemap[run_dev_id] == INVALID){
-					short FetchFromIdCAdr, FetchFromId = tmp->getId(MASTER); //CoCoReturnClosestLoc(tmp->cachemap, run_dev_id);
-					if (FetchFromId!= -1) printf("Fetched from other device1!1\n");
+					tmp->adrs[run_dev_id] = CoCoPeLiaAsignBuffer(run_dev_id, tmp->size());
+					short FetchFromIdCAdr, FetchFromId = (short) fmax(tmp->getId(MASTER), tmp->getId(AVAILABLE)); //tmp->getId(MASTER); //
 					if (FetchFromId == -1) FetchFromIdCAdr = LOC_NUM - 1;
 					else FetchFromIdCAdr = FetchFromId;
-					tmp->adrs[run_dev_id] = CoCoPeLiaAsignBuffer(run_dev_id, tmp->size());
 					CoCoMemcpy2DAsync(tmp->adrs[run_dev_id], tmp->ldim[run_dev_id],
 														tmp->adrs[FetchFromIdCAdr], tmp->ldim[FetchFromIdCAdr],
 														tmp->dim1, tmp->dim2, tmp->dtypesize(),
 														run_dev_id, FetchFromId, h2d_queue[run_dev_id]);
-					tmp->cachemap[run_dev_id] = AVAILABLE;
+					//tmp->cachemap[run_dev_id] = AVAILABLE;
 				}
 		}
 		else error("Subkernel::request_data: Not implemented for TileDim=%d\n", TileDimlist[j]);

@@ -64,6 +64,7 @@ class Asset2D
 	// Variables
 	private:
 	public:
+	char transpose;
 	int GridSz1, GridSz2;
 	int loc;
 	dtype *adrs;
@@ -74,7 +75,7 @@ class Asset2D
 	std::string name;
 
 	// Constructor, sets dim1, dim2, ldim, adrs and derives loc from get_loc(adr)
-	Asset2D<dtype>(void* adrr, int in_dim1, int in_dim2, int in_ldim);
+	Asset2D<dtype>(void* adrr, int in_dim1, int in_dim2, int in_ldim, char transpose);
 
 	// General Functions
 	void InitTileMap(int T1, int T2);

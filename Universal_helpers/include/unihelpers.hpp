@@ -40,7 +40,7 @@ class Event
 	private:
 	public:
 		void* event_backend_ptr;
-		
+
 		Event();
 		void sync_barrier();
 		void record_to_queue(CQueue_p Rr);
@@ -53,7 +53,7 @@ class Event
 // Sync all devices and search for enchountered errors.
 void CoCoSyncCheckErr();
 
-// Search for enchountered errors without synchronization. 
+// Search for enchountered errors without synchronization.
 void CoCoASyncCheckErr();
 
 // Enable available links for target device with the provided list of (other) devices
@@ -90,7 +90,7 @@ size_t CoCoGetMaxDimSqAsset2D(short Asset2DNum, short dsize, size_t step, short 
 // Return the max dim size (which is a multiple of 'step') for 'Asset1DNum' assets on 'loc'
 size_t CoCoGetMaxDimAsset1D(short Asset1DNum, short dsize, size_t step, short loc);
 
-short CoCoGetPtrLoc(const void * in_ptr); 
+short CoCoGetPtrLoc(const void * in_ptr);
 
 /*****************************************************/
 /// Timers for benchmarks
@@ -148,7 +148,7 @@ long long dgemm_flops(size_t M, size_t N, size_t K);
 long long dgemm_memory(size_t M, size_t N, size_t K, size_t A_loc, size_t B_loc, size_t C_loc);
 
 long long daxpy_flops(size_t N);
- 
+
 size_t count_lines(FILE* fp); // TODO: Where is this used?
 void check_benchmark(char *filename);
 

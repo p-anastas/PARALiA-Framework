@@ -15,7 +15,6 @@ add_definitions(-DVERSION="${PROJECT_VERSION}")
 #Run in deep debug mode, for command-to-command debugging
 #add_definitions(-DDDEBUG)
 
-
 project (CoCopeLia-Framework VERSION ${PROJECT_VERSION} DESCRIPTION "The complete CoCoPeLia Framework")
 
 ## Define a name for the testbed, to be used for the whole framework setup

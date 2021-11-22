@@ -23,25 +23,38 @@ CoCoModel_p glob_model;
 struct CoControl predef_vals;
 CoControl_p used_vals = NULL;
 
+void CoCoGemmUpdateDevice(Subkernel* ker, short dev_id){
+	gemm_backend_in_p ptr_ker_translate = (gemm_backend_in_p) ker->operation_params;
+	ker->run_dev_id = ptr_ker_translate->dev_id = dev_id;
+	ptr_ker_translate->A = &((Tile2D<VALUE_TYPE>*) ker->TileList[0])->adrs[dev_id];
+	ptr_ker_translate->B = &((Tile2D<VALUE_TYPE>*) ker->TileList[1])->adrs[dev_id];
+	ptr_ker_translate->C = &((Tile2D<VALUE_TYPE>*) ker->TileList[2])->adrs[dev_id];
+	ptr_ker_translate->ldA = ((Tile2D<VALUE_TYPE>*) ker->TileList[0])->ldim[dev_id];
+	ptr_ker_translate->ldB = ((Tile2D<VALUE_TYPE>*) ker->TileList[1])->ldim[dev_id];
+	ptr_ker_translate->ldC = ((Tile2D<VALUE_TYPE>*) ker->TileList[2])->ldim[dev_id];
+}
+
 Subkernel** CoCoAsignTilesToSubkernelsGemm(Asset2D<VALUE_TYPE>* A_asset, Asset2D<VALUE_TYPE>* B_asset, Asset2D<VALUE_TYPE>* C_asset, int T, int* kernelNum){
 
 	short lvl = 2;
-	/// Check Assets satisfy GEMM dim criteria
-	massert(A_asset->GridSz1 == C_asset->GridSz1 &&
-					A_asset->Tile_map[0]->dim1 == C_asset->Tile_map[0]->dim1 &&
-					A_asset->Tile_map[A_asset->GridSz1*A_asset->GridSz2-1]->dim1
-					== C_asset->Tile_map[C_asset->GridSz1*C_asset->GridSz2-1]->dim1,
-					"M dim does not mach between assets for GEMM\n");
-	massert(B_asset->GridSz2 == C_asset->GridSz2 &&
-					B_asset->Tile_map[0]->dim2 == C_asset->Tile_map[0]->dim2 &&
-					B_asset->Tile_map[B_asset->GridSz1*B_asset->GridSz2-1]->dim2
-					== C_asset->Tile_map[C_asset->GridSz1*C_asset->GridSz2-1]->dim2,
-					"N dim does not mach between assets for GEMM\n");
-	massert(A_asset->GridSz2 == B_asset->GridSz1 &&
-					A_asset->Tile_map[0]->dim2 == B_asset->Tile_map[0]->dim1 &&
-					A_asset->Tile_map[A_asset->GridSz1*A_asset->GridSz2-1]->dim2
-					== B_asset->Tile_map[B_asset->GridSz1*B_asset->GridSz2-1]->dim1,
-					"K dim does not mach between assets for GEMM\n");
+	/// Check Assets satisfy GEMM dim criteria for N, N transpose
+	if (A_asset->transpose == 'N' && B_asset->transpose == 'N'){
+		massert(A_asset->GridSz1 == C_asset->GridSz1 &&
+						A_asset->Tile_map[0]->dim1 == C_asset->Tile_map[0]->dim1 &&
+						A_asset->Tile_map[A_asset->GridSz1*A_asset->GridSz2-1]->dim1
+						== C_asset->Tile_map[C_asset->GridSz1*C_asset->GridSz2-1]->dim1,
+						"M dim does not mach between assets for GEMM\n");
+		massert(B_asset->GridSz2 == C_asset->GridSz2 &&
+						B_asset->Tile_map[0]->dim2 == C_asset->Tile_map[0]->dim2 &&
+						B_asset->Tile_map[B_asset->GridSz1*B_asset->GridSz2-1]->dim2
+						== C_asset->Tile_map[C_asset->GridSz1*C_asset->GridSz2-1]->dim2,
+						"N dim does not mach between assets for GEMM\n");
+		massert(A_asset->GridSz2 == B_asset->GridSz1 &&
+						A_asset->Tile_map[0]->dim2 == B_asset->Tile_map[0]->dim1 &&
+						A_asset->Tile_map[A_asset->GridSz1*A_asset->GridSz2-1]->dim2
+						== B_asset->Tile_map[B_asset->GridSz1*B_asset->GridSz2-1]->dim1,
+						"K dim does not mach between assets for GEMM\n");
+	}
 	int MGridSz = A_asset->GridSz1, NGridSz = B_asset->GridSz2, KGridSz = A_asset->GridSz2;
 	*kernelNum = MGridSz*NGridSz*KGridSz;
 #ifdef DEBUG
@@ -70,9 +83,11 @@ int current_ctr = 0;
 				gemm_backend_in_p ptr_ker_translate = (gemm_backend_in_p) kernels[current_ctr]->operation_params;
 				ptr_ker_translate->TransA = initial_gemm->TransA;
 				ptr_ker_translate->TransB = initial_gemm->TransB;
-				ptr_ker_translate->M = ((Tile2D<VALUE_TYPE>*) kernels[current_ctr]->TileList[0])->dim1;
-				ptr_ker_translate->N = ((Tile2D<VALUE_TYPE>*) kernels[current_ctr]->TileList[1])->dim2;
-				ptr_ker_translate->K = ((Tile2D<VALUE_TYPE>*) kernels[current_ctr]->TileList[0])->dim2;
+				ptr_ker_translate->M = ((Tile2D<VALUE_TYPE>*) kernels[current_ctr]->TileList[2])->dim1;
+				ptr_ker_translate->N = ((Tile2D<VALUE_TYPE>*) kernels[current_ctr]->TileList[2])->dim2;
+				if (ptr_ker_translate->TransA == 'N') ptr_ker_translate->K = ((Tile2D<VALUE_TYPE>*) kernels[current_ctr]->TileList[0])->dim2;
+				else if (ptr_ker_translate->TransA == 'T') ptr_ker_translate->K = ((Tile2D<VALUE_TYPE>*) kernels[current_ctr]->TileList[0])->dim1;
+				else error("CoCoAsignTilesToSubkernelsGemm: Unknown transpose type\n");
 				ptr_ker_translate->A = NULL;
 				ptr_ker_translate->B = NULL;
 				ptr_ker_translate->C = NULL;
@@ -81,10 +96,6 @@ int current_ctr = 0;
 				else ptr_ker_translate->beta = 1.0;
 				if (ki == KGridSz - 1) kernels[current_ctr]->writeback_master = 1;
 				else kernels[current_ctr]->writeback_master = 0;
-				ptr_ker_translate->ldA = ((Tile2D<VALUE_TYPE>*) kernels[current_ctr]->TileList[0])->dim1;
-				ptr_ker_translate->ldB = ((Tile2D<VALUE_TYPE>*) kernels[current_ctr]->TileList[1])->dim1;
-				ptr_ker_translate->ldC = ((Tile2D<VALUE_TYPE>*) kernels[current_ctr]->TileList[2])->dim1;
-				ptr_ker_translate->dev_id = initial_gemm->dev_id;
 			}
 
 #ifdef DEBUG
@@ -128,17 +139,9 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 
 	for (int keri = 0; keri < gemm_subkernel_data->SubkernelNumDev; keri++){
 		gemm_subkernel_data->SubkernelListDev[keri]->init_events();
-		gemm_subkernel_data->SubkernelListDev[keri]->run_dev_id = dev_id;
-		gemm_backend_in_p ptr_ker_translate = (gemm_backend_in_p)
-			gemm_subkernel_data->SubkernelListDev[keri]->operation_params;
-		ptr_ker_translate->A = &((Tile2D<VALUE_TYPE>*)
-		gemm_subkernel_data->SubkernelListDev[keri]->TileList[0])->adrs[dev_id];
-		ptr_ker_translate->B = &((Tile2D<VALUE_TYPE>*)
-		gemm_subkernel_data->SubkernelListDev[keri]->TileList[1])->adrs[dev_id];
-		ptr_ker_translate->C = &((Tile2D<VALUE_TYPE>*)
-		gemm_subkernel_data->SubkernelListDev[keri]->TileList[2])->adrs[dev_id];
-		ptr_ker_translate->dev_id = dev_id;
-		//CoCoPeLiaSubkernelFireAsync(gemm_subkernel_data->SubkernelListDev[keri]);
+		CoCoGemmUpdateDevice(gemm_subkernel_data->SubkernelListDev[keri], dev_id);
+		if (!keri) gemm_subkernel_data->SubkernelListDev[keri]->prev = NULL;
+		else gemm_subkernel_data->SubkernelListDev[keri]->prev = gemm_subkernel_data->SubkernelListDev[keri-1];
 		gemm_subkernel_data->SubkernelListDev[keri]->request_data();
 		gemm_subkernel_data->SubkernelListDev[keri]->run_operation();
 		if (gemm_subkernel_data->SubkernelListDev[keri]->writeback_master)
@@ -211,9 +214,9 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 	/// return: A_asset, B_asset, C_asset initialized and pinned
 	/// FIXME: high probability the M, N etc dims are reverse (cause of column major stuff)
 	{
-		A_asset = new Asset2D<VALUE_TYPE>( A, M, K, ldA);
-		B_asset = new Asset2D<VALUE_TYPE>( B, K, N, ldB);
-		C_asset = new Asset2D<VALUE_TYPE>( C, M, N, ldC);
+		A_asset = new Asset2D<VALUE_TYPE>( A, M, K, ldA, TransA);
+		B_asset = new Asset2D<VALUE_TYPE>( B, K, N, ldB, TransB);
+		C_asset = new Asset2D<VALUE_TYPE>( C, M, N, ldC, 'N');
 
 		pthread_attr_t attr;
 		int s = pthread_attr_init(&attr);
@@ -307,35 +310,55 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 	// TODO: Idea 1 - Simulate the full execution step to step using thew expected times (instead of runtime scheduler), and asign Subkernels TO agents respectively to minimize communication.
 	int Subkernel_num;
 	Subkernel** Subkernel_list = CoCoAsignTilesToSubkernelsGemm(A_asset, B_asset, C_asset, T, &Subkernel_num);
-
-	/// TODO: Split Subkernels equally on devices. Naive, questionable and kinda pointless, for test purposes only.
-	int Subkernels_per_dev = Subkernel_num/num_devices;
 	#ifdef DEBUG
 			lprintf(lvl, "Subkernel_num = %d, num_devices = %d\n\n", Subkernel_num, num_devices);
 	#endif
+
+	/// TODO: Split Subkernels equally on devices. For test purposes only.
+	/// FIXME: Never split K between devices, otherwise buffer needed for adding results
+	/// and a more complex mechanism
+	int Subkernels_per_dev[num_devices], remaining_subkernels = Subkernel_num;
+	if (Subkernel_num > num_devices){
+		for (int d = 0 ; d < num_devices; d++){
+			int remaining_devices = num_devices - d;
+			if (d>0) remaining_subkernels = remaining_subkernels - Subkernels_per_dev[d-1];
+			Subkernels_per_dev[d] = remaining_subkernels/remaining_devices;
+			while (Subkernel_list[Subkernel_num-remaining_subkernels + Subkernels_per_dev[d]-1]-> writeback_master!= 1)
+				Subkernels_per_dev[d]++;
+			if (Subkernels_per_dev[d] > remaining_subkernels) error("CoCoPeLiaDgemm: Split to devices went terribly wrong\n");
+		}
+	}
+	else{
+				num_devices = Subkernel_num;
+				for (int d = 0 ; d < num_devices; d++) Subkernels_per_dev[d] = 1;
+	}
 	pthread_attr_t attr;
 	int s = pthread_attr_init(&attr);
 	if (s != 0) error("CoCopeLiaDgemm: pthread_attr_init failed s=%d\n", s);
 	void* res;
-	pthread_t thread_id[num_devices];
-	kernel_pthread_wrap_p thread_dev_data[num_devices];
+	int used_devices = 0;
+	for (int d = 0 ; d < num_devices; d++) if(Subkernels_per_dev[d] > 0) used_devices++;
+	pthread_t thread_id[used_devices];
+	kernel_pthread_wrap_p thread_dev_data[used_devices];
 
-	for(int i=0; i<num_devices;i++){
+	for(int i=0; i<used_devices;i++){
 
 		// Check/Enable peer access between participating GPUs
 		CoCoEnableLinks(i, dev_id, num_devices);
 
 		thread_dev_data[i] = (kernel_pthread_wrap_p) malloc(sizeof(struct kernel_pthread_wrap));
 		thread_dev_data[i]->devId = dev_id[i];
-		thread_dev_data[i]->SubkernelListDev = &(Subkernel_list[i*Subkernels_per_dev]);
-		thread_dev_data[i]->SubkernelNumDev = Subkernels_per_dev;
-		if (i == (num_devices - 1)) thread_dev_data[i]->SubkernelNumDev+= Subkernel_num%num_devices;
+
+		if (i>0) thread_dev_data[i]->SubkernelListDev = &(Subkernel_list[i*Subkernels_per_dev[i-1]]);
+		else thread_dev_data[i]->SubkernelListDev = Subkernel_list;
+
+		thread_dev_data[i]->SubkernelNumDev = Subkernels_per_dev[i];
 
 		s = pthread_create(&thread_id[i], &attr,
                                   &CoCopeLiaDgemmAgentVoid, thread_dev_data[i]);
 
 	}
-	for(int i=0; i<num_devices;i++){
+	for(int i=0; i<used_devices;i++){
 		s = pthread_join(thread_id[i], &res);
 		if (s != 0) error("CoCopeLiaDgemm: pthread_join failed with exit value %d", s);
 		//free(res);      /* Free memory allocated by thread */

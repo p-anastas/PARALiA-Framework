@@ -19,6 +19,7 @@ class Subkernel
 		short run_dev_id, writeback_master;
 		short TileNum, *TileDimlist;
 		void** TileList;
+		Subkernel* prev;
 		Event* data_available, *operation_complete;
 		void* operation_params;
 		void* operation;

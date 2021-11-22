@@ -38,7 +38,7 @@ long long CoCoPeLiaDevBuffSz(kernel_pthread_wrap_p subkernel_data){
 DevBufPtr CoCoPeLiaBufferInit(short dev_id){
   DevBufPtr result = (DevBufPtr) malloc (sizeof(struct globuf));
   result->dev_id = dev_id;
-  result->gpu_mem_buf == NULL;
+  result->gpu_mem_buf = NULL;
   result->gpu_mem_buf_sz = result->gpu_mem_offset = 0;
   return result;
 }
@@ -131,5 +131,5 @@ void CoCoPeLiaDevCacheInvalidate(kernel_pthread_wrap_p subkernel_data){
 			else error("CoCoPeLiaDevCacheInvalidate: Not implemented for TileDim=%d\n", curr->TileDimlist[j]);
 		}
 	}
-  for (int i = 0; i< DEV_NUM; i++) if (GloBuf[i]!= NULL) GloBuf[i]->gpu_mem_offset = 0;
+  if (GloBuf[subkernel_data->devId]!= NULL) GloBuf[subkernel_data->devId]->gpu_mem_offset = 0;
 }
