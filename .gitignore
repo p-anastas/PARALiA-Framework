@@ -12,3 +12,4 @@ _deps
 .ipynb_checkpoints
 __pycache__
 *build/
+**/.idea/
