@@ -128,7 +128,7 @@ void CoCopeLiaDgemm_flush_gpu_mem_buf(short dev_id)
 	}
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer;
-	lprintf(lvl, "Buffer de-allocation: t_free = %lf ms\n" , cpu_timer*1000);
+	lprintf(lvl, "Buffer de-allocation(%d): t_free = %lf ms\n" , dev_id, cpu_timer*1000);
 #endif
 #ifdef DEBUG
 	lprintf(lvl-1, "<-----|\n");

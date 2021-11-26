@@ -125,10 +125,15 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 	lprintf(lvl, " -Mem required for matrices: %zu MB\n", (size_t) buff_req_sz/1024/1024);
 #endif
   CoCoPeLiaRequestBuffer(dev_id, buff_req_sz);
-	CoCoPeLiaInitStreams(dev_id);
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer;
 	lprintf(lvl, "Memory management(%d): t_mem = %lf ms\n", dev_id, cpu_timer*1000);
+	cpu_timer = csecond();
+#endif
+	CoCoPeLiaInitStreams(dev_id);
+#ifdef TEST
+	cpu_timer = csecond() - cpu_timer;
+	lprintf(lvl, "Stream/Lib Handle Initialization(%d): t_resource = %lf ms\n", dev_id, cpu_timer*1000);
 	cpu_timer = csecond();
 #endif
 #ifdef DEBUG

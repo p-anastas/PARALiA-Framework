@@ -276,7 +276,7 @@ void backend_enableGPUPeer(short target_dev_i, short dev_ids[], short num_device
 #endif
 
 #ifdef TEST
-	lprintf(lvl-1, "|-----> CoCopeLiaDgemm\n");
+	lprintf(lvl-1, "|-----> CoCoPeLiaEnableGPUPeer\n");
 	double cpu_timer = csecond();
 #endif
 	cudaSetDevice(dev_ids[target_dev_i]);

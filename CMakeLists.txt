@@ -9,7 +9,7 @@ set(PROJECT_VERSION "0.21")
 message("CoCopeLia-Framework - PROJECT_VERSION: " ${PROJECT_VERSION})
 add_definitions(-DVERSION="${PROJECT_VERSION}")
 #Run in testing mode : details about models, decisions and time spend in operations.
-#add_definitions(-DTEST)
+add_definitions(-DTEST)
 #Run in debug mode, which includes detailed function calls and info for error-checking
 #add_definitions(-DDEBUG)
 #Run in deep debug mode, for command-to-command debugging
@@ -110,7 +110,7 @@ add_definitions(-DDEPLOYDB="${DEPLOYMENT_DIR_DB}")
 
 ADD_SUBDIRECTORY (Autotuning_runtime)
 
-set(EXPERIMENTAL_VERSION 1)
+set(EXPERIMENTAL_VERSION 0)
 if (${EXPERIMENTAL_VERSION} EQUAL 0)
 	ADD_SUBDIRECTORY (Library_scheduler)
 elseif(${EXPERIMENTAL_VERSION} EQUAL 1)
