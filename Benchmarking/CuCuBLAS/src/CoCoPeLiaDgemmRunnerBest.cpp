@@ -84,14 +84,17 @@ int main(const int argc, const char *argv[]) {
 	CoCoSyncCheckErr();
 	cpu_timer  = csecond() - cpu_timer;
 
+	short bench_it = 10;
 	double best_t = cpu_timer;
 	for (size_t T_trial = (((size_t)fmax(fmin(fmin(M/32,N/32),K/32),512))/512)*512; T_trial <= (size_t) fmin(fmin(fmin(M/DEV_NUM,N/DEV_NUM),K),CBLASXT_MAX_SAFE_TILE); T_trial+=512){
 			fprintf(stderr,"Running CoCopeLia DGEMM-> M = %zu, N = %zu, K = %zu, T = %zu\n", M, N, K, T_trial);
 			predef_control_values-> T = T_trial;
 			cpu_timer  = csecond();
-			return_values = CoCopeLiaDgemmControled(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC, predef_control_values);
-			CoCoSyncCheckErr();
-			cpu_timer  = csecond() - cpu_timer;
+			for(int it = 0; it < bench_it; it++){
+				return_values = CoCopeLiaDgemmControled(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC, predef_control_values);
+				CoCoSyncCheckErr();
+			}
+			cpu_timer  = (csecond() - cpu_timer)/bench_it;
 			fprintf(stderr, "Total time:\t%lf ms\n", cpu_timer  * 1000);
 			if (cpu_timer < best_t){
 				best_t = cpu_timer;
@@ -148,7 +151,7 @@ int main(const int argc, const char *argv[]) {
 
 	double min_t = first_over_t, max_t = 0, avg_t = 0;
 	cpu_timer = csecond();
-	short bench_it = 100;
+  bench_it = 100;
 	if ( M >= 8192 || N >= 8192 || K >= 8192) bench_it = 10;
 	for(int it = 0; it < bench_it; it++){
 		cpu_timer = csecond();

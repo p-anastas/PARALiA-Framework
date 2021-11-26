@@ -1,6 +1,6 @@
 /// \author Anastasiadis Petros (panastas@cslab.ece.ntua.gr)
 ///
-/// \brief The header containing the "Subkernel" (== subkernel) definition for data scheduling and management in heterogeneous multi-device systems.
+/// \brief The header containing the "Subkernel" definition for data scheduling and management in heterogeneous multi-device systems.
 ///
 
 #ifndef Subkernel_H

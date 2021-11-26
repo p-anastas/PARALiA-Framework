@@ -16,7 +16,7 @@ alpha=1.2345
 beta=1.1154
 
 
-for FUNC in Dgemm Sgemm 
+for FUNC in Dgemm Sgemm
 do
 	perf_log="${LIBSC_TEST_LOG_DIR}/exec_logs/${FUNC}_perf_eval.log"
 	rm $perf_log
@@ -40,7 +40,7 @@ do
 			B_loc=-1
 		else
 			if [ $NUM_DEVICES -eq 1 ]
-			then 
+			then
 				A_loc=0
 				B_loc=0
 			elif [ $NUM_DEVICES -ge 2 ]
@@ -53,7 +53,7 @@ do
 
 		# I) Mid-sized square problems
 		for Sq in {2048..16384..1024}
-		do 
+		do
 			#echo "$CoCopelia_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $Sq $Sq $Sq $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
 			#$CoCopelia_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $Sq $Sq $Sq $A_loc $B_loc $C_loc $C_loc  &>> $perf_log
 			echo "$CoCopelia_run_best -1 -1 -1 -1 $TransA $TransB $alpha $beta $Sq $Sq $Sq $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
@@ -69,11 +69,11 @@ do
 		done
 		# II) Large-sized square problems (usually >> GPU memory)
 		for Sq in {16384..40000..4096}
-		do 
+		do
 			#echo "$CoCopelia_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $Sq $Sq $Sq $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
 			#$CoCopelia_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $Sq $Sq $Sq $A_loc $B_loc $C_loc $C_loc  &>> $perf_log
 			echo "$CoCopelia_run_best -1 -1 -1 -1 $TransA $TransB $alpha $beta $Sq $Sq $Sq $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
-			$CoCopelia_run_best -1 -1 -1 -1 $TransA $TransB $alpha $beta $Sq $Sq $Sq $A_loc $B_loc $C_loc $C_loc  &>> $perf_log
+			#$CoCopelia_run_best -1 -1 -1 -1 $TransA $TransB $alpha $beta $Sq $Sq $Sq $A_loc $B_loc $C_loc $C_loc  &>> $perf_log
 			#echo "$cuBLASXt_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $Sq $Sq $Sq $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
 			#$cuBLASXt_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $Sq $Sq $Sq $A_loc $B_loc $C_loc $C_loc &>> $perf_log
 			#echo "$BLASX_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $Sq $Sq $Sq $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
@@ -86,10 +86,10 @@ do
 		exit 1
 		# III) Non-square Problems
 		for inbalanced in 8192 16384
-		do 
+		do
 			# K < M,N
 			for ctr in 3 4 5 6 7 8 9 10;
-			do 
+			do
 				fat=$(($inbalanced*$ctr/2))
 				double_thin=$(($inbalanced*4/$ctr/$ctr))
 

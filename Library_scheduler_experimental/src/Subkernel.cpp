@@ -1,7 +1,7 @@
 ///
 /// \author Anastasiadis Petros (panastas@cslab.ece.ntua.gr)
 ///
-/// \brief The "Asset" related function implementations.
+/// \brief The "Subkernel" related function implementations.
 ///
 
 #include "Subkernel.hpp"

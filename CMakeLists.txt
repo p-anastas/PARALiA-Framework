@@ -29,7 +29,7 @@ message("CoCopeLia-Framework - NUM_DEVICES: " ${NUM_DEVICES})
 add_definitions(-DDEV_NUM=${NUM_DEVICES})
 
 ## Define the max GPU memory percentage (%) a problem can use ( not accounting for streams and other control structs; e.g. only the problem data ).
-set(PROBLEM_GPU_PERCENTAGE 90)
+set(PROBLEM_GPU_PERCENTAGE 80)
 message("CoCopeLia-Framework - PROBLEM_GPU_PERCENTAGE: " ${PROBLEM_GPU_PERCENTAGE})
 add_definitions(-DPROBLEM_GPU_PERCENTAGE=${PROBLEM_GPU_PERCENTAGE})
 

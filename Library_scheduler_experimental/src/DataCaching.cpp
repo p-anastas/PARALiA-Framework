@@ -48,6 +48,9 @@ void CoCoPeLiaRequestBuffer(short dev_id, long long buff_req_sz){
 #ifdef DEBUG
   lprintf(lvl-1, "|-----> CoCoPeLiaRequestBuffer(%d, %lld)\n", dev_id, buff_req_sz);
 #endif
+#ifdef TEST
+	double cpu_timer = csecond();
+#endif
   if (GloBuf[dev_id] == NULL) GloBuf[dev_id] = CoCoPeLiaBufferInit(dev_id);
   long long free_dev_mem, max_dev_mem;
   CoCoPeLiaDevGetMemInfo(&free_dev_mem, &max_dev_mem);
@@ -74,6 +77,10 @@ void CoCoPeLiaRequestBuffer(short dev_id, long long buff_req_sz){
     CoCoSyncCheckErr();
   }
   else error("CoCoPeLia larger than dev mem not implemented\n");
+#ifdef TEST
+	cpu_timer = csecond() - cpu_timer;
+	lprintf(lvl, "GPU(%d) Buffer allocation with sz = %lld: t_alloc = %lf ms\n" , dev_id, buff_req_sz, cpu_timer*1000);
+#endif
 #ifdef DEBUG
 	lprintf(lvl-1, "<-----|\n");
 #endif
@@ -84,7 +91,6 @@ void* CoCoPeLiaAsignBuffer(short dev_id, long long size){
 #ifdef DEBUG
   lprintf(lvl-1, "|-----> CoCoPeLiaAsignBuffer(%d,%lld)\n", dev_id, size);
 #endif
-
   if (GloBuf[dev_id]->gpu_mem_offset + size > GloBuf[dev_id]->gpu_mem_buf_sz) error("CoCoPeLiaAsignBuffer: Buffer \
   full but request for more offset: %lld + %lld > %lld\n",
     GloBuf[dev_id]->gpu_mem_offset, size, GloBuf[dev_id]->gpu_mem_buf_sz);
@@ -102,6 +108,9 @@ void CoCopeLiaDgemm_flush_gpu_mem_buf(short dev_id)
 #ifdef DEBUG
 			lprintf(lvl-1, "|-----> CoCopeLiaDgemm_flush_gpu_mem_buf(dev_id=%d)\n", dev_id);
 #endif
+#ifdef TEST
+	double cpu_timer = csecond();
+#endif
 	if (GloBuf[dev_id]){
 #ifdef DEBUG
 		lprintf(lvl, "Clearing (presumably) %zu MB\n\n", (size_t) GloBuf[dev_id]->gpu_mem_buf_sz/1024/1024);
@@ -117,9 +126,23 @@ void CoCopeLiaDgemm_flush_gpu_mem_buf(short dev_id)
 #endif
 		;
 	}
+#ifdef TEST
+	cpu_timer = csecond() - cpu_timer;
+	lprintf(lvl, "Buffer de-allocation: t_free = %lf ms\n" , cpu_timer*1000);
+#endif
+#ifdef DEBUG
+	lprintf(lvl-1, "<-----|\n");
+#endif
 }
 
 void CoCoPeLiaDevCacheInvalidate(kernel_pthread_wrap_p subkernel_data){
+	short lvl = 3;
+#ifdef DEBUG
+	lprintf(lvl-1, "|-----> CoCoPeLiaDevCacheInvalidate(subkernel_list(len=%d)\n", subkernel_data->SubkernelNumDev);
+#endif
+#ifdef TEST
+	double cpu_timer = csecond();
+#endif
 	for (int i = 0; i < subkernel_data->SubkernelNumDev; i++){
 		Subkernel* curr = subkernel_data->SubkernelListDev[i];
 		for (int j = 0; j < curr->TileNum; j++){
@@ -132,4 +155,11 @@ void CoCoPeLiaDevCacheInvalidate(kernel_pthread_wrap_p subkernel_data){
 		}
 	}
   if (GloBuf[subkernel_data->devId]!= NULL) GloBuf[subkernel_data->devId]->gpu_mem_offset = 0;
+#ifdef TEST
+	cpu_timer = csecond() - cpu_timer;
+	lprintf(lvl, "Cache for %d Subkernels invalidated: t_nv = %lf ms\n" , subkernel_data->SubkernelNumDev, cpu_timer*1000);
+#endif
+#ifdef DEBUG
+	lprintf(lvl-1, "<-----|\n");
+#endif
 }
