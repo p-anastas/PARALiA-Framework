@@ -90,12 +90,12 @@ double dabs(double x){
 }
 
 inline float Serror(float a, float b) {
-  if (a == 0) return (float) dabs((float)(a - b)); 
+  if (a == 0) return (float) dabs((float)(a - b));
   return dabs(a - b)/a;
 }
 
 inline double Derror(double a, double b) {
-  if (a == 0) return dabs(a - b); 
+  if (a == 0) return dabs(a - b);
   return dabs(a - b)/a;
 }
 
@@ -104,7 +104,7 @@ size_t Dvec_diff(double* a, double* b, long long size, double eps) {
 	//#pragma omp parallel for
 	for (long long i = 0; i < size; i++)
 		if (Derror(a[i], b[i]) > eps){
-			//#pragma omp atomic 
+			//#pragma omp atomic
 			failed++;
 		}
 	return failed;
@@ -115,7 +115,7 @@ size_t Svec_diff(float* a, float* b, long long size, float eps) {
 	//#pragma omp parallel for
   	for (long long i = 0; i < size; i++)
 		if (Serror(a[i], b[i]) > eps){
-			//#pragma omp atomic 
+			//#pragma omp atomic
 			failed++;
 		}
   	return failed;
@@ -132,7 +132,7 @@ short Stest_equality(float* C_comp, float* C, long long size) {
   }
   if (4==acc) {
 	fprintf(stderr, "Test failed %zu times\n", failed);
-	int ctr = 0, itt = 0; 
+	int ctr = 0, itt = 0;
 	while (ctr < 10 & itt < size){
 		if (Serror(C_comp[itt], C[itt]) > eps){
 			fprintf(stderr, "Baseline vs Tested: %.10f vs %.10f\n", C_comp[itt], C[itt]);
@@ -143,7 +143,7 @@ short Stest_equality(float* C_comp, float* C, long long size) {
   } else
     fprintf(stderr, "Test passed(Accuracy= %zu digits, %zu/%lld breaking for %zu)\n\n",
             acc, failed, size, acc + 1);
-  return (short) acc; 
+  return (short) acc;
 }
 
 short Dtest_equality(double* C_comp, double* C, long long size) {
@@ -157,10 +157,11 @@ short Dtest_equality(double* C_comp, double* C, long long size) {
   }
   if (8==acc) {
 	fprintf(stderr, "Test failed %zu times\n", failed);
-	int ctr = 0, itt = 0; 
+	int ctr = 0;
+  long long itt = 0;
 	while (ctr < 10 & itt < size){
 		if (Derror(C_comp[itt], C[itt]) > eps){
-			fprintf(stderr, "Baseline vs Tested: %.15lf vs %.15lf\n", C_comp[itt], C[itt]);
+			fprintf(stderr, "Baseline vs Tested(adr = %p, itt = %lld): %.15lf vs %.15lf\n", &C[itt], itt, C_comp[itt], C[itt]);
 			ctr++;
 		}
 		itt++;
@@ -168,12 +169,12 @@ short Dtest_equality(double* C_comp, double* C, long long size) {
   } else
     fprintf(stderr, "Test passed(Accuracy= %zu digits, %zu/%lld breaking for %zu)\n\n",
             acc, failed, size, acc + 1);
-  return (short) acc; 
+  return (short) acc;
 }
 
 size_t count_lines(FILE* fp){
 	if (!fp) error("count_lines: fp = 0 ");
-	int ctr = 0; 
+	int ctr = 0;
 	char chr = getc(fp);
 	while (chr != EOF){
 		//Count whenever new line is encountered
@@ -187,7 +188,7 @@ size_t count_lines(FILE* fp){
 
 void check_benchmark(char *filename){
 	FILE* fp = fopen(filename,"r");
-	if (!fp) { 
+	if (!fp) {
 		fp = fopen(filename,"w+");
 		if (!fp) error("report_results: LogFile failed to open");
 		else warning("Generating Logfile...");
@@ -195,10 +196,10 @@ void check_benchmark(char *filename){
 	}
 	else {
 		fprintf(stderr,"Benchmark found: %s\n", filename);
-		fclose(fp);	
-		exit(1); 
+		fclose(fp);
+		exit(1);
 	}
-	return;		  	
+	return;
 }
 
 double Gval_per_s(long long value, double time){
@@ -210,7 +211,7 @@ long long dgemm_flops(size_t M, size_t N, size_t K){
 }
 
 long long dgemm_memory(size_t M, size_t N, size_t K, size_t A_loc, size_t B_loc, size_t C_loc){
-	return (M * K * A_loc + K * N * B_loc + M * N * C_loc)*sizeof(double); 
+	return (M * K * A_loc + K * N * B_loc + M * N * C_loc)*sizeof(double);
 }
 
 long long daxpy_flops(size_t N){
@@ -224,21 +225,15 @@ long long dgemv_flops(size_t M, size_t N){
 }
 
 long long dgemv_bytes(size_t M, size_t N){
-	return (M * N + N + M * 2)*sizeof(double) ; 
+	return (M * N + N + M * 2)*sizeof(double) ;
 }
 
 
 long long dgemm_bytes(size_t M, size_t N, size_t K){
-	return (M * K + K * N + M * N * 2)*sizeof(double) ; 
+	return (M * K + K * N + M * N * 2)*sizeof(double) ;
 }
 
 long long sgemm_bytes(size_t M, size_t N, size_t K){
-	return (M * K + K * N + M * N * 2)*sizeof(float) ; 
+	return (M * K + K * N + M * N * 2)*sizeof(float) ;
 }
 */
-
-
-
-
-
-

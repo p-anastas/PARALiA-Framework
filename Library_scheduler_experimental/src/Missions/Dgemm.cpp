@@ -108,7 +108,7 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 	short lvl = 2;
 
 	kernel_pthread_wrap_p gemm_subkernel_data = (kernel_pthread_wrap_p)kernel_pthread_wrapped;
-	short dev_id = gemm_subkernel_data->devId;
+	short dev_id = gemm_subkernel_data->dev_id;
 #ifdef DEBUG
 	lprintf(lvl-1, "|-----> CoCopeLiaDgemmAgentVoid(gemm_subkernel_data: dev_id = %d, SubkernelNumDev = %d)\n",
 		dev_id, gemm_subkernel_data->SubkernelNumDev);
@@ -118,13 +118,7 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 #endif
 
 	CoCoPeLiaSelectDevice(dev_id);
-	long long buff_req_sz = CoCoPeLiaDevBuffSz(gemm_subkernel_data);
-#ifdef DEBUG
-	lprintf(lvl, "====================================\n");
-	lprintf(lvl, "GPU mem management:\n");
-	lprintf(lvl, " -Mem required for matrices: %zu MB\n", (size_t) buff_req_sz/1024/1024);
-#endif
-  CoCoPeLiaRequestBuffer(dev_id, buff_req_sz);
+  CoCoPeLiaRequestBuffer(gemm_subkernel_data);
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer;
 	lprintf(lvl, "Memory management(%d): t_mem = %lf ms\n", dev_id, cpu_timer*1000);
@@ -147,6 +141,8 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 		CoCoGemmUpdateDevice(gemm_subkernel_data->SubkernelListDev[keri], dev_id);
 		if (!keri) gemm_subkernel_data->SubkernelListDev[keri]->prev = NULL;
 		else gemm_subkernel_data->SubkernelListDev[keri]->prev = gemm_subkernel_data->SubkernelListDev[keri-1];
+		if(keri==gemm_subkernel_data->SubkernelNumDev - 1) gemm_subkernel_data->SubkernelListDev[keri]->next = NULL;
+		else gemm_subkernel_data->SubkernelListDev[keri]->next = gemm_subkernel_data->SubkernelListDev[keri+1];
 		gemm_subkernel_data->SubkernelListDev[keri]->request_data();
 		gemm_subkernel_data->SubkernelListDev[keri]->run_operation();
 		if (gemm_subkernel_data->SubkernelListDev[keri]->writeback_master)
@@ -195,8 +191,8 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 	double cpu_timer = csecond();
 #endif
 
-	int prev_devID;
-	cudaGetDevice(&prev_devID);
+	int prev_dev_id;
+	cudaGetDevice(&prev_dev_id);
 
 	if(!initial_gemm) initial_gemm = (gemm_backend_in_p) malloc(sizeof(struct gemm_backend_in));
 	initial_gemm->TransA = TransA;
@@ -352,7 +348,7 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 		CoCoEnableLinks(i, dev_id, num_devices);
 
 		thread_dev_data[i] = (kernel_pthread_wrap_p) malloc(sizeof(struct kernel_pthread_wrap));
-		thread_dev_data[i]->devId = dev_id[i];
+		thread_dev_data[i]->dev_id = dev_id[i];
 
 		if (i>0) thread_dev_data[i]->SubkernelListDev = &(Subkernel_list[i*Subkernels_per_dev[i-1]]);
 		else thread_dev_data[i]->SubkernelListDev = Subkernel_list;
@@ -369,7 +365,7 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 		//free(res);      /* Free memory allocated by thread */
 	}
 
-	cudaSetDevice(prev_devID);
+	cudaSetDevice(prev_dev_id);
 #ifdef TEST
 	cpu_timer = csecond();
 #endif

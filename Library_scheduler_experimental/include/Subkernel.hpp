@@ -19,10 +19,11 @@ class Subkernel
 		short run_dev_id, writeback_master;
 		short TileNum, *TileDimlist;
 		void** TileList;
-		Subkernel* prev;
-		Event* data_available, *operation_complete;
+		Subkernel* prev, * next;
+		Event* data_available, *operation_complete, *writeback_complete;
 		void* operation_params;
 		void* operation;
+		short work_complete;
 
 		/// Constructors
 		Subkernel(short TileNum);
@@ -37,7 +38,7 @@ class Subkernel
 };
 
 typedef struct kernel_pthread_wrap{
-	short devId;
+	short dev_id;
 	Subkernel** SubkernelListDev;
 	int SubkernelNumDev;
 }* kernel_pthread_wrap_p;
@@ -45,8 +46,6 @@ typedef struct kernel_pthread_wrap{
 //Subkernel** CoCoAsignTilesToSubkernelsGemm(Asset2D<double>* A_asset, Asset2D<double>* B_asset, Asset2D<double>* C_asset, int T, int* kernelNum);
 
 void CoCoPeLiaDevCacheInvalidate(kernel_pthread_wrap_p subkernel_data);
-
-long long CoCoPeLiaDevBuffSz(kernel_pthread_wrap_p subkernel_data);
 
 void 	CoCoPeLiaInitStreams(short dev_id);
 

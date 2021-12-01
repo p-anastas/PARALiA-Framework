@@ -35,10 +35,16 @@ template<typename dtype> void Asset2D<dtype>::InitTileMap(int T1, int T2){
   GridSz1 = dim1/T1;
 	GridSz2 = dim2/T2;
   int T1Last = dim1%T1, T2Last = dim2%T2;
-	if (T1Last > T1/4) GridSz1++;
-	else T1Last+=T1;
-  if (T2Last > T2/4) GridSz2++;
-  else T2Last+=T2;
+  // TODO: Padding instead of resize so all data fit in buffer without complex mechanism.
+  // Can degrade performance for small div sizes.
+  if (T1Last > 0) GridSz1++;
+  else T1Last=T1;
+  if (T2Last > 0) GridSz2++;
+  else T2Last=T2;
+	//if (T1Last > T1/4) GridSz1++;
+	//else T1Last+=T1;
+  //if (T2Last > T2/4) GridSz2++;
+  //else T2Last+=T2;
 
   Tile_map = (Tile2D<dtype>**) malloc(sizeof(Tile2D<dtype>*)*GridSz1*GridSz2);
 
@@ -84,16 +90,17 @@ template<typename dtype>  Tile2D<dtype>::Tile2D(void * in_addr, int in_dim1, int
   short init_loc = CoCoGetPtrLoc(in_addr);
   if (init_loc < 0) init_loc = LOC_NUM -1;
   for (int iloc = 0; iloc < LOC_NUM; iloc++){
+    //PendingUsage[iloc] = 0;
     if (iloc == init_loc){
        adrs[iloc] = in_addr;
        ldim[iloc] = in_ldim;
-       cachemap[iloc] = MASTER;
+       CacheLocId[iloc] = -1;
     }
     else{
       adrs[iloc] = NULL;
       /// For column major format assumed = in_dim1, else in_dim2
       ldim[iloc] = in_dim1;
-      cachemap[iloc] = INVALID;
+      CacheLocId[iloc] = -42;
     }
   }
   writeback = 0;
@@ -104,7 +111,12 @@ template<typename dtype>  Tile2D<dtype>::Tile2D(void * in_addr, int in_dim1, int
 
 template<typename dtype>  short Tile2D<dtype>::getId(state first_appearance){
   short pos = 0;
-  while (pos < LOC_NUM && cachemap[pos] != first_appearance) pos++;
+  state temp;
+  for (pos =0; pos < LOC_NUM; pos++){
+    if (CacheLocId[pos] == -1 && first_appearance == MASTER) break;
+    if (CacheLocId[pos] != -42 && CacheLocId[pos] != -1)
+      if (CoCoPeLiaGetCacheState(pos, CacheLocId[pos]) == first_appearance) break;
+  }
   if (pos >= LOC_NUM) return -2;
   else if (pos == LOC_NUM - 1) return -1;
   else return pos;

@@ -10,6 +10,8 @@
 #include <string>
 #define LOC_NUM (DEV_NUM + 1)
 
+#include "DataCaching.hpp"
+
 // TODO: Not used yet (BLAS 3 only use Asset2D)
 template <typename dtype>
 class Asset1D
@@ -26,13 +28,6 @@ class Asset1D
 
 };
 
-enum state{
-	MASTER = 0, /// The Tile is in its initial memory location and should NEVER be deleted internally in CoCoPeLia.
-	INVALID = 1, /// Tile does not exist in this location.
-	AVAILABLE = 2, /// Tile exists in this location and is available for reading.
-	BUSY = 3  /// Tile is being modified (or transefered) by somebody in this location. Not sure this state is required.
-};
-
 template <typename dtype>
 class Tile2D
 {
@@ -45,7 +40,8 @@ class Tile2D
 
 		void *adrs[LOC_NUM];
 		int ldim[LOC_NUM];
-		state cachemap[LOC_NUM];
+		int CacheLocId[LOC_NUM];
+		//int PendingUsage[LOC_NUM];
 
 		// Constructor
 		Tile2D<dtype>(void* tile_addr, int T1tmp, int T2tmp, int ldim);

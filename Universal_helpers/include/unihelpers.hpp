@@ -44,6 +44,7 @@ class Event
 		Event();
 		void sync_barrier();
 		void record_to_queue(CQueue_p Rr);
+		short is_complete();
 
 };
 

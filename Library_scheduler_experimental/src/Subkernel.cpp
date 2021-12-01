@@ -16,29 +16,31 @@ CQueue_p h2d_queue[128] = {NULL}, d2h_queue[128] = {NULL}, exec_queue[128] = {NU
 cublasHandle_t handle[128] = {NULL};
 
 Subkernel::Subkernel(short TileNum_in){
-	//data_available = new Event();
-	//operation_complete = new Event();
 	TileNum = TileNum_in;
 	TileDimlist = (short*) malloc(TileNum*sizeof(short));
 	TileList = (void**) malloc(TileNum*sizeof(void*));
+	work_complete = 0;
+	prev = next = NULL;
 }
 
 void Subkernel::init_events(){
 	data_available = new Event();
 	operation_complete = new Event();
+	writeback_complete = new Event();
 }
 void Subkernel::request_data(){
 	short lvl = 4;
 #ifdef DEBUG
 	lprintf(lvl-1, "|-----> Subkernel::request_data()\n");
 #endif
+	int cache_used_flag = 0;
 	if (prev!= NULL){
 		prev->data_available->sync_barrier();
 		for (int j = 0; j < prev->TileNum; j++){
 			if (prev->TileDimlist[j] == 1) error("Subkernel::request_data: Tile1D not implemented\n");
 			else if (prev->TileDimlist[j] == 2){
 					Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) prev->TileList[j];
-					if (tmp->cachemap[run_dev_id] == INVALID) tmp->cachemap[run_dev_id] = AVAILABLE;
+					if (!tmp->writeback) CoCoPeLiaUpdateCache(run_dev_id, tmp->CacheLocId[run_dev_id], AVAILABLE);
 			}
 		}
 	}
@@ -46,8 +48,17 @@ void Subkernel::request_data(){
 		if (TileDimlist[j] == 1) error("Subkernel::request_data: Tile1D not implemented\n");
 		else if (TileDimlist[j] == 2){
 				Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) TileList[j];
-				if (tmp->cachemap[run_dev_id] == INVALID){
-					tmp->adrs[run_dev_id] = CoCoPeLiaAsignBuffer(run_dev_id, tmp->size());
+				//tmp->PendingUsage[run_dev_id]++;
+				//if (writeback_master && tmp->writeback) tmp->PendingUsage[run_dev_id]++;
+				if (tmp->CacheLocId[run_dev_id] == -42){
+					tmp->adrs[run_dev_id] = CoCoPeLiaAsignBuffer(run_dev_id, &(tmp->CacheLocId[run_dev_id]));
+#ifdef DEBUG
+					lprintf(lvl, "Asigned buffer Block = %d\n", tmp->CacheLocId[run_dev_id]);
+#endif
+					if (tmp->adrs[run_dev_id] == NULL){
+						tmp->adrs[run_dev_id] = CoCoPeLiaReAsignBuffer(this, &(tmp->CacheLocId[run_dev_id]));
+						cache_used_flag = 1;
+					}
 					short FetchFromIdCAdr, FetchFromId = (short) fmax(tmp->getId(MASTER), tmp->getId(AVAILABLE)); //tmp->getId(MASTER); //
 					if (FetchFromId == -1) FetchFromIdCAdr = LOC_NUM - 1;
 					else FetchFromIdCAdr = FetchFromId;
@@ -55,13 +66,14 @@ void Subkernel::request_data(){
 														tmp->adrs[FetchFromIdCAdr], tmp->ldim[FetchFromIdCAdr],
 														tmp->dim1, tmp->dim2, tmp->dtypesize(),
 														run_dev_id, FetchFromId, h2d_queue[run_dev_id]);
-					//tmp->cachemap[run_dev_id] = AVAILABLE;
 				}
+				else CoCoPeLiaUpdateCache(run_dev_id, tmp->CacheLocId[run_dev_id], LOCKED);
 		}
 		else error("Subkernel::request_data: Not implemented for TileDim=%d\n", TileDimlist[j]);
-		//CoCoSyncCheckErr();
 	}
 	data_available->record_to_queue(h2d_queue[run_dev_id]);
+	if (cache_used_flag) CoCoPeLiaUnlockCache(run_dev_id);
+	//CoCoSyncCheckErr();
 	#ifdef DEBUG
 		lprintf(lvl-1, "<-----|\n");
 	#endif
@@ -85,13 +97,19 @@ void Subkernel::run_operation(){
 		(VALUE_TYPE*) *ptr_ker_translate->B, ptr_ker_translate->ldB, &ptr_ker_translate->beta, (VALUE_TYPE*) *ptr_ker_translate->C, ptr_ker_translate->ldC),
 		"CoCoPeLiaSubkernelFireAsync: cublasDgemm failed\n");
 	operation_complete->record_to_queue(exec_queue[run_dev_id]);
+	//if (prev!= NULL) prev->operation_complete->sync_barrier();
+  //CoCoSyncCheckErr();
 #ifdef DEBUG
 	lprintf(lvl-1, "<-----|\n");
 #endif
-  //CoCoSyncCheckErr();
 }
 
 void Subkernel::writeback_data(){
+	short lvl = 4;
+#ifdef DEBUG
+	lprintf(lvl-1, "|-----> Subkernel::writeback_data()\n");
+#endif
+
 	d2h_queue[run_dev_id]->wait_for_event(operation_complete);
 	for (int j = 0; j < TileNum; j++){
 		if (TileDimlist[j] == 1) error("Subkernel::writeback_data: Tile1D not implemented\n");
@@ -108,8 +126,12 @@ void Subkernel::writeback_data(){
 				}
 		}
 		else error("Subkernel::writeback_data: Not implemented for TileDim=%d\n", TileDimlist[j]);
-		//CoCoSyncCheckErr();
 	}
+	writeback_complete->record_to_queue(d2h_queue[run_dev_id]);;
+	//CoCoSyncCheckErr();
+#ifdef DEBUG
+	lprintf(lvl-1, "<-----|\n");
+#endif
 }
 
 void 	CoCoPeLiaInitStreams(short dev_id){
@@ -120,24 +142,4 @@ void 	CoCoPeLiaInitStreams(short dev_id){
     massert(CUBLAS_STATUS_SUCCESS == cublasCreate(&(handle[dev_id])), "cublasCreate failed\n");
     massert(CUBLAS_STATUS_SUCCESS == cublasSetStream(handle[dev_id], *(cudaStream_t*) (exec_queue[dev_id]->cqueue_backend_ptr)), "cublasSetStream failed\n");
   }
-}
-
-void CoCoPeLiaSubkernelFireAsync(Subkernel* subkernel){
-	short lvl = 3;
-#ifdef DEBUG
-	lprintf(lvl-1, "|-----> CoCoPeLiaSubkernelFireAsync(subkernel)\n");
-#endif
-
-	subkernel->request_data();
-	exec_queue[subkernel->run_dev_id]->wait_for_event(subkernel->data_available);
-	subkernel->run_operation();
-	if (subkernel->writeback_master) {
-		d2h_queue[subkernel->run_dev_id]->wait_for_event(subkernel->operation_complete);
-		subkernel->writeback_data();
-	}
-	//CoCoSyncCheckErr();
-#ifdef DEBUG
-	lprintf(lvl-1, "<-----|\n");
-#endif
-	return ;
 }
