@@ -10,10 +10,15 @@ message("CoCopeLia-Framework - PROJECT_VERSION: " ${PROJECT_VERSION})
 add_definitions(-DVERSION="${PROJECT_VERSION}")
 #Run in testing mode : details about models, decisions and time spend in operations.
 #add_definitions(-DTEST)
+
 #Run in debug mode, which includes detailed function calls and info for error-checking
 #add_definitions(-DDEBUG)
+
 #Run in deep debug mode, for command-to-command debugging
 #add_definitions(-DDDEBUG)
+
+#Run in caching debug mode, for cache-related deep debugging
+#add_definitions(-DCDEBUG)
 
 project (CoCopeLia-Framework VERSION ${PROJECT_VERSION} DESCRIPTION "The complete CoCoPeLia Framework")
 

@@ -7,12 +7,14 @@
 #include "Asset.hpp"
 #include "unihelpers.hpp"
 
+int Tile_num = 0;
+
 template class Tile2D<double>;
 template class Asset2D<double>;
 
 template<typename dtype> Tile2D<dtype>* Asset2D<dtype>::getTile(int iloc1, int iloc2){
-  if(iloc1 >= GridSz1) error("%s::getTile : iloc1 >= GridSz1 (%d vs %d)\n", name.c_str(), iloc1, GridSz1);
-  else if(iloc2 >= GridSz2) error("%s::getTile : iloc2 >= GridSz2 (%d vs %d)\n", name.c_str(), iloc2, GridSz2);
+  if(iloc1 >= GridSz1) error("Asset2D::getTile : iloc1 >= GridSz1 (%d vs %d)\n", iloc1, GridSz1);
+  else if(iloc2 >= GridSz2) error("Asset2D::getTile : iloc2 >= GridSz2 (%d vs %d)\n", iloc2, GridSz2);
   return Tile_map[iloc1*GridSz2 + iloc2];
 }
 
@@ -60,11 +62,11 @@ template<typename dtype> void Asset2D<dtype>::InitTileMap(int T1, int T2){
       /// For column major format assumed with T1tmp = rows and T2tmp = cols
       if (transpose == 'N'){
          tile_addr = adrs + itt1*T1 + itt2*T2*ldim;
-         Tile_map[current_ctr] = new Tile2D<dtype>(tile_addr, T1tmp, T2tmp, ldim);
+         Tile_map[current_ctr] = new Tile2D<dtype>(tile_addr, T1tmp, T2tmp, ldim, itt1, itt2);
        }
       else if (transpose == 'T'){
         tile_addr = adrs + itt1*T1*ldim + itt2*T2;
-        Tile_map[current_ctr] = new Tile2D<dtype>(tile_addr, T2tmp, T1tmp, ldim);
+        Tile_map[current_ctr] = new Tile2D<dtype>(tile_addr, T2tmp, T1tmp, ldim, itt2, itt1);
       }
       else error("Asset2D<dtype>::InitTileMap: Unknown transpose type\n");
 
@@ -77,16 +79,34 @@ template<typename dtype> void Asset2D<dtype>::InitTileMap(int T1, int T2){
 
 template void Asset2D<double>::InitTileMap(int T1, int T2);
 
-template<typename dtype>  Tile2D<dtype>::Tile2D(void * in_addr, int in_dim1, int in_dim2, int in_ldim)
+template<typename dtype> void Asset2D<dtype>::DestroyTileMap(){
+  int current_ctr;
+  for (int itt1 = 0; itt1 < GridSz1; itt1++)
+    for (int itt2 = 0 ; itt2 < GridSz2; itt2++){
+      current_ctr = itt1*GridSz2 + itt2;
+      delete Tile_map[current_ctr];
+      Tile_num--;
+    }
+  free(Tile_map);
+}
+
+template void Asset2D<double>::DestroyTileMap();
+
+template<typename dtype>  Tile2D<dtype>::Tile2D(void * in_addr, int in_dim1, int in_dim2, int in_ldim, int inGrid1, int inGrid2)
 {
   short lvl = 3;
 
   #ifdef DEBUG
-    lprintf(lvl-1, "|-----> Tile2D<dtype>::Tile2D(in_addr(%d),%d,%d,%d)\n", CoCoGetPtrLoc(in_addr), in_dim1, in_dim2, in_ldim);
+    lprintf(lvl-1, "|-----> Tile2D(%d)::Tile2D(in_addr(%d),%d,%d,%d, %d, %d)\n",
+      Tile_num, CoCoGetPtrLoc(in_addr), in_dim1, in_dim2, in_ldim, inGrid1, inGrid2);
   #endif
 
   dim1 = in_dim1;
   dim2 = in_dim2;
+  GridId1 = inGrid1;
+  GridId2 = inGrid2;
+  id = Tile_num;
+  Tile_num++;
   short init_loc = CoCoGetPtrLoc(in_addr);
   if (init_loc < 0) init_loc = LOC_NUM -1;
   for (int iloc = 0; iloc < LOC_NUM; iloc++){
@@ -109,15 +129,35 @@ template<typename dtype>  Tile2D<dtype>::Tile2D(void * in_addr, int in_dim1, int
   #endif
 }
 
-template<typename dtype>  short Tile2D<dtype>::getId(state first_appearance){
+template<typename dtype> short Tile2D<dtype>::getWriteBackLoc(){
   short pos = 0;
   state temp;
+  for (pos =0; pos < LOC_NUM; pos++) if (CacheLocId[pos] == -1) break;
+  if (pos >= LOC_NUM) error("Tile2D<dtype>::getWriteBackLoc: No initial location found for tile - bug.");
+  else if (pos == LOC_NUM - 1) return -1;
+  else return pos;
+}
+
+// TODO: to make this more sophisticated, we have to add prediction data in it.
+// For now: closest = already in device, then other GPUs, then host (since devices in order etc, host after in CacheLocId)
+template<typename dtype> short Tile2D<dtype>::getClosestReadLoc(short dev_id_in){
+  short lvl = 5;
+#ifdef DEBUG
+  lprintf(lvl-1, "|-----> Tile2D(%d)::getClosestReadLoc(%d)\n", id, dev_id_in);
+#endif
+  short pos = 0;
   for (pos =0; pos < LOC_NUM; pos++){
-    if (CacheLocId[pos] == -1 && first_appearance == MASTER) break;
-    if (CacheLocId[pos] != -42 && CacheLocId[pos] != -1)
-      if (CoCoPeLiaGetCacheState(pos, CacheLocId[pos]) == first_appearance) break;
+    if (pos == dev_id_in) continue;
+    if (CacheLocId[pos] == -1) break;
+    else if (CacheLocId[pos] != -42){
+      state temp = CoCacheUpdateBlockState(pos, CacheLocId[pos]);
+      if (temp == AVAILABLE || temp == R) break;
+#ifdef DDEBUG
+  lprintf(lvl, "|-----> Tile2D(%d)::getClosestReadLoc(%d): Selecting cached tile in loc =%d \n", id, dev_id_in, pos);
+#endif
+    }
   }
-  if (pos >= LOC_NUM) return -2;
+  if (pos >= LOC_NUM) error("Tile2D(%d)::getClosestReadLoc(%d): No location found for tile - bug.", id, dev_id_in);
   else if (pos == LOC_NUM - 1) return -1;
   else return pos;
 }

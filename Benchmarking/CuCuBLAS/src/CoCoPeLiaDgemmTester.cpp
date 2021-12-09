@@ -82,7 +82,7 @@ int main(const int argc, const char *argv[]) {
 		cpu_timer  = csecond() - cpu_timer;
 		fprintf(stderr, "cuBLASXT: %.1lf\n", Gval_per_s(dgemm_flops(dim,dim,dim),cpu_timer));
 		if (comp_flops < Gval_per_s(dgemm_flops(dim,dim,dim),cpu_timer)) warning("Inferior Perf to cublasXt\n");
-		if(Dtest_equality(C, C_comp, dim * dim) < 5) error("Insufficient accuracy for benchmarks\n");
+		if(Dtest_equality(C_comp, C, dim * dim) < 5) error("Insufficient accuracy for benchmarks\n");
 
 		CoCoSyncCheckErr();
 	}
@@ -109,7 +109,7 @@ int main(const int argc, const char *argv[]) {
 		cpu_timer  = csecond() - cpu_timer;
 		fprintf(stderr, "cuBLASXT: %.1lf\n", Gval_per_s(dgemm_flops(dim1,dim2,dim3),cpu_timer));
 		if (comp_flops < Gval_per_s(dgemm_flops(dim1,dim2,dim3),cpu_timer)) warning("Inferior Perf to cublasXt\n");
-		if(Dtest_equality(C, C_comp, dim1 * dim2) < 5) error("Insufficient accuracy for benchmarks\n");
+		if(Dtest_equality(C_comp, C, dim1 * dim2) < 5) error("Insufficient accuracy for benchmarks\n");
 		CoCoSyncCheckErr();
 	}
 
@@ -135,7 +135,7 @@ int main(const int argc, const char *argv[]) {
 		cpu_timer  = csecond() - cpu_timer;
 		fprintf(stderr, "cuBLASXT: %.1lf\n", Gval_per_s(dgemm_flops(dim1,dim2,dim3),cpu_timer));
 		if (comp_flops < Gval_per_s(dgemm_flops(dim1,dim2,dim3),cpu_timer)) warning("Inferior Perf to cublasXt\n");
-		if(Dtest_equality(C, C_comp, dim1 * dim2) < 5) error("Insufficient accuracy for benchmarks\n");
+		if(Dtest_equality(C_comp, C, dim1 * dim2) < 5) error("Insufficient accuracy for benchmarks\n");
 		CoCoSyncCheckErr();
 	}
 
@@ -162,7 +162,7 @@ int main(const int argc, const char *argv[]) {
 		cpu_timer  = csecond() - cpu_timer;
 		fprintf(stderr, "cuBLASXT: %.1lf\n", Gval_per_s(dgemm_flops(dim1,dim2,dim3),cpu_timer));
 		if (comp_flops < Gval_per_s(dgemm_flops(dim1,dim2,dim3),cpu_timer)) warning("Inferior Perf to cublasXt\n");
-		if(Dtest_equality(C, C_comp, dim1 * dim2) < 5) error("Insufficient accuracy for benchmarks\n");
+		if(Dtest_equality(C_comp, C, dim1 * dim2) < 5) error("Insufficient accuracy for benchmarks\n");
 		CoCoSyncCheckErr();
 	}
 	CoCoFree(A, A_loc);
@@ -311,7 +311,7 @@ int main(const int argc, const char *argv[]) {
 		cpu_timer  = csecond() - cpu_timer;
 		fprintf(stderr, "cuBLASXT: %.1lf\n", Gval_per_s(dgemm_flops(M,N,K),cpu_timer));
 		if (comp_flops < Gval_per_s(dgemm_flops(M,N,K),cpu_timer)) warning("Inferior Perf to cublasXt\n");
-		if(Dtest_equality(C, C_comp, M * N) < 5) error("Insufficient accuracy for benchmarks\n");
+		if(Dtest_equality(C_comp, C, M * N) < 5) error("Insufficient accuracy for benchmarks\n");
 		CoCoSyncCheckErr();
 
 		CoCoVecInit(C, M * N, 44, C_loc);
@@ -340,7 +340,7 @@ int main(const int argc, const char *argv[]) {
 		cpu_timer  = csecond() - cpu_timer;
 		fprintf(stderr, "cuBLASXT: %.1lf\n", Gval_per_s(dgemm_flops(M,N,K),cpu_timer));
 		if (comp_flops < Gval_per_s(dgemm_flops(M,N,K),cpu_timer)) warning("Inferior Perf to cublasXt\n");
-		if(Dtest_equality(C, C_comp, M * N) < 5) error("Insufficient accuracy for benchmarks\n");
+		if(Dtest_equality(C_comp, C, M * N) < 5) error("Insufficient accuracy for benchmarks\n");
 		CoCoSyncCheckErr();
 
 		CoCoVecInit(C, M * N, 44, C_loc);
@@ -367,7 +367,7 @@ int main(const int argc, const char *argv[]) {
 		cpu_timer  = csecond() - cpu_timer;
 		fprintf(stderr, "cuBLASXT: %.1lf\n", Gval_per_s(dgemm_flops(M,N,K),cpu_timer));
 		if (comp_flops < Gval_per_s(dgemm_flops(M,N,K),cpu_timer)) warning("Inferior Perf to cublasXt\n");
-		if(Dtest_equality(C, C_comp, M * N) < 5) error("Insufficient accuracy for benchmarks\n");
+		if(Dtest_equality(C_comp, C, M * N) < 5) error("Insufficient accuracy for benchmarks\n");
 		CoCoSyncCheckErr();
 
 		CoCoFree(A, A_loc);

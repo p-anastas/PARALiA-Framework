@@ -11,6 +11,28 @@
 
 #include "backend_wrappers.hpp"
 
+int Event_num_device[128] = {0};
+
+/*****************************************************/
+/// Event Status-related functions
+
+const char* print_event_status(event_status in_status){
+	switch(in_status){
+		case(UNRECORDED):
+			return "UNRECORDED";
+		case(RECORDED):
+			return "RECORDED";
+		case(COMPLETE):
+			return "COMPLETE";
+		case(CHECKED):
+			return "CHECKED";
+		case(GHOST):
+			return "GHOST";
+		default:
+			error("print_event_status: Unknown state\n");
+	}
+}
+
 /*****************************************************/
 /// Command queue class functions
 CommandQueue::CommandQueue()
@@ -40,7 +62,11 @@ void CommandQueue::wait_for_event(Event_p Wevent)
 Event::Event()
 {
 	event_backend_ptr = malloc(sizeof(cudaEvent_t));
+	int dev_id;  cudaGetDevice(&dev_id);
+	Event_num_device[dev_id]++;
+	id = Event_num_device[dev_id];
 	cudaError_t err = cudaEventCreate(( cudaEvent_t*) event_backend_ptr);
+	status = UNRECORDED;
 	massert(cudaSuccess == err, "Event::Event - %s\n", cudaGetErrorString(err));
 }
 
@@ -48,6 +74,7 @@ void Event::sync_barrier()
 {
 	cudaEvent_t cuda_event= *(cudaEvent_t*) event_backend_ptr;
 	cudaError_t err = cudaEventSynchronize(cuda_event);
+	if (status == RECORDED) status = COMPLETE;
 	massert(cudaSuccess == err, "Event::sync_barrier - %s\n", cudaGetErrorString(err));
 }
 
@@ -55,15 +82,31 @@ void Event::record_to_queue(CQueue_p Rr){
 	cudaEvent_t cuda_event= *(cudaEvent_t*) event_backend_ptr;
 	cudaStream_t stream = *((cudaStream_t*) Rr->cqueue_backend_ptr);
 	cudaError_t err = cudaEventRecord(cuda_event, stream);
+	status = RECORDED;
 	massert(cudaSuccess == err, "Event::record_to_queue - %s\n", cudaGetErrorString(err));
 }
 
-short Event::is_complete(){
+event_status Event::query_status(){
 	cudaEvent_t cuda_event= *(cudaEvent_t*) event_backend_ptr;
 	cudaError_t err = cudaEventQuery(cuda_event);
-	if (err == cudaSuccess) return 1;
-	if (err == cudaErrorNotReady) return 0;
-	else error("Event::is_complete - %s\n", cudaGetErrorString(err));
+	if (err == cudaSuccess && (status == UNRECORDED || status == CHECKED ||  status == COMPLETE)) return status;
+	else if (err == cudaSuccess && status == RECORDED){ // Event has finished but not synched yet!
+		status = COMPLETE;
+		return status;
+	}
+	else if (err == cudaErrorNotReady && status == RECORDED) return status;
+	else if (err == cudaErrorNotReady && status == UNRECORDED){
+		// this should not happen in a healthy implementation
+		warning("Event::query_status: cudaErrorNotReady with status == UNRECORDED should not happen\n");
+		status = RECORDED;
+		return status;
+	}
+	else error("Event::query_status - %s, status=%s\n", cudaGetErrorString(err), print_event_status(status));
+}
+
+void Event::checked(){
+	if (status == COMPLETE) status = CHECKED;
+	else error("Event::checked(): error event was %s,  not COMPLETE()\n", print_event_status(status));
 }
 
 /*****************************************************/

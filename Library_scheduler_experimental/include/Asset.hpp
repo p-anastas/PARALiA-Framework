@@ -8,6 +8,8 @@
 
 #include<iostream>
 #include <string>
+#include <mutex>          // std::mutex
+
 #define LOC_NUM (DEV_NUM + 1)
 
 #include "DataCaching.hpp"
@@ -24,7 +26,6 @@ class Asset1D
 		std::string name;
 
 		int dsize() { return sizeof(dtype); }
-		void print() { std::cout << "Asset1D : " << name; }
 
 };
 
@@ -34,7 +35,7 @@ class Tile2D
 		// Variables
 	private:
 	public:
-		std::string name;
+		int id, GridId1, GridId2;
 		int dim1, dim2;
 		short writeback;
 
@@ -44,13 +45,13 @@ class Tile2D
 		//int PendingUsage[LOC_NUM];
 
 		// Constructor
-		Tile2D<dtype>(void* tile_addr, int T1tmp, int T2tmp, int ldim);
+		Tile2D<dtype>(void* tile_addr, int T1tmp, int T2tmp, int ldim, int inGrid1, int inGrid2);
 
     // General Functions
 		int dtypesize() { return sizeof(dtype); }
 		int size() { return dtypesize()*dim1*dim2; }
-		short getId(state first_appearance);
-		void print() { std::cout << "Asset2D : " << name; }
+		short getWriteBackLoc();
+		short getClosestReadLoc(short dev_id_in);
 
 };
 
@@ -60,6 +61,7 @@ class Asset2D
 	// Variables
 	private:
 	public:
+	int id;
 	char transpose;
 	int GridSz1, GridSz2;
 	int loc;
@@ -68,17 +70,16 @@ class Asset2D
 	int dim1, dim2;
 	short pin_internally;
 	Tile2D<dtype> **Tile_map;
-	std::string name;
 
 	// Constructor, sets dim1, dim2, ldim, adrs and derives loc from get_loc(adr)
 	Asset2D<dtype>(void* adrr, int in_dim1, int in_dim2, int in_ldim, char transpose);
 
 	// General Functions
 	void InitTileMap(int T1, int T2);
+	void DestroyTileMap();
 	Tile2D<dtype>* getTile(int iloc1, int iloc2);
 	int dtypesize() { return sizeof(dtype); }
 	int size() { return dtypesize()*dim1*dim2; }
-	void print() { std::cout << "Asset2D : " << name; }
 
 	// Backend Functions
 	void* prepareAsync(pthread_t* thread_id, pthread_attr_t attr);

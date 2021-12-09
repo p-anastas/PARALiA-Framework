@@ -41,11 +41,13 @@ void _printf(const char *fmt, va_list ap)
 }
 
 void warning(const char *fmt, ...) {
+//#ifdef DEBUG
 	fprintf(stderr, "WARNING -> ");
 	va_list ap;
 	va_start(ap, fmt);
 	_printf(fmt, ap);
 	va_end(ap);
+//#endif
 }
 
 void error(const char *fmt, ...) {

@@ -35,16 +35,31 @@ typedef class CommandQueue
 
 }* CQueue_p;
 
+enum event_status{
+	UNRECORDED = 0, /// Event has not been recorded yet.
+	RECORDED = 1, /// Recorded but not guaranteed to be complete.
+	COMPLETE = 2,  /// Complete but not yet ran 'check' function (for cache updates etc)
+	CHECKED = 3,  /// Complete and Checked/Updated caches etc.
+	GHOST = 4  /// Does not exist in the time continuum.
+};
+
+/// Returns a string representation for event_status
+const char* print_event_status(event_status in_status);
+
 class Event
 {
 	private:
+		event_status status;
 	public:
 		void* event_backend_ptr;
+		int id;
 
 		Event();
 		void sync_barrier();
 		void record_to_queue(CQueue_p Rr);
-		short is_complete();
+		event_status query_status();
+		void checked();
+
 
 };
 

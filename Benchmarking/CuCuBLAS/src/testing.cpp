@@ -34,16 +34,16 @@ void ParseInputLvl3(const int argc, const char *argv[], CoControl_p* predef_cont
 	//Tunning Parameters
 	if (dev_num < 0 && cpu_ratio <= 0 && T <=0 ) temp_p = *predef_control_values = NULL;
 	else{
-		printf("Using predifined control parameters from input\n");
+		fprintf(stderr, "Using predefined control parameters from input\n");
 		*predef_control_values = (CoControl_p) malloc (sizeof(struct CoControl));
 		temp_p = *predef_control_values;
-		temp_p->cpu_ratio = cpu_ratio; 
-		temp_p->T = T; 
+		temp_p->cpu_ratio = cpu_ratio;
+		temp_p->T = T;
 		if (dev_num < 0){
 			temp_p->dev_num = -1;
 			temp_p->dev_ids = NULL;
 		}
-		else if (dev_num == 0) temp_p->cpu_ratio = 1.0; 
+		else if (dev_num == 0) temp_p->cpu_ratio = 1.0;
 		else{
 			temp_p->dev_num = dev_num;
 			temp_p->dev_ids = (int*) malloc(dev_num*sizeof(int));
@@ -70,29 +70,29 @@ void ParseInputLvl3(const int argc, const char *argv[], CoControl_p* predef_cont
 	*loc3 = atoi(argv[14]);
 	*outloc = atoi(argv[15]);
 
-	char* control_str = CoControlPrint(temp_p); 
+	char* control_str = CoControlPrint(temp_p);
 	fprintf(stderr, "ParseInputLvl3: Parsed configuration:\n\tControl: %s\n\tTransA: %c, TransB: %c\n\talpha: %lf, beta: %lf\n\tD1: %zu, D2: %zu, D3: %zu\n\tloc1: %d, loc2: %d, loc3: %d, outloc: %d\n",
 	control_str, *TransA, *TransB, *alpha, *beta, *D1, *D2, *D3, *loc1, *loc2, *loc3, *outloc);
 	free(control_str);
-	return; 
+	return;
 }
 
 
 void CheckLogLvl3(char* filename, CoControl_p predef_control_values, char TransA, char TransB, double alpha, double beta, size_t D1, size_t D2, size_t D3, short loc1, short loc2, short loc3, short outloc){
 	FILE* fp = fopen(filename,"r");
-	if (!fp) { 
+	if (!fp) {
 		fp = fopen(filename,"w+");
 		if (!fp) error("CheckLogLvl3: LogFile %s failed to open\n", filename);
 		else warning("CheckLogLvl3: Generating Logfile %s...\n", filename);
-	}	
+	}
 	char buffer[256], search_string[256];
-	char* control_str = CoControlPrint(predef_control_values); 
+	char* control_str = CoControlPrint(predef_control_values);
 	sprintf(search_string, "%s, %c,%c,%.5lf,%.5lf,%zu,%zu,%zu,%d,%d,%d,%d", control_str, TransA, TransB, alpha, beta, D1, D2, D3, loc1, loc2, loc3, outloc);
 	while (fgets(buffer, sizeof(buffer), fp) != NULL){
 		if(strstr(buffer, search_string) != NULL){
    			fprintf(stderr,"CheckLogLvl3: entry %s, %c,%c,%.5lf,%.5lf,%zu,%zu,%zu,%d,%d,%d,%d found. Quiting...\n", control_str, TransA, TransB, alpha, beta, D1, D2, D3, loc1, loc2, loc3, outloc);
-			fclose(fp);	
-			exit(1); 
+			fclose(fp);
+			exit(1);
 		}
 	}
 	free(control_str);
@@ -103,10 +103,9 @@ void CheckLogLvl3(char* filename, CoControl_p predef_control_values, char TransA
 void StoreLogLvl3(char* filename, CoControl_p predef_control_values, char TransA, char TransB, double alpha, double beta, size_t D1, size_t D2, size_t D3, short loc1, short loc2, short loc3, short outloc, double timer){
 	FILE* fp = fopen(filename,"a");
 	if (!fp) error("report_results: LogFile failed to open");
-	char* control_str = CoControlPrint(predef_control_values); 
+	char* control_str = CoControlPrint(predef_control_values);
    	fprintf(fp,"%s, %c,%c,%.5lf,%.5lf,%zu,%zu,%zu,%d,%d,%d,%d, %e\n",  control_str, TransA, TransB, alpha, beta, D1, D2, D3, loc1, loc2, loc3, outloc, timer);
 	free(control_str);
-        fclose(fp); 
+        fclose(fp);
 	return;
 }
- 

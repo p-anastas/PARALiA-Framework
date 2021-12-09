@@ -118,6 +118,27 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 #endif
 
 	CoCoPeLiaSelectDevice(dev_id);
+
+	for (int keri = 0; keri < gemm_subkernel_data->SubkernelNumDev; keri++){
+		gemm_subkernel_data->SubkernelListDev[keri]->init_events();
+		CoCoGemmUpdateDevice(gemm_subkernel_data->SubkernelListDev[keri], dev_id);
+		if (!keri) gemm_subkernel_data->SubkernelListDev[keri]->prev = NULL;
+		else gemm_subkernel_data->SubkernelListDev[keri]->prev = gemm_subkernel_data->SubkernelListDev[keri-1];
+		if(keri==gemm_subkernel_data->SubkernelNumDev - 1) gemm_subkernel_data->SubkernelListDev[keri]->next = NULL;
+		else gemm_subkernel_data->SubkernelListDev[keri]->next = gemm_subkernel_data->SubkernelListDev[keri+1];
+	}
+
+	/// Only warks assuming the last subkernel writes back
+	Event* tmp_writeback;
+	for (int keri = gemm_subkernel_data->SubkernelNumDev -1 ; keri >= 0 ; keri--){
+		if (gemm_subkernel_data->SubkernelListDev[keri]->writeback_master)
+			tmp_writeback = gemm_subkernel_data->SubkernelListDev[keri]->writeback_complete;
+		else{
+			delete gemm_subkernel_data->SubkernelListDev[keri]->writeback_complete;
+			gemm_subkernel_data->SubkernelListDev[keri]->writeback_complete = tmp_writeback;
+		}
+	}
+
   CoCoPeLiaRequestBuffer(gemm_subkernel_data);
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer;
@@ -137,12 +158,6 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 #endif
 
 	for (int keri = 0; keri < gemm_subkernel_data->SubkernelNumDev; keri++){
-		gemm_subkernel_data->SubkernelListDev[keri]->init_events();
-		CoCoGemmUpdateDevice(gemm_subkernel_data->SubkernelListDev[keri], dev_id);
-		if (!keri) gemm_subkernel_data->SubkernelListDev[keri]->prev = NULL;
-		else gemm_subkernel_data->SubkernelListDev[keri]->prev = gemm_subkernel_data->SubkernelListDev[keri-1];
-		if(keri==gemm_subkernel_data->SubkernelNumDev - 1) gemm_subkernel_data->SubkernelListDev[keri]->next = NULL;
-		else gemm_subkernel_data->SubkernelListDev[keri]->next = gemm_subkernel_data->SubkernelListDev[keri+1];
 		gemm_subkernel_data->SubkernelListDev[keri]->request_data();
 		gemm_subkernel_data->SubkernelListDev[keri]->run_operation();
 		if (gemm_subkernel_data->SubkernelListDev[keri]->writeback_master)
@@ -169,7 +184,9 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 		prev_exec = *(cudaEvent_t*) gemm_subkernel_data->SubkernelListDev[keri]->operation_complete->event_backend_ptr;
 	}
 #endif
-	CoCoPeLiaDevCacheInvalidate(gemm_subkernel_data);
+	/// Do this after pthread join to enable other devices
+	/// to still read cached data after a device's part is over
+	//CoCoPeLiaDevCacheInvalidate(gemm_subkernel_data);
 #ifdef DEBUG
 	lprintf(lvl-1, "<-----|\n");
 #endif
@@ -250,7 +267,7 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 			num_devices = predef_vals.dev_num;
 			dev_id = (short*) malloc (num_devices*sizeof(short));
 			for (int i =0; i < num_devices; i++) dev_id[i] = predef_vals.dev_ids[i];
-#ifdef TEST
+#ifdef DEBUG
 			lprintf(lvl, "Running on %d devices with dev_ids=[ ", num_devices);
 			for (int i =0; i < num_devices; i++) fprintf(stderr, "%d ", predef_vals.dev_ids[i]);
 			fprintf(stderr, "]\n");
@@ -301,19 +318,36 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 		used_vals->T = T;
 	}
 
+#ifdef TEST
+	cpu_timer = csecond() - cpu_timer;
+	lprintf(lvl, "Device/T selection -> t_configure = %lf ms\n", cpu_timer*1000);
+	cpu_timer = csecond();
+#endif
+
 	/// TODO: Split each asset to Tiles
 	A_asset->InitTileMap(T, T);
 	B_asset->InitTileMap(T, T);
 	C_asset->InitTileMap(T, T);
+
+#ifdef TEST
+	cpu_timer = csecond() - cpu_timer;
+	lprintf(lvl, "Spliting assets to tiles -> t_tile_init = %lf ms\n", cpu_timer*1000);
+	cpu_timer = csecond();
+#endif
 
 	// Here would be the place for Agent distribution to devices.
 	// Working implementation similar to old : Each agent works on part of the problem, asigns to Subkernels subproblems
 	// TODO: Idea 1 - Simulate the full execution step to step using thew expected times (instead of runtime scheduler), and asign Subkernels TO agents respectively to minimize communication.
 	int Subkernel_num;
 	Subkernel** Subkernel_list = CoCoAsignTilesToSubkernelsGemm(A_asset, B_asset, C_asset, T, &Subkernel_num);
-	#ifdef DEBUG
-			lprintf(lvl, "Subkernel_num = %d, num_devices = %d\n\n", Subkernel_num, num_devices);
-	#endif
+#ifdef DEBUG
+	lprintf(lvl, "Subkernel_num = %d, num_devices = %d\n\n", Subkernel_num, num_devices);
+#endif
+#ifdef TEST
+	cpu_timer = csecond() - cpu_timer;
+	lprintf(lvl, "Subkernel init -> t_subkernel_init = %lf ms\n", cpu_timer*1000);
+	cpu_timer = csecond();
+#endif
 
 	/// TODO: Split Subkernels equally on devices. For test purposes only.
 	/// FIXME: Never split K between devices, otherwise buffer needed for adding results
@@ -342,6 +376,12 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 	pthread_t thread_id[used_devices];
 	kernel_pthread_wrap_p thread_dev_data[used_devices];
 
+#ifdef TEST
+	cpu_timer = csecond() - cpu_timer;
+	lprintf(lvl, "Subkernel Split devices -> t_subkernel_split = %lf ms\n", cpu_timer*1000);
+	cpu_timer = csecond();
+#endif
+
 	for(int i=0; i<used_devices;i++){
 
 		// Check/Enable peer access between participating GPUs
@@ -364,17 +404,51 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 		if (s != 0) error("CoCopeLiaDgemm: pthread_join failed with exit value %d", s);
 		//free(res);      /* Free memory allocated by thread */
 	}
-
-	cudaSetDevice(prev_dev_id);
-#ifdef TEST
-	cpu_timer = csecond();
-#endif
-        A_asset->resetProperties();
-        B_asset->resetProperties();
-        C_asset->resetProperties();
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer;
-	lprintf(lvl, "Unregistering matrices -> t_unpin = %lf ms\n", cpu_timer*1000);
+	lprintf(lvl, "Fire and gather pthreads for all devices -> t_exec_full = %lf ms\n", cpu_timer*1000);
+	cpu_timer = csecond();
+#endif
+
+	for(int i=0; i<used_devices;i++) CoCoPeLiaDevCacheInvalidate(thread_dev_data[i]);
+
+#ifdef TEST
+	cpu_timer = csecond() - cpu_timer;
+	lprintf(lvl, "Invalidate caches -> t_invalidate = %lf ms\n", cpu_timer*1000);
+	cpu_timer = csecond();
+#endif
+
+	for(int i=0; i<Subkernel_num; i++) delete Subkernel_list[i];
+	//delete [] Subkernel_list;
+
+#ifdef TEST
+	cpu_timer = csecond() - cpu_timer;
+	lprintf(lvl, "Freed Subkernels -> t_invalidate = %lf ms\n", cpu_timer*1000);
+	cpu_timer = csecond();
+#endif
+
+	A_asset->DestroyTileMap();
+	B_asset->DestroyTileMap();
+	C_asset->DestroyTileMap();
+
+#ifdef TEST
+	cpu_timer = csecond() - cpu_timer;
+	lprintf(lvl, "Destroyed Tilemaps -> t_invalidate = %lf ms\n", cpu_timer*1000);
+	cpu_timer = csecond();
+#endif
+
+	cudaSetDevice(prev_dev_id);
+
+  A_asset->resetProperties();
+  B_asset->resetProperties();
+  C_asset->resetProperties();
+	delete A_asset;
+	delete B_asset;
+	delete C_asset;
+
+#ifdef TEST
+	cpu_timer = csecond() - cpu_timer;
+	lprintf(lvl, "Unregistering assets -> t_unpin = %lf ms\n", cpu_timer*1000);
 #endif
 
 #ifdef DEBUG

@@ -15,7 +15,7 @@ class Subkernel
 {
 	private:
 	public:
-		std::string name;
+		int id;
 		short run_dev_id, writeback_master;
 		short TileNum, *TileDimlist;
 		void** TileList;
@@ -28,13 +28,15 @@ class Subkernel
 		/// Constructors
 		Subkernel(short TileNum);
 
+		/// Destructors
+		~Subkernel();
+
 		/// Functions
 		void init_events();
 		void request_data();
+		void request_data_complete();
 		void run_operation();
 		void writeback_data();
-		void print() { std::cout << "Subkernel : " << name; }
-
 };
 
 typedef struct kernel_pthread_wrap{
