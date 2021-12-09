@@ -316,6 +316,7 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 					(CoCoGetPtrLoc(C) == dev_id[d])? 0 : 1, (CoCoGetPtrLoc(A) == dev_id[d])? 0 : 1,
 					(CoCoGetPtrLoc(B) == dev_id[d])? 0 : 1, (CoCoGetPtrLoc(C) == dev_id[d])? 0 : 1,
 					ldA, ldB, ldC);
+
 #ifdef TEST
 				cpu_timer = csecond() - cpu_timer;
 				lprintf(lvl, "Model Initialization(dev = %d): t_mod_init = %lf ms\n", dev_id[d], cpu_timer*1000);
@@ -327,6 +328,7 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 					slowest_problem_t = pred_p[d]->pred_t;
 					slowest_problem_T = pred_p[d]->T;
 				}
+
 #ifdef TEST
 				cpu_timer = csecond() - cpu_timer;
 				lprintf(lvl, "Model Selected T=%zu with t_predicted = %lf ms : t_mod_opt = %lf ms\n", T, pred_p[d]->pred_t*1000, cpu_timer*1000);
