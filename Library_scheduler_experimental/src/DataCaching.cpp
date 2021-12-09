@@ -89,55 +89,44 @@ void CoCoPeLiaRequestBuffer(kernel_pthread_wrap_p subkernel_data){
   short dev_id = subkernel_data->dev_id;
   if (dev_id < 0 ) error("CoCoPeLiaRequestBuffer called with dev_id=%d\n", dev_id);
 	DevBufPtr temp_globuf = CoCoPeLiaGlobufInit(subkernel_data);
-  long long free_dev_mem, max_dev_mem, prev_globuf_sz = 0;
-	if (GloBuf[dev_id] != NULL) prev_globuf_sz = GloBuf[dev_id]->gpu_mem_buf_sz;
-  CoCoPeLiaDevGetMemInfo(&free_dev_mem, &max_dev_mem);
-  long long problem_avail_mem = free_dev_mem - max_dev_mem*(1-PROBLEM_GPU_PERCENTAGE/100.0) + prev_globuf_sz;
-  // For debuging large cases
-  //problem_avail_mem/=125;
-  #ifdef DEBUG
-  	lprintf(lvl, "====================================\n");
-  	lprintf(lvl, "GPU mem management:\n");
-  	lprintf(lvl, " -Buffer requested for BlockSize=%zu MB and BlockNum=%d\n", (size_t) temp_globuf->BlockSize/1024/1024, temp_globuf->BlockNum);
-  	lprintf(lvl, " -Mem required for matrices: %zu MB\n", (size_t) temp_globuf->gpu_mem_buf_sz/1024/1024);
-    lprintf(lvl, " -Mem available in GPU: %zu MB\n", (size_t) problem_avail_mem/1024/1024);
-  #endif
+	if (temp_globuf->gpu_mem_buf_sz > 0){
+	  long long free_dev_mem, max_dev_mem, prev_globuf_sz = 0;
+		if (GloBuf[dev_id] != NULL) prev_globuf_sz = GloBuf[dev_id]->gpu_mem_buf_sz;
+	  CoCoPeLiaDevGetMemInfo(&free_dev_mem, &max_dev_mem);
+	  long long problem_avail_mem = free_dev_mem - max_dev_mem*(1-PROBLEM_GPU_PERCENTAGE/100.0) + prev_globuf_sz;
+	  // For debuging large cases
+	  //problem_avail_mem/=125;
+	  #ifdef DEBUG
+	  	lprintf(lvl, "====================================\n");
+	  	lprintf(lvl, "GPU mem management:\n");
+	  	lprintf(lvl, " -Buffer requested for BlockSize=%zu MB and BlockNum=%d\n", (size_t) temp_globuf->BlockSize/1024/1024, temp_globuf->BlockNum);
+	  	lprintf(lvl, " -Mem required for matrices: %zu MB\n", (size_t) temp_globuf->gpu_mem_buf_sz/1024/1024);
+	    lprintf(lvl, " -Mem available in GPU: %zu MB\n", (size_t) problem_avail_mem/1024/1024);
+	  #endif
 
-  if (temp_globuf->gpu_mem_buf_sz <= problem_avail_mem){
-#ifdef DEBUG
-    lprintf(lvl, " -Requested buffer fits in GPU(%d)\n", dev_id);
-#endif
-	;}
-	else{
-    temp_globuf->BlockNum =  (int) (problem_avail_mem/temp_globuf->BlockSize);
-		temp_globuf->gpu_mem_buf_sz = temp_globuf->BlockNum*temp_globuf->BlockSize;
-#ifdef DEBUG
-    lprintf(lvl, " -Requested buffer does not fit in GPU(%d)\n", dev_id);
-#endif
-	}
+	  if (temp_globuf->gpu_mem_buf_sz <= problem_avail_mem){
+	#ifdef DEBUG
+	    lprintf(lvl, " -Requested buffer fits in GPU(%d)\n", dev_id);
+	#endif
+		;}
+		else{
+	    temp_globuf->BlockNum =  (int) (problem_avail_mem/temp_globuf->BlockSize);
+			temp_globuf->gpu_mem_buf_sz = temp_globuf->BlockNum*temp_globuf->BlockSize;
+	#ifdef DEBUG
+	    lprintf(lvl, " -Requested buffer does not fit in GPU(%d)\n", dev_id);
+	#endif
+		}
 
-#ifdef DEBUG
-  if (prev_globuf_sz >= temp_globuf->gpu_mem_buf_sz)
-		lprintf(lvl, " -GPU(%d) buf available: %zu MB\n", dev_id, (size_t) prev_globuf_sz/1024/1024);
-  else if (prev_globuf_sz > 0) lprintf(lvl, " -Smaller GPU(%d) buf available -> replacing : %zu -> %zu MB\n",
-		dev_id, (size_t) prev_globuf_sz/1024/1024, (size_t) temp_globuf->gpu_mem_buf_sz/1024/1024);
-  else lprintf(lvl, " -Initializing new GPU(%d) buffer: %zu MB\n", dev_id, (size_t) temp_globuf->gpu_mem_buf_sz/1024/1024);
-#endif
-  if (prev_globuf_sz >= temp_globuf->gpu_mem_buf_sz){
-		temp_globuf->gpu_mem_buf_sz = GloBuf[dev_id]->gpu_mem_buf_sz;
-		temp_globuf->gpu_mem_buf = GloBuf[dev_id]->gpu_mem_buf;
-		for (int ifr = 0; ifr < GloBuf[dev_id]->BlockNum; ifr++)
-			pending_events_free(&GloBuf[dev_id]->BlockPendingEvents[ifr]);
-		free(GloBuf[dev_id]->BlockPendingEvents);
-		free(GloBuf[dev_id]->BlockState);
-		free(GloBuf[dev_id]->BlockCurrentTileDim);
-		free(GloBuf[dev_id]->BlockCurrentTilePtr);
-		free(GloBuf[dev_id]);
-		GloBuf[dev_id] = temp_globuf;
-	}
-  else{
-		if (prev_globuf_sz > 0){
-		  CoCoFree(GloBuf[dev_id]->gpu_mem_buf, dev_id);
+	#ifdef DEBUG
+	  if (prev_globuf_sz >= temp_globuf->gpu_mem_buf_sz)
+			lprintf(lvl, " -GPU(%d) buf available: %zu MB\n", dev_id, (size_t) prev_globuf_sz/1024/1024);
+	  else if (prev_globuf_sz > 0) lprintf(lvl, " -Smaller GPU(%d) buf available -> replacing : %zu -> %zu MB\n",
+			dev_id, (size_t) prev_globuf_sz/1024/1024, (size_t) temp_globuf->gpu_mem_buf_sz/1024/1024);
+	  else lprintf(lvl, " -Initializing new GPU(%d) buffer: %zu MB\n", dev_id, (size_t) temp_globuf->gpu_mem_buf_sz/1024/1024);
+	#endif
+	  if (prev_globuf_sz >= temp_globuf->gpu_mem_buf_sz){
+			temp_globuf->gpu_mem_buf_sz = GloBuf[dev_id]->gpu_mem_buf_sz;
+			temp_globuf->gpu_mem_buf = GloBuf[dev_id]->gpu_mem_buf;
 			for (int ifr = 0; ifr < GloBuf[dev_id]->BlockNum; ifr++)
 				pending_events_free(&GloBuf[dev_id]->BlockPendingEvents[ifr]);
 			free(GloBuf[dev_id]->BlockPendingEvents);
@@ -145,24 +134,44 @@ void CoCoPeLiaRequestBuffer(kernel_pthread_wrap_p subkernel_data){
 			free(GloBuf[dev_id]->BlockCurrentTileDim);
 			free(GloBuf[dev_id]->BlockCurrentTilePtr);
 			free(GloBuf[dev_id]);
+			GloBuf[dev_id] = temp_globuf;
 		}
-    GloBuf[dev_id] = temp_globuf;
-		GloBuf[dev_id]->gpu_mem_buf = CoCoMalloc(GloBuf[dev_id]->gpu_mem_buf_sz,
-			dev_id);
-  }
-  CoCoSyncCheckErr();
+	  else{
+			if (prev_globuf_sz > 0){
+			  CoCoFree(GloBuf[dev_id]->gpu_mem_buf, dev_id);
+				for (int ifr = 0; ifr < GloBuf[dev_id]->BlockNum; ifr++)
+					pending_events_free(&GloBuf[dev_id]->BlockPendingEvents[ifr]);
+				free(GloBuf[dev_id]->BlockPendingEvents);
+				free(GloBuf[dev_id]->BlockState);
+				free(GloBuf[dev_id]->BlockCurrentTileDim);
+				free(GloBuf[dev_id]->BlockCurrentTilePtr);
+				free(GloBuf[dev_id]);
+			}
+	    GloBuf[dev_id] = temp_globuf;
+			GloBuf[dev_id]->gpu_mem_buf = CoCoMalloc(GloBuf[dev_id]->gpu_mem_buf_sz,
+				dev_id);
+	  }
+	  CoCoSyncCheckErr();
 
 #ifdef TEST
-	cpu_timer = csecond() - cpu_timer;
-	lprintf(lvl, "GPU(%d) Buffer allocation with sz = %zu MB: t_alloc = %lf ms\n" ,
-    dev_id, (size_t) GloBuf[dev_id]->gpu_mem_buf_sz/1024/1024, cpu_timer*1000);
+		cpu_timer = csecond() - cpu_timer;
+		lprintf(lvl, "GPU(%d) Buffer allocation with sz = %zu MB: t_alloc = %lf ms\n" ,
+	    dev_id, (size_t) GloBuf[dev_id]->gpu_mem_buf_sz/1024/1024, cpu_timer*1000);
 #endif
+
 #ifdef DEBUG
-	lprintf(lvl, "GPU(%d) Buffer allocation (Size = %zu MB, Blocksize = %zu MB, BlockNum = %d)\n" ,
-  dev_id, (size_t) GloBuf[dev_id]->gpu_mem_buf_sz/1024/1024,
-  (size_t) GloBuf[dev_id]->BlockSize/1024/1024,  GloBuf[dev_id]->BlockNum);
-	lprintf(lvl-1, "<-----|\n");
+		lprintf(lvl, "GPU(%d) Buffer allocation (Size = %zu MB, Blocksize = %zu MB, BlockNum = %d)\n" ,
+	  dev_id, (size_t) GloBuf[dev_id]->gpu_mem_buf_sz/1024/1024,
+	  (size_t) GloBuf[dev_id]->BlockSize/1024/1024,  GloBuf[dev_id]->BlockNum);
+		lprintf(lvl-1, "<-----|\n");
 #endif
+	}
+	else{;
+#ifdef DEBUG
+		lprintf(lvl, "GPU(%d) does not require a buffer - all data available\n" , dev_id);
+		lprintf(lvl-1, "<-----|\n");
+#endif
+	}
 }
 
 void* CoCacheAsignBlock(short dev_id, void* TilePtr, short TileDim){

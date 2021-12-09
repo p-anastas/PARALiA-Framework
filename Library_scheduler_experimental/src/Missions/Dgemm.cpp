@@ -335,6 +335,30 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 
 			}
 
+			/// Extra: check if running in multiple GPUs seems to have a point performance-wise.
+			/// Currently only comparing single vs multi GPU
+			/// Can be extended to complex (e.g. 1 vs 2 vs 3 etc)
+			if (predef_vals.dev_num < 0 && num_devices > 1) {
+				short best_dev_id = 0;
+			 	model = CoCoPeLiaModelInit(0, "Dgemm", 'X', TransA, TransB, M, N, K,
+				 (CoCoGetPtrLoc(A) == 0)? 0 : 1, (CoCoGetPtrLoc(B) == 0)? 0 : 1,
+				 (CoCoGetPtrLoc(C) == 0)? 0 : 1, (CoCoGetPtrLoc(A) == 0)? 0 : 1,
+				 (CoCoGetPtrLoc(B) == 0)? 0 : 1, (CoCoGetPtrLoc(C) == 0)? 0 : 1,
+				 ldA, ldB, ldC);
+
+				tunableParams_p pred_p_single_dev = CoCoPeLiaModelOptimizeTile(model, COCOPELIA_REUSE);
+				/// How much performance improvent justifies adding one more GPU?
+				/// Aren't there better metrics for this?
+				if (slowest_problem_t > pred_p_single_dev->pred_t){
+				 	slowest_problem_T = pred_p_single_dev->T;
+				 	warning("Chose to run on only 1 device: Model implies %lf\% better performance\n",
+						(slowest_problem_t - pred_p_single_dev->pred_t)/slowest_problem_t*100);
+					slowest_problem_t = pred_p_single_dev->pred_t;
+					num_devices = 1;
+					dev_id[0] = best_dev_id;
+			 	}
+			}
+
 			T = slowest_problem_T;
 #ifdef TEST
 			cpu_timer = csecond() - cpu_timer;
