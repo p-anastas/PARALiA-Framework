@@ -29,8 +29,8 @@ typedef struct pending_action_list{
 
 int pending_events_free(pending_events_p target);
 
-/* global variable declaration */
-typedef struct globuf{
+/* Device-wise software cache struct declaration */
+typedef struct DevCache_str{
 	short dev_id;
 	void * gpu_mem_buf;
 	long long gpu_mem_buf_sz;
@@ -40,13 +40,16 @@ typedef struct globuf{
 	short* BlockCurrentTileDim;
 	void** BlockCurrentTilePtr;
 	pending_events_p *BlockPendingEvents;
-}* DevBufPtr;
+}* DevCachePtr;
 
 long long CoCoPeLiaDevBuffSz(kernel_pthread_wrap_p subkernel_data);
-DevBufPtr CoCoPeLiaGlobufInit(short dev_id);
+DevCachePtr CoCoPeLiaGlobufInit(short dev_id);
 void CoCoPeLiaRequestBuffer(kernel_pthread_wrap_p subkernel_data);
 
 void* CoCacheAsignBlock(short dev_id, void* TilePtr, short TileDim);
+
+int CoCacheSelectBlockToRemove_naive(short dev_id);
+
 void* CoCacheUpdateAsignBlock(short dev_id, void* TilePtr, short TileDim);
 
 void CoCoPeLiaUnlockCache(short dev_id);

@@ -12,7 +12,7 @@
 #include "Asset.hpp"
 #include "backend_lib_wrappers.hpp"
 
-DevBufPtr GloBuf[128] = {NULL};
+DevCachePtr DevCache[128] = {NULL};
 int globalock = 0;
 short recursion_depth[128] = {0};
 
@@ -44,17 +44,17 @@ int pending_events_free(pending_events_p* target){
 	return num_freed;
 }
 
-DevBufPtr CoCoPeLiaGlobufInit(kernel_pthread_wrap_p subkernel_data){
-  DevBufPtr result = (DevBufPtr) malloc (sizeof(struct globuf));
+DevCachePtr CoCoPeLiaDevCacheInit(kernel_pthread_wrap_p subkernel_data){
+  DevCachePtr result = (DevCachePtr) malloc (sizeof(struct DevCache_str));
   int dev_id = result->dev_id = subkernel_data->dev_id;
-  if (dev_id < 0 ) error("CoCoPeLiaGlobufInit called with dev_id=%d\n", dev_id);
+  if (dev_id < 0 ) error("CoCoPeLiaDevCacheInit called with dev_id=%d\n", dev_id);
   result->gpu_mem_buf = NULL;
   result->gpu_mem_buf_sz = result->BlockNum = result->BlockSize = result->serialCtr = 0;
 	;
 	for (int i = 0; i < subkernel_data->SubkernelNumDev; i++){
 		Subkernel* curr = subkernel_data->SubkernelListDev[i];
 		for (int j = 0; j < curr->TileNum; j++){
-			if (curr->TileDimlist[j] == 1) error("CoCoPeLiaGlobufInit: Tile1D not implemented\n");
+			if (curr->TileDimlist[j] == 1) error("CoCoPeLiaDevCacheInit: Tile1D not implemented\n");
 			else if (curr->TileDimlist[j] == 2){
 					Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) curr->TileList[j];
 					if (tmp->CacheLocId[dev_id] == -42){
@@ -64,7 +64,7 @@ DevBufPtr CoCoPeLiaGlobufInit(kernel_pthread_wrap_p subkernel_data){
 						result->BlockNum++;
 					}
 			}
-			else error("CoCoPeLiaGlobufInit: Not implemented for TileDim=%d\n", curr->TileDimlist[j]);
+			else error("CoCoPeLiaDevCacheInit: Not implemented for TileDim=%d\n", curr->TileDimlist[j]);
 		}
 	}
 
@@ -88,67 +88,67 @@ void CoCoPeLiaRequestBuffer(kernel_pthread_wrap_p subkernel_data){
 #endif
   short dev_id = subkernel_data->dev_id;
   if (dev_id < 0 ) error("CoCoPeLiaRequestBuffer called with dev_id=%d\n", dev_id);
-	DevBufPtr temp_globuf = CoCoPeLiaGlobufInit(subkernel_data);
-	if (temp_globuf->gpu_mem_buf_sz > 0){
-	  long long free_dev_mem, max_dev_mem, prev_globuf_sz = 0;
-		if (GloBuf[dev_id] != NULL) prev_globuf_sz = GloBuf[dev_id]->gpu_mem_buf_sz;
+	DevCachePtr temp_DevCache = CoCoPeLiaDevCacheInit(subkernel_data);
+	if (temp_DevCache->gpu_mem_buf_sz > 0){
+	  long long free_dev_mem, max_dev_mem, prev_DevCache_sz = 0;
+		if (DevCache[dev_id] != NULL) prev_DevCache_sz = DevCache[dev_id]->gpu_mem_buf_sz;
 	  CoCoPeLiaDevGetMemInfo(&free_dev_mem, &max_dev_mem);
-	  long long problem_avail_mem = free_dev_mem - max_dev_mem*(1-PROBLEM_GPU_PERCENTAGE/100.0) + prev_globuf_sz;
+	  long long problem_avail_mem = free_dev_mem - max_dev_mem*(1-PROBLEM_GPU_PERCENTAGE/100.0) + prev_DevCache_sz;
 	  // For debuging large cases
 	  //problem_avail_mem/=125;
 	  #ifdef DEBUG
 	  	lprintf(lvl, "====================================\n");
 	  	lprintf(lvl, "GPU mem management:\n");
-	  	lprintf(lvl, " -Buffer requested for BlockSize=%zu MB and BlockNum=%d\n", (size_t) temp_globuf->BlockSize/1024/1024, temp_globuf->BlockNum);
-	  	lprintf(lvl, " -Mem required for matrices: %zu MB\n", (size_t) temp_globuf->gpu_mem_buf_sz/1024/1024);
+	  	lprintf(lvl, " -Buffer requested for BlockSize=%zu MB and BlockNum=%d\n", (size_t) temp_DevCache->BlockSize/1024/1024, temp_DevCache->BlockNum);
+	  	lprintf(lvl, " -Mem required for matrices: %zu MB\n", (size_t) temp_DevCache->gpu_mem_buf_sz/1024/1024);
 	    lprintf(lvl, " -Mem available in GPU: %zu MB\n", (size_t) problem_avail_mem/1024/1024);
 	  #endif
 
-	  if (temp_globuf->gpu_mem_buf_sz <= problem_avail_mem){
+	  if (temp_DevCache->gpu_mem_buf_sz <= problem_avail_mem){
 	#ifdef DEBUG
 	    lprintf(lvl, " -Requested buffer fits in GPU(%d)\n", dev_id);
 	#endif
 		;}
 		else{
-	    temp_globuf->BlockNum =  (int) (problem_avail_mem/temp_globuf->BlockSize);
-			temp_globuf->gpu_mem_buf_sz = temp_globuf->BlockNum*temp_globuf->BlockSize;
+	    temp_DevCache->BlockNum =  (int) (problem_avail_mem/temp_DevCache->BlockSize);
+			temp_DevCache->gpu_mem_buf_sz = temp_DevCache->BlockNum*temp_DevCache->BlockSize;
 	#ifdef DEBUG
 	    lprintf(lvl, " -Requested buffer does not fit in GPU(%d)\n", dev_id);
 	#endif
 		}
 
 	#ifdef DEBUG
-	  if (prev_globuf_sz >= temp_globuf->gpu_mem_buf_sz)
-			lprintf(lvl, " -GPU(%d) buf available: %zu MB\n", dev_id, (size_t) prev_globuf_sz/1024/1024);
-	  else if (prev_globuf_sz > 0) lprintf(lvl, " -Smaller GPU(%d) buf available -> replacing : %zu -> %zu MB\n",
-			dev_id, (size_t) prev_globuf_sz/1024/1024, (size_t) temp_globuf->gpu_mem_buf_sz/1024/1024);
-	  else lprintf(lvl, " -Initializing new GPU(%d) buffer: %zu MB\n", dev_id, (size_t) temp_globuf->gpu_mem_buf_sz/1024/1024);
+	  if (prev_DevCache_sz >= temp_DevCache->gpu_mem_buf_sz)
+			lprintf(lvl, " -GPU(%d) buf available: %zu MB\n", dev_id, (size_t) prev_DevCache_sz/1024/1024);
+	  else if (prev_DevCache_sz > 0) lprintf(lvl, " -Smaller GPU(%d) buf available -> replacing : %zu -> %zu MB\n",
+			dev_id, (size_t) prev_DevCache_sz/1024/1024, (size_t) temp_DevCache->gpu_mem_buf_sz/1024/1024);
+	  else lprintf(lvl, " -Initializing new GPU(%d) buffer: %zu MB\n", dev_id, (size_t) temp_DevCache->gpu_mem_buf_sz/1024/1024);
 	#endif
-	  if (prev_globuf_sz >= temp_globuf->gpu_mem_buf_sz){
-			temp_globuf->gpu_mem_buf_sz = GloBuf[dev_id]->gpu_mem_buf_sz;
-			temp_globuf->gpu_mem_buf = GloBuf[dev_id]->gpu_mem_buf;
-			for (int ifr = 0; ifr < GloBuf[dev_id]->BlockNum; ifr++)
-				pending_events_free(&GloBuf[dev_id]->BlockPendingEvents[ifr]);
-			free(GloBuf[dev_id]->BlockPendingEvents);
-			free(GloBuf[dev_id]->BlockState);
-			free(GloBuf[dev_id]->BlockCurrentTileDim);
-			free(GloBuf[dev_id]->BlockCurrentTilePtr);
-			free(GloBuf[dev_id]);
-			GloBuf[dev_id] = temp_globuf;
+	  if (prev_DevCache_sz >= temp_DevCache->gpu_mem_buf_sz){
+			temp_DevCache->gpu_mem_buf_sz = DevCache[dev_id]->gpu_mem_buf_sz;
+			temp_DevCache->gpu_mem_buf = DevCache[dev_id]->gpu_mem_buf;
+			for (int ifr = 0; ifr < DevCache[dev_id]->BlockNum; ifr++)
+				pending_events_free(&DevCache[dev_id]->BlockPendingEvents[ifr]);
+			free(DevCache[dev_id]->BlockPendingEvents);
+			free(DevCache[dev_id]->BlockState);
+			free(DevCache[dev_id]->BlockCurrentTileDim);
+			free(DevCache[dev_id]->BlockCurrentTilePtr);
+			free(DevCache[dev_id]);
+			DevCache[dev_id] = temp_DevCache;
 		}
 	  else{
-			if (prev_globuf_sz > 0){
-			  CoCoFree(GloBuf[dev_id]->gpu_mem_buf, dev_id);
-				for (int ifr = 0; ifr < GloBuf[dev_id]->BlockNum; ifr++)
-					pending_events_free(&GloBuf[dev_id]->BlockPendingEvents[ifr]);
-				free(GloBuf[dev_id]->BlockPendingEvents);
-				free(GloBuf[dev_id]->BlockState);
-				free(GloBuf[dev_id]->BlockCurrentTileDim);
-				free(GloBuf[dev_id]->BlockCurrentTilePtr);
-				free(GloBuf[dev_id]);
+			if (prev_DevCache_sz > 0){
+			  CoCoFree(DevCache[dev_id]->gpu_mem_buf, dev_id);
+				for (int ifr = 0; ifr < DevCache[dev_id]->BlockNum; ifr++)
+					pending_events_free(&DevCache[dev_id]->BlockPendingEvents[ifr]);
+				free(DevCache[dev_id]->BlockPendingEvents);
+				free(DevCache[dev_id]->BlockState);
+				free(DevCache[dev_id]->BlockCurrentTileDim);
+				free(DevCache[dev_id]->BlockCurrentTilePtr);
+				free(DevCache[dev_id]);
 			}
-	    GloBuf[dev_id] = temp_globuf;
-			GloBuf[dev_id]->gpu_mem_buf = CoCoMalloc(GloBuf[dev_id]->gpu_mem_buf_sz,
+	    DevCache[dev_id] = temp_DevCache;
+			DevCache[dev_id]->gpu_mem_buf = CoCoMalloc(DevCache[dev_id]->gpu_mem_buf_sz,
 				dev_id);
 	  }
 	  CoCoSyncCheckErr();
@@ -156,13 +156,13 @@ void CoCoPeLiaRequestBuffer(kernel_pthread_wrap_p subkernel_data){
 #ifdef TEST
 		cpu_timer = csecond() - cpu_timer;
 		lprintf(lvl, "GPU(%d) Buffer allocation with sz = %zu MB: t_alloc = %lf ms\n" ,
-	    dev_id, (size_t) GloBuf[dev_id]->gpu_mem_buf_sz/1024/1024, cpu_timer*1000);
+	    dev_id, (size_t) DevCache[dev_id]->gpu_mem_buf_sz/1024/1024, cpu_timer*1000);
 #endif
 
 #ifdef DEBUG
 		lprintf(lvl, "GPU(%d) Buffer allocation (Size = %zu MB, Blocksize = %zu MB, BlockNum = %d)\n" ,
-	  dev_id, (size_t) GloBuf[dev_id]->gpu_mem_buf_sz/1024/1024,
-	  (size_t) GloBuf[dev_id]->BlockSize/1024/1024,  GloBuf[dev_id]->BlockNum);
+	  dev_id, (size_t) DevCache[dev_id]->gpu_mem_buf_sz/1024/1024,
+	  (size_t) DevCache[dev_id]->BlockSize/1024/1024,  DevCache[dev_id]->BlockNum);
 		lprintf(lvl-1, "<-----|\n");
 #endif
 	}
@@ -172,142 +172,6 @@ void CoCoPeLiaRequestBuffer(kernel_pthread_wrap_p subkernel_data){
 		lprintf(lvl-1, "<-----|\n");
 #endif
 	}
-}
-
-void* CoCacheAsignBlock(short dev_id, void* TilePtr, short TileDim){
-  short lvl = 5;
-	if (TileDim != 2) error("CoCacheAsignBlock(%d): Tile%dD not implemented\n", dev_id, TileDim);
-	Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) TilePtr;
-#ifdef DEBUG
-  lprintf(lvl-1, "|-----> CoCacheAsignBlock(dev= %d, T = %d.[%d,%d] )\n",
-		dev_id, tmp->id, tmp->GridId1, tmp->GridId2);
-#endif
-	if (dev_id < 0 ) error("CoCacheAsignBlock(): Invalid dev_id = %d\n", dev_id);
-	if (GloBuf[dev_id] == NULL)
-		error("CoCacheAsignBlock(%d): Called on empty buffer\n", dev_id);
-	void* result = NULL;
-  if (GloBuf[dev_id]->serialCtr >= GloBuf[dev_id]->BlockNum)
-    return CoCacheUpdateAsignBlock(dev_id, TilePtr, TileDim);
-		//No cache mechanism: error("CoCacheAsignBlock: Buffer full but request for more Blocks\n");
-	else{
-  	result = GloBuf[dev_id]->gpu_mem_buf + GloBuf[dev_id]->serialCtr*GloBuf[dev_id]->BlockSize;
-		tmp->CacheLocId[dev_id] = GloBuf[dev_id]->serialCtr;
-		GloBuf[dev_id]->BlockCurrentTileDim[GloBuf[dev_id]->serialCtr] = TileDim;
-		GloBuf[dev_id]->BlockCurrentTilePtr[GloBuf[dev_id]->serialCtr] = TilePtr;
-		GloBuf[dev_id]->serialCtr++;
-	}
-#ifdef DEBUG
-	lprintf(lvl-1, "<-----|\n");
-#endif
-  return result;
-}
-
-void* CoCacheUpdateAsignBlock(short dev_id, void* TilePtr, short TileDim){
-	short lvl = 5;
-	if (TileDim != 2) error("CoCacheUpdateAsignBlock: Tile%dD not implemented\n", TileDim);
-	Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) TilePtr;
-
-#ifdef DEBUG
-	lprintf(lvl-1, "|-----> CoCacheUpdateAsignBlock(dev= %d, T = %d.[%d,%d] )\n",
-		dev_id, tmp->id, tmp->GridId1, tmp->GridId2);
-#endif
-	if (dev_id < 0 ) error("CoCacheUpdateAsignBlock(): Invalid dev_id = %d\n", dev_id);
-	if (GloBuf[dev_id] == NULL)
-		error("CoCacheUpdateAsignBlock(%d): Called on empty buffer\n", dev_id);
-
-	void* result = NULL;
-	for (int idx = 0; idx < GloBuf[dev_id]->BlockNum; idx++){
-		state tmp_state = CoCacheUpdateBlockState(dev_id, idx); // Update events etc for idx.
-		while(__sync_lock_test_and_set (&globalock, 1));
-		if(GloBuf[dev_id]->BlockPendingEvents[idx] == NULL){
-			result = GloBuf[dev_id]->gpu_mem_buf + idx*GloBuf[dev_id]->BlockSize;
-			GloBuf[dev_id]->BlockState[idx] = EMPTY;
-			Tile2D<VALUE_TYPE>* prev_tile = (Tile2D<VALUE_TYPE>*) GloBuf[dev_id]->BlockCurrentTilePtr[idx];
-			prev_tile->CacheLocId[dev_id] = -42;
-			tmp->CacheLocId[dev_id] = idx;
-			GloBuf[dev_id]->BlockCurrentTileDim[idx] = TileDim;
-			GloBuf[dev_id]->BlockCurrentTilePtr[idx] = TilePtr;
-
-#ifdef CDEBUG
-			lprintf(lvl, "CoCacheUpdateAsignBlock(%d): Block(idx=%d) had no pending actions for T(%d.[%d,%d]), replacing...\n",
-			dev_id, idx, prev_tile->id, prev_tile->GridId1, prev_tile->GridId2);
-#endif
-			break;
-		}
-		__sync_lock_release(&globalock);
-	}
-	__sync_lock_release(&globalock);
-	if (result == NULL){
-		if(recursion_depth[dev_id]==0){ // sync-wait for first incomplete event (not W) on each block to complete
-			warning("CoCacheUpdateAsignBlock(dev= %d, T = %d.[%d,%d] )-Rec(%d): entry\n",
-				dev_id, tmp->id, tmp->GridId1, tmp->GridId2, recursion_depth[dev_id]);
-			for (int idx = 0; idx < GloBuf[dev_id]->BlockNum; idx++){
-				//while(__sync_lock_test_and_set (&globalock, 1));
-				if(GloBuf[dev_id]->BlockPendingEvents[idx] == NULL)
-					error("CoCacheUpdateAsignBlock(dev= %d, T = %d.[%d,%d] )-Rec(%d): in recursion but block(%d) has no pending events\n",
-					dev_id, tmp->id, tmp->GridId1, tmp->GridId2, recursion_depth[dev_id], idx);
-				else if (GloBuf[dev_id]->BlockPendingEvents[idx]->effect != W){
-					if (GloBuf[dev_id]->BlockPendingEvents[idx]->event_end!=NULL){
-#ifdef CDEBUG
-						lprintf(lvl, "CoCacheUpdateAsignBlock(dev= %d, T = %d.[%d,%d] )-Rec(%d): syncronizing event_end(%d) for block(%d)\n",
-							dev_id, tmp->id, tmp->GridId1, tmp->GridId2, recursion_depth[dev_id],
-							GloBuf[dev_id]->BlockPendingEvents[idx]->event_end->id, idx);
-#endif
-						GloBuf[dev_id]->BlockPendingEvents[idx]->event_end->sync_barrier();
-					}
-					else if( GloBuf[dev_id]->BlockPendingEvents[idx]->event_start!= NULL){
-#ifdef CDEBUG
-						lprintf(lvl, "CoCacheUpdateAsignBlock(dev= %d, T = %d.[%d,%d] )-Rec(%d): syncronizing event_start(%d) for block(%d)\n",
-							dev_id, tmp->id, tmp->GridId1, tmp->GridId2, recursion_depth[dev_id],
-							GloBuf[dev_id]->BlockPendingEvents[idx]->event_start->id, idx);
-#endif
-						GloBuf[dev_id]->BlockPendingEvents[idx]->event_start->sync_barrier();
-					}
-					else error("CoCacheUpdateAsignBlock(dev= %d, T = %d.[%d,%d] )-Rec(%d): First event of block(%d) is double-ghost\n",
-								dev_id, tmp->id, tmp->GridId1, tmp->GridId2, recursion_depth[dev_id], idx);
-				}
-				//__sync_lock_release(&globalock);
-			}
-		}
-		else if(recursion_depth[dev_id]==1){ // sync-wait for all incomplete event (not W) on each block to complete
-			warning("CoCacheUpdateAsignBlock(dev= %d, T = %d.[%d,%d] ): second recursion entry\n",
-				dev_id, tmp->id, tmp->GridId1, tmp->GridId2);
-			for (int idx = 0; idx < GloBuf[dev_id]->BlockNum; idx++){
-				pending_events_p current = GloBuf[dev_id]->BlockPendingEvents[idx];
-				while(current!=NULL){
-					if (current->event_end!=NULL){
-#ifdef CDEBUG
-					lprintf(lvl, "CoCacheUpdateAsignBlock(dev= %d, T = %d.[%d,%d] )-Rec(%d): syncronizing event_end(%d) for block(%d)\n",
-						dev_id, tmp->id, tmp->GridId1, tmp->GridId2, recursion_depth[dev_id],
-						current->event_end->id, idx);
-#endif
-						current->event_end->sync_barrier();
-					}
-					else if( current->event_start!= NULL){
-#ifdef CDEBUG
-						lprintf(lvl, "CoCacheUpdateAsignBlock(dev= %d, T = %d.[%d,%d] )-Rec(%d): syncronizing event_start(%d) for block(%d)\n",
-							dev_id, tmp->id, tmp->GridId1, tmp->GridId2, recursion_depth[dev_id],
-							current->event_start->id, idx);
-#endif
-						current->event_start->sync_barrier();
-					}
-					else error("CoCacheUpdateAsignBlock(dev= %d, T = %d.[%d,%d] ):\
-						in recursion but some event of block(%d) is double-ghost\n",
-						dev_id, tmp->id, tmp->GridId1, tmp->GridId2, idx);
-					current = current->next;
-				}
-			}
-		}
-		else error("CoCacheUpdateAsignBlock: reached max recursion_depth=%d \
-			while searching which Blocks to remove from Cache. Given T too large for GPU.\n", recursion_depth[dev_id]);
-		recursion_depth[dev_id]++;
-		return CoCacheUpdateAsignBlock(dev_id, TilePtr, TileDim);
-	}
-#ifdef DEBUG
-	lprintf(lvl-1, "<-----|\n");
-#endif
-	recursion_depth[dev_id] = 0;
-  return result;
 }
 
 void CoCopeLiaDgemm_flush_gpu_mem_buf(short dev_id)
@@ -320,19 +184,19 @@ void CoCopeLiaDgemm_flush_gpu_mem_buf(short dev_id)
 #ifdef TEST
 	double cpu_timer = csecond();
 #endif
-	if (GloBuf[dev_id]){
+	if (DevCache[dev_id]){
 #ifdef DEBUG
-		lprintf(lvl, "Clearing (presumably) %zu MB\n\n", (size_t) GloBuf[dev_id]->gpu_mem_buf_sz/1024/1024);
+		lprintf(lvl, "Clearing (presumably) %zu MB\n\n", (size_t) DevCache[dev_id]->gpu_mem_buf_sz/1024/1024);
 #endif
-		CoCoFree(GloBuf[dev_id]->gpu_mem_buf, dev_id);
-		for (int ifr = 0; ifr < GloBuf[dev_id]->BlockNum; ifr++)
-			pending_events_free(&GloBuf[dev_id]->BlockPendingEvents[ifr]);
-		free(GloBuf[dev_id]->BlockPendingEvents);
-		free(GloBuf[dev_id]->BlockState);
-		free(GloBuf[dev_id]->BlockCurrentTileDim);
-		free(GloBuf[dev_id]->BlockCurrentTilePtr);
-		free(GloBuf[dev_id]);
-		GloBuf[dev_id] = NULL;
+		CoCoFree(DevCache[dev_id]->gpu_mem_buf, dev_id);
+		for (int ifr = 0; ifr < DevCache[dev_id]->BlockNum; ifr++)
+			pending_events_free(&DevCache[dev_id]->BlockPendingEvents[ifr]);
+		free(DevCache[dev_id]->BlockPendingEvents);
+		free(DevCache[dev_id]->BlockState);
+		free(DevCache[dev_id]->BlockCurrentTileDim);
+		free(DevCache[dev_id]->BlockCurrentTilePtr);
+		free(DevCache[dev_id]);
+		DevCache[dev_id] = NULL;
     recursion_depth[dev_id] = 0;
 		CoCoSyncCheckErr();
 	}
@@ -374,10 +238,10 @@ void CoCoPeLiaDevCacheInvalidate(kernel_pthread_wrap_p subkernel_data){
 			else error("CoCoPeLiaDevCacheInvalidate: Not implemented for TileDim=%d\n", curr->TileDimlist[j]);
 		}
 	}
-  if (GloBuf[dev_id]!= NULL) {
-    GloBuf[dev_id]->serialCtr = 0;
-    for (int ifr = 0; ifr < GloBuf[dev_id]->BlockNum; ifr++)
-			pending_events_free(&GloBuf[dev_id]->BlockPendingEvents[ifr]);
+  if (DevCache[dev_id]!= NULL) {
+    DevCache[dev_id]->serialCtr = 0;
+    for (int ifr = 0; ifr < DevCache[dev_id]->BlockNum; ifr++)
+			pending_events_free(&DevCache[dev_id]->BlockPendingEvents[ifr]);
   }
   recursion_depth[dev_id] = 0;
 #ifdef TEST
@@ -387,6 +251,169 @@ void CoCoPeLiaDevCacheInvalidate(kernel_pthread_wrap_p subkernel_data){
 #ifdef DEBUG
 	lprintf(lvl-1, "<-----|\n");
 #endif
+}
+
+void* CoCacheAsignBlock(short dev_id, void* TilePtr, short TileDim){
+  short lvl = 5;
+	if (TileDim != 2) error("CoCacheAsignBlock(%d): Tile%dD not implemented\n", dev_id, TileDim);
+	Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) TilePtr;
+#ifdef DEBUG
+  lprintf(lvl-1, "|-----> CoCacheAsignBlock(dev= %d, T = %d.[%d,%d] )\n",
+		dev_id, tmp->id, tmp->GridId1, tmp->GridId2);
+#endif
+	if (dev_id < 0 ) error("CoCacheAsignBlock(): Invalid dev_id = %d\n", dev_id);
+	if (DevCache[dev_id] == NULL)
+		error("CoCacheAsignBlock(%d): Called on empty buffer\n", dev_id);
+	void* result = NULL;
+  if (DevCache[dev_id]->serialCtr >= DevCache[dev_id]->BlockNum)
+    return CoCacheUpdateAsignBlock(dev_id, TilePtr, TileDim);
+		//No cache mechanism: error("CoCacheAsignBlock: Buffer full but request for more Blocks\n");
+	else{
+  	result = DevCache[dev_id]->gpu_mem_buf + DevCache[dev_id]->serialCtr*DevCache[dev_id]->BlockSize;
+		tmp->CacheLocId[dev_id] = DevCache[dev_id]->serialCtr;
+		DevCache[dev_id]->BlockCurrentTileDim[DevCache[dev_id]->serialCtr] = TileDim;
+		DevCache[dev_id]->BlockCurrentTilePtr[DevCache[dev_id]->serialCtr] = TilePtr;
+		DevCache[dev_id]->serialCtr++;
+	}
+#ifdef DEBUG
+	lprintf(lvl-1, "<-----|\n");
+#endif
+  return result;
+}
+
+void* CoCacheUpdateAsignBlock(short dev_id, void* TilePtr, short TileDim){
+	short lvl = 5;
+	if (TileDim != 2) error("CoCacheUpdateAsignBlock: Tile%dD not implemented\n", TileDim);
+	Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) TilePtr;
+
+#ifdef DEBUG
+	lprintf(lvl-1, "|-----> CoCacheUpdateAsignBlock(dev= %d, T = %d.[%d,%d] )\n",
+		dev_id, tmp->id, tmp->GridId1, tmp->GridId2);
+#endif
+	if (dev_id < 0 ) error("CoCacheUpdateAsignBlock(): Invalid dev_id = %d\n", dev_id);
+	if (DevCache[dev_id] == NULL)
+		error("CoCacheUpdateAsignBlock(%d): Called on empty buffer\n", dev_id);
+
+	void* result = NULL;
+	int remove_block_idx  = CoCacheSelectBlockToRemove_naive(dev_id);
+	if(remove_block_idx >= 0){
+		while(__sync_lock_test_and_set (&globalock, 1));
+		result = DevCache[dev_id]->gpu_mem_buf + remove_block_idx*DevCache[dev_id]->BlockSize;
+		DevCache[dev_id]->BlockState[remove_block_idx] = EMPTY;
+		Tile2D<VALUE_TYPE>* prev_tile = (Tile2D<VALUE_TYPE>*)
+			DevCache[dev_id]->BlockCurrentTilePtr[remove_block_idx];
+		#ifdef CDEBUG
+					lprintf(lvl, "CoCacheSelectBlockToRemove_naive(%d): Block(idx=%d) had no pending actions for T(%d.[%d,%d]), replacing...\n",
+					dev_id, remove_block_idx, prev_tile->id, prev_tile->GridId1, prev_tile->GridId2);
+		#endif
+		prev_tile->CacheLocId[dev_id] = -42;
+		tmp->CacheLocId[dev_id] = remove_block_idx;
+		DevCache[dev_id]->BlockCurrentTileDim[remove_block_idx] = TileDim;
+		DevCache[dev_id]->BlockCurrentTilePtr[remove_block_idx] = TilePtr;
+		__sync_lock_release(&globalock);
+	}
+	else{
+		if(recursion_depth[dev_id]==0){ // sync-wait for first incomplete event (not W) on each block to complete
+			warning("CoCacheUpdateAsignBlock(dev= %d, T = %d.[%d,%d] )-Rec(%d): entry\n",
+				dev_id, tmp->id, tmp->GridId1, tmp->GridId2, recursion_depth[dev_id]);
+			for (int idx = 0; idx < DevCache[dev_id]->BlockNum; idx++){
+				//while(__sync_lock_test_and_set (&globalock, 1));
+				if(DevCache[dev_id]->BlockPendingEvents[idx] == NULL)
+					error("CoCacheUpdateAsignBlock(dev= %d, T = %d.[%d,%d] )-Rec(%d): in recursion but block(%d) has no pending events\n",
+					dev_id, tmp->id, tmp->GridId1, tmp->GridId2, recursion_depth[dev_id], idx);
+				else if (DevCache[dev_id]->BlockPendingEvents[idx]->effect != W){
+					if (DevCache[dev_id]->BlockPendingEvents[idx]->event_end!=NULL){
+#ifdef CDEBUG
+						lprintf(lvl, "CoCacheUpdateAsignBlock(dev= %d, T = %d.[%d,%d] )-Rec(%d): syncronizing event_end(%d) for block(%d)\n",
+							dev_id, tmp->id, tmp->GridId1, tmp->GridId2, recursion_depth[dev_id],
+							DevCache[dev_id]->BlockPendingEvents[idx]->event_end->id, idx);
+#endif
+						DevCache[dev_id]->BlockPendingEvents[idx]->event_end->sync_barrier();
+					}
+					else if( DevCache[dev_id]->BlockPendingEvents[idx]->event_start!= NULL){
+#ifdef CDEBUG
+						lprintf(lvl, "CoCacheUpdateAsignBlock(dev= %d, T = %d.[%d,%d] )-Rec(%d): syncronizing event_start(%d) for block(%d)\n",
+							dev_id, tmp->id, tmp->GridId1, tmp->GridId2, recursion_depth[dev_id],
+							DevCache[dev_id]->BlockPendingEvents[idx]->event_start->id, idx);
+#endif
+						DevCache[dev_id]->BlockPendingEvents[idx]->event_start->sync_barrier();
+					}
+					else error("CoCacheUpdateAsignBlock(dev= %d, T = %d.[%d,%d] )-Rec(%d): First event of block(%d) is double-ghost\n",
+								dev_id, tmp->id, tmp->GridId1, tmp->GridId2, recursion_depth[dev_id], idx);
+				}
+				//__sync_lock_release(&globalock);
+			}
+		}
+		else if(recursion_depth[dev_id]==1){ // sync-wait for all incomplete event (not W) on each block to complete
+			warning("CoCacheUpdateAsignBlock(dev= %d, T = %d.[%d,%d] ): second recursion entry\n",
+				dev_id, tmp->id, tmp->GridId1, tmp->GridId2);
+			for (int idx = 0; idx < DevCache[dev_id]->BlockNum; idx++){
+				pending_events_p current = DevCache[dev_id]->BlockPendingEvents[idx];
+				while(current!=NULL){
+					if (current->event_end!=NULL){
+#ifdef CDEBUG
+					lprintf(lvl, "CoCacheUpdateAsignBlock(dev= %d, T = %d.[%d,%d] )-Rec(%d): syncronizing event_end(%d) for block(%d)\n",
+						dev_id, tmp->id, tmp->GridId1, tmp->GridId2, recursion_depth[dev_id],
+						current->event_end->id, idx);
+#endif
+						current->event_end->sync_barrier();
+					}
+					else if( current->event_start!= NULL){
+#ifdef CDEBUG
+						lprintf(lvl, "CoCacheUpdateAsignBlock(dev= %d, T = %d.[%d,%d] )-Rec(%d): syncronizing event_start(%d) for block(%d)\n",
+							dev_id, tmp->id, tmp->GridId1, tmp->GridId2, recursion_depth[dev_id],
+							current->event_start->id, idx);
+#endif
+						current->event_start->sync_barrier();
+					}
+					else error("CoCacheUpdateAsignBlock(dev= %d, T = %d.[%d,%d] ):\
+						in recursion but some event of block(%d) is double-ghost\n",
+						dev_id, tmp->id, tmp->GridId1, tmp->GridId2, idx);
+					current = current->next;
+				}
+			}
+		}
+		else error("CoCacheUpdateAsignBlock: reached max recursion_depth=%d \
+			while searching which Blocks to remove from Cache. Given T too large for GPU.\n", recursion_depth[dev_id]);
+		recursion_depth[dev_id]++;
+		return CoCacheUpdateAsignBlock(dev_id, TilePtr, TileDim);
+	}
+#ifdef DEBUG
+	lprintf(lvl-1, "<-----|\n");
+#endif
+	recursion_depth[dev_id] = 0;
+  return result;
+}
+
+int CoCacheSelectBlockToRemove_naive(short dev_id){
+	short lvl = 6;
+#ifdef DEBUG
+	lprintf(lvl-1, "|-----> CoCacheSelectBlockToRemove_naive(dev= %d)\n",dev_id);
+#endif
+#ifdef CTEST
+	cpu_timer = csecond();
+#endif
+
+	int result_idx = -1;
+	if (dev_id < 0 ) error("CoCacheSelectBlockToRemove_naive(): Invalid dev_id = %d\n", dev_id);
+	if (DevCache[dev_id] == NULL)
+		error("CoCacheSelectBlockToRemove_naive(%d): Called on empty buffer\n", dev_id);
+	for (int idx = 0; idx < DevCache[dev_id]->BlockNum; idx++){ // Iterate through cache serially.
+		state tmp_state = CoCacheUpdateBlockState(dev_id, idx); // Update all events etc for idx.
+		if(DevCache[dev_id]->BlockPendingEvents[idx] == NULL){ 		// Indx can be removed if there are no pending events.
+			result_idx =  idx;
+			break;
+		}
+	}
+#ifdef CTEST
+	cpu_timer = csecond() - cpu_timer;
+	lprintf(lvl-1, "CoCacheSelectBlockToRemove_naive(%d): t_select = %lf\n",dev_id, cpu_timer);
+	cpu_timer = csecond();
+#endif
+#ifdef DEBUG
+	lprintf(lvl-1, "<-----|\n");
+#endif
+	return result_idx;
 }
 
 void CoCacheStateUpdate(state* prev, state next){
@@ -431,22 +458,22 @@ state CoCacheUpdateBlockState(short dev_id, int BlockIdx){
   lprintf(lvl-1, "|-----> CoCacheUpdateBlockState(%d,%d)\n", dev_id, BlockIdx);
 #endif
 	if (dev_id < 0 ) error("CoCacheUpdateBlockState(%d,%d): Invalid dev_id = %d\n", dev_id, BlockIdx, dev_id);
-  if (GloBuf[dev_id] == NULL)
+  if (DevCache[dev_id] == NULL)
     error("CoCacheUpdateBlockState(%d,%d): Called on empty buffer\n", dev_id, BlockIdx);
-  if (BlockIdx < 0 || BlockIdx >= GloBuf[dev_id]->BlockNum)
+  if (BlockIdx < 0 || BlockIdx >= DevCache[dev_id]->BlockNum)
     error("CoCacheUpdateBlockState(%d,%d): Invalid BlockIdx = %d\n", dev_id, BlockIdx, BlockIdx);
 		while(__sync_lock_test_and_set (&globalock, 1));
-		state temp = (GloBuf[dev_id]->BlockState[BlockIdx] > 0) ? AVAILABLE : EMPTY;
-		pending_events_p current = GloBuf[dev_id]->BlockPendingEvents[BlockIdx], prev = NULL;
+		state temp = (DevCache[dev_id]->BlockState[BlockIdx] > 0) ? AVAILABLE : EMPTY;
+		pending_events_p current = DevCache[dev_id]->BlockPendingEvents[BlockIdx], prev = NULL;
 		event_status start_status, end_status;
 		short delete_curr_flag = 0;
 	  while(current!=NULL){
 			start_status = (current->event_start==NULL) ? GHOST : current->event_start->query_status();
 			end_status = (current->event_end==NULL) ? GHOST : current->event_end->query_status();
 #ifdef CDEBUG
-			if (GloBuf[dev_id]->BlockCurrentTileDim[BlockIdx] != 2)
-				error("CoCacheUpdateBlockState: Tile%dD not implemented\n", GloBuf[dev_id]->BlockCurrentTileDim[BlockIdx]);
-			Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) GloBuf[dev_id]->BlockCurrentTilePtr[BlockIdx];
+			if (DevCache[dev_id]->BlockCurrentTileDim[BlockIdx] != 2)
+				error("CoCacheUpdateBlockState: Tile%dD not implemented\n", DevCache[dev_id]->BlockCurrentTileDim[BlockIdx]);
+			Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) DevCache[dev_id]->BlockCurrentTilePtr[BlockIdx];
 			lprintf(lvl, "Found pending action for BlockIdx = %d hosting T(%d.[%d,%d])\n",
 				BlockIdx, tmp->id, tmp->GridId1, tmp->GridId2);
 			lprintf(lvl, "with event_start(%d) = %s, event_end(%d) = %s and effect = %s\n",
@@ -496,7 +523,7 @@ state CoCacheUpdateBlockState(short dev_id, int BlockIdx){
 			if(!delete_curr_flag) prev = free_tmp;
 			else{
 				delete_curr_flag = 0;
-				if (prev == NULL) GloBuf[dev_id]->BlockPendingEvents[BlockIdx] = current;
+				if (prev == NULL) DevCache[dev_id]->BlockPendingEvents[BlockIdx] = current;
 				else prev->next = current;
 				free(free_tmp);
 			}
@@ -507,7 +534,7 @@ state CoCacheUpdateBlockState(short dev_id, int BlockIdx){
 	#ifdef DEBUG
   	lprintf(lvl-1, "<-----|\n");
   #endif
-	GloBuf[dev_id]->BlockState[BlockIdx] = temp;
+	DevCache[dev_id]->BlockState[BlockIdx] = temp;
   return temp;
 }
 
@@ -520,19 +547,19 @@ void CoCacheAddPendingEvent(short dev_id, Event* e_start, Event* e_end, int Bloc
 #endif
 
 	if (dev_id < 0 ) error("CoCacheAddPendingEvent(%d,%d): Invalid dev_id = %d\n", dev_id, BlockIdx, dev_id);
-  if (GloBuf[dev_id] == NULL)
+  if (DevCache[dev_id] == NULL)
     error("CoCacheAddPendingEvent(%d,%d): Called on empty buffer\n", dev_id, BlockIdx);
-  if (BlockIdx < 0 || BlockIdx >= GloBuf[dev_id]->BlockNum)
+  if (BlockIdx < 0 || BlockIdx >= DevCache[dev_id]->BlockNum)
     error("CoCacheAddPendingEvent(%d,%d): Invalid BlockIdx = %d\n", dev_id, BlockIdx, BlockIdx);
 	while(__sync_lock_test_and_set (&globalock, 1));
 
-	pending_events_p current = GloBuf[dev_id]->BlockPendingEvents[BlockIdx], new_pending_event;
+	pending_events_p current = DevCache[dev_id]->BlockPendingEvents[BlockIdx], new_pending_event;
 	new_pending_event = (pending_events_p) malloc(sizeof(struct pending_action_list));
 	new_pending_event->event_start = e_start;
 	new_pending_event->event_end = e_end;
 	new_pending_event->effect = effect;
 	new_pending_event->next = NULL;
-	if (current == NULL ) GloBuf[dev_id]->BlockPendingEvents[BlockIdx] = new_pending_event;
+	if (current == NULL ) DevCache[dev_id]->BlockPendingEvents[BlockIdx] = new_pending_event;
 	else {
 		while(current->next!=NULL) current = current->next;
 		current->next = new_pending_event;
