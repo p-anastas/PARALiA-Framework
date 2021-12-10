@@ -67,11 +67,17 @@ Subkernel** CoCoAsignTilesToSubkernelsGemm(Asset2D<VALUE_TYPE>* A_asset, Asset2D
 #endif
 
 Subkernel** kernels = (Subkernel**) malloc(*kernelNum*sizeof(Subkernel*));
-int current_ctr = 0;
-	for (int mi = 0; mi < MGridSz; mi++)
-		for (int ni = 0 ; ni < NGridSz; ni++)
-			for (int ki = 0; ki < KGridSz; ki++){
-	      current_ctr = mi*NGridSz*KGridSz + ni*KGridSz + ki;
+int current_ctr = 0, reverseK = 0, reverseN = 0;
+	for (int mi = 0; mi < MGridSz; mi++){
+		for (int ni_lie = 0; ni_lie < NGridSz; ni_lie++){
+			int ni;
+			if(reverseN) ni = NGridSz-1 -ni_lie;
+			else ni = ni_lie;
+			for (int ki_lie = 0; ki_lie < KGridSz; ki_lie++){
+				int ki;
+				if(reverseK) ki = KGridSz-1 -ki_lie;
+				else ki = ki_lie;
+	      current_ctr = mi*NGridSz*KGridSz + ni*KGridSz + ki_lie;
 				kernels[current_ctr] = new Subkernel(3);
 				kernels[current_ctr]->TileDimlist[0] = kernels[current_ctr]->TileDimlist[1]
 				= kernels[current_ctr]->TileDimlist[2] = 2;
@@ -92,11 +98,17 @@ int current_ctr = 0;
 				ptr_ker_translate->B = NULL;
 				ptr_ker_translate->C = NULL;
 				ptr_ker_translate->alpha = initial_gemm->alpha;
-				if (ki == 0) ptr_ker_translate->beta = initial_gemm->beta;
+				if (ki_lie == 0) ptr_ker_translate->beta = initial_gemm->beta;
 				else ptr_ker_translate->beta = 1.0;
-				if (ki == KGridSz - 1) kernels[current_ctr]->writeback_master = 1;
+				if (ki_lie == KGridSz - 1) kernels[current_ctr]->writeback_master = 1;
 				else kernels[current_ctr]->writeback_master = 0;
 			}
+			if(reverseK) reverseK = 0;
+			else reverseK = 1;
+		}
+		if(reverseN) reverseN = 0;
+		else reverseN = 1;
+	}
 
 #ifdef DEBUG
 	lprintf(lvl-1, "<-----|\n");
@@ -322,7 +334,7 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 				cpu_timer = csecond();
 #endif
 
-				pred_p[d] = CoCoPeLiaModelOptimizeTile(model, COCOPELIA_REUSE);
+				pred_p[d] = CoCoPeLiaModelOptimizeTile(model, COCOPELIA_PIPELINE_EMULATE);
 				if (pred_p[d]->pred_t > slowest_problem_t){
 					slowest_problem_t = pred_p[d]->pred_t;
 					slowest_problem_T = pred_p[d]->T;
@@ -346,7 +358,7 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 				 (CoCoGetPtrLoc(B) == 0)? 0 : 1, (CoCoGetPtrLoc(C) == 0)? 0 : 1,
 				 ldA, ldB, ldC);
 
-				tunableParams_p pred_p_single_dev = CoCoPeLiaModelOptimizeTile(model, COCOPELIA_REUSE);
+				tunableParams_p pred_p_single_dev = CoCoPeLiaModelOptimizeTile(model, COCOPELIA_PIPELINE_EMULATE);
 
 #ifdef TEST
 			 cpu_timer = csecond() - cpu_timer;
@@ -483,6 +495,11 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 	cpu_timer = csecond() - cpu_timer;
 	lprintf(lvl, "Fire and gather pthreads for all devices -> t_exec_full = %lf ms\n", cpu_timer*1000);
 	cpu_timer = csecond();
+	if(predef_vals.T <= 0){
+		lprintf(lvl, "t_predicted for T=%zu was %lf ms : %.1lf \% error\n",
+		T, slowest_problem_t*1000,
+		(slowest_problem_t==0)? 0: (slowest_problem_t - cpu_timer )/slowest_problem_t*100);
+	}
 #endif
 
 	for(int i=0; i<used_devices;i++) CoCoPeLiaDevCacheInvalidate(thread_dev_data[i]);

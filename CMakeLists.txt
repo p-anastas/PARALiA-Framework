@@ -5,7 +5,7 @@ set(BACKEND "CuCuBLAS")
 message("CoCopeLia-Framework - BACKEND: " ${BACKEND})
 add_definitions(-DBACKEND="${BACKEND}")
 ## Define the project version (used in logfiles for result testing)
-set(PROJECT_VERSION "1.0")
+set(PROJECT_VERSION "1.01")
 message("CoCopeLia-Framework - PROJECT_VERSION: " ${PROJECT_VERSION})
 add_definitions(-DVERSION="${PROJECT_VERSION}")
 #Run in testing mode : details about models, decisions and time spend in operations.

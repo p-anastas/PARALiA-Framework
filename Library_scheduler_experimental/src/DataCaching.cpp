@@ -527,8 +527,6 @@ state CoCacheUpdateBlockState(short dev_id, int BlockIdx){
 				else prev->next = current;
 				free(free_tmp);
 			}
-
-
 		}
 	  __sync_lock_release(&globalock);
 	#ifdef DEBUG
