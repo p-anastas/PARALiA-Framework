@@ -128,7 +128,7 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 		else gemm_subkernel_data->SubkernelListDev[keri]->next = gemm_subkernel_data->SubkernelListDev[keri+1];
 	}
 
-	/// Only warks assuming the last subkernel writes back
+	/// Only works assuming the last subkernel writes back
 	Event* tmp_writeback;
 	for (int keri = gemm_subkernel_data->SubkernelNumDev -1 ; keri >= 0 ; keri--){
 		if (gemm_subkernel_data->SubkernelListDev[keri]->writeback_master)
@@ -329,7 +329,7 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 				}
 #ifdef TEST
 				cpu_timer = csecond() - cpu_timer;
-				lprintf(lvl, "Model Selected T=%zu with t_predicted = %lf ms : t_mod_opt = %lf ms\n", T, pred_p[d]->pred_t*1000, cpu_timer*1000);
+				lprintf(lvl, "Model Selected T=%zu for dev = %d with t_predicted = %lf ms : t_mod_opt = %lf ms\n", pred_p[d]->T, dev_id[d], pred_p[d]->pred_t*1000, cpu_timer*1000);
 				cpu_timer = csecond();
 #endif
 
@@ -347,6 +347,13 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 				 ldA, ldB, ldC);
 
 				tunableParams_p pred_p_single_dev = CoCoPeLiaModelOptimizeTile(model, COCOPELIA_REUSE);
+
+#ifdef TEST
+			 cpu_timer = csecond() - cpu_timer;
+			 lprintf(lvl, "Model Selected T=%zu for single-device execution(%d) with t_predicted = %lf ms : t_mod_opt = %lf ms\n", pred_p_single_dev->T, best_dev_id, pred_p_single_dev->pred_t*1000, cpu_timer*1000);
+			 cpu_timer = csecond();
+#endif
+
 				/// How much performance improvent justifies adding one more GPU?
 				/// Aren't there better metrics for this?
 				if (slowest_problem_t > pred_p_single_dev->pred_t){
