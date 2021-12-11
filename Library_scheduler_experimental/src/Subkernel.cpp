@@ -33,13 +33,13 @@ Subkernel::~Subkernel(){
 	free(operation_params);
 	delete data_available;
 	delete operation_complete;
-	if (writeback_master) delete writeback_complete;
+	if (W_resource_writer) delete writeback_complete;
 }
 
 void Subkernel::init_events(){
 	data_available = new Event();
 	operation_complete = new Event();
-	writeback_complete = new Event();
+	if (W_resource_writer) writeback_complete = new Event();
 }
 
 void Subkernel::request_data(){

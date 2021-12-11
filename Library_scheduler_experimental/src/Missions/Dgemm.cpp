@@ -77,7 +77,7 @@ int current_ctr = 0, reverseK = 0, reverseN = 0;
 				int ki;
 				if(reverseK) ki = KGridSz-1 -ki_lie;
 				else ki = ki_lie;
-	      current_ctr = mi*NGridSz*KGridSz + ni*KGridSz + ki_lie;
+	      current_ctr = mi*NGridSz*KGridSz + ni_lie*KGridSz + ki_lie;
 				kernels[current_ctr] = new Subkernel(3);
 				kernels[current_ctr]->TileDimlist[0] = kernels[current_ctr]->TileDimlist[1]
 				= kernels[current_ctr]->TileDimlist[2] = 2;
@@ -98,16 +98,24 @@ int current_ctr = 0, reverseK = 0, reverseN = 0;
 				ptr_ker_translate->B = NULL;
 				ptr_ker_translate->C = NULL;
 				ptr_ker_translate->alpha = initial_gemm->alpha;
-				if (ki_lie == 0) ptr_ker_translate->beta = initial_gemm->beta;
-				else ptr_ker_translate->beta = 1.0;
-				if (ki_lie == KGridSz - 1) kernels[current_ctr]->writeback_master = 1;
-				else kernels[current_ctr]->writeback_master = 0;
+				if (ki_lie == 0){
+					kernels[current_ctr]->W_resource_reader = 1;
+					ptr_ker_translate->beta = initial_gemm->beta;
+				}
+				else{
+					kernels[current_ctr]->W_resource_reader = 0;
+					ptr_ker_translate->beta = 1.0;
+				}
+				if (ki_lie == KGridSz - 1) kernels[current_ctr]->W_resource_writer = 1;
+				else kernels[current_ctr]->W_resource_writer = 0;
 			}
-			if(reverseK) reverseK = 0;
-			else reverseK = 1;
+			//if(reverseK) reverseK = 0;
+			//else reverseK = 1;
 		}
-		if(reverseN) reverseN = 0;
-		else reverseN = 1;
+		//if(reverseN) reverseN = 0;
+		//else reverseN = 1;
+		if(reverseK) reverseK = 0;
+		else reverseK = 1;
 	}
 
 #ifdef DEBUG
@@ -140,13 +148,20 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 		else gemm_subkernel_data->SubkernelListDev[keri]->next = gemm_subkernel_data->SubkernelListDev[keri+1];
 	}
 
+#ifdef TEST
+	cpu_timer = csecond() - cpu_timer;
+	lprintf(lvl, "Update Subkernels -Init Events(%d): t_update = %lf ms\n", dev_id, cpu_timer*1000);
+	cpu_timer = csecond();
+#endif
+
 	/// Only works assuming the last subkernel writes back
 	Event* tmp_writeback;
 	for (int keri = gemm_subkernel_data->SubkernelNumDev -1 ; keri >= 0 ; keri--){
-		if (gemm_subkernel_data->SubkernelListDev[keri]->writeback_master)
+		if (gemm_subkernel_data->SubkernelListDev[keri]->W_resource_writer)
 			tmp_writeback = gemm_subkernel_data->SubkernelListDev[keri]->writeback_complete;
 		else{
-			delete gemm_subkernel_data->SubkernelListDev[keri]->writeback_complete;
+			// Replaced delete with never initializing it instead!
+			//delete gemm_subkernel_data->SubkernelListDev[keri]->writeback_complete;
 			gemm_subkernel_data->SubkernelListDev[keri]->writeback_complete = tmp_writeback;
 		}
 	}
@@ -172,15 +187,16 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 	for (int keri = 0; keri < gemm_subkernel_data->SubkernelNumDev; keri++){
 		gemm_subkernel_data->SubkernelListDev[keri]->request_data();
 		gemm_subkernel_data->SubkernelListDev[keri]->run_operation();
-		if (gemm_subkernel_data->SubkernelListDev[keri]->writeback_master)
+		if (gemm_subkernel_data->SubkernelListDev[keri]->W_resource_writer)
 			gemm_subkernel_data->SubkernelListDev[keri]->writeback_data();
 	}
 	CoCoSyncCheckErr();
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer;
-	lprintf(lvl, "Subkernels complete: t_comp = %lf ms\n" , cpu_timer*1000);
+	lprintf(lvl, "Subkernels complete(%d): t_comp = %lf ms\n" , dev_id, cpu_timer*1000);
 #endif
-#ifdef DEBUG //TEST
+#ifdef DEBUG
+#ifdef TEST
 	cudaEvent_t prev_data_sent = start_firing, prev_exec =  *(cudaEvent_t*) gemm_subkernel_data->SubkernelListDev[0]->data_available->event_backend_ptr;
 	for (int keri = 0; keri < gemm_subkernel_data->SubkernelNumDev; keri++){
 		float t_send, t_exec, temp, t_gpu_idle = 0;
@@ -195,6 +211,7 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 		prev_data_sent = *(cudaEvent_t*) gemm_subkernel_data->SubkernelListDev[keri]->data_available->event_backend_ptr;
 		prev_exec = *(cudaEvent_t*) gemm_subkernel_data->SubkernelListDev[keri]->operation_complete->event_backend_ptr;
 	}
+#endif
 #endif
 	/// Do this after pthread join to enable other devices
 	/// to still read cached data after a device's part is over
@@ -305,6 +322,7 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 	/// Read predefined values for T or use Tile selection.
 	/// return: T size for datum
 	size_t T = 256;
+	double slowest_problem_t = 0;
 	CoCoModel_p model = NULL;
 	{
 		if(predef_vals.T <= 0){
@@ -319,7 +337,6 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 
 			/// Naive for multiple equivalent devices.
 			int slowest_problem_T = fmin(1024, fmin(M, fmin(N, K)));
-			double slowest_problem_t = 0;
 			tunableParams_p pred_p[num_devices];
 			for (int d = 0 ; d < num_devices; d++){
 				model = CoCoPeLiaModelInit(dev_id[d], "Dgemm", 'X', TransA, TransB,
@@ -445,7 +462,7 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 			int remaining_devices = num_devices - d;
 			if (d>0) remaining_subkernels = remaining_subkernels - Subkernels_per_dev[d-1];
 			Subkernels_per_dev[d] = remaining_subkernels/remaining_devices;
-			while (Subkernel_list[Subkernel_num-remaining_subkernels + Subkernels_per_dev[d]-1]-> writeback_master!= 1)
+			while (Subkernel_list[Subkernel_num-remaining_subkernels + Subkernels_per_dev[d]-1]-> W_resource_writer!= 1)
 				Subkernels_per_dev[d]++;
 			if (Subkernels_per_dev[d] > remaining_subkernels) error("CoCoPeLiaDgemm: Split to devices went terribly wrong\n");
 		}
@@ -494,12 +511,12 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer;
 	lprintf(lvl, "Fire and gather pthreads for all devices -> t_exec_full = %lf ms\n", cpu_timer*1000);
-	cpu_timer = csecond();
 	if(predef_vals.T <= 0){
-		lprintf(lvl, "t_predicted for T=%zu was %lf ms : %.1lf \% error\n",
+		lprintf(lvl, "t_predicted for T=%zu was %.2lf ms : %lf \% error\n",
 		T, slowest_problem_t*1000,
 		(slowest_problem_t==0)? 0: (slowest_problem_t - cpu_timer )/slowest_problem_t*100);
 	}
+	cpu_timer = csecond();
 #endif
 
 	for(int i=0; i<used_devices;i++) CoCoPeLiaDevCacheInvalidate(thread_dev_data[i]);
