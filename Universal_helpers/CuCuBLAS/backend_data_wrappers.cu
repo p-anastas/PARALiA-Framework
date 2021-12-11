@@ -220,6 +220,12 @@ void CoCoMemcpy2DAsync(void* dest, size_t ldest, void* src, size_t lsrc, size_t 
 	//else if (loc_src >=0 && loc_dest == -1) massert(CUBLAS_STATUS_SUCCESS == cublasGetMatrixAsync(rows, cols, elemSize, src, lsrc, dest, ldest, stream),  "CoCoMemcpy2DAsync: cublasGetMatrixAsync failed");
 }
 
+// Asunchronous Memcpy in internal buffer AND reduce to dest between two locations WITHOUT synchronous errorchecking. Use with caution.
+void CoCoMemcpyReduce2DAsync(void* reduce_buffer, void* dest, size_t ldest, void* src, size_t lsrc,
+	size_t rows, size_t cols, short elemSize, short loc_dest, short loc_src, CQueue_p transfer_medium){
+		error("CoCoMemcpyReduce2DAsync: Not implemented\n");
+	}
+
 template<typename VALUETYPE>
 void CoCoVecInit(VALUETYPE *vec, long long length, int seed, short loc)
 {

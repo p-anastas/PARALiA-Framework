@@ -17,6 +17,7 @@ add_definitions(-DVERSION="${PROJECT_VERSION}")
 #Run in deep debug mode, for command-to-command debugging
 #add_definitions(-DDDEBUG)
 
+
 #Run in caching debug mode, for cache-related deep debugging
 #add_definitions(-DCDEBUG)
 

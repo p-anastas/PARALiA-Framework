@@ -12,9 +12,11 @@
 #include "backend_wrappers.hpp"
 
 /// TODO: Works for systems with up to 128 devices, not 'completely' future-proof
-CQueue_p h2d_queue[128] = {NULL}, d2h_queue[128] = {NULL}, exec_queue[128] = {NULL};
+CQueue_p h2d_queue[128] = {NULL}, d2h_queue[128] = {NULL}, exec_queue[128] = {NULL}, d2h_reduce_queue = NULL;
 cublasHandle_t handle[128] = {NULL};
 int Subkernel_num = 0;
+
+void* reduce_buf[128] = {NULL};
 
 Subkernel::Subkernel(short TileNum_in){
 	id = Subkernel_num;
@@ -157,10 +159,16 @@ void Subkernel::writeback_data(){
 						short WritebackIdCAdr, WritebackId = tmp->getWriteBackLoc(); //to MASTER
 						if (WritebackId == -1) WritebackIdCAdr = LOC_NUM - 1;
 						else WritebackIdCAdr = WritebackId;
-						CoCoMemcpy2DAsync(tmp->adrs[WritebackIdCAdr], tmp->ldim[WritebackIdCAdr],
-															tmp->adrs[run_dev_id], tmp->ldim[run_dev_id],
-															tmp->dim1, tmp->dim2, tmp->dtypesize(),
-															WritebackId, run_dev_id, d2h_queue[run_dev_id]);
+						if(W_resource_writer==0) error("Subkernel(%d)-Tile(%d.[%d,%d])::writeback_data:\
+						Subkernel is a W_resource_writer\n", id, tmp->id, tmp->GridId1, tmp->GridId2);
+						else if (W_resource_writer == 1)
+							CoCoMemcpy2DAsync(tmp->adrs[WritebackIdCAdr], tmp->ldim[WritebackIdCAdr],
+								tmp->adrs[run_dev_id], tmp->ldim[run_dev_id],
+								tmp->dim1, tmp->dim2, tmp->dtypesize(),
+								WritebackId, run_dev_id, d2h_queue[run_dev_id]);
+						else CoCoMemcpyReduce2DAsync(reduce_buf[WritebackIdCAdr], tmp->adrs[WritebackIdCAdr],
+								   tmp->ldim[WritebackIdCAdr], tmp->adrs[run_dev_id], tmp->ldim[run_dev_id],
+									 tmp->dim1, tmp->dim2, tmp->dtypesize(), WritebackId, run_dev_id, d2h_reduce_queue);
 						Event* prev_event = operation_complete;
 						CoCacheAddPendingEvent(run_dev_id, prev_event, writeback_complete, tmp->CacheLocId[run_dev_id], W);
 					}
@@ -168,7 +176,7 @@ void Subkernel::writeback_data(){
 		}
 		else error("Subkernel(%d)::writeback_data: Not implemented for TileDim=%d\n", id, TileDimlist[j]);
 	}
-	writeback_complete->record_to_queue(d2h_queue[run_dev_id]);;
+	writeback_complete->record_to_queue(d2h_queue[run_dev_id]);
 	//CoCoSyncCheckErr();
 #ifdef DEBUG
 	lprintf(lvl-1, "<-----|\n");
@@ -176,6 +184,7 @@ void Subkernel::writeback_data(){
 }
 
 void 	CoCoPeLiaInitStreams(short dev_id){
+	//if (!d2h_reduce_queue) d2h_reduce_queue = new CommandQueue();
   if (!h2d_queue[dev_id]) h2d_queue[dev_id] = new CommandQueue();
   if (!d2h_queue[dev_id])  d2h_queue[dev_id] = new CommandQueue();
   if (!exec_queue[dev_id])  exec_queue[dev_id] = new CommandQueue();

@@ -91,7 +91,12 @@ void CoCoMemcpy2D(void* dest, size_t ldest, void* src, size_t lsrc, size_t rows,
 void CoCoMemcpyAsync(void* dest, void* src, long long N_bytes, short loc_dest, short loc_src, CQueue_p transfer_medium);
 
 // Asunchronous Memcpy between two locations WITHOUT synchronous errorchecking. Use with caution.
-void CoCoMemcpy2DAsync(void* dest, size_t ldest, void* src, size_t lsrc, size_t rows, size_t cols, short elemSize, short loc_dest, short loc_src, CQueue_p transfer_medium);
+void CoCoMemcpy2DAsync(void* dest, size_t ldest, void* src, size_t lsrc, size_t rows, size_t cols,
+	short elemSize, short loc_dest, short loc_src, CQueue_p transfer_medium);
+
+// Asunchronous Memcpy in internal buffer AND reduce to dest between two locations WITHOUT synchronous errorchecking. Use with caution.
+void CoCoMemcpyReduce2DAsync(void* reduce_buffer, void* dest, size_t ldest, void* src, size_t lsrc, size_t rows, size_t cols,
+	short elemSize, short loc_dest, short loc_src, CQueue_p transfer_medium);
 
 // Initalize vector in loc with error-checking
 template<typename VALUETYPE>
