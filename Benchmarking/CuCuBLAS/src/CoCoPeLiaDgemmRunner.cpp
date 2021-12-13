@@ -27,7 +27,7 @@ int main(const int argc, const char *argv[]) {
 	if (predef_control_values!= NULL){
 		if(predef_control_values->T > 0) {
 			if (predef_control_values->T > M || predef_control_values->T > N || predef_control_values->T > K) error("Given Tin=%d bigger than problem dim\n", predef_control_values->T);
-			else if (predef_control_values->T > M/1.5 && predef_control_values->T > N/1.5 && predef_control_values->T > K/1.5) error("Given Tin=%d bigger than all problem dims/1.5\n", predef_control_values->T);
+			else if (predef_control_values->T > M/1.5 && predef_control_values->T > N/1.5 && predef_control_values->T > K/1.5) warning("Given Tin=%d bigger than all problem dims/1.5\n", predef_control_values->T);
 		}
 		sprintf(filename, "%s/CoCoPeLiaDgemmRunner_predefined_vals_%s.log", TESTLIBDIR, VERSION);
 	}
