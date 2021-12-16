@@ -20,7 +20,4 @@ typedef struct gemm_backend_in{
 	short dev_id;
 }* gemm_backend_in_p;
 
-void CoCoPeLiaSelectDevice(short dev_id);
-void CoCoPeLiaDevGetMemInfo(long long* free_dev_mem, long long* max_dev_mem);
-
 #endif

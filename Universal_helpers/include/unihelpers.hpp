@@ -59,12 +59,22 @@ class Event
 		void record_to_queue(CQueue_p Rr);
 		event_status query_status();
 		void checked();
+		void reset();
 
 
 };
 
 /*****************************************************/
 /// Generalised data management functions & helpers
+
+// Return current device used
+int CoCoPeLiaGetDevice();
+
+// Select device for current running pthread
+void CoCoPeLiaSelectDevice(short dev_id);
+
+// Return free memory and total memory for current device
+void CoCoPeLiaDevGetMemInfo(long long* free_dev_mem, long long* max_dev_mem);
 
 // Sync all devices and search for enchountered errors.
 void CoCoSyncCheckErr();

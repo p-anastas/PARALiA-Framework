@@ -107,6 +107,13 @@ template<typename dtype>  Tile2D<dtype>::Tile2D(void * in_addr, int in_dim1, int
   GridId2 = inGrid2;
   id = Tile_num;
   Tile_num++;
+  short prev_loc = CoCoPeLiaGetDevice();
+  for (int iloc = 0; iloc < LOC_NUM -1; iloc++){
+    	CoCoPeLiaSelectDevice(iloc);
+      available[iloc] = new Event();
+      if(!iloc) available[LOC_NUM -1] = new Event();
+  }
+  CoCoPeLiaSelectDevice(prev_loc);
   short init_loc = CoCoGetPtrLoc(in_addr);
   if (init_loc < 0) init_loc = LOC_NUM -1;
   for (int iloc = 0; iloc < LOC_NUM; iloc++){
@@ -115,6 +122,7 @@ template<typename dtype>  Tile2D<dtype>::Tile2D(void * in_addr, int in_dim1, int
        adrs[iloc] = in_addr;
        ldim[iloc] = in_ldim;
        CacheLocId[iloc] = -1;
+       available[iloc]->record_to_queue(NULL);
     }
     else{
       adrs[iloc] = NULL;

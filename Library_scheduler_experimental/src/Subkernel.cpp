@@ -35,13 +35,13 @@ Subkernel::~Subkernel(){
 	free(operation_params);
 	delete data_available;
 	delete operation_complete;
-	if (W_resource_writer) delete writeback_complete;
+	if (WR_writer) delete writeback_complete;
 }
 
 void Subkernel::init_events(){
 	data_available = new Event();
 	operation_complete = new Event();
-	if (W_resource_writer) writeback_complete = new Event();
+	if (WR_writer) writeback_complete = new Event();
 }
 
 void Subkernel::request_data(){
@@ -159,9 +159,9 @@ void Subkernel::writeback_data(){
 						short WritebackIdCAdr, WritebackId = tmp->getWriteBackLoc(); //to MASTER
 						if (WritebackId == -1) WritebackIdCAdr = LOC_NUM - 1;
 						else WritebackIdCAdr = WritebackId;
-						if(W_resource_writer==0) error("Subkernel(%d)-Tile(%d.[%d,%d])::writeback_data:\
-						Subkernel is a W_resource_writer\n", id, tmp->id, tmp->GridId1, tmp->GridId2);
-						else if (W_resource_writer == 1)
+						if(WR_writer==0) error("Subkernel(%d)-Tile(%d.[%d,%d])::writeback_data:\
+						Subkernel is a WR_writer\n", id, tmp->id, tmp->GridId1, tmp->GridId2);
+						else if (WR_writer == 1)
 							CoCoMemcpy2DAsync(tmp->adrs[WritebackIdCAdr], tmp->ldim[WritebackIdCAdr],
 								tmp->adrs[run_dev_id], tmp->ldim[run_dev_id],
 								tmp->dim1, tmp->dim2, tmp->dtypesize(),

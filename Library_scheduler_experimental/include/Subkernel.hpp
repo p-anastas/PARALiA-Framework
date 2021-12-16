@@ -15,11 +15,11 @@ class Subkernel
 {
 	private:
 	public:
-		int id;
+		int id, iloc1, iloc2, iloc3;
 		short run_dev_id;
-		// W_resource_reader must run first to read input chunk of W tile(s), if any.
-		// W_resource_writer must run last to write back chunk of W tile(s), if any.
-		short W_resource_writer, W_resource_reader;
+		// WR_reader must run first to read input chunk of W tile(s), if any.
+		// WR_writer must run last to write back chunk of W tile(s), if any.
+		short WR_writer, WR_reader, WR_reducer;
 		short TileNum, *TileDimlist;
 		void** TileList;
 		Subkernel* prev, * next;

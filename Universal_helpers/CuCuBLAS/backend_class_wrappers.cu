@@ -51,6 +51,7 @@ void CommandQueue::sync_barrier()
 
 void CommandQueue::wait_for_event(Event_p Wevent)
 {
+	if (Wevent->query_status() == CHECKED) return;
 	cudaStream_t stream = *((cudaStream_t*) cqueue_backend_ptr);
 	cudaEvent_t cuda_event= *(cudaEvent_t*) Wevent->event_backend_ptr;
 	cudaError_t err = cudaStreamWaitEvent(stream, cuda_event, 0); // 0-only parameter = future NVIDIA masterplan?
@@ -58,7 +59,7 @@ void CommandQueue::wait_for_event(Event_p Wevent)
 }
 
 /*****************************************************/
-/// Event class functions
+/// Event class functions. TODO: Do status = .. commands need lock?
 Event::Event()
 {
 	event_backend_ptr = malloc(sizeof(cudaEvent_t));
@@ -72,6 +73,11 @@ Event::Event()
 
 void Event::sync_barrier()
 {
+	if (status == CHECKED) return;
+	else if (status == UNRECORDED){
+		warning("Event::sync_barrier: Tried to sync unrecorded event\n");
+		return;
+	}
 	cudaEvent_t cuda_event= *(cudaEvent_t*) event_backend_ptr;
 	cudaError_t err = cudaEventSynchronize(cuda_event);
 	if (status == RECORDED) status = COMPLETE;
@@ -79,6 +85,13 @@ void Event::sync_barrier()
 }
 
 void Event::record_to_queue(CQueue_p Rr){
+	if (Rr == NULL){
+		status = CHECKED;
+		return;
+	}
+	else if (status != UNRECORDED){
+		warning("Event::record_to_queue: Recording %s event\n", print_event_status(status));
+	}
 	cudaEvent_t cuda_event= *(cudaEvent_t*) event_backend_ptr;
 	cudaStream_t stream = *((cudaStream_t*) Rr->cqueue_backend_ptr);
 	cudaError_t err = cudaEventRecord(cuda_event, stream);
@@ -87,9 +100,10 @@ void Event::record_to_queue(CQueue_p Rr){
 }
 
 event_status Event::query_status(){
+	if (status == CHECKED) return status;
 	cudaEvent_t cuda_event= *(cudaEvent_t*) event_backend_ptr;
 	cudaError_t err = cudaEventQuery(cuda_event);
-	if (err == cudaSuccess && (status == UNRECORDED || status == CHECKED ||  status == COMPLETE)) return status;
+	if (err == cudaSuccess && (status == UNRECORDED ||  status == COMPLETE)) return status;
 	else if (err == cudaSuccess && status == RECORDED){ // Event has finished but not synched yet!
 		status = COMPLETE;
 		return status;
@@ -107,6 +121,10 @@ event_status Event::query_status(){
 void Event::checked(){
 	if (status == COMPLETE) status = CHECKED;
 	else error("Event::checked(): error event was %s,  not COMPLETE()\n", print_event_status(status));
+}
+
+void Event::reset(){
+	status = UNRECORDED;
 }
 
 /*****************************************************/

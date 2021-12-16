@@ -39,6 +39,7 @@ class Tile2D
 		int dim1, dim2;
 		short writeback;
 
+		Event* available[LOC_NUM];
 		void *adrs[LOC_NUM];
 		int ldim[LOC_NUM];
 		int CacheLocId[LOC_NUM];
