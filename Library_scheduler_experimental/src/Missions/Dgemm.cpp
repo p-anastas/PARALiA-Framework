@@ -78,6 +78,9 @@ int current_ctr = 0;
 			for (int ki = 0; ki < KGridSz; ki++){
 	      current_ctr = mi*NGridSz*KGridSz + ni*KGridSz + ki;
 				kernels[current_ctr] = new Subkernel(3);
+				kernels[current_ctr]->iloc1 = mi;
+				kernels[current_ctr]->iloc2 = ni;
+				kernels[current_ctr]->iloc3 = ki;
 				kernels[current_ctr]->TileDimlist[0] = kernels[current_ctr]->TileDimlist[1]
 				= kernels[current_ctr]->TileDimlist[2] = 2;
 				kernels[current_ctr]->TileList[0] = A_asset->getTile(mi,ki);
@@ -97,16 +100,15 @@ int current_ctr = 0;
 				ptr_ker_translate->B = NULL;
 				ptr_ker_translate->C = NULL;
 				ptr_ker_translate->alpha = initial_gemm->alpha;
-				if (ki == 0){
-					kernels[current_ctr]->W_resource_reader = 1;
-					ptr_ker_translate->beta = initial_gemm->beta;
-				}
+				ptr_ker_translate->beta = initial_gemm->beta;
+				if (ki == 0) kernels[current_ctr]->WR_reader = 1;
 				else{
-					kernels[current_ctr]->W_resource_reader = 0;
+					kernels[current_ctr]->WR_reader = 0;
+					kernels[current_ctr]->WR_reducer = 1;
 					ptr_ker_translate->beta = 1.0;
 				}
-				if (ki == KGridSz - 1) kernels[current_ctr]->W_resource_writer = 1;
-				else kernels[current_ctr]->W_resource_writer = 0;
+				if (ki == KGridSz - 1) kernels[current_ctr]->WR_writer = 1;
+				else kernels[current_ctr]->WR_writer = 0;
 			}
 		}
 	}
@@ -166,10 +168,6 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 	for (int keri = 0; keri < gemm_subkernel_data->SubkernelNumDev; keri++){
 		gemm_subkernel_data->SubkernelListDev[keri]->init_events();
 		CoCoGemmUpdateDevice(gemm_subkernel_data->SubkernelListDev[keri], dev_id);
-		if (!keri) gemm_subkernel_data->SubkernelListDev[keri]->prev = NULL;
-		else gemm_subkernel_data->SubkernelListDev[keri]->prev = gemm_subkernel_data->SubkernelListDev[keri-1];
-		if(keri==gemm_subkernel_data->SubkernelNumDev - 1) gemm_subkernel_data->SubkernelListDev[keri]->next = NULL;
-		else gemm_subkernel_data->SubkernelListDev[keri]->next = gemm_subkernel_data->SubkernelListDev[keri+1];
 	}
 
 #ifdef TEST
@@ -181,7 +179,7 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 	/// Only works assuming the last subkernel writes back
 	Event* tmp_writeback;
 	if (KSplit == 1) for (int keri = gemm_subkernel_data->SubkernelNumDev -1 ; keri >= 0 ; keri--){
-		if (gemm_subkernel_data->SubkernelListDev[keri]->W_resource_writer)
+		if (gemm_subkernel_data->SubkernelListDev[keri]->WR_writer)
 			tmp_writeback = gemm_subkernel_data->SubkernelListDev[keri]->writeback_complete;
 		else{
 			// never init instead of delete
@@ -204,8 +202,8 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 					lprintf(lvl, "CoCopeLiaDgemmAgentVoid(%d): Swaping ker(%d) with rev_ker(%d)\n",
 					dev_id, keri, rev_ker);
 #endif
-					if (gemm_subkernel_data->SubkernelListDev[keri]->W_resource_reader)
-							if (gemm_subkernel_data->SubkernelListDev[rev_ker]->W_resource_writer){
+					if (gemm_subkernel_data->SubkernelListDev[keri]->WR_reader)
+							if (gemm_subkernel_data->SubkernelListDev[rev_ker]->WR_writer){
 #ifdef DEBUG
 					lprintf(lvl, "CoCopeLiaDgemmAgentVoid(%d): ker(%d) reader->writer \n",
 					dev_id, keri);
@@ -216,14 +214,15 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 									gemm_subkernel_data->SubkernelListDev[keri]->operation_params;
 								gemm_backend_in_p ptr_ker_translate_revker = (gemm_backend_in_p)
 									gemm_subkernel_data->SubkernelListDev[rev_ker]->operation_params;
-								gemm_subkernel_data->SubkernelListDev[keri]->W_resource_writer = 1;
-								gemm_subkernel_data->SubkernelListDev[keri]->W_resource_reader = 0;
+								gemm_subkernel_data->SubkernelListDev[keri]->WR_writer = 1;
+								gemm_subkernel_data->SubkernelListDev[keri]->WR_reader = 0;
 								ptr_ker_translate_revker->beta = ptr_ker_translate_keri->beta;
 								ptr_ker_translate_keri->beta = 1.0;
-								gemm_subkernel_data->SubkernelListDev[rev_ker]->W_resource_writer = 0;
-								gemm_subkernel_data->SubkernelListDev[rev_ker]->W_resource_reader = 1;
+								gemm_subkernel_data->SubkernelListDev[rev_ker]->WR_writer = 0;
+								gemm_subkernel_data->SubkernelListDev[rev_ker]->WR_reader = 1;
 							}
 							else error("CoCopeLiaDgemmAgentVoid(%d): tried to swap reader with no-writer\n", dev_id);
+
 					tmp = gemm_subkernel_data->SubkernelListDev[keri];
 					gemm_subkernel_data->SubkernelListDev[keri] =
 						gemm_subkernel_data->SubkernelListDev[rev_ker];
@@ -251,9 +250,16 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 #endif
 
 	for (int keri = 0; keri < gemm_subkernel_data->SubkernelNumDev; keri++){
+		if (!keri) gemm_subkernel_data->SubkernelListDev[keri]->prev = NULL;
+		else gemm_subkernel_data->SubkernelListDev[keri]->prev =
+			gemm_subkernel_data->SubkernelListDev[keri-1];
+		if(keri==gemm_subkernel_data->SubkernelNumDev - 1)
+			gemm_subkernel_data->SubkernelListDev[keri]->next = NULL;
+		else gemm_subkernel_data->SubkernelListDev[keri]->next =
+			gemm_subkernel_data->SubkernelListDev[keri+1];
 		gemm_subkernel_data->SubkernelListDev[keri]->request_data();
 		gemm_subkernel_data->SubkernelListDev[keri]->run_operation();
-		if (gemm_subkernel_data->SubkernelListDev[keri]->W_resource_writer)
+		if (gemm_subkernel_data->SubkernelListDev[keri]->WR_writer)
 			gemm_subkernel_data->SubkernelListDev[keri]->writeback_data();
 	}
 	CoCoSyncCheckErr();
@@ -528,7 +534,7 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 		int remaining_devices = num_devices - d;
 		if (d>0) remaining_subkernels = remaining_subkernels - Subkernels_per_dev[d-1];
 		Subkernels_per_dev[d] = remaining_subkernels/remaining_devices;
-		while (Subkernel_list[Subkernel_num-remaining_subkernels + Subkernels_per_dev[d]-1]-> W_resource_writer!= 1)
+		while (Subkernel_list[Subkernel_num-remaining_subkernels + Subkernels_per_dev[d]-1]-> WR_writer!= 1)
 			Subkernels_per_dev[d]++;
 		if (Subkernels_per_dev[d] > remaining_subkernels) error("CoCoPeLiaDgemm: Split to devices went terribly wrong\n");
 	}*/
@@ -545,7 +551,7 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 		/// FIXME: Naive for 2 devices
 		MSplit = num_devices;
 		int dev_offset = ((MGridSz*NGridSz)/MSplit)*KGridSz;
-		if (dev_offset) while (Subkernel_list[dev_offset-1]->W_resource_writer!= 1) dev_offset++;
+		if (dev_offset) while (Subkernel_list[dev_offset-1]->WR_writer!= 1) dev_offset++;
 		else dev_offset = Subkernel_num;
 #ifdef DEBUG
 		lprintf(lvl, "Subkernel Split offset = %d\n", dev_offset);
