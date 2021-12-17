@@ -80,7 +80,7 @@ void Event::sync_barrier()
 	}
 	cudaEvent_t cuda_event= *(cudaEvent_t*) event_backend_ptr;
 	cudaError_t err = cudaEventSynchronize(cuda_event);
-	if (status == RECORDED) status = COMPLETE;
+	if (status == RECORDED) status = CHECKED;
 	massert(cudaSuccess == err, "Event::sync_barrier - %s\n", cudaGetErrorString(err));
 }
 
@@ -103,6 +103,7 @@ event_status Event::query_status(){
 	if (status == CHECKED) return status;
 	cudaEvent_t cuda_event= *(cudaEvent_t*) event_backend_ptr;
 	cudaError_t err = cudaEventQuery(cuda_event);
+
 	if (err == cudaSuccess && (status == UNRECORDED ||  status == COMPLETE)) return status;
 	else if (err == cudaSuccess && status == RECORDED){ // Event has finished but not synched yet!
 		status = COMPLETE;
@@ -115,6 +116,10 @@ event_status Event::query_status(){
 		status = RECORDED;
 		return status;
 	}
+	else if (err == cudaSuccess &&  status == CHECKED)
+		// TODO: This should not happen in a healthy locked update scenario.
+		// But it does since no locking yet. Not sure of its effects.
+		return status;
 	else error("Event::query_status - %s, status=%s\n", cudaGetErrorString(err), print_event_status(status));
 }
 

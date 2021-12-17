@@ -23,7 +23,7 @@ class Subkernel
 		short TileNum, *TileDimlist;
 		void** TileList;
 		Subkernel* prev, * next;
-		Event* data_available, *operation_complete, *writeback_complete;
+		Event* operation_complete, *writeback_complete;
 		void* operation_params;
 		void* operation;
 		short work_complete;
@@ -37,7 +37,7 @@ class Subkernel
 		/// Functions
 		void init_events();
 		void request_data();
-		void request_data_complete();
+		void sync_request_data();
 		void run_operation();
 		void writeback_data();
 };

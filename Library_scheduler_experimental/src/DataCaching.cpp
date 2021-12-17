@@ -58,7 +58,7 @@ DevCachePtr CoCoPeLiaDevCacheInit(kernel_pthread_wrap_p subkernel_data){
 			else if (curr->TileDimlist[j] == 2){
 					Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) curr->TileList[j];
 					if (tmp->CacheLocId[dev_id] == -42){
-						tmp->CacheLocId[dev_id] = 0;
+						tmp->CacheLocId[dev_id] = -2;
 						//printf("Found Tile with INVALID entry, adding %d to result", tmp->size());
 						result->BlockSize = (long long) fmax(result->BlockSize, tmp->size());
 						result->BlockNum++;
@@ -67,14 +67,13 @@ DevCachePtr CoCoPeLiaDevCacheInit(kernel_pthread_wrap_p subkernel_data){
 			else error("CoCoPeLiaDevCacheInit: Not implemented for TileDim=%d\n", curr->TileDimlist[j]);
 		}
 	}
-
+	CoCoPeLiaDevCacheInvalidate(subkernel_data);
 	result->gpu_mem_buf_sz= result->BlockSize*result->BlockNum;
 	result->BlockState = (state*) calloc (result->BlockNum, sizeof(state));
 	result->BlockPendingEvents = (pending_events_p*) malloc (result->BlockNum* sizeof(pending_events_p));
 	result->BlockCurrentTileDim = (short*) malloc (result->BlockNum* sizeof(short));
 	result->BlockCurrentTilePtr = (void**) malloc (result->BlockNum* sizeof(void*));
 	for (int idx = 0; idx < result->BlockNum; idx++) result->BlockPendingEvents[idx] = NULL;
-	CoCoPeLiaDevCacheInvalidate(subkernel_data);
 	return result;
 }
 
@@ -95,7 +94,7 @@ void CoCoPeLiaRequestBuffer(kernel_pthread_wrap_p subkernel_data){
 	  CoCoPeLiaDevGetMemInfo(&free_dev_mem, &max_dev_mem);
 	  long long problem_avail_mem = free_dev_mem - max_dev_mem*(1-PROBLEM_GPU_PERCENTAGE/100.0) + prev_DevCache_sz;
 	  // For debuging large cases
-	  //problem_avail_mem/=125;
+	  //problem_avail_mem=1024*1024*262;
 	  #ifdef DEBUG
 	  	lprintf(lvl, "====================================\n");
 	  	lprintf(lvl, "GPU mem management:\n");
@@ -147,9 +146,11 @@ void CoCoPeLiaRequestBuffer(kernel_pthread_wrap_p subkernel_data){
 				free(DevCache[dev_id]->BlockCurrentTilePtr);
 				free(DevCache[dev_id]);
 			}
-	    DevCache[dev_id] = temp_DevCache;
-			DevCache[dev_id]->gpu_mem_buf = CoCoMalloc(DevCache[dev_id]->gpu_mem_buf_sz,
-				dev_id);
+	    //DevCache[dev_id] = temp_DevCache;
+			//DevCache[dev_id]->gpu_mem_buf = CoCoMalloc(DevCache[dev_id]->gpu_mem_buf_sz,
+			//	dev_id);
+			temp_DevCache->gpu_mem_buf = CoCoMalloc(temp_DevCache->gpu_mem_buf_sz, dev_id);
+			DevCache[dev_id] = temp_DevCache;
 	  }
 	  CoCoSyncCheckErr();
 
@@ -234,6 +235,7 @@ void CoCoPeLiaDevCacheInvalidate(kernel_pthread_wrap_p subkernel_data){
 			else if (curr->TileDimlist[j] == 2){
 					Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) curr->TileList[j];
 					if (tmp->CacheLocId[dev_id] != -1) tmp->CacheLocId[dev_id] = -42;
+					tmp->available[dev_id]->reset();
 			}
 			else error("CoCoPeLiaDevCacheInvalidate: Not implemented for TileDim=%d\n", curr->TileDimlist[j]);
 		}
@@ -307,6 +309,7 @@ void* CoCacheUpdateAsignBlock(short dev_id, void* TilePtr, short TileDim){
 					dev_id, remove_block_idx, prev_tile->id, prev_tile->GridId1, prev_tile->GridId2);
 		#endif
 		prev_tile->CacheLocId[dev_id] = -42;
+		prev_tile->available[dev_id]->reset();
 		tmp->CacheLocId[dev_id] = remove_block_idx;
 		DevCache[dev_id]->BlockCurrentTileDim[remove_block_idx] = TileDim;
 		DevCache[dev_id]->BlockCurrentTilePtr[remove_block_idx] = TilePtr;
@@ -400,10 +403,13 @@ int CoCacheSelectBlockToRemove_naive(short dev_id){
 		error("CoCacheSelectBlockToRemove_naive(%d): Called on empty buffer\n", dev_id);
 	for (int idx = 0; idx < DevCache[dev_id]->BlockNum; idx++){ // Iterate through cache serially.
 		state tmp_state = CoCacheUpdateBlockState(dev_id, idx); // Update all events etc for idx.
+		while(__sync_lock_test_and_set (&globalock, 1));
 		if(DevCache[dev_id]->BlockPendingEvents[idx] == NULL){ 		// Indx can be removed if there are no pending events.
 			result_idx =  idx;
+			__sync_lock_release(&globalock);
 			break;
 		}
+		__sync_lock_release(&globalock);
 	}
 #ifdef CTEST
 	cpu_timer = csecond() - cpu_timer;
@@ -485,7 +491,7 @@ state CoCacheUpdateBlockState(short dev_id, int BlockIdx){
 				warning("CoCacheUpdateBlockState: Double-GHOST event found, removing (bug?)\n");
 				delete_curr_flag = 1;
 			}
-			else if(end_status == GHOST){ // Instantaneous event
+			else if(end_status == GHOST){ // Instantaneous start effect event
 				if (start_status == COMPLETE || start_status == CHECKED){
 					CoCacheStateUpdate(&temp, current->effect);
 					delete_curr_flag = 1;
@@ -497,6 +503,21 @@ state CoCacheUpdateBlockState(short dev_id, int BlockIdx){
 #ifdef CDEBUG
 					lprintf(lvl, "Instantaneous action still incomplete, waiting\n");
 #endif
+				}
+			}
+			// Continuous from record to end event.
+			else if(start_status == GHOST){
+				if (end_status == COMPLETE || end_status == CHECKED){
+					delete_curr_flag = 1;
+#ifdef CDEBUG
+					lprintf(lvl, "From record to end action complete, removing\n");
+#endif
+				}
+				else{
+#ifdef CDEBUG
+					lprintf(lvl, "From record to end action incomplete, updating cache and waiting\n");
+#endif
+					CoCacheStateUpdate(&temp, current->effect);
 				}
 			}
 			else if ((start_status == COMPLETE || start_status == CHECKED) &&
@@ -528,11 +549,11 @@ state CoCacheUpdateBlockState(short dev_id, int BlockIdx){
 				free(free_tmp);
 			}
 		}
-	  __sync_lock_release(&globalock);
 	#ifdef DEBUG
   	lprintf(lvl-1, "<-----|\n");
   #endif
 	DevCache[dev_id]->BlockState[BlockIdx] = temp;
+	__sync_lock_release(&globalock);
   return temp;
 }
 

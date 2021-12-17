@@ -157,7 +157,7 @@ template<typename dtype> short Tile2D<dtype>::getClosestReadLoc(short dev_id_in)
   for (pos =0; pos < LOC_NUM; pos++){
     if (pos == dev_id_in) continue;
     if (CacheLocId[pos] == -1) break;
-    else if (CacheLocId[pos] != -42){
+    else if (CacheLocId[pos] > -1){
       state temp = CoCacheUpdateBlockState(pos, CacheLocId[pos]);
       if (temp == AVAILABLE || temp == R) break;
 #ifdef DDEBUG
