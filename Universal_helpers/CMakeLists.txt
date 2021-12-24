@@ -1,5 +1,5 @@
 cmake_minimum_required (VERSION 3.10)
-### Initialize the project 
+### Initialize the project
 project (CoCopeLia-Helpers VERSION ${PROJECT_VERSION} DESCRIPTION "Universal Helper function lib for CoCoPeLia" LANGUAGES CXX CUDA)
 message( "------------------------------------------------------------------------------------------------")
 message( "Universal Helpers - PROJECT_SOURCE_DIR: " ${PROJECT_SOURCE_DIR} )
@@ -20,7 +20,7 @@ message( "Universal Helpers - BACKEND DIR: " ${BACKEND_UNIHELP_DIR_SRC} )
 message( "Universal Helpers - Included DIR: " ${BACKEND_UNIHELP_DIR_SRC} )
 include_directories(${BACKEND_UNIHELP_DIR_SRC})
 
-set (UNIHELP_INSTALL ${CMAKE_INSTALL_PROJECT}/Universal_helpers) 
+set (UNIHELP_INSTALL ${CMAKE_INSTALL_PROJECT}/Universal_helpers)
 file(MAKE_DIRECTORY ${UNIHELP_INSTALL})
 
 set (UNIHELP_INSTALL_LIB ${UNIHELP_INSTALL}/lib)
@@ -30,17 +30,17 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${UNIHELP_INSTALL_LIB})
 set (UNIHELP_INSTALL_INC ${UNIHELP_INSTALL}/include)
 file(MAKE_DIRECTORY ${UNIHELP_INSTALL_INC})
 
-add_library(unihelpers SHARED 
+add_library(unihelpers SHARED
 ${UNIHELP_DIR_SRC}/general_utils.cpp
 #${UNIHELP_DIR_SRC}/data_management.cpp
 ${BACKEND_UNIHELP_DIR_SRC}/backend_util_wrappers.cu
 ${BACKEND_UNIHELP_DIR_SRC}/backend_data_wrappers.cu
 ${BACKEND_UNIHELP_DIR_SRC}/backend_class_wrappers.cu
 )
-target_link_libraries(unihelpers ${INTERNAL_LINK_LIB})
+target_link_libraries(unihelpers ${INTERNAL_LINK_LIB} ${OPENBLAS_LINK})
 configure_file(${UNIHELP_DIR_INC}/unihelpers.hpp ${UNIHELP_INSTALL_INC}/unihelpers.hpp COPYONLY)
 
-## FIXME: This is a temporary cheat for deployment, must be removed at some point (?). It has to do with TransposeTranslate. 
+## FIXME: This is a temporary cheat for deployment, must be removed at some point (?). It has to do with TransposeTranslate.
 configure_file(${BACKEND_UNIHELP_DIR_SRC}/backend_wrappers.hpp ${UNIHELP_INSTALL_INC}/backend_wrappers.hpp COPYONLY)
 
 set (UNIHELP_INSTALL_INC ${UNIHELP_INSTALL_INC} PARENT_SCOPE)
@@ -61,5 +61,3 @@ message( "----------------------------------------------------------------------
 #    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 #configure_file(unihelpers.pc.in unihelpers.pc @ONLY)
 #install(FILES ${CMAKE_BINARY_DIR}/unihelpers.pc DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/pkgconfig)
-
-

@@ -17,12 +17,18 @@
 #include "Subkernel.hpp"
 #include "DataCaching.hpp"
 
+#include <cublas_v2.h>
+#include <cuda_runtime.h>
+#include <pthread.h>
+
 gemm_backend_in_p initial_gemm = NULL;
 
 CoCoModel_p glob_model;
 struct CoControl predef_vals;
 CoControl_p used_vals = NULL;
 int MGridSz = 0, NGridSz = 0, KGridSz = 0;
+int reduce_flag = 0;
+
 int MSplit = 1, NSplit = 1, KSplit = 1;
 
 void CoCoGemmUpdateDevice(Subkernel* ker, short dev_id){
@@ -77,7 +83,7 @@ int current_ctr = 0;
 		for (int ni = 0; ni < NGridSz; ni++){
 			for (int ki = 0; ki < KGridSz; ki++){
 	      current_ctr = mi*NGridSz*KGridSz + ni*KGridSz + ki;
-				kernels[current_ctr] = new Subkernel(3);
+				kernels[current_ctr] = new Subkernel(3,"gemm");
 				kernels[current_ctr]->iloc1 = mi;
 				kernels[current_ctr]->iloc2 = ni;
 				kernels[current_ctr]->iloc3 = ki;
@@ -86,7 +92,10 @@ int current_ctr = 0;
 				kernels[current_ctr]->TileList[0] = A_asset->getTile(mi,ki);
 				kernels[current_ctr]->TileList[1] = B_asset->getTile(ki,ni);
 				kernels[current_ctr]->TileList[2] = C_asset->getTile(mi,ni);
-				((Tile2D<VALUE_TYPE>*)kernels[current_ctr]->TileList[2])->writeback = 1;
+				((Tile2D<VALUE_TYPE>*)kernels[current_ctr]->TileList[0])->R_flag = 1;
+				((Tile2D<VALUE_TYPE>*)kernels[current_ctr]->TileList[1])->R_flag = 1;
+				((Tile2D<VALUE_TYPE>*)kernels[current_ctr]->TileList[2])->R_flag = 1;
+				((Tile2D<VALUE_TYPE>*)kernels[current_ctr]->TileList[2])->W_flag = 1;
 				kernels[current_ctr]->operation_params = (void*) malloc(sizeof(struct gemm_backend_in));
 				gemm_backend_in_p ptr_ker_translate = (gemm_backend_in_p) kernels[current_ctr]->operation_params;
 				ptr_ker_translate->TransA = initial_gemm->TransA;
@@ -101,14 +110,13 @@ int current_ctr = 0;
 				ptr_ker_translate->C = NULL;
 				ptr_ker_translate->alpha = initial_gemm->alpha;
 				ptr_ker_translate->beta = initial_gemm->beta;
+				kernels[current_ctr]->WR_reducer = kernels[current_ctr]->WR_writer = 0;
+				if (initial_gemm->beta == 0.0)((Tile2D<VALUE_TYPE>*)kernels[current_ctr]->TileList[2])->R_flag = 0;
 				if (ki == 0) kernels[current_ctr]->WR_reader = 1;
 				else{
 					kernels[current_ctr]->WR_reader = 0;
-					kernels[current_ctr]->WR_reducer = 1;
 					ptr_ker_translate->beta = 1.0;
 				}
-				if (ki == KGridSz - 1) kernels[current_ctr]->WR_writer = 1;
-				else kernels[current_ctr]->WR_writer = 0;
 			}
 		}
 	}
@@ -119,6 +127,37 @@ int current_ctr = 0;
 	return kernels;
 }
 
+/*
+void CoCoSplitDims(size_t M, size_t N, size_t K, short A_loc, short B_loc, short C_loc, short dev_num)
+{
+	short lvl = 3;
+#ifdef DEBUG
+	lprintf(lvl-1, "|-----> CoCopelia_split_dims(%zu,%zu,%zu,%d,%d,%d)\n", M, N, K, A_loc, B_loc, C_loc);
+#endif
+#ifdef TEST
+	lprintf(lvl-1, "|-----> CoCopelia_split_dims\n");
+#endif
+	if (!(A_loc || B_loc || C_loc)) return;
+	MSplit = NSplit = KSplit = 1;
+	int candM = M/ MSplit, candN = N/ NSplit, candK = K/ KSplit;
+	short ctr = 0;
+	while (ctr < dev_num - 1){
+		if(A_loc || C_loc) candM = M/ MSplit;
+		else candM = 0;
+		if(B_loc || C_loc) candN = N/ NSplit;
+		else candN = 0;
+		if(A_loc || B_loc) candK = K/ KSplit;
+		else candK = 0;
+
+		if (candM >= (size_t) fmax(candN, candK)) MSplit+=1;
+		else if (candN >= (size_t) fmax(candM, candK)) NSplit+=1;
+		else if (candK >= (size_t) fmax(candM, candN)) KSplit+=1;
+	}
+#ifdef DEBUG
+	lprintf(lvl-1, "<-----|\n");
+#endif
+	return;
+}*/
 
 void CoCoPeLiaGemmFixKReduction(kernel_pthread_wrap_p gemm_subkernel_data){
 	short lvl = 3;
@@ -159,6 +198,7 @@ void CoCoPeLiaGemmFixKReduction(kernel_pthread_wrap_p gemm_subkernel_data){
 						gemm_subkernel_data->SubkernelListDev[first_k[mi][ni]]->operation_params;
 					ptr_ker_translate->beta = 0;
 
+					reduce_flag = 1;
 					gemm_subkernel_data->SubkernelListDev[last_k[mi][ni]]->WR_reducer = 1;
 				}
 				else{
@@ -253,7 +293,8 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 #endif
 
 	CoCoPeLiaSelectDevice(dev_id);
-	CoCoPeLiaGemmFixKReduction(gemm_subkernel_data);
+
+ 	CoCoPeLiaGemmFixKReduction(gemm_subkernel_data);
 
 	for (int keri = 0; keri < gemm_subkernel_data->SubkernelNumDev; keri++){
 		gemm_subkernel_data->SubkernelListDev[keri]->init_events();
@@ -266,24 +307,13 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 	cpu_timer = csecond();
 #endif
 
-	/// Only works assuming the last subkernel writes back
-	Event* tmp_writeback;
-	if (KSplit == 1) for (int keri = gemm_subkernel_data->SubkernelNumDev -1 ; keri >= 0 ; keri--){
-		if (gemm_subkernel_data->SubkernelListDev[keri]->WR_writer)
-			tmp_writeback = gemm_subkernel_data->SubkernelListDev[keri]->writeback_complete;
-		else{
-			// never init instead of delete
-			//delete gemm_subkernel_data->SubkernelListDev[keri]->writeback_complete;
-			gemm_subkernel_data->SubkernelListDev[keri]->writeback_complete = tmp_writeback;
-		}
-	}
-	else{
-			error("Not implemented K split in devices.\n");
-			for (int keri = 0; keri < gemm_subkernel_data->SubkernelNumDev; keri++);
-	}
 	/// Reverse K in odd devices for better cache utilization
-	if (dev_id%2 == 1)CoCoPeLiaGemmReverseK(gemm_subkernel_data);
+	if (0) //dev_id%2 == 1){
+		CoCoPeLiaGemmReverseK(gemm_subkernel_data);
 
+#ifdef TEST
+	cpu_timer = csecond();
+#endif
   CoCoPeLiaRequestBuffer(gemm_subkernel_data);
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer;
@@ -314,6 +344,10 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 		gemm_subkernel_data->SubkernelListDev[keri]->run_operation();
 		if (gemm_subkernel_data->SubkernelListDev[keri]->WR_writer)
 			gemm_subkernel_data->SubkernelListDev[keri]->writeback_data();
+	}
+	for (int keri = 0; keri < gemm_subkernel_data->SubkernelNumDev; keri++){
+		if (gemm_subkernel_data->SubkernelListDev[keri]->WR_reducer)
+			gemm_subkernel_data->SubkernelListDev[keri]->writeback_reduce_data();
 	}
 	CoCoSyncCheckErr();
 #ifdef TEST
@@ -599,12 +633,32 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 			Subkernel_dev_id_list[d][0] = d;
 		}
 	}
-	else{
+	/*else{
 		int total_sk_ctr = 0;
-		/// FIXME: Naive for 2 devices
+		/// FIXME: Naive for 2 devices, WORKING
 		MSplit = num_devices;
 		int dev_offset = ((MGridSz*NGridSz)/MSplit)*KGridSz;
 		if (dev_offset) while (Subkernel_list[dev_offset-1]->WR_writer!= 1) dev_offset++;
+		else dev_offset = Subkernel_num;
+#ifdef DEBUG
+		lprintf(lvl, "Subkernel Split offset = %d\n", dev_offset);
+#endif
+		while(total_sk_ctr<Subkernel_num){
+			if(total_sk_ctr<dev_offset){
+				Subkernel_dev_id_list[0][Subkernels_per_dev[0]] = 0*dev_offset + Subkernels_per_dev[0];
+				Subkernels_per_dev[0]++;
+			}
+			else{
+				Subkernel_dev_id_list[1][Subkernels_per_dev[1]] = 1*dev_offset + Subkernels_per_dev[1];
+				Subkernels_per_dev[1]++;
+			}
+			total_sk_ctr++;
+		}
+	}*/
+	else{
+		int total_sk_ctr = 0;
+		int dev_offset = Subkernel_num/num_devices;
+		if (dev_offset);
 		else dev_offset = Subkernel_num;
 #ifdef DEBUG
 		lprintf(lvl, "Subkernel Split offset = %d\n", dev_offset);
