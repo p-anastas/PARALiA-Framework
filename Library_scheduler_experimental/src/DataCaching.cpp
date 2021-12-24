@@ -60,7 +60,7 @@ DevCachePtr CoCoPeLiaDevCacheInit(kernel_pthread_wrap_p subkernel_data){
 					if (tmp->CacheLocId[dev_id] == -42){
 						tmp->CacheLocId[dev_id] = -2;
 						//printf("Found Tile with INVALID entry, adding %d to result", tmp->size());
-						result->BlockSize = (long long) fmax(result->BlockSize, tmp->size());
+						result->BlockSize = (long long) std::max(result->BlockSize, (long long) tmp->size());
 						result->BlockNum++;
 					}
 			}
@@ -587,4 +587,17 @@ void CoCacheAddPendingEvent(short dev_id, Event* e_start, Event* e_end, int Bloc
 #ifdef DEBUG
   lprintf(lvl-1, "<-----|\n");
 #endif
+}
+
+
+long long CoCoGetBlockSize(short dev_id){
+	short lvl = 5;
+#ifdef DEBUG
+	lprintf(lvl-1, "|-----> CoCoGetBlockSize(dev = %d)\n", dev_id);
+#endif
+
+	if (dev_id < 0 ) error("CoCoGetBlockSize(%d): Invalid dev_id = %d\n", dev_id, dev_id);
+	if (DevCache[dev_id] == NULL)
+		error("CoCoGetBlockSize(%d): Called on empty buffer\n", dev_id);
+	return DevCache[dev_id]->BlockSize;
 }

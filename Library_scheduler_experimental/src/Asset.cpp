@@ -111,13 +111,12 @@ template<typename dtype>  Tile2D<dtype>::Tile2D(void * in_addr, int in_dim1, int
   for (int iloc = 0; iloc < LOC_NUM -1; iloc++){
     	CoCoPeLiaSelectDevice(iloc);
       available[iloc] = new Event();
-      if(!iloc) available[LOC_NUM -1] = new Event();
+      if(!iloc) available[LOC_NUM -1] = new Event(); // "Host" event is initialized in device 0
   }
   CoCoPeLiaSelectDevice(prev_loc);
   short init_loc = CoCoGetPtrLoc(in_addr);
   if (init_loc < 0) init_loc = LOC_NUM -1;
   for (int iloc = 0; iloc < LOC_NUM; iloc++){
-    //PendingUsage[iloc] = 0;
     if (iloc == init_loc){
        adrs[iloc] = in_addr;
        ldim[iloc] = in_ldim;
@@ -131,7 +130,7 @@ template<typename dtype>  Tile2D<dtype>::Tile2D(void * in_addr, int in_dim1, int
       CacheLocId[iloc] = -42;
     }
   }
-  writeback = 0;
+  W_flag = R_flag = 0;
   #ifdef DEBUG
   	lprintf(lvl-1, "<-----|\n");
   #endif

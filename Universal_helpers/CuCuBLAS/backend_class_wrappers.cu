@@ -12,6 +12,22 @@
 #include "backend_wrappers.hpp"
 
 int Event_num_device[128] = {0};
+#ifdef UNIHELPER_LOCK_ENABLE
+int unihelper_lock = 0;
+#endif
+
+inline void get_lock(){
+#ifdef UNIHELPER_LOCK_ENABLE
+	while(__sync_lock_test_and_set (&unihelper_lock, 1));
+#endif
+	;
+}
+inline void release_lock(){
+#ifdef UNIHELPER_LOCK_ENABLE
+	__sync_lock_release(&unihelper_lock);
+#endif
+	;
+}
 
 /*****************************************************/
 /// Event Status-related functions
@@ -52,16 +68,19 @@ void CommandQueue::sync_barrier()
 void CommandQueue::wait_for_event(Event_p Wevent)
 {
 	if (Wevent->query_status() == CHECKED) return;
+	get_lock();
 	cudaStream_t stream = *((cudaStream_t*) cqueue_backend_ptr);
 	cudaEvent_t cuda_event= *(cudaEvent_t*) Wevent->event_backend_ptr;
 	cudaError_t err = cudaStreamWaitEvent(stream, cuda_event, 0); // 0-only parameter = future NVIDIA masterplan?
 	massert(cudaSuccess == err, "CommandQueue::wait_for_event - %s\n", cudaGetErrorString(err));
+	release_lock();
 }
 
 /*****************************************************/
 /// Event class functions. TODO: Do status = .. commands need lock?
 Event::Event()
 {
+	get_lock();
 	event_backend_ptr = malloc(sizeof(cudaEvent_t));
 	int dev_id;  cudaGetDevice(&dev_id);
 	Event_num_device[dev_id]++;
@@ -69,67 +88,76 @@ Event::Event()
 	cudaError_t err = cudaEventCreate(( cudaEvent_t*) event_backend_ptr);
 	status = UNRECORDED;
 	massert(cudaSuccess == err, "Event::Event - %s\n", cudaGetErrorString(err));
+	release_lock();
 }
 
 void Event::sync_barrier()
 {
-	if (status == CHECKED) return;
-	else if (status == UNRECORDED){
-		warning("Event::sync_barrier: Tried to sync unrecorded event\n");
-		return;
+	get_lock();
+	if (status != CHECKED){
+		if (status == UNRECORDED){
+			warning("Event::sync_barrier: Tried to sync unrecorded event\n");
+			return;
+		}
+		cudaEvent_t cuda_event= *(cudaEvent_t*) event_backend_ptr;
+		cudaError_t err = cudaEventSynchronize(cuda_event);
+		if (status == RECORDED) status = CHECKED;
+		massert(cudaSuccess == err, "Event::sync_barrier - %s\n", cudaGetErrorString(err));
 	}
-	cudaEvent_t cuda_event= *(cudaEvent_t*) event_backend_ptr;
-	cudaError_t err = cudaEventSynchronize(cuda_event);
-	if (status == RECORDED) status = CHECKED;
-	massert(cudaSuccess == err, "Event::sync_barrier - %s\n", cudaGetErrorString(err));
+	release_lock();
 }
 
 void Event::record_to_queue(CQueue_p Rr){
-	if (Rr == NULL){
-		status = CHECKED;
-		return;
+	get_lock();
+	if (Rr == NULL) status = CHECKED;
+	else{
+		if (status != UNRECORDED){
+			warning("Event::record_to_queue: Recording %s event\n", print_event_status(status));
+		}
+		cudaEvent_t cuda_event= *(cudaEvent_t*) event_backend_ptr;
+		cudaStream_t stream = *((cudaStream_t*) Rr->cqueue_backend_ptr);
+		cudaError_t err = cudaEventRecord(cuda_event, stream);
+		status = RECORDED;
+		massert(cudaSuccess == err, "Event::record_to_queue - %s\n", cudaGetErrorString(err));
 	}
-	else if (status != UNRECORDED){
-		warning("Event::record_to_queue: Recording %s event\n", print_event_status(status));
-	}
-	cudaEvent_t cuda_event= *(cudaEvent_t*) event_backend_ptr;
-	cudaStream_t stream = *((cudaStream_t*) Rr->cqueue_backend_ptr);
-	cudaError_t err = cudaEventRecord(cuda_event, stream);
-	status = RECORDED;
-	massert(cudaSuccess == err, "Event::record_to_queue - %s\n", cudaGetErrorString(err));
+	release_lock();
 }
 
 event_status Event::query_status(){
-	if (status == CHECKED) return status;
-	cudaEvent_t cuda_event= *(cudaEvent_t*) event_backend_ptr;
-	cudaError_t err = cudaEventQuery(cuda_event);
+	get_lock();
+	if (status != CHECKED){
+		cudaEvent_t cuda_event= *(cudaEvent_t*) event_backend_ptr;
+		cudaError_t err = cudaEventQuery(cuda_event);
 
-	if (err == cudaSuccess && (status == UNRECORDED ||  status == COMPLETE)) return status;
-	else if (err == cudaSuccess && status == RECORDED){ // Event has finished but not synched yet!
-		status = COMPLETE;
-		return status;
+		if (err == cudaSuccess && (status == UNRECORDED ||  status == COMPLETE));
+		else if (err == cudaSuccess && status == RECORDED) status = COMPLETE;
+		else if (err == cudaErrorNotReady && status == RECORDED);
+		else if (err == cudaErrorNotReady && status == UNRECORDED){
+			// this should not happen in a healthy implementation
+			warning("Event::query_status: cudaErrorNotReady with status == UNRECORDED should not happen\n");
+			status = RECORDED;
+		}
+		else if (err == cudaSuccess &&  status == CHECKED)
+			// TODO: This should not happen in a healthy locked update scenario.
+			// But it does since no locking yet. Not sure of its effects.
+			warning("Event::query_status: cudaSuccess with status == CHECKED should not happen\n");
+		else error("Event::query_status - %s, status=%s\n", cudaGetErrorString(err), print_event_status(status));
 	}
-	else if (err == cudaErrorNotReady && status == RECORDED) return status;
-	else if (err == cudaErrorNotReady && status == UNRECORDED){
-		// this should not happen in a healthy implementation
-		warning("Event::query_status: cudaErrorNotReady with status == UNRECORDED should not happen\n");
-		status = RECORDED;
-		return status;
-	}
-	else if (err == cudaSuccess &&  status == CHECKED)
-		// TODO: This should not happen in a healthy locked update scenario.
-		// But it does since no locking yet. Not sure of its effects.
-		return status;
-	else error("Event::query_status - %s, status=%s\n", cudaGetErrorString(err), print_event_status(status));
+	release_lock();
+	return status;
 }
 
 void Event::checked(){
+	get_lock();
 	if (status == COMPLETE) status = CHECKED;
 	else error("Event::checked(): error event was %s,  not COMPLETE()\n", print_event_status(status));
+	release_lock();
 }
 
 void Event::reset(){
+	get_lock();
 	status = UNRECORDED;
+	release_lock();
 }
 
 /*****************************************************/

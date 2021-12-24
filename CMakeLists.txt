@@ -8,6 +8,10 @@ add_definitions(-DBACKEND="${BACKEND}")
 set(PROJECT_VERSION "1.05")
 message("CoCopeLia-Framework - PROJECT_VERSION: " ${PROJECT_VERSION})
 add_definitions(-DVERSION="${PROJECT_VERSION}")
+
+## Enable locking during event & Queue management in Universal_helpers
+#add_definitions(-DUNIHELPER_LOCK_ENABLE)
+
 #Run in testing mode : details about models, decisions and time spend in operations.
 #add_definitions(-DTEST)
 

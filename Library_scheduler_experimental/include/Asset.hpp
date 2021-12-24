@@ -37,7 +37,7 @@ class Tile2D
 	public:
 		int id, GridId1, GridId2;
 		int dim1, dim2;
-		short writeback;
+		int R_flag, W_flag;
 
 		Event* available[LOC_NUM];
 		void *adrs[LOC_NUM];

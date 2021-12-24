@@ -6,9 +6,8 @@
 #ifndef LIBSC_BACKEND_H
 #define LIBSC_BACKEND_H
 
-#include <cublas_v2.h>
-#include <cuda_runtime.h>
-#include <pthread.h>
+
+#include "unihelpers.hpp"
 
 //#define NUM_DEVICES 1
 
@@ -21,3 +20,6 @@ typedef struct gemm_backend_in{
 }* gemm_backend_in_p;
 
 #endif
+
+void backend_init(short dev_id, CQueue_p h2d_q, CQueue_p d2h_q, CQueue_p exec_q);
+void backend_run_operation(short dev_id, void* backend_data, const char* opname);

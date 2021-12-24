@@ -11,6 +11,11 @@
 
 #include "backend_lib_wrappers.hpp"
 
+#include <cublas_v2.h>
+#include <cuda_runtime.h>
+#include <pthread.h>
+
+
 typedef struct pthread_data_in{
 	void* adrs;
 	size_t dim, ldim;

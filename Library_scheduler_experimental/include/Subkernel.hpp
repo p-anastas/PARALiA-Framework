@@ -25,11 +25,11 @@ class Subkernel
 		Subkernel* prev, * next;
 		Event* operation_complete, *writeback_complete;
 		void* operation_params;
-		void* operation;
+		const char* op_name;
 		short work_complete;
 
 		/// Constructors
-		Subkernel(short TileNum);
+		Subkernel(short TileNum, const char* name);
 
 		/// Destructors
 		~Subkernel();
@@ -40,6 +40,7 @@ class Subkernel
 		void sync_request_data();
 		void run_operation();
 		void writeback_data();
+		void writeback_reduce_data();
 };
 
 typedef struct kernel_pthread_wrap{

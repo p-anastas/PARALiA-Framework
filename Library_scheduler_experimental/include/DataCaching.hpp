@@ -58,4 +58,5 @@ state CoCacheUpdateBlockState(short dev_id, int BlockIdx);
 
 void CoCacheAddPendingEvent(short dev_id, Event* e_start, Event* e_end, int BlockIdx, state effect);
 
+long long CoCoGetBlockSize(short dev_id);
 #endif
