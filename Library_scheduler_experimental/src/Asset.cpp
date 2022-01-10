@@ -121,7 +121,7 @@ template<typename dtype>  Tile2D<dtype>::Tile2D(void * in_addr, int in_dim1, int
        adrs[iloc] = in_addr;
        ldim[iloc] = in_ldim;
        CacheLocId[iloc] = -1;
-       available[iloc]->record_to_queue(NULL);
+       //available[iloc]->record_to_queue(NULL);
     }
     else{
       adrs[iloc] = NULL;
@@ -131,6 +131,7 @@ template<typename dtype>  Tile2D<dtype>::Tile2D(void * in_addr, int in_dim1, int
     }
   }
   W_flag = R_flag = 0;
+  RW_lock = 1;
   #ifdef DEBUG
   	lprintf(lvl-1, "<-----|\n");
   #endif

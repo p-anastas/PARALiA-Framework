@@ -309,19 +309,19 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 
 	/// Only works assuming the last subkernel writes back
 	Event* tmp_writeback;
-	if (!reduce_flag) for (int keri = gemm_subkernel_data->SubkernelNumDev -1 ; keri >= 0 ; keri--){
+	//if (!reduce_flag)
+	for (int keri = gemm_subkernel_data->SubkernelNumDev -1 ; keri >= 0 ; keri--){
 		if (gemm_subkernel_data->SubkernelListDev[keri]->WR_writer || gemm_subkernel_data->SubkernelListDev[keri]->WR_reducer)
 			tmp_writeback = gemm_subkernel_data->SubkernelListDev[keri]->writeback_complete;
 		else gemm_subkernel_data->SubkernelListDev[keri]->writeback_complete = tmp_writeback;
 		}
-	else{
+	/*else{
 			error("Not implemented K split in devices.\n");
 			for (int keri = 0; keri < gemm_subkernel_data->SubkernelNumDev; keri++);
-	}
+	}*/
 
 	/// Reverse K in odd devices for better cache utilization
-	if (dev_id%2 == 1)
-		CoCoPeLiaGemmReverseK(gemm_subkernel_data);
+	//if (dev_id%2 == 1) CoCoPeLiaGemmReverseK(gemm_subkernel_data);
 
 #ifdef TEST
 	cpu_timer = csecond();
@@ -627,7 +627,7 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 			Subkernel_dev_id_list[d][0] = d;
 		}
 	}
-	else{
+	/*else{
 		int total_sk_ctr = 0;
 		/// FIXME: Naive for 2 devices, WORKING
 		MSplit = num_devices;
@@ -649,7 +649,7 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 			total_sk_ctr++;
 		}
 	}
-	/*else{
+	*/else{
 		int total_sk_ctr = 0;
 		int dev_offset = Subkernel_num/num_devices;
 		if (dev_offset);
@@ -668,7 +668,7 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 			}
 			total_sk_ctr++;
 		}
-	}*/
+	}
 	pthread_attr_t attr;
 	int s = pthread_attr_init(&attr);
 	if (s != 0) error("CoCopeLiaDgemm: pthread_attr_init failed s=%d\n", s);

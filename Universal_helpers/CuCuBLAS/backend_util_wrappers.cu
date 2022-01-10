@@ -17,7 +17,7 @@ const char *print_loc(short loc) {
   int dev_count;
   massert(CUBLAS_STATUS_SUCCESS == cudaGetDeviceCount(&dev_count), "print_loc: cudaGetDeviceCount failed");
 
-  if (loc == -2)  return "Host"; 
+  if (loc == -2)  return "Host";
   else if (loc == -1 || loc == -3)  return "Pinned Host";
   else if (loc < dev_count) return "Device";
   else return "ERROR";
@@ -63,32 +63,40 @@ void cudaCheckErrors(){
 	CoCoSyncCheckErr();
 }
 
+void CoCoSetFlag(void* wrapped_int){
+  int* intptr = (int*) wrapped_int;
+  *intptr = 0;
+#ifdef DEBUG
+  lprintf(6, "CoCoSetFlag(%p) ran succesfully. *wrapped_int = %d\n", wrapped_int, *((int*) wrapped_int) );
+#endif
+}
+
 void TransposeTranslate(char TransChar, CBLAS_TRANSPOSE* cblasFlag, cublasOperation_t* cuBLASFlag, size_t* ldim, size_t dim1, size_t dim2){
 	if (TransChar == 'N'){
  		*cblasFlag = CblasNoTrans;
  		*cuBLASFlag = CUBLAS_OP_N;
-		*ldim = dim1; 
+		*ldim = dim1;
 	}
 	else if (TransChar == 'T'){
  		*cblasFlag = CblasTrans;
  		*cuBLASFlag = CUBLAS_OP_T;
-		*ldim = dim2; 
+		*ldim = dim2;
 	}
 	else if (TransChar == 'C'){
  		*cblasFlag = CblasConjTrans;
  		*cuBLASFlag = CUBLAS_OP_C;
-		*ldim = dim2; 
+		*ldim = dim2;
 	}
 	else error("TransposeTranslate: %c is an invalid Trans flag", TransChar);
 }
 
 
 cublasOperation_t OpCblasToCublas(CBLAS_TRANSPOSE src)
-{ 
+{
 	if(src == CblasNoTrans) return CUBLAS_OP_N;
 	else if(src == CblasTrans) return CUBLAS_OP_T;
 	else if(src == CblasConjTrans) return CUBLAS_OP_C;
-	else error("OpCblasToCublas: Invalid Op\n"); 
+	else error("OpCblasToCublas: Invalid Op\n");
 }
 
 cublasOperation_t OpCharToCublas(char src)
@@ -96,7 +104,7 @@ cublasOperation_t OpCharToCublas(char src)
 	if(src == 'N') return CUBLAS_OP_N;
 	else if(src == 'T') return CUBLAS_OP_T;
 	else if(src == 'C') return CUBLAS_OP_C;
-	else error("OpCharToCublas: Invalid Op: %c\n", src); 
+	else error("OpCharToCublas: Invalid Op: %c\n", src);
 }
 
 CBLAS_TRANSPOSE OpCharToCblas(char src)
@@ -104,7 +112,7 @@ CBLAS_TRANSPOSE OpCharToCblas(char src)
 	if(src == 'N') return CblasNoTrans;
 	else if(src == 'T') return CblasTrans;
 	else if(src == 'C') return CblasConjTrans;
-	else error("OpCharToCblas: Invalid Op: %c\n", src); 
+	else error("OpCharToCblas: Invalid Op: %c\n", src);
 }
 
 CBLAS_TRANSPOSE OpCublasToCblas(cublasOperation_t src)
@@ -112,15 +120,14 @@ CBLAS_TRANSPOSE OpCublasToCblas(cublasOperation_t src)
 	if(src == CUBLAS_OP_N) return CblasNoTrans;
 	else if(src == CUBLAS_OP_T) return CblasTrans;
 	else if(src == CUBLAS_OP_C) return CblasConjTrans;
-	else error("OpCublasToCblas: Invalid Op\n"); 
+	else error("OpCublasToCblas: Invalid Op\n");
 }
 
 char PrintCublasOp(cublasOperation_t src)
 {
-	
+
 	if(src == CUBLAS_OP_N) return 'N';
 	else if(src == CUBLAS_OP_T) return 'T';
 	else if(src == CUBLAS_OP_C) return 'C';
-	else error("PrintCublasOp: Invalid Op\n"); 
+	else error("PrintCublasOp: Invalid Op\n");
 }
-

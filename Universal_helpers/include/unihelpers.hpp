@@ -29,6 +29,7 @@ typedef class CommandQueue
 
 		CommandQueue();
 		void sync_barrier();
+		void add_host_func(void* func, void* data);
 		void wait_for_event(Event_p Wevent);
 		std::string name;
 		void print() { std::cout << "Command Queue : " << name; }
@@ -82,6 +83,9 @@ void CoCoSyncCheckErr();
 // Search for enchountered errors without synchronization.
 void CoCoASyncCheckErr();
 
+// Set then data pointed by an int* to 1, wrapped for add_host_func
+void CoCoSetFlag(void* wrapped_int);
+
 // Enable available links for target device with the provided list of (other) devices
 void CoCoEnableLinks(short target_dev_i, short dev_ids[], short num_devices);
 
@@ -106,7 +110,7 @@ void CoCoMemcpy2DAsync(void* dest, size_t ldest, void* src, size_t lsrc, size_t 
 
 // Asunchronous Memcpy in internal buffer AND reduce to dest between two locations WITHOUT synchronous errorchecking. Use with caution.
 void CoCoMemcpyReduce2DAsync(void* reduce_buffer, void* dest, size_t ldest, void* src, size_t lsrc, size_t rows, size_t cols,
-	short elemSize, short loc_dest, short loc_src, CQueue_p* transfer_mediums);
+	short elemSize, short loc_dest, short loc_src, CQueue_p reduce_queue);
 
 // Asunchronous add 2D (for block reduce)
 template<typename VALUETYPE>

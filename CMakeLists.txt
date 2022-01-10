@@ -5,7 +5,7 @@ set(BACKEND "CuCuBLAS")
 message("CoCopeLia-Framework - BACKEND: " ${BACKEND})
 add_definitions(-DBACKEND="${BACKEND}")
 ## Define the project version (used in logfiles for result testing)
-set(PROJECT_VERSION "1.05")
+set(PROJECT_VERSION "1.07")
 message("CoCopeLia-Framework - PROJECT_VERSION: " ${PROJECT_VERSION})
 add_definitions(-DVERSION="${PROJECT_VERSION}")
 
@@ -20,7 +20,6 @@ add_definitions(-DVERSION="${PROJECT_VERSION}")
 
 #Run in deep debug mode, for command-to-command debugging
 #add_definitions(-DDDEBUG)
-
 
 #Run in caching debug mode, for cache-related deep debugging
 #add_definitions(-DCDEBUG)

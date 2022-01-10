@@ -14,7 +14,7 @@
 CQueue_p h2d_queue[128] = {NULL}, d2h_queue[128] = {NULL}, exec_queue[128] = {NULL};
 int Subkernel_num = 0, backend_init_flag[128] = {0};
 
-void* reduce_buf[128] = {NULL};
+void* reduce_buf = NULL;
 
 Subkernel::Subkernel(short TileNum_in, const char* name){
 	id = Subkernel_num;
@@ -33,7 +33,9 @@ Subkernel::~Subkernel(){
 	free(TileList);
 	free(operation_params);
 	delete operation_complete;
-	if (WR_writer) delete writeback_complete;
+	if (WR_writer || WR_reducer) delete writeback_complete;
+	if(reduce_buf) CoCoFree(reduce_buf, CoCoGetPtrLoc(reduce_buf));
+	reduce_buf = NULL;
 }
 
 void Subkernel::init_events(){
@@ -98,7 +100,6 @@ void Subkernel::request_data(){
 						tmp->available[run_dev_id]->record_to_queue(h2d_queue[run_dev_id]);
 						CoCacheAddPendingEvent(run_dev_id, tmp->available[run_dev_id], NULL, tmp->CacheLocId[run_dev_id], AVAILABLE);
 					}
-					//if (tmp->W_flag && WR_reader) tmp->available[InitialId]->reset();
 
 					if (tmp->W_flag) CoCacheAddPendingEvent(run_dev_id, tmp->available[run_dev_id], writeback_complete, tmp->CacheLocId[run_dev_id], W);
 					else CoCacheAddPendingEvent(run_dev_id, tmp->available[run_dev_id], operation_complete, tmp->CacheLocId[run_dev_id], R);
@@ -174,6 +175,7 @@ void Subkernel::writeback_data(){
 								WritebackId, run_dev_id, d2h_queue[run_dev_id]);
 							CoCacheAddPendingEvent(run_dev_id, operation_complete, writeback_complete, tmp->CacheLocId[run_dev_id], W);
 					}
+					d2h_queue[run_dev_id]->add_host_func((void*)&CoCoSetFlag, (void*) &tmp->RW_lock);
 				}
 		}
 		else error("Subkernel(dev=%d,id=%d)::writeback_data: Not implemented for TileDim=%d\n", run_dev_id, id, TileDimlist[j]);
@@ -205,26 +207,31 @@ void Subkernel::writeback_reduce_data(){
 						if (WritebackId == -1) WritebackIdCAdr = LOC_NUM - 1;
 						else WritebackIdCAdr = WritebackId;
 						d2h_queue[run_dev_id]->wait_for_event(operation_complete);
-						//for (int devidx = 0; devidx < LOC_NUM -1; devidx++){
-						//	if(h2d_queue[devidx]!= NULL) h2d_queue[devidx]->sync_barrier();
-						//}
-						event_status temp_eve = tmp->available[WritebackIdCAdr]->query_status();
-						while(temp_eve == UNRECORDED) temp_eve = tmp->available[WritebackIdCAdr]->query_status();
-						tmp->available[WritebackIdCAdr]->sync_barrier();
-						//delete tmp->available[WritebackIdCAdr];
-						tmp->available[WritebackIdCAdr]->reset();
+						if (reduce_buf == NULL) reduce_buf = CoCoMalloc(CoCoGetBlockSize(run_dev_id), WritebackId);
+#ifdef TEST
+						double cpu_timer = csecond();
+#endif
+#ifdef DDEBUG
+						lprintf(lvl, "Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::writeback_reduce_data: blocking until CoCoSetFlag(%p)\n",
+							run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2, &tmp->RW_lock);
+
+#endif
+						while(__sync_lock_test_and_set (&tmp->RW_lock, 1));
+						__sync_lock_release(&tmp->RW_lock); // No need to keep lock per tile, buffer is locked internally
+#ifdef TEST
+						cpu_timer = csecond() - cpu_timer;
+						lprintf(lvl, "Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::writeback_reduce_data: blocked waiting for %lf ms\n",
+							run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2, cpu_timer*1000);
+#endif
 						if(WR_reducer==0) error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::writeback_reduce_data:\
 						Subkernel should be a WR_reduce?\n", run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2);
 						else{
-							if (reduce_buf[WritebackIdCAdr] == NULL)
-								reduce_buf[WritebackIdCAdr] = CoCoMalloc(CoCoGetBlockSize(run_dev_id), WritebackId);
-							CoCoMemcpyReduce2DAsync(reduce_buf[WritebackIdCAdr], tmp->adrs[WritebackIdCAdr], tmp->ldim[WritebackIdCAdr],
+							CoCoMemcpyReduce2DAsync(reduce_buf, tmp->adrs[WritebackIdCAdr], tmp->ldim[WritebackIdCAdr],
 								tmp->adrs[run_dev_id], tmp->ldim[run_dev_id],
 								tmp->dim1, tmp->dim2, tmp->dtypesize(),
-								WritebackId, run_dev_id, d2h_queue);
-							//tmp->available[WritebackIdCAdr]->record_to_queue(d2h_queue[run_dev_id]);
+								WritebackId, run_dev_id, d2h_queue[run_dev_id]);
 							}
-						CoCacheAddPendingEvent(run_dev_id, operation_complete, tmp->available[WritebackIdCAdr], tmp->CacheLocId[run_dev_id], W);
+						//CoCacheAddPendingEvent(run_dev_id, operation_complete, tmp->available[WritebackIdCAdr], tmp->CacheLocId[run_dev_id], W);
 					}
 				}
 		}

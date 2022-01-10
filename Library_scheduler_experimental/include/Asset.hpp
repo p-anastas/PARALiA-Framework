@@ -37,7 +37,7 @@ class Tile2D
 	public:
 		int id, GridId1, GridId2;
 		int dim1, dim2;
-		int R_flag, W_flag;
+		int R_flag, W_flag, RW_lock;
 
 		Event* available[LOC_NUM];
 		void *adrs[LOC_NUM];
@@ -53,6 +53,7 @@ class Tile2D
 		int size() { return dtypesize()*dim1*dim2; }
 		short getWriteBackLoc();
 		short getClosestReadLoc(short dev_id_in);
+		void Set_RW_lock(void* wrapped_value);
 
 };
 

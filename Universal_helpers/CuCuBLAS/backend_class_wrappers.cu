@@ -65,6 +65,14 @@ void CommandQueue::sync_barrier()
 	massert(cudaSuccess == err, "CommandQueue::sync_barrier - %s\n", cudaGetErrorString(err));
 }
 
+void CommandQueue::add_host_func(void* func, void* data){
+	get_lock();
+	cudaStream_t stream = *((cudaStream_t*) cqueue_backend_ptr);
+	cudaError_t err = cudaLaunchHostFunc(stream, (cudaHostFn_t) func, data);
+	massert(cudaSuccess == err, "CommandQueue::add_host_func - %s\n", cudaGetErrorString(err));
+	release_lock();
+}
+
 void CommandQueue::wait_for_event(Event_p Wevent)
 {
 	if (Wevent->query_status() == CHECKED) return;

@@ -12,7 +12,7 @@
 #include "backend_wrappers.hpp"
 
 CQueue_p reduce_queue = NULL;
-int globalock = 0;
+int reduce_block_lock = 0;
 
 size_t CoCoGetMaxDimSqAsset2D(short Asset2DNum, short dsize, size_t step, short loc){
 	size_t free_cuda_mem, max_cuda_mem;
@@ -225,18 +225,17 @@ void CoCoMemcpy2DAsync(void* dest, size_t ldest, void* src, size_t lsrc, size_t 
 
 // Asunchronous Memcpy in internal buffer AND reduce to dest between two locations WITHOUT synchronous errorchecking. Use with caution.
 void CoCoMemcpyReduce2DAsync(void* reduce_buffer, void* dest, size_t ldest, void* src, size_t lsrc,
-	size_t rows, size_t cols, short elemSize, short loc_dest, short loc_src, CQueue_p* transfer_mediums){
+	size_t rows, size_t cols, short elemSize, short loc_dest, short loc_src, CQueue_p reduce_queue){
 		short lvl = 5;
 #ifdef DDEBUG
 	lprintf(lvl, "CoCoMemcpyReduce2DAsync(buf = %p, dest=%p, ldest =%zu, src=%p, lsrc = %zu, rows = %zu, cols = %zu, elemsize = %d, loc_dest = %d, loc_src = %d)\n",
 		reduce_buffer, dest, ldest, src, lsrc, rows, cols, elemSize, loc_dest, loc_src);
 #endif
-	while(__sync_lock_test_and_set (&globalock, 1)); // Naive global lock.
-	if(reduce_queue == NULL) reduce_queue = new CommandQueue();
+	while(__sync_lock_test_and_set (&reduce_block_lock, 1)); // Naive global block lock.
 	CoCoMemcpy2DAsync(reduce_buffer, lsrc, src, lsrc, rows, cols, elemSize, loc_dest, loc_src, reduce_queue);
 	reduce_queue->sync_barrier();
 	CoCoAdd2DAsync<VALUE_TYPE>( (VALUE_TYPE*) dest, ldest, (VALUE_TYPE*) reduce_buffer, lsrc, rows, cols, loc_dest, reduce_queue);
-	__sync_lock_release(&globalock);
+	__sync_lock_release(&reduce_block_lock);
 }
 
 template<typename VALUETYPE>
@@ -248,6 +247,9 @@ void CoCoAdd2DAsync(VALUETYPE* dest, size_t ldest, VALUETYPE* src, size_t lsrc,
 		dest, ldest, src, lsrc, rows, cols, loc);
 #endif
 	for(int colidx = 0; colidx < cols; colidx++){
+#ifdef DDEBUG
+		lprintf(lvl, "colidx: %d x_offset = %d, y_offset = %d\n", colidx, colidx*lsrc, colidx*ldest);
+#endif
 		VALUETYPE* x = &src[colidx*lsrc];
 		VALUETYPE* y = &dest[colidx*ldest];
 		if (std::is_same<VALUETYPE, double>::value) cblas_daxpy(rows, 1.0, x, 1, y, 1);
