@@ -89,7 +89,7 @@ void CoCoPeLiaRequestBuffer(kernel_pthread_wrap_p subkernel_data){
   if (dev_id < 0 ) error("CoCoPeLiaRequestBuffer called with dev_id=%d\n", dev_id);
 	DevCachePtr temp_DevCache = CoCoPeLiaDevCacheInit(subkernel_data);
 	if (temp_DevCache->gpu_mem_buf_sz > 0){
-	  long long free_dev_mem, max_dev_mem, prev_DevCache_sz = 0;
+	  long long free_dev_mem, max_dev_mem,  prev_DevCache_sz = 0;
 		if (DevCache[dev_id] != NULL) prev_DevCache_sz = DevCache[dev_id]->gpu_mem_buf_sz;
 	  CoCoPeLiaDevGetMemInfo(&free_dev_mem, &max_dev_mem);
 	  long long problem_avail_mem = free_dev_mem - max_dev_mem*(1-PROBLEM_GPU_PERCENTAGE/100.0) + prev_DevCache_sz;
@@ -175,13 +175,13 @@ void CoCoPeLiaRequestBuffer(kernel_pthread_wrap_p subkernel_data){
 	}
 }
 
-void CoCopeLiaDgemm_flush_gpu_mem_buf(short dev_id)
+void CoCopeLiaDevCacheFree(short dev_id)
 {
 	short lvl = 3;
 #ifdef DEBUG
-			lprintf(lvl-1, "|-----> CoCopeLiaDgemm_flush_gpu_mem_buf(dev_id=%d)\n", dev_id);
+			lprintf(lvl-1, "|-----> CoCopeLiaDevCacheFree(dev_id=%d)\n", dev_id);
 #endif
-  if (dev_id < 0 ) error("CoCopeLiaDgemm_flush_gpu_mem_buf called with dev_id=%d\n", dev_id);
+  if (dev_id < 0 ) error("CoCopeLiaDevCacheFree called with dev_id=%d\n", dev_id);
 #ifdef TEST
 	double cpu_timer = csecond();
 #endif

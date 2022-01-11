@@ -114,10 +114,12 @@ void Subkernel::request_data(){
 		else error("Subkernel(dev=%d,id=%d)::request_data: Not implemented for TileDim=%d\n", run_dev_id, id, TileDimlist[j]);
 	}
 	//data_available->record_to_queue(h2d_queue[run_dev_id]);
-	//CoCoSyncCheckErr();
-	#ifdef DEBUG
-		lprintf(lvl-1, "<-----|\n");
-	#endif
+#ifndef ASYNC_ENABLE
+	CoCoSyncCheckErr();
+#endif
+#ifdef DEBUG
+	lprintf(lvl-1, "<-----|\n");
+#endif
 }
 
 void Subkernel::run_operation(){
@@ -137,10 +139,12 @@ void Subkernel::run_operation(){
 				else if(tmp->R_flag) exec_queue[run_dev_id]->wait_for_event(tmp->available[run_dev_id]);
 		}
 	}
-	backend_run_operation(run_dev_id, operation_params, op_name);
+	backend_run_operation(operation_params, op_name);
 	operation_complete->record_to_queue(exec_queue[run_dev_id]);
 	//if (prev!= NULL) prev->operation_complete->sync_barrier();
-  //CoCoSyncCheckErr();
+#ifndef ASYNC_ENABLE
+	CoCoSyncCheckErr();
+#endif
 #ifdef DEBUG
 	lprintf(lvl-1, "<-----|\n");
 #endif
@@ -159,7 +163,7 @@ void Subkernel::writeback_data(){
 		else if (TileDimlist[j] == 2){
 				Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) TileList[j];
 				if (tmp->W_flag){
-					if (tmp->CacheLocId[run_dev_id] == -1) continue;
+					if (tmp->CacheLocId[run_dev_id] == -1);
 					else if (tmp->CacheLocId[run_dev_id] < -1)
 						error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::writeback_data: invoked with tile with loc = %d\n",
 							run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2, tmp->CacheLocId[run_dev_id]);
@@ -181,7 +185,9 @@ void Subkernel::writeback_data(){
 		else error("Subkernel(dev=%d,id=%d)::writeback_data: Not implemented for TileDim=%d\n", run_dev_id, id, TileDimlist[j]);
 	}
 	writeback_complete->record_to_queue(d2h_queue[run_dev_id]);
-	//CoCoSyncCheckErr();
+#ifndef ASYNC_ENABLE
+	CoCoSyncCheckErr();
+#endif
 #ifdef DEBUG
 	lprintf(lvl-1, "<-----|\n");
 #endif
@@ -217,7 +223,7 @@ void Subkernel::writeback_reduce_data(){
 
 #endif
 						while(__sync_lock_test_and_set (&tmp->RW_lock, 1));
-						__sync_lock_release(&tmp->RW_lock); // No need to keep lock per tile, buffer is locked internally
+						//__sync_lock_release(&tmp->RW_lock); // No need to keep lock per tile, buffer is locked internally
 #ifdef TEST
 						cpu_timer = csecond() - cpu_timer;
 						lprintf(lvl, "Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::writeback_reduce_data: blocked waiting for %lf ms\n",
@@ -226,7 +232,7 @@ void Subkernel::writeback_reduce_data(){
 						if(WR_reducer==0) error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::writeback_reduce_data:\
 						Subkernel should be a WR_reduce?\n", run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2);
 						else{
-							CoCoMemcpyReduce2DAsync(reduce_buf, tmp->adrs[WritebackIdCAdr], tmp->ldim[WritebackIdCAdr],
+							CoCoMemcpyReduce2D(reduce_buf, tmp->adrs[WritebackIdCAdr], tmp->ldim[WritebackIdCAdr],
 								tmp->adrs[run_dev_id], tmp->ldim[run_dev_id],
 								tmp->dim1, tmp->dim2, tmp->dtypesize(),
 								WritebackId, run_dev_id, d2h_queue[run_dev_id]);
@@ -237,18 +243,39 @@ void Subkernel::writeback_reduce_data(){
 		}
 		else error("Subkernel(dev=%d,id=%d)::writeback_data: Not implemented for TileDim=%d\n", run_dev_id, id, TileDimlist[j]);
 	}
-	//CoCoSyncCheckErr();
+#ifndef ASYNC_ENABLE
+	CoCoSyncCheckErr();
+#endif
 #ifdef DEBUG
 	lprintf(lvl-1, "<-----|\n");
 #endif
 }
 
-void 	CoCoPeLiaInitStreams(short dev_id){
+void 	CoCoPeLiaInitResources(short dev_id){
   if (!h2d_queue[dev_id]) h2d_queue[dev_id] = new CommandQueue();
   if (!d2h_queue[dev_id])  d2h_queue[dev_id] = new CommandQueue();
   if (!exec_queue[dev_id])  exec_queue[dev_id] = new CommandQueue();
   if (!backend_init_flag[dev_id]){
 		backend_init_flag[dev_id] = 1;
 		backend_init(dev_id, h2d_queue[dev_id], d2h_queue[dev_id], exec_queue[dev_id]);
+	}
+}
+
+void 	CoCoPeLiaFreeResources(short dev_id){
+  if (h2d_queue[dev_id]){
+		delete h2d_queue[dev_id];
+		h2d_queue[dev_id] = NULL;
+	}
+  if (d2h_queue[dev_id]){
+		delete d2h_queue[dev_id];
+		d2h_queue[dev_id] = NULL;
+	}
+  if (exec_queue[dev_id]){
+		delete exec_queue[dev_id];
+		exec_queue[dev_id] = NULL;
+	}
+  if (backend_init_flag[dev_id]){
+		backend_init_flag[dev_id] = 0;
+		backend_free(dev_id);
 	}
 }

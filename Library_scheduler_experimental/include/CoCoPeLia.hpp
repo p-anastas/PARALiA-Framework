@@ -24,6 +24,7 @@ void ParseInputLvl3(const int argc, const char *argv[], CoControl_p* predef_cont
 void CheckLogLvl3(char* filename, CoControl_p predef_control_values, char TransA, char TransB, double alpha, double beta, size_t D1, size_t D2, size_t D3, short loc1, short loc2, short loc3, short outloc);
 void StoreLogLvl3(char* filename, CoControl_p predef_control_values, char TransA, char TransB, double alpha, double beta, size_t D1, size_t D2, size_t D3, short loc1, short loc2, short loc3, short outloc, double timer);
 
-///Clears all GPU mem allocation done by CoCopeLiaDgemm at target device
-void CoCopeLiaDgemm_flush_gpu_mem_buf(short dev_id);
+///Deallocates the GPU-allocated cache buffer at target device
+void CoCopeLiaDevCacheFree(short dev_id);
+
 #endif

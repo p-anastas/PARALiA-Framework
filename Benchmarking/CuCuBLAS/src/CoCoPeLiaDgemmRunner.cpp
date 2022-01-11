@@ -78,7 +78,7 @@ int main(const int argc, const char *argv[]) {
 	if (predef_control_values!= NULL) return_values = CoCopeLiaDgemmControled(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC, predef_control_values);
 	else return_values = CoCopeLiaDgemm(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC);
 	CoCoSyncCheckErr();
-	for (int i = 0; i< return_values->dev_num; i++) CoCopeLiaDgemm_flush_gpu_mem_buf(return_values->dev_ids[i]);
+	for (int i = 0; i< return_values->dev_num; i++) CoCopeLiaDevCacheFree(return_values->dev_ids[i]);
 
  	CoCoMemcpy(C_out, C,  M * N *sizeof(double), -2, C_loc);
  	CoCoMemcpy(C, C_buf,  M * N *sizeof(double), C_loc, -2);
@@ -134,7 +134,7 @@ int main(const int argc, const char *argv[]) {
 	min_t  * 1000, Gval_per_s(dgemm_flops(M,N,K),min_t),
 	max_t  * 1000, Gval_per_s(dgemm_flops(M,N,K),max_t));
 
-	for (int i = 0; i< return_values->dev_num; i++) CoCopeLiaDgemm_flush_gpu_mem_buf(return_values->dev_ids[i]);
+	for (int i = 0; i< return_values->dev_num; i++) CoCopeLiaDevCacheFree(return_values->dev_ids[i]);
 
 	CoCoSyncCheckErr();
 	CoCoFree(A, A_loc);

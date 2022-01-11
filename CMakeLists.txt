@@ -9,17 +9,29 @@ set(PROJECT_VERSION "1.07")
 message("CoCopeLia-Framework - PROJECT_VERSION: " ${PROJECT_VERSION})
 add_definitions(-DVERSION="${PROJECT_VERSION}")
 
-## Enable locking during event & Queue management in Universal_helpers
-#add_definitions(-DUNIHELPER_LOCK_ENABLE)
+## Enable Asynchronous execution for Subkernels - CoCo overlap
+add_definitions(-DASYNC_ENABLE)
+
+## Enable GPU backend resourse reuse (streams, handles)
+add_definitions(-DBACKEND_RES_REUSE_ENABLE)
+
+## Enable GPU-allocated cache buffer reuse between different calls
+add_definitions(-DCACHEBUFFER_REUSE_ENABLE)
+
+## Enable lock-free versions of event & Queue management in Universal_helpers
+add_definitions(-DUNIHELPER_LOCKFREE_ENABLE)
+
+## Enable Spiting Internal dims and using reduction between multiple devices.
+add_definitions(-DMULTIDEVICE_REDUCTION_ENABLE)
 
 #Run in testing mode : details about models, decisions and time spend in operations.
 #add_definitions(-DTEST)
 
 #Run in debug mode, which includes detailed function calls and info for error-checking
-#add_definitions(-DDEBUG)
+add_definitions(-DDEBUG)
 
 #Run in deep debug mode, for command-to-command debugging
-#add_definitions(-DDDEBUG)
+add_definitions(-DDDEBUG)
 
 #Run in caching debug mode, for cache-related deep debugging
 #add_definitions(-DCDEBUG)

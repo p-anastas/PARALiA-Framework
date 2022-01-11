@@ -133,15 +133,16 @@ short Stest_equality(float* C_comp, float* C, long long size) {
     failed = Svec_diff(C_comp, C, size, eps);
   }
   if (4==acc) {
-	fprintf(stderr, "Test failed %zu times\n", failed);
-	int ctr = 0, itt = 0;
-	while (ctr < 10 & itt < size){
-		if (Serror(C_comp[itt], C[itt]) > eps){
-			fprintf(stderr, "Baseline vs Tested: %.10f vs %.10f\n", C_comp[itt], C[itt]);
-			ctr++;
-		}
-		itt++;
-	}
+  	fprintf(stderr, "Test failed %zu times\n", failed);
+  	int ctr = 0, itt = 0;
+  	while (ctr < 10 & itt < size){
+  		if (Serror(C_comp[itt], C[itt]) > eps){
+  			fprintf(stderr, "Baseline vs Tested: %.10f vs %.10f\n", C_comp[itt], C[itt]);
+  			ctr++;
+  		}
+  		itt++;
+  	}
+    return 0;
   } else
     fprintf(stderr, "Test passed(Accuracy= %zu digits, %zu/%lld breaking for %zu)\n\n",
             acc, failed, size, acc + 1);
@@ -158,17 +159,19 @@ short Dtest_equality(double* C_comp, double* C, long long size) {
     failed = Dvec_diff(C_comp, C, size, eps);
   }
   if (8==acc) {
-	fprintf(stderr, "Test failed %zu times\n", failed);
-	int ctr = 0;
-  long long itt = 0;
-	while (ctr < 10 & itt < size){
-		if (Derror(C_comp[itt], C[itt]) > eps){
-			fprintf(stderr, "Baseline vs Tested(adr = %p, itt = %lld): %.15lf vs %.15lf\n", &C[itt], itt, C_comp[itt], C[itt]);
-			ctr++;
-		}
-		itt++;
-	}
-  } else
+  	fprintf(stderr, "Test failed %zu times\n", failed);
+  	int ctr = 0;
+    long long itt = 0;
+  	while (ctr < 10 & itt < size){
+  		if (Derror(C_comp[itt], C[itt]) > eps){
+  			fprintf(stderr, "Baseline vs Tested(adr = %p, itt = %lld): %.15lf vs %.15lf\n", &C[itt], itt, C_comp[itt], C[itt]);
+  			ctr++;
+  		}
+  		itt++;
+  	}
+  return 0;
+  }
+  else
     fprintf(stderr, "Test passed(Accuracy= %zu digits, %zu/%lld breaking for %zu)\n\n",
             acc, failed, size, acc + 1);
   return (short) acc;

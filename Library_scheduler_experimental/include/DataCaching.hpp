@@ -59,4 +59,8 @@ state CoCacheUpdateBlockState(short dev_id, int BlockIdx);
 void CoCacheAddPendingEvent(short dev_id, Event* e_start, Event* e_end, int BlockIdx, state effect);
 
 long long CoCoGetBlockSize(short dev_id);
+
+///Invalidates the GPU-allocated cache buffer metadata at target device
+void CoCoPeLiaDevCacheInvalidate(kernel_pthread_wrap_p subkernel_data);
+
 #endif

@@ -309,16 +309,11 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 
 	/// Only works assuming the last subkernel writes back
 	Event* tmp_writeback;
-	//if (!reduce_flag)
 	for (int keri = gemm_subkernel_data->SubkernelNumDev -1 ; keri >= 0 ; keri--){
 		if (gemm_subkernel_data->SubkernelListDev[keri]->WR_writer || gemm_subkernel_data->SubkernelListDev[keri]->WR_reducer)
 			tmp_writeback = gemm_subkernel_data->SubkernelListDev[keri]->writeback_complete;
 		else gemm_subkernel_data->SubkernelListDev[keri]->writeback_complete = tmp_writeback;
 		}
-	/*else{
-			error("Not implemented K split in devices.\n");
-			for (int keri = 0; keri < gemm_subkernel_data->SubkernelNumDev; keri++);
-	}*/
 
 	/// Reverse K in odd devices for better cache utilization
 	//if (dev_id%2 == 1) CoCoPeLiaGemmReverseK(gemm_subkernel_data);
@@ -332,7 +327,7 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 	lprintf(lvl, "Memory management(%d): t_mem = %lf ms\n", dev_id, cpu_timer*1000);
 	cpu_timer = csecond();
 #endif
-	CoCoPeLiaInitStreams(dev_id);
+	CoCoPeLiaInitResources(dev_id);
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer;
 	lprintf(lvl, "Stream/Lib Handle Initialization(%d): t_resource = %lf ms\n", dev_id, cpu_timer*1000);
@@ -609,16 +604,6 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 #endif
 
 	/// TODO: Split Subkernels equally on devices. For test purposes only.
-	/// FIXME: Never split K between devices, otherwise buffer needed for adding results
-	/// and a more complex mechanism
-	/*for (int d = 0 ; d < num_devices; d++){
-		int remaining_devices = num_devices - d;
-		if (d>0) remaining_subkernels = remaining_subkernels - Subkernels_per_dev[d-1];
-		Subkernels_per_dev[d] = remaining_subkernels/remaining_devices;
-		while (Subkernel_list[Subkernel_num-remaining_subkernels + Subkernels_per_dev[d]-1]-> WR_writer!= 1)
-			Subkernels_per_dev[d]++;
-		if (Subkernels_per_dev[d] > remaining_subkernels) error("CoCoPeLiaDgemm: Split to devices went terribly wrong\n");
-	}*/
 	int Subkernel_dev_id_list[num_devices][Subkernel_num] = {-1}, Subkernels_per_dev[num_devices] = {0};
 	if (Subkernel_num <= num_devices){
 		num_devices = Subkernel_num;
@@ -627,33 +612,20 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 			Subkernel_dev_id_list[d][0] = d;
 		}
 	}
-	/*else{
+	else{
 		int total_sk_ctr = 0;
-		/// FIXME: Naive for 2 devices, WORKING
+#ifdef MULTIDEVICE_REDUCTION_ENABLE
+		/// FIXME: Naive for 2 devices with K split, WORKING
+		int dev_offset = Subkernel_num/num_devices;
+		if (dev_offset);
+		else dev_offset = Subkernel_num;
+#else
+		/// FIXME: Naive for 2 devices without K split, WORKING
 		MSplit = num_devices;
 		int dev_offset = ((MGridSz*NGridSz)/MSplit)*KGridSz;
 		if (dev_offset) while (Subkernel_list[dev_offset-1]->iloc3 != KGridSz - 1) dev_offset++;
 		else dev_offset = Subkernel_num;
-#ifdef DEBUG
-		lprintf(lvl, "Subkernel Split offset = %d\n", dev_offset);
 #endif
-		while(total_sk_ctr<Subkernel_num){
-			if(total_sk_ctr<dev_offset){
-				Subkernel_dev_id_list[0][Subkernels_per_dev[0]] = 0*dev_offset + Subkernels_per_dev[0];
-				Subkernels_per_dev[0]++;
-			}
-			else{
-				Subkernel_dev_id_list[1][Subkernels_per_dev[1]] = 1*dev_offset + Subkernels_per_dev[1];
-				Subkernels_per_dev[1]++;
-			}
-			total_sk_ctr++;
-		}
-	}
-	*/else{
-		int total_sk_ctr = 0;
-		int dev_offset = Subkernel_num/num_devices;
-		if (dev_offset);
-		else dev_offset = Subkernel_num;
 #ifdef DEBUG
 		lprintf(lvl, "Subkernel Split offset = %d\n", dev_offset);
 #endif
@@ -718,7 +690,15 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 	cpu_timer = csecond();
 #endif
 
+#ifndef CACHEBUFFER_REUSE_ENABLE
+	for(int i=0; i<used_devices;i++) CoCopeLiaDevCacheFree(i);
+#else
 	for(int i=0; i<used_devices;i++) CoCoPeLiaDevCacheInvalidate(thread_dev_data[i]);
+#endif
+
+#ifndef BACKEND_RES_REUSE_ENABLE
+	for(int i=0; i<used_devices;i++) CoCoPeLiaFreeResources(i);
+#endif
 
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer;

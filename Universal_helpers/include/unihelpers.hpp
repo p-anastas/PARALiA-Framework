@@ -55,13 +55,16 @@ class Event
 		void* event_backend_ptr;
 		int id;
 
+		/// Constructors
 		Event();
+		/// Destructors
+		~Event();
+		/// Functions
 		void sync_barrier();
 		void record_to_queue(CQueue_p Rr);
 		event_status query_status();
 		void checked();
 		void reset();
-
 
 };
 
@@ -107,15 +110,6 @@ void CoCoMemcpyAsync(void* dest, void* src, long long N_bytes, short loc_dest, s
 // Asunchronous Memcpy between two locations WITHOUT synchronous errorchecking. Use with caution.
 void CoCoMemcpy2DAsync(void* dest, size_t ldest, void* src, size_t lsrc, size_t rows, size_t cols,
 	short elemSize, short loc_dest, short loc_src, CQueue_p transfer_medium);
-
-// Asunchronous Memcpy in internal buffer AND reduce to dest between two locations WITHOUT synchronous errorchecking. Use with caution.
-void CoCoMemcpyReduce2DAsync(void* reduce_buffer, void* dest, size_t ldest, void* src, size_t lsrc, size_t rows, size_t cols,
-	short elemSize, short loc_dest, short loc_src, CQueue_p reduce_queue);
-
-// Asunchronous add 2D (for block reduce)
-template<typename VALUETYPE>
-void CoCoAdd2DAsync(VALUETYPE* dest, size_t ldest, VALUETYPE* src, size_t lsrc,
-	size_t rows, size_t cols, short loc, CQueue_p add_queue);
 
 // Initalize vector in loc with error-checking
 template<typename VALUETYPE>

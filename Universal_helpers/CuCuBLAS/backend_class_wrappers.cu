@@ -12,18 +12,18 @@
 #include "backend_wrappers.hpp"
 
 int Event_num_device[128] = {0};
-#ifdef UNIHELPER_LOCK_ENABLE
+#ifndef UNIHELPER_LOCKFREE_ENABLE
 int unihelper_lock = 0;
 #endif
 
 inline void get_lock(){
-#ifdef UNIHELPER_LOCK_ENABLE
+#ifndef UNIHELPER_LOCKFREE_ENABLE
 	while(__sync_lock_test_and_set (&unihelper_lock, 1));
 #endif
 	;
 }
 inline void release_lock(){
-#ifdef UNIHELPER_LOCK_ENABLE
+#ifndef UNIHELPER_LOCKFREE_ENABLE
 	__sync_lock_release(&unihelper_lock);
 #endif
 	;
@@ -96,6 +96,17 @@ Event::Event()
 	cudaError_t err = cudaEventCreate(( cudaEvent_t*) event_backend_ptr);
 	status = UNRECORDED;
 	massert(cudaSuccess == err, "Event::Event - %s\n", cudaGetErrorString(err));
+	release_lock();
+}
+
+Event::~Event()
+{
+	get_lock();
+	int dev_id;  cudaGetDevice(&dev_id);
+	Event_num_device[dev_id]--;
+	cudaError_t err = cudaEventDestroy(*(( cudaEvent_t*) event_backend_ptr));
+	free(event_backend_ptr);
+	massert(cudaSuccess == err, "Event::~Event - %s\n", cudaGetErrorString(err));
 	release_lock();
 }
 
