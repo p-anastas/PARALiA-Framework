@@ -16,6 +16,7 @@
 #include "Asset.hpp"
 #include "Subkernel.hpp"
 #include "DataCaching.hpp"
+#include "Distributions.hpp"
 
 #include <cublas_v2.h>
 #include <cuda_runtime.h>
@@ -176,62 +177,6 @@ void CoCoPeLiaGemmFixKReduction(kernel_pthread_wrap_p gemm_subkernel_data){
 	lprintf(lvl-1, "<-----|\n");
 #endif
 }
-
-/*void CoCoPeLiaGemmReverseK(kernel_pthread_wrap_p gemm_subkernel_data){
-	short lvl = 3;
-	short dev_id = gemm_subkernel_data->dev_id;
-#ifdef DEBUG
-	lprintf(lvl-1, "|-----> CoCoPeLiaGemmReverseK(gemm_subkernel_data: dev_id = %d, SubkernelNumDev = %d)\n",
-		dev_id, gemm_subkernel_data->SubkernelNumDev);
-#endif
-#ifdef TEST
-		double cpu_timer = csecond();
-#endif
-	int last_reader = 0;
-	Subkernel* tmp;
-	for (int keri = 0; keri < gemm_subkernel_data->SubkernelNumDev; keri++){
-			int rev_ker = (keri/KGridSz + 1)*(KGridSz) - keri%KGridSz - 1;
-			if ( keri < rev_ker){
-#ifdef DEBUG
-				lprintf(lvl, "CoCoPeLiaGemmReverseK(%d): Swaping ker(%d) with rev_ker(%d)\n",
-				dev_id, keri, rev_ker);
-#endif
-				if (gemm_subkernel_data->SubkernelListDev[keri]->WR_reader)
-						if (gemm_subkernel_data->SubkernelListDev[rev_ker]->WR_writer){
-#ifdef DEBUG
-				lprintf(lvl, "CoCoPeLiaGemmReverseK(%d): ker(%d) reader->writer \n",
-				dev_id, keri);
-				lprintf(lvl, "CoCoPeLiaGemmReverseK(%d): rev_ker(%d) writer->reader \n",
-				dev_id, rev_ker);
-#endif
-							gemm_backend_in_p ptr_ker_translate_keri = (gemm_backend_in_p)
-								gemm_subkernel_data->SubkernelListDev[keri]->operation_params;
-							gemm_backend_in_p ptr_ker_translate_revker = (gemm_backend_in_p)
-								gemm_subkernel_data->SubkernelListDev[rev_ker]->operation_params;
-							gemm_subkernel_data->SubkernelListDev[keri]->WR_writer = 1;
-							gemm_subkernel_data->SubkernelListDev[keri]->WR_reader = 0;
-							ptr_ker_translate_revker->beta = ptr_ker_translate_keri->beta;
-							ptr_ker_translate_keri->beta = 1.0;
-							gemm_subkernel_data->SubkernelListDev[rev_ker]->WR_writer = 0;
-							gemm_subkernel_data->SubkernelListDev[rev_ker]->WR_reader = 1;
-						}
-						else error("CoCoPeLiaGemmReverseK(%d): tried to swap reader with no-writer\n", dev_id);
-
-				tmp = gemm_subkernel_data->SubkernelListDev[keri];
-				gemm_subkernel_data->SubkernelListDev[keri] =
-					gemm_subkernel_data->SubkernelListDev[rev_ker];
-				gemm_subkernel_data->SubkernelListDev[rev_ker] = tmp;
-			}
-		}
-#ifdef TEST
-	cpu_timer = csecond() - cpu_timer;
-	lprintf(lvl, "Reversing K in dev(%d): t_reverse = %lf ms\n", dev_id, cpu_timer*1000);
-	cpu_timer = csecond();
-#endif
-#ifdef DEBUG
-	lprintf(lvl-1, "<-----|\n");
-#endif
-}*/
 
 void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 	short lvl = 2;
@@ -546,9 +491,6 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 	cpu_timer = csecond();
 #endif
 
-	// Here would be the place for Agent distribution to devices.
-	// Working implementation similar to old : Each agent works on part of the problem, asigns to Subkernels subproblems
-	// TODO: Idea 1 - Simulate the full execution step to step using thew expected times (instead of runtime scheduler), and asign Subkernels TO agents respectively to minimize communication.
 	int Subkernel_num;
 	Subkernel** Subkernel_list = CoCoAsignTilesToSubkernelsGemm(A_asset, B_asset, C_asset, T,
 		&Subkernel_num);
@@ -561,45 +503,9 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 	lprintf(lvl, "Subkernel init -> t_subkernel_init = %lf ms\n", cpu_timer*1000);
 	cpu_timer = csecond();
 #endif
+	int Subkernel_dev_id_list[num_devices*Subkernel_num] = {-1}, Subkernels_per_dev[num_devices] = {0};
+	CoCoDistributeSubkernelsRoundRobin(Subkernel_dev_id_list, Subkernels_per_dev, num_devices, Subkernel_num);
 
-	/// TODO: Split Subkernels equally on devices. For test purposes only.
-	int Subkernel_dev_id_list[num_devices][Subkernel_num] = {-1}, Subkernels_per_dev[num_devices] = {0};
-	if (Subkernel_num <= num_devices){
-		num_devices = Subkernel_num;
-		for (int d = 0 ; d < num_devices; d++){
-			Subkernels_per_dev[d] = 1;
-			Subkernel_dev_id_list[d][0] = d;
-		}
-	}
-	else{
-		int total_sk_ctr = 0;
-#ifdef MULTIDEVICE_REDUCTION_ENABLE
-		/// FIXME: Naive for 2 devices with K split, WORKING
-		int dev_offset = Subkernel_num/num_devices;
-		if (dev_offset);
-		else dev_offset = Subkernel_num;
-#else
-		/// FIXME: Naive for 2 devices without K split, WORKING
-		MSplit = num_devices;
-		int dev_offset = ((MGridSz*NGridSz)/MSplit)*KGridSz;
-		if (dev_offset) while (Subkernel_list[dev_offset-1]->iloc3 != KGridSz - 1) dev_offset++;
-		else dev_offset = Subkernel_num;
-#endif
-#ifdef DEBUG
-		lprintf(lvl, "Subkernel Split offset = %d\n", dev_offset);
-#endif
-		while(total_sk_ctr<Subkernel_num){
-			if(total_sk_ctr<dev_offset){
-				Subkernel_dev_id_list[0][Subkernels_per_dev[0]] = 0*dev_offset + Subkernels_per_dev[0];
-				Subkernels_per_dev[0]++;
-			}
-			else{
-				Subkernel_dev_id_list[1][Subkernels_per_dev[1]] = 1*dev_offset + Subkernels_per_dev[1];
-				Subkernels_per_dev[1]++;
-			}
-			total_sk_ctr++;
-		}
-	}
 	pthread_attr_t attr;
 	int s = pthread_attr_init(&attr);
 	if (s != 0) error("CoCopeLiaDgemm: pthread_attr_init failed s=%d\n", s);
@@ -625,7 +531,7 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 
 		thread_dev_data[d]->SubkernelListDev = (Subkernel**) malloc(Subkernels_per_dev[d]* sizeof(Subkernel*));
 		for(int skitt = 0; skitt < Subkernels_per_dev[d]; skitt++)
-			thread_dev_data[d]->SubkernelListDev[skitt] = Subkernel_list[Subkernel_dev_id_list[d][skitt]];
+			thread_dev_data[d]->SubkernelListDev[skitt] = Subkernel_list[Subkernel_dev_id_list[d*Subkernel_num + skitt]];
 
 		thread_dev_data[d]->SubkernelNumDev = Subkernels_per_dev[d];
 

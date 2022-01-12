@@ -94,7 +94,7 @@ void CoCoPeLiaRequestBuffer(kernel_pthread_wrap_p subkernel_data){
 	  CoCoPeLiaDevGetMemInfo(&free_dev_mem, &max_dev_mem);
 	  long long problem_avail_mem = free_dev_mem - max_dev_mem*(1-PROBLEM_GPU_PERCENTAGE/100.0) + prev_DevCache_sz;
 	  // For debuging large cases
-	  problem_avail_mem=1024*1024*262;
+	  //problem_avail_mem=1024*1024*262;
 	  #ifdef DEBUG
 	  	lprintf(lvl, "====================================\n");
 	  	lprintf(lvl, "GPU mem management:\n");
