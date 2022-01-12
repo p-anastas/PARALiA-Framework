@@ -28,10 +28,10 @@ add_definitions(-DMULTIDEVICE_REDUCTION_ENABLE)
 #add_definitions(-DTEST)
 
 #Run in debug mode, which includes detailed function calls and info for error-checking
-add_definitions(-DDEBUG)
+#add_definitions(-DDEBUG)
 
 #Run in deep debug mode, for command-to-command debugging
-add_definitions(-DDDEBUG)
+#add_definitions(-DDDEBUG)
 
 #Run in caching debug mode, for cache-related deep debugging
 #add_definitions(-DCDEBUG)

@@ -19,7 +19,7 @@ class Subkernel
 		short run_dev_id;
 		// WR_reader must run first to read input chunk of W tile(s), if any.
 		// WR_writer must run last to write back chunk of W tile(s), if any.
-		short WR_writer, WR_reader, WR_reducer;
+		short WR_first, WR_last, WR_reduce;
 		short TileNum, *TileDimlist;
 		void** TileList;
 		Subkernel* prev, * next;
@@ -37,6 +37,7 @@ class Subkernel
 		/// Functions
 		void init_events();
 		void request_data();
+		void request_tile(short TileIdx);
 		void sync_request_data();
 		void run_operation();
 		void writeback_data();

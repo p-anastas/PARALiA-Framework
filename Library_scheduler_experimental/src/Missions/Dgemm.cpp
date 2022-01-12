@@ -27,13 +27,13 @@ CoCoModel_p glob_model;
 struct CoControl predef_vals;
 CoControl_p used_vals = NULL;
 int MGridSz = 0, NGridSz = 0, KGridSz = 0;
-int reduce_flag = 0;
 
 int MSplit = 1, NSplit = 1, KSplit = 1;
 
 void CoCoGemmUpdateDevice(Subkernel* ker, short dev_id){
 	gemm_backend_in_p ptr_ker_translate = (gemm_backend_in_p) ker->operation_params;
 	ker->run_dev_id = ptr_ker_translate->dev_id = dev_id;
+	if(!ker->WR_first) ptr_ker_translate->beta = 1.0;
 	ptr_ker_translate->A = &((Tile2D<VALUE_TYPE>*) ker->TileList[0])->adrs[dev_id];
 	ptr_ker_translate->B = &((Tile2D<VALUE_TYPE>*) ker->TileList[1])->adrs[dev_id];
 	ptr_ker_translate->C = &((Tile2D<VALUE_TYPE>*) ker->TileList[2])->adrs[dev_id];
@@ -110,13 +110,9 @@ int current_ctr = 0;
 				ptr_ker_translate->C = NULL;
 				ptr_ker_translate->alpha = initial_gemm->alpha;
 				ptr_ker_translate->beta = initial_gemm->beta;
-				kernels[current_ctr]->WR_reducer = kernels[current_ctr]->WR_writer = 0;
-				if (initial_gemm->beta == 0.0)((Tile2D<VALUE_TYPE>*)kernels[current_ctr]->TileList[2])->R_flag = 0;
-				if (ki == 0) kernels[current_ctr]->WR_reader = 1;
-				else{
-					kernels[current_ctr]->WR_reader = 0;
-					ptr_ker_translate->beta = 1.0;
-				}
+				kernels[current_ctr]->WR_first = kernels[current_ctr]->WR_last = 0;
+				kernels[current_ctr]->WR_reduce = 1; // Default: Reduce internal dims
+				//if (initial_gemm->beta == 0.0)((Tile2D<VALUE_TYPE>*) kernels[current_ctr]->TileList[2])->R_flag = 0; TODO: Does this break anything? :()
 			}
 		}
 	}
@@ -126,38 +122,6 @@ int current_ctr = 0;
 #endif
 	return kernels;
 }
-
-/*
-void CoCoSplitDims(size_t M, size_t N, size_t K, short A_loc, short B_loc, short C_loc, short dev_num)
-{
-	short lvl = 3;
-#ifdef DEBUG
-	lprintf(lvl-1, "|-----> CoCopelia_split_dims(%zu,%zu,%zu,%d,%d,%d)\n", M, N, K, A_loc, B_loc, C_loc);
-#endif
-#ifdef TEST
-	lprintf(lvl-1, "|-----> CoCopelia_split_dims\n");
-#endif
-	if (!(A_loc || B_loc || C_loc)) return;
-	MSplit = NSplit = KSplit = 1;
-	int candM = M/ MSplit, candN = N/ NSplit, candK = K/ KSplit;
-	short ctr = 0;
-	while (ctr < dev_num - 1){
-		if(A_loc || C_loc) candM = M/ MSplit;
-		else candM = 0;
-		if(B_loc || C_loc) candN = N/ NSplit;
-		else candN = 0;
-		if(A_loc || B_loc) candK = K/ KSplit;
-		else candK = 0;
-
-		if (candM >= (size_t) fmax(candN, candK)) MSplit+=1;
-		else if (candN >= (size_t) fmax(candM, candK)) NSplit+=1;
-		else if (candK >= (size_t) fmax(candM, candN)) KSplit+=1;
-	}
-#ifdef DEBUG
-	lprintf(lvl-1, "<-----|\n");
-#endif
-	return;
-}*/
 
 void CoCoPeLiaGemmFixKReduction(kernel_pthread_wrap_p gemm_subkernel_data){
 	short lvl = 3;
@@ -169,14 +133,16 @@ void CoCoPeLiaGemmFixKReduction(kernel_pthread_wrap_p gemm_subkernel_data){
 #ifdef TEST
 		double cpu_timer = csecond();
 #endif
-	int first_k[MGridSz][NGridSz], last_k[MGridSz][NGridSz];
+	int first_k[MGridSz][NGridSz], last_k[MGridSz][NGridSz], sum_k[MGridSz][NGridSz];
 	Subkernel* currKer;
 	for (int mi = 0; mi < MGridSz; mi++){
 		for (int ni = 0; ni < NGridSz; ni++){
 			first_k[mi][ni] = last_k[mi][ni] = -1;
+			sum_k[mi][ni] = 0;
 			for (int keri = 0; keri < gemm_subkernel_data->SubkernelNumDev; keri++){
 				currKer = gemm_subkernel_data->SubkernelListDev[keri];
 				if (currKer->iloc1 == mi && currKer->iloc2 == ni){
+					sum_k[mi][ni]++;
 					if(first_k[mi][ni] == -1) first_k[mi][ni] =  keri;
 					 last_k[mi][ni] =  keri;
 //#ifdef DDEBUG
@@ -187,29 +153,17 @@ void CoCoPeLiaGemmFixKReduction(kernel_pthread_wrap_p gemm_subkernel_data){
 			}
 			if(first_k[mi][ni] == -1) continue;
 			else {
-				if(!gemm_subkernel_data->SubkernelListDev[first_k[mi][ni]]->WR_reader){
 #ifdef DEBUG
-					lprintf(lvl, "CoCoPeLiaGemmFixKReduction(%d): First k=%d subkernel(%d) for (mi=%d, ni = %d) is not a reader. Making its beta 0\n",
+					lprintf(lvl, "CoCoPeLiaGemmFixKReduction(%d): First k=%d subkernel(%d) for (mi=%d, ni = %d)\n",
 					dev_id, gemm_subkernel_data->SubkernelListDev[first_k[mi][ni]]->iloc3, gemm_subkernel_data->SubkernelListDev[first_k[mi][ni]]->id,  mi, ni);
-					lprintf(lvl, "CoCoPeLiaGemmFixKReduction(%d): Making Last k=%d subkernel(%d) for (mi=%d, ni = %d) a reducer\n",
-					dev_id, gemm_subkernel_data->SubkernelListDev[last_k[mi][ni]]->iloc3, gemm_subkernel_data->SubkernelListDev[last_k[mi][ni]]->id,  mi, ni);
-#endif
-					gemm_backend_in_p ptr_ker_translate = (gemm_backend_in_p)
-						gemm_subkernel_data->SubkernelListDev[first_k[mi][ni]]->operation_params;
-					ptr_ker_translate->beta = 0;
-
-					reduce_flag = 1;
-					gemm_subkernel_data->SubkernelListDev[last_k[mi][ni]]->WR_reducer = 1;
-				}
-				else{
-#ifdef DEBUG
-					lprintf(lvl, "CoCoPeLiaGemmFixKReduction(%d): First k=%d subkernel(%d) for (mi=%d, ni = %d) is a reader\n",
-					dev_id, gemm_subkernel_data->SubkernelListDev[first_k[mi][ni]]->iloc3, gemm_subkernel_data->SubkernelListDev[first_k[mi][ni]]->id,  mi, ni);
-					lprintf(lvl, "CoCoPeLiaGemmFixKReduction(%d): Making Last k=%d subkernel(%d) for (mi=%d, ni = %d) the writer.\n",
+					lprintf(lvl, "CoCoPeLiaGemmFixKReduction(%d): Last k=%d subkernel(%d) for (mi=%d, ni = %d)\n",
 						dev_id, gemm_subkernel_data->SubkernelListDev[last_k[mi][ni]]->iloc3, gemm_subkernel_data->SubkernelListDev[last_k[mi][ni]]->id,  mi, ni);
 #endif
-					gemm_subkernel_data->SubkernelListDev[last_k[mi][ni]]->WR_writer = 1;
-				}
+					gemm_subkernel_data->SubkernelListDev[first_k[mi][ni]]->WR_first = 1;
+					gemm_subkernel_data->SubkernelListDev[last_k[mi][ni]]->WR_last = 1;
+					if(sum_k[mi][ni] == KGridSz) gemm_subkernel_data->SubkernelListDev[first_k[mi][ni]]->WR_reduce = 0;
+
+
 			}
 		}
 	}
@@ -223,7 +177,7 @@ void CoCoPeLiaGemmFixKReduction(kernel_pthread_wrap_p gemm_subkernel_data){
 #endif
 }
 
-void CoCoPeLiaGemmReverseK(kernel_pthread_wrap_p gemm_subkernel_data){
+/*void CoCoPeLiaGemmReverseK(kernel_pthread_wrap_p gemm_subkernel_data){
 	short lvl = 3;
 	short dev_id = gemm_subkernel_data->dev_id;
 #ifdef DEBUG
@@ -277,7 +231,7 @@ void CoCoPeLiaGemmReverseK(kernel_pthread_wrap_p gemm_subkernel_data){
 #ifdef DEBUG
 	lprintf(lvl-1, "<-----|\n");
 #endif
-}
+}*/
 
 void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 	short lvl = 2;
@@ -310,7 +264,7 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 	/// Only works assuming the last subkernel writes back
 	Event* tmp_writeback;
 	for (int keri = gemm_subkernel_data->SubkernelNumDev -1 ; keri >= 0 ; keri--){
-		if (gemm_subkernel_data->SubkernelListDev[keri]->WR_writer || gemm_subkernel_data->SubkernelListDev[keri]->WR_reducer)
+		if (gemm_subkernel_data->SubkernelListDev[keri]->WR_last)
 			tmp_writeback = gemm_subkernel_data->SubkernelListDev[keri]->writeback_complete;
 		else gemm_subkernel_data->SubkernelListDev[keri]->writeback_complete = tmp_writeback;
 		}
@@ -348,12 +302,17 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 		else gemm_subkernel_data->SubkernelListDev[keri]->next =
 			gemm_subkernel_data->SubkernelListDev[keri+1];
 		gemm_subkernel_data->SubkernelListDev[keri]->request_data();
+		if(gemm_subkernel_data->SubkernelListDev[keri]->WR_first && gemm_subkernel_data->SubkernelListDev[keri]->WR_reduce == 1){
+			gemm_backend_in_p ptr_ker_translate = (gemm_backend_in_p)
+				gemm_subkernel_data->SubkernelListDev[keri]->operation_params;
+			ptr_ker_translate->beta = 0.0;
+		}
 		gemm_subkernel_data->SubkernelListDev[keri]->run_operation();
-		if (gemm_subkernel_data->SubkernelListDev[keri]->WR_writer)
+		if (gemm_subkernel_data->SubkernelListDev[keri]->WR_last)
 			gemm_subkernel_data->SubkernelListDev[keri]->writeback_data();
 	}
 	for (int keri = 0; keri < gemm_subkernel_data->SubkernelNumDev; keri++){
-		if (gemm_subkernel_data->SubkernelListDev[keri]->WR_reducer)
+		if (gemm_subkernel_data->SubkernelListDev[keri]->WR_last)
 			gemm_subkernel_data->SubkernelListDev[keri]->writeback_reduce_data();
 	}
 	CoCoSyncCheckErr();

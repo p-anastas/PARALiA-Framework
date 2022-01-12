@@ -37,7 +37,7 @@ class Tile2D
 	public:
 		int id, GridId1, GridId2;
 		int dim1, dim2;
-		int R_flag, W_flag, RW_lock;
+		int R_flag, W_flag, RW_lock, RW_master;
 
 		Event* available[LOC_NUM];
 		void *adrs[LOC_NUM];

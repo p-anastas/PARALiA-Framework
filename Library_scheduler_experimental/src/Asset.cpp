@@ -132,6 +132,7 @@ template<typename dtype>  Tile2D<dtype>::Tile2D(void * in_addr, int in_dim1, int
   }
   W_flag = R_flag = 0;
   RW_lock = 1;
+  RW_master = -42;
   #ifdef DEBUG
   	lprintf(lvl-1, "<-----|\n");
   #endif
