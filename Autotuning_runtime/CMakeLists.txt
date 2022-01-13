@@ -1,5 +1,5 @@
 cmake_minimum_required (VERSION 3.10)
-### Initialize the project 
+### Initialize the project
 project (CoCopeLia-Autotune VERSION ${PROJECT_VERSION} DESCRIPTION "Auto-tuning function lib for CoCoPeLia" LANGUAGES CXX)
 message( "------------------------------------------------------------------------------------------------")
 message( "Autotuning Runtime - PROJECT_SOURCE_DIR: " ${PROJECT_SOURCE_DIR} )
@@ -36,11 +36,12 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${AUTOTUNE_INSTALL_BIN})
 file(MAKE_DIRECTORY ${AUTOTUNE_INSTALL}/testLogs)
 add_definitions(-DTESTDIR="${AUTOTUNE_INSTALL}/testLogs")
 
-add_library(autotuning_runtime SHARED 
+add_library(autotuning_runtime SHARED
 ${AUTOTUNE_DIR_SRC}/CoCoPeLiaCoModel.cpp
 ${AUTOTUNE_DIR_SRC}/CoCoPeLiaGPUexec.cpp
 ${AUTOTUNE_DIR_SRC}/CoCoPeLiaModel.cpp
 ${AUTOTUNE_DIR_SRC}/WerkhovenModel.cpp
+${AUTOTUNE_DIR_SRC}/Distributions.cpp
 )
 target_link_libraries(autotuning_runtime ${INTERNAL_LINK_LIB} unihelpers)
 configure_file(${AUTOTUNE_DIR_INC}/CoCoPeLiaCoModel.hpp ${AUTOTUNE_INSTALL_INC}/CoCoPeLiaCoModel.hpp COPYONLY)
@@ -54,5 +55,3 @@ message( "->\nAutotuning Runtime - Shared Library: " ${CMAKE_LIBRARY_OUTPUT_DIRE
 message( "Autotuning Runtime - Shared Library headers: " ${AUTOTUNE_INSTALL_INC} )
 message( "Autotuning Runtime - Model testing bin DIR: " ${CMAKE_RUNTIME_OUTPUT_DIRECTORY} )
 message( "------------------------------------------------------------------------------------------------")
-
-

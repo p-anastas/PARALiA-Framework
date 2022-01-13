@@ -11,7 +11,6 @@
 #include "Asset.hpp"
 #include "Subkernel.hpp"
 #include "DataCaching.hpp"
-#include "Distributions.hpp"
 
 #include <pthread.h>
 
@@ -488,8 +487,9 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 	cpu_timer = csecond();
 #endif
 	int Subkernel_dev_id_list[num_devices*Subkernel_num] = {-1}, Subkernels_per_dev[num_devices] = {0};
-	CoCoDistributeSubkernelsRoundRobin(Subkernel_dev_id_list, Subkernels_per_dev, num_devices, Subkernel_num);
-	//CoCoDistributeSubkernelsNaive(Subkernel_dev_id_list, Subkernels_per_dev, num_devices, Subkernel_num);
+	//CoCoDistributeSubkernelsRoundRobin(Subkernel_dev_id_list, Subkernels_per_dev, num_devices, Subkernel_num);
+	CoCoDistributeSubkernelsNaive(Subkernel_dev_id_list, Subkernels_per_dev, num_devices, Subkernel_num);
+	CoCoDistributeSubkernelsSmurt(Subkernel_dev_id_list, Subkernels_per_dev, num_devices, MGridSz, NGridSz, KGridSz);
 
 	pthread_attr_t attr;
 	int s = pthread_attr_init(&attr);

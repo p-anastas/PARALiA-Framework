@@ -9,7 +9,7 @@
 #include "CoCoPeLiaCoModel.hpp"
 
 // TODO: To avoid mallocs, define a set vec size of 4 (No BLAS has that many data arguments anyway)
-typedef struct V_struct{	
+typedef struct V_struct{
 	// Routine specific
 	short numT;
 	short dtype_sz;
@@ -26,7 +26,7 @@ typedef struct V_struct{
 
 enum ModelType{
 	WERKHOVEN = 0,
-	WERKHOVEN_DATALOC = 1, 
+	WERKHOVEN_DATALOC = 1,
 	WERKHOVEN_LOOKUP_EXEC_TILES = 2,
 	COCOPELIA_BASELINE = 3,
 	COCOPELIA_DATALOC = 4,
@@ -39,28 +39,28 @@ typedef struct tunableParams{
 	size_t T;
 	double pred_t;
 	double cpuRatio;
-}* tunableParams_p; 
+}* tunableParams_p;
 
 typedef struct flagParams{
 	char TransA;
 	char TransB;
 	//TODO: Add all flags used in BLAS, only applicable initialized/used for each routine.
-}* flagParams_p; 
+}* flagParams_p;
 
 typedef struct CoCo_model{
 	Vdata_p V;
 	CoModel_p h2d;//ComModel_p h2d;
 	CoModel_p d2h;//ComModel_p d2h;
 	char* func;
-	double Ker_pot; 
-	size_t D1, D2, D3; 
+	double Ker_pot;
+	size_t D1, D2, D3;
 	flagParams_p flags;
 	void* GPUexec_model_ptr;
 	// FIXME: Add cpu_exec prediction
 
 }* CoCoModel_p;
 
-///  Mode-Generalized prediction wrapper 
+///  Mode-Generalized prediction wrapper
 double CoCoPeLiaModelPredict(CoCoModel_p model, size_t T, ModelType mode);
 
 double WerkhovenModelPredictWrapper(CoCo_model* model, size_t T, short t_exec_method);
@@ -73,8 +73,8 @@ double CoCopeLiaPipelineEmulate(CoCoModel_p model, size_t T);
 ///  Predicts Best tile size for 3-way overlaped execution time for BLAS3 2-dim blocking.
 tunableParams_p CoCoPeLiaModelOptimizeTile(CoCoModel_p model, ModelType mode);
 
-/// Choose the best way to approach h2d/d2h overlap 
-short CoCoModel_choose_transfer_mode3(CoCoModel_p model, size_t T); 
+/// Choose the best way to approach h2d/d2h overlap
+short CoCoModel_choose_transfer_mode3(CoCoModel_p model, size_t T);
 
 ///  Predicts Best tile size for 3-way overlaped execution time for BLAS1 1-dim blocking.
 size_t CoCoModel_optimize1(CoCoModel_p model);
@@ -93,8 +93,12 @@ tunableParams_p tunableParamsInit();
 
 const char* printTunableParams(tunableParams_p params);
 
+/// Each device gets 1/num_devices Subkernels without acounting for their size or location
+void CoCoDistributeSubkernelsNaive(int* Subkernel_dev_id_list,
+  int* Subkernels_per_dev, short num_devices, int Subkernel_num);
 
-
-
+/// A classic round-robin distribution
+void CoCoDistributeSubkernelsRoundRobin(int* Subkernel_dev_id_list,
+  int* Subkernels_per_dev, short num_devices, int Subkernel_num);
 
 #endif

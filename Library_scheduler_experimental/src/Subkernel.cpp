@@ -14,7 +14,7 @@
 CQueue_p h2d_queue[128] = {NULL}, d2h_queue[128] = {NULL}, exec_queue[128] = {NULL};
 int Subkernel_num = 0, backend_init_flag[128] = {0};
 
-void* reduce_buf = NULL;
+void* reduce_buf[128] = {NULL};
 
 Subkernel::Subkernel(short TileNum_in, const char* name){
 	id = Subkernel_num;
@@ -34,8 +34,10 @@ Subkernel::~Subkernel(){
 	free(operation_params);
 	delete operation_complete;
 	if (WR_last) delete writeback_complete;
-	if(reduce_buf) CoCoFree(reduce_buf, CoCoGetPtrLoc(reduce_buf));
-	reduce_buf = NULL;
+	if(reduce_buf[run_dev_id]){
+		CoCoFree(reduce_buf[run_dev_id], CoCoGetPtrLoc(reduce_buf[run_dev_id]));
+		reduce_buf[run_dev_id] = NULL;
+	}
 }
 
 void Subkernel::init_events(){
@@ -239,29 +241,14 @@ void Subkernel::writeback_reduce_data(){
 						if (WritebackId == -1) WritebackIdCAdr = LOC_NUM - 1;
 						else WritebackIdCAdr = WritebackId;
 						d2h_queue[run_dev_id]->wait_for_event(operation_complete);
-						if (reduce_buf == NULL) reduce_buf = CoCoMalloc(CoCoGetBlockSize(run_dev_id), WritebackId);
-#ifdef TEST
-						double cpu_timer = csecond();
-#endif
-#ifdef DDEBUG
-						lprintf(lvl, "Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::writeback_reduce_data: blocking until CoCoSetFlag(%p)\n",
-							run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2, &tmp->RW_lock);
-
-#endif
-						while(__sync_lock_test_and_set (&tmp->RW_lock, 1));
-						//__sync_lock_release(&tmp->RW_lock); // No need to keep lock per tile, buffer is locked internally
-#ifdef TEST
-						cpu_timer = csecond() - cpu_timer;
-						lprintf(lvl, "Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::writeback_reduce_data: blocked waiting for %lf ms\n",
-							run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2, cpu_timer*1000);
-#endif
+						if (reduce_buf[run_dev_id] == NULL) reduce_buf[run_dev_id] = CoCoMalloc(CoCoGetBlockSize(run_dev_id), WritebackId);
 						if(!WR_last) error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::writeback_reduce_data:\
 						Subkernel should be a WR_reduce?\n", run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2);
 						else{
-							CoCoMemcpyReduce2D(reduce_buf, tmp->adrs[WritebackIdCAdr], tmp->ldim[WritebackIdCAdr],
+							CoCoMemcpyReduce2D(reduce_buf[run_dev_id], tmp->adrs[WritebackIdCAdr], tmp->ldim[WritebackIdCAdr],
 								tmp->adrs[run_dev_id], tmp->ldim[run_dev_id],
 								tmp->dim1, tmp->dim2, tmp->dtypesize(),
-								WritebackId, run_dev_id, d2h_queue[run_dev_id]);
+								WritebackId, run_dev_id, &tmp->RW_lock, d2h_queue[run_dev_id]);
 							}
 						//CoCacheAddPendingEvent(run_dev_id, operation_complete, tmp->available[WritebackIdCAdr], tmp->CacheLocId[run_dev_id], W);
 					}

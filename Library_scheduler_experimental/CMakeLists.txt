@@ -40,7 +40,6 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${LIBSC_INSTALL_LIB})
 
 add_library(cocopelia SHARED
 ${LIBSC_DIR_SRC}/DataCaching.cpp
-${LIBSC_DIR_SRC}/Distributions.cpp
 ${LIBSC_DIR_SRC}/Asset.cpp
 ${LIBSC_DIR_SRC}/Subkernel.cpp
 ${LIBSC_DIR_SRC}/Missions/Dgemm.cpp

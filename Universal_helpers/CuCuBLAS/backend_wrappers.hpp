@@ -39,13 +39,13 @@ void backend_run_operation(void* backend_data, const char* opname);
 
 // Asunchronous Memcpy in internal buffer AND reduce to dest between two locations WITHOUT synchronous errorchecking. Use with caution.
 void CoCoMemcpyReduce2D(void* reduce_buffer, void* dest, size_t ldest, void* src, size_t lsrc, size_t rows, size_t cols,
-	short elemSize, short loc_dest, short loc_src, CQueue_p reduce_queue);
+	short elemSize, short loc_dest, short loc_src, int* Tile_lock, CQueue_p reduce_queue);
 
 /// Asunchronous add 2D (for block reduce)
 template<typename VALUETYPE>
 void CoCoAdd2Dc(VALUETYPE* dest, size_t ldest, VALUETYPE* src, size_t lsrc,
 	size_t rows, size_t cols, short loc, CQueue_p add_queue);
-  
+
 void TransposeTranslate(char TransChar, CBLAS_TRANSPOSE* cblasFlag, cublasOperation_t* cuBLASFlag, size_t* ldim, size_t dim1, size_t dim2);
 
 cublasOperation_t OpCblasToCublas(CBLAS_TRANSPOSE src);

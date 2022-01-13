@@ -9,13 +9,11 @@
 #include <pthread.h>
 #include <cblas.h>
 
-#include <thread>
-
 #include "backend_wrappers.hpp"
 
 cublasHandle_t handle[128] = {NULL};
-CQueue_p reduce_queue = NULL;
-int reduce_block_lock = 0;
+
+int reduce_block_lock[128] = {0};
 
 void backend_init(short dev_id, CQueue_p h2d_q, CQueue_p d2h_q, CQueue_p exec_q){
   int dev_idc = -1;
@@ -104,7 +102,7 @@ void CoCoAdd2D(VALUETYPE* dest, size_t ldest, VALUETYPE* src, size_t lsrc,
 		backend_axpy_wrapper->y = (void**) &y;
 		backend_run_operation(backend_axpy_wrapper, "axpy");
   }
-  CoCoSyncCheckErr();
+  add_queue->sync_barrier();
   free(backend_axpy_wrapper);
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer;
@@ -118,20 +116,36 @@ template void CoCoAdd2D<double>(double* dest, size_t ldest, double* src, size_t 
 
 // Asunchronous Memcpy in internal buffer AND reduce to dest between two locations WITHOUT synchronous errorchecking. Use with caution.
 void CoCoMemcpyReduce2D(void* reduce_buffer, void* dest, size_t ldest, void* src, size_t lsrc,
-	size_t rows, size_t cols, short elemSize, short loc_dest, short loc_src, CQueue_p reduce_queue){
+	size_t rows, size_t cols, short elemSize, short loc_dest, short loc_src, int* Tile_lock, CQueue_p reduce_queue){
 		short lvl = 5;
 #ifdef DDEBUG
 	lprintf(lvl, "CoCoMemcpyReduce2DAsync(buf = %p, dest=%p, ldest =%zu, src=%p, lsrc = %zu, rows = %zu, cols = %zu, elemsize = %d, loc_dest = %d, loc_src = %d)\n",
 		reduce_buffer, dest, ldest, src, lsrc, rows, cols, elemSize, loc_dest, loc_src);
+  lprintf(lvl, "Blocking until CoCoSetFlag(%p)\n",
+    run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2, &(*Tile_lock));
 #endif
 #ifdef TEST
-	double cpu_timer = csecond();
+						double cpu_timer = csecond();
 #endif
-	while(__sync_lock_test_and_set (&reduce_block_lock, 1)); // Naive global block lock.
+						while(__sync_lock_test_and_set (Tile_lock, 1));
+#ifdef TEST
+						cpu_timer = csecond() - cpu_timer;
+						lprintf(lvl, "CoCoMemcpyReduce2DAsync(buf = %p, loc_dest = %d, loc_src = %d): Blocked waiting for Tile lock: %lf ms\n",
+							reduce_buffer, loc_dest, loc_src, cpu_timer*1000);
+            cpu_timer = csecond();
+#endif
+	while(__sync_lock_test_and_set (&reduce_block_lock[loc_src], 1)); // Naive global block lock.
+#ifdef TEST
+						cpu_timer = csecond() - cpu_timer;
+						lprintf(lvl, "CoCoMemcpyReduce2DAsync(buf = %p, loc_dest = %d, loc_src = %d): Blocked waiting for reduce_block_lock[%d] lock: %lf ms\n",
+							reduce_buffer, loc_dest, loc_src, loc_src, cpu_timer*1000);
+            cpu_timer = csecond();
+#endif
 	CoCoMemcpy2DAsync(reduce_buffer, lsrc, src, lsrc, rows, cols, elemSize, loc_dest, loc_src, reduce_queue);
 	reduce_queue->sync_barrier();
 	CoCoAdd2D<VALUE_TYPE>( (VALUE_TYPE*) dest, ldest, (VALUE_TYPE*) reduce_buffer, lsrc, rows, cols, loc_dest, reduce_queue);
-	__sync_lock_release(&reduce_block_lock);
+	__sync_lock_release(&reduce_block_lock[loc_src]);
+  __sync_lock_release(&Tile_lock);
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer;
   lprintf(lvl, "CoCoMemcpyReduce2D(loc_src=%d, loc_dest=%d, cols=%d, rows=%d): t_reduce_total = %lf ms\n", loc_src, loc_dest, cols, rows, cpu_timer*1000);

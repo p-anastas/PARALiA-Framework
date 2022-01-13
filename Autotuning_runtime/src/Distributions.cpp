@@ -4,8 +4,6 @@
 /// \brief The possible subkernel distributions to different execution units.
 ///
 
-#include "Asset.hpp"
-#include "Subkernel.hpp"
 #include "unihelpers.hpp"
 
 void CoCoDistributeSubkernelsRoundRobin(int* Subkernel_dev_id_list,
@@ -100,5 +98,41 @@ void CoCoDistributeSubkernelsNaive(int* Subkernel_dev_id_list,
     }
 
 
+  }
+}
+
+void CoCoDistributeSubkernelsSmurt(int* Subkernel_dev_id_list,
+  int* Subkernels_per_dev, short num_devices, int Subkernel_num){
+    if (Subkernel_num <= num_devices){
+      num_devices = Subkernel_num;
+      for (int d = 0 ; d < num_devices; d++){
+        Subkernels_per_dev[d] = 1;
+        Subkernel_dev_id_list[d*Subkernel_num] = d;
+      }
+    }
+    else{
+      int total_sk_ctr = 0;
+#ifdef MULTIDEVICE_REDUCTION_ENABLE
+    while(total_sk_ctr<Subkernel_num){
+      for(int devidx = 0; devidx < num_devices; devidx++){
+        if(total_sk_ctr == Subkernel_num) break;
+        else{
+          Subkernel_dev_id_list[devidx*Subkernel_num + Subkernels_per_dev[devidx]] = total_sk_ctr;
+          Subkernels_per_dev[devidx]++;
+          total_sk_ctr++;
+        }
+      }
+    }
+#else
+      /// FIXME: Naive for 2 devices without K split, WORKING
+      //MSplit = num_devices;
+      //int dev_offset = ((MGridSz*NGridSz)/MSplit)*KGridSz;
+      //if (dev_offset) while (Subkernel_list[dev_offset-1]->iloc3 != KGridSz - 1) dev_offset++;
+      //else dev_offset = Subkernel_num;
+      error("CoCoDistributeSubkernelsNaive: not implemented for undefined MULTIDEVICE_REDUCTION_ENABLE\n");
+#endif
+#ifdef DEBUG
+      lprintf(lvl, "Subkernel Split offset = %d\n", dev_offset);
+#endif
   }
 }
