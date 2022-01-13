@@ -25,8 +25,8 @@ message( "Library Scheduler exp - Source DIR: " ${LIBSC_DIR_SRC} )
 set ( BACKEND_LIBSC_DIR ${LIBSC_DIR}/${BACKEND} )
 message( "Library Scheduler exp - BACKEND_LIBSC_DIR: " ${BACKEND_LIBSC_DIR} )
 
-include_directories(${BACKEND_LIBSC_DIR})
-message( "Library Scheduler exp - Included DIR: " ${BACKEND_LIBSC_DIR} )
+#include_directories(${BACKEND_LIBSC_DIR})
+#message( "Library Scheduler exp - Included DIR: " ${BACKEND_LIBSC_DIR} )
 
 set (LIBSC_INSTALL ${CMAKE_INSTALL_PROJECT}/Library_scheduler_exp)
 file(MAKE_DIRECTORY ${LIBSC_INSTALL})
@@ -44,7 +44,7 @@ ${LIBSC_DIR_SRC}/Distributions.cpp
 ${LIBSC_DIR_SRC}/Asset.cpp
 ${LIBSC_DIR_SRC}/Subkernel.cpp
 ${LIBSC_DIR_SRC}/Missions/Dgemm.cpp
-${BACKEND_LIBSC_DIR}/backend_wrappers.cu
+#${BACKEND_LIBSC_DIR}/backend_wrappers.cu
 ${BACKEND_LIBSC_DIR}/Asset_backend.cpp
 )
 target_link_libraries(cocopelia ${INTERNAL_LINK_LIB} autotuning_runtime unihelpers )

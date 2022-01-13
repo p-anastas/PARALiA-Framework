@@ -4,12 +4,7 @@
 /// \brief The DGEMM CoCopeLia implementation using the new mission-agent-asset C++ classes.
 ///
 
-#include <cblas.h>
-
-// FIXME: Must remove any calls from this since its the backend of utils (should be wrapped).
-//#include "backend_wrappers.hpp"
-// FIXME: This header should be "backend_wrappers.hpp" but there is a clash with temp wrappers for Deployment. Must fix when they are removed.
-#include "backend_lib_wrappers.hpp"
+#include "backend_wrappers.hpp"
 #include "CoCoPeLiaModel.hpp"
 #include "CoCoPeLia.hpp"
 #include "unihelpers.hpp"
@@ -18,8 +13,6 @@
 #include "DataCaching.hpp"
 #include "Distributions.hpp"
 
-#include <cublas_v2.h>
-#include <cuda_runtime.h>
 #include <pthread.h>
 
 gemm_backend_in_p initial_gemm = NULL;
@@ -232,11 +225,6 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 	lprintf(lvl, "Stream/Lib Handle Initialization(%d): t_resource = %lf ms\n", dev_id, cpu_timer*1000);
 	cpu_timer = csecond();
 #endif
-#ifdef DEBUG
-	cudaEvent_t start_firing;
-	cudaEventCreateWithFlags(&start_firing, cudaEventDefault);
-	cudaEventRecord(start_firing);
-#endif
 
 	for (int keri = 0; keri < gemm_subkernel_data->SubkernelNumDev; keri++){
 		if (!keri) gemm_subkernel_data->SubkernelListDev[keri]->prev = NULL;
@@ -289,8 +277,7 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 	double cpu_timer = csecond();
 #endif
 
-	int prev_dev_id;
-	cudaGetDevice(&prev_dev_id);
+	int prev_dev_id = CoCoPeLiaGetDevice();
 
 	if(!initial_gemm) initial_gemm = (gemm_backend_in_p) malloc(sizeof(struct gemm_backend_in));
 	initial_gemm->TransA = TransA;
@@ -384,11 +371,8 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 			/// 3) Interesting point for exploration (how to find datum, performance impact etc.)
 			/// 4)  Basically its the tile selection part of CoCoPeLia, but for multiple devices.
 
-			/// Use static tiles until implementation is complete.
-			//T = fmin(1024, fmin(M, fmin(N, K)));
-
 			/// Naive for multiple equivalent devices.
-			int slowest_problem_T = fmin(1024, fmin(M, fmin(N, K)));
+			int slowest_problem_T = std::min((size_t) 1024, std::min((size_t) M, (size_t)std::min(N, K)));
 			tunableParams_p pred_p[num_devices];
 			for (int d = 0 ; d < num_devices; d++){
 				model = CoCoPeLiaModelInit(dev_id[d], "Dgemm", 'X', TransA, TransB,
@@ -505,6 +489,7 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 #endif
 	int Subkernel_dev_id_list[num_devices*Subkernel_num] = {-1}, Subkernels_per_dev[num_devices] = {0};
 	CoCoDistributeSubkernelsRoundRobin(Subkernel_dev_id_list, Subkernels_per_dev, num_devices, Subkernel_num);
+	//CoCoDistributeSubkernelsNaive(Subkernel_dev_id_list, Subkernels_per_dev, num_devices, Subkernel_num);
 
 	pthread_attr_t attr;
 	int s = pthread_attr_init(&attr);
@@ -590,7 +575,7 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 	cpu_timer = csecond();
 #endif
 
-	cudaSetDevice(prev_dev_id);
+	CoCoPeLiaSelectDevice(prev_dev_id);
 
   A_asset->resetProperties();
   B_asset->resetProperties();

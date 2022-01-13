@@ -8,7 +8,7 @@
 #include "unihelpers.hpp"
 #include "Asset.hpp"
 #include "DataCaching.hpp"
-#include "backend_lib_wrappers.hpp"
+#include "backend_wrappers.hpp"
 
 /// TODO: Works for systems with up to 128 devices, not 'completely' future-proof
 CQueue_p h2d_queue[128] = {NULL}, d2h_queue[128] = {NULL}, exec_queue[128] = {NULL};

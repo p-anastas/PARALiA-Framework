@@ -9,7 +9,7 @@
 #include "Asset.hpp"
 #include "unihelpers.hpp"
 
-#include "backend_lib_wrappers.hpp"
+#include "backend_wrappers.hpp"
 
 #include <cublas_v2.h>
 #include <cuda_runtime.h>

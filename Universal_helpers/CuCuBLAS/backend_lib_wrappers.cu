@@ -9,7 +9,8 @@
 #include <pthread.h>
 #include <cblas.h>
 
-#include "backend_lib_wrappers.hpp"
+#include <thread>
+
 #include "backend_wrappers.hpp"
 
 cublasHandle_t handle[128] = {NULL};
@@ -30,40 +31,6 @@ void backend_init(short dev_id, CQueue_p h2d_q, CQueue_p d2h_q, CQueue_p exec_q)
 void backend_free(short dev_id){
   massert(CUBLAS_STATUS_SUCCESS == cublasDestroy(handle[dev_id]), "cublasDestroy failed\n");
   return;
-}
-
-int CoCoPeLiaGetDevice(){
-  int dev_id = -1;
-  cudaError_t err = cudaGetDevice(&dev_id);
-  massert(cudaSuccess == err,
-    "CoCoPeLiaGetDevice: cudaGetDevice failed - %s\n", cudaGetErrorString(err));
-  return dev_id;
-}
-
-void CoCoPeLiaSelectDevice(short dev_id){
-  int dev_count;
-  cudaError_t err = cudaGetDeviceCount(&dev_count);
-  if(dev_id >= 0 && dev_id < dev_count){
-  cudaError_t err = cudaSetDevice(dev_id);
-  massert(cudaSuccess == err,
-    "CoCoPeLiaSelectDevice: cudaSetDevice failed - %s\n", cudaGetErrorString(err));
-  }
-  else if(dev_id == -1){  /// "Host" device loc id used by CoCoPeLia
-    ;
-#ifdef DEBUG
-    warning("CoCoPeLiaSelectDevice: dev_id = %d used, check loc in code\n", dev_id);
-#endif
-  }
-  else error("CoCoPeLiaSelectDevice(%d): invalid dev_id\n", dev_id);
-}
-
-void CoCoPeLiaDevGetMemInfo(long long* free_dev_mem, long long* max_dev_mem){
-  size_t free_dev_mem_tmp, max_dev_mem_tmp;
-    cudaError_t err = cudaMemGetInfo(&free_dev_mem_tmp, &max_dev_mem_tmp);
-  	massert(cudaSuccess == err,
-      "CoCoPeLiaDevGetMemInfo: cudaMemGetInfo failed - %s\n", cudaGetErrorString(err));
-    *free_dev_mem = (long long) free_dev_mem_tmp;
-    *max_dev_mem = (long long) max_dev_mem_tmp;
 }
 
 void backend_run_operation(void* backend_data, const char* opname){
@@ -119,6 +86,9 @@ void CoCoAdd2D(VALUETYPE* dest, size_t ldest, VALUETYPE* src, size_t lsrc,
 	lprintf(lvl, "CoCoAdd2DAsync(dest = %p, ldest =%zu, src=%p, lsrc = %zu, rows = %zu, cols = %zu, loc = %d)\n",
 		dest, ldest, src, lsrc, rows, cols, loc);
 #endif
+#ifdef TEST
+	double cpu_timer = csecond();
+#endif
   axpy_backend_in_p backend_axpy_wrapper = (axpy_backend_in_p) malloc(sizeof(struct axpy_backend_in));
   backend_axpy_wrapper->N = rows;
   backend_axpy_wrapper->incx = backend_axpy_wrapper->incy = 1;
@@ -136,6 +106,10 @@ void CoCoAdd2D(VALUETYPE* dest, size_t ldest, VALUETYPE* src, size_t lsrc,
   }
   CoCoSyncCheckErr();
   free(backend_axpy_wrapper);
+#ifdef TEST
+	cpu_timer = csecond() - cpu_timer;
+  lprintf(lvl, "CoCoAdd2D(loc=%d, cols=%d, rows=%d): t_reduce_add = %lf ms\n", loc, cols, rows, cpu_timer*1000);
+#endif
 }
 
 template void CoCoAdd2D<double>(double* dest, size_t ldest, double* src, size_t lsrc,
@@ -150,9 +124,16 @@ void CoCoMemcpyReduce2D(void* reduce_buffer, void* dest, size_t ldest, void* src
 	lprintf(lvl, "CoCoMemcpyReduce2DAsync(buf = %p, dest=%p, ldest =%zu, src=%p, lsrc = %zu, rows = %zu, cols = %zu, elemsize = %d, loc_dest = %d, loc_src = %d)\n",
 		reduce_buffer, dest, ldest, src, lsrc, rows, cols, elemSize, loc_dest, loc_src);
 #endif
+#ifdef TEST
+	double cpu_timer = csecond();
+#endif
 	while(__sync_lock_test_and_set (&reduce_block_lock, 1)); // Naive global block lock.
 	CoCoMemcpy2DAsync(reduce_buffer, lsrc, src, lsrc, rows, cols, elemSize, loc_dest, loc_src, reduce_queue);
 	reduce_queue->sync_barrier();
 	CoCoAdd2D<VALUE_TYPE>( (VALUE_TYPE*) dest, ldest, (VALUE_TYPE*) reduce_buffer, lsrc, rows, cols, loc_dest, reduce_queue);
 	__sync_lock_release(&reduce_block_lock);
+#ifdef TEST
+	cpu_timer = csecond() - cpu_timer;
+  lprintf(lvl, "CoCoMemcpyReduce2D(loc_src=%d, loc_dest=%d, cols=%d, rows=%d): t_reduce_total = %lf ms\n", loc_src, loc_dest, cols, rows, cpu_timer*1000);
+#endif
 }

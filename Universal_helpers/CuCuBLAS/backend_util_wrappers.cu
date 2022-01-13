@@ -63,6 +63,40 @@ void cudaCheckErrors(){
 	CoCoSyncCheckErr();
 }
 
+int CoCoPeLiaGetDevice(){
+  int dev_id = -1;
+  cudaError_t err = cudaGetDevice(&dev_id);
+  massert(cudaSuccess == err,
+    "CoCoPeLiaGetDevice: cudaGetDevice failed - %s\n", cudaGetErrorString(err));
+  return dev_id;
+}
+
+void CoCoPeLiaSelectDevice(short dev_id){
+  int dev_count;
+  cudaError_t err = cudaGetDeviceCount(&dev_count);
+  if(dev_id >= 0 && dev_id < dev_count){
+  cudaError_t err = cudaSetDevice(dev_id);
+  massert(cudaSuccess == err,
+    "CoCoPeLiaSelectDevice: cudaSetDevice failed - %s\n", cudaGetErrorString(err));
+  }
+  else if(dev_id == -1){  /// "Host" device loc id used by CoCoPeLia
+    ;
+#ifdef DEBUG
+    warning("CoCoPeLiaSelectDevice: dev_id = %d used, check loc in code\n", dev_id);
+#endif
+  }
+  else error("CoCoPeLiaSelectDevice(%d): invalid dev_id\n", dev_id);
+}
+
+void CoCoPeLiaDevGetMemInfo(long long* free_dev_mem, long long* max_dev_mem){
+  size_t free_dev_mem_tmp, max_dev_mem_tmp;
+    cudaError_t err = cudaMemGetInfo(&free_dev_mem_tmp, &max_dev_mem_tmp);
+  	massert(cudaSuccess == err,
+      "CoCoPeLiaDevGetMemInfo: cudaMemGetInfo failed - %s\n", cudaGetErrorString(err));
+    *free_dev_mem = (long long) free_dev_mem_tmp;
+    *max_dev_mem = (long long) max_dev_mem_tmp;
+}
+
 void CoCoSetFlag(void* wrapped_int){
   int* intptr = (int*) wrapped_int;
   *intptr = 0;

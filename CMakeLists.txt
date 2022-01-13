@@ -25,7 +25,7 @@ add_definitions(-DUNIHELPER_LOCKFREE_ENABLE)
 add_definitions(-DMULTIDEVICE_REDUCTION_ENABLE)
 
 #Run in testing mode : details about models, decisions and time spend in operations.
-#add_definitions(-DTEST)
+add_definitions(-DTEST)
 
 #Run in debug mode, which includes detailed function calls and info for error-checking
 #add_definitions(-DDEBUG)
