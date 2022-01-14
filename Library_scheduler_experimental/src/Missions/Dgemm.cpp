@@ -238,6 +238,11 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 			gemm_backend_in_p ptr_ker_translate = (gemm_backend_in_p)
 				gemm_subkernel_data->SubkernelListDev[keri]->operation_params;
 			ptr_ker_translate->beta = 0.0;
+#ifdef DDEBUG
+			lprintf(lvl, "Subkernel(dev=%d,id=%d): Setting beta to 0.\n",
+				gemm_subkernel_data->SubkernelListDev[keri]->run_dev_id,
+				gemm_subkernel_data->SubkernelListDev[keri]->id);
+#endif
 		}
 		gemm_subkernel_data->SubkernelListDev[keri]->run_operation();
 		if (gemm_subkernel_data->SubkernelListDev[keri]->WR_last)

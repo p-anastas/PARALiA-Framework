@@ -11,19 +11,7 @@
 
 #include "backend_wrappers.hpp"
 
-/*
-const char *print_loc(short loc) {
-
-  int dev_count;
-  massert(CUBLAS_STATUS_SUCCESS == cudaGetDeviceCount(&dev_count), "print_loc: cudaGetDeviceCount failed");
-
-  if (loc == -2)  return "Host";
-  else if (loc == -1 || loc == -3)  return "Pinned Host";
-  else if (loc < dev_count) return "Device";
-  else return "ERROR";
-}
-
-void print_devices() {
+/*void print_devices() {
   cudaDeviceProp properties;
   int nDevices = 0;
   massert(CUBLAS_STATUS_SUCCESS == cudaGetDeviceCount(&nDevices), "print_devices: cudaGetDeviceCount failed");

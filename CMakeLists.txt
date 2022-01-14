@@ -24,7 +24,7 @@ add_definitions(-DUNIHELPER_LOCKFREE_ENABLE)
 ## Enable Spiting Internal dims and using reduction between multiple devices.
 add_definitions(-DMULTIDEVICE_REDUCTION_ENABLE)
 ## The buffering level used for reduction per-device (e.g. double, triple etc)
-add_definitions(-DMAX_BUFFERING_L=1)
+add_definitions(-DMAX_BUFFERING_L=4)
 
 ## Enable Spiting Internal dims and using reduction between multiple devices.
 add_definitions(-DENABLE_MUTEX_LOCKING)

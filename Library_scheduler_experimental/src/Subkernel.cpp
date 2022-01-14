@@ -38,8 +38,9 @@ Subkernel::~Subkernel(){
 	delete operation_complete;
 	if (WR_last) delete writeback_complete;
 #ifdef MULTIDEVICE_REDUCTION_ENABLE
+		reduce_buf_it[run_dev_id] = 0;
 		for(int idx = 0; idx < MAX_BUFFERING_L; idx++)
-			if(reduce_buf[run_dev_id]!= NULL){
+			if(reduce_buf[idx*128 + run_dev_id]!= NULL){
 				CoCoFree(reduce_buf[idx*128 + run_dev_id], CoCoGetPtrLoc(reduce_buf[idx*128 + run_dev_id]));
 				reduce_buf[idx*128 + run_dev_id] = NULL;
 			}
@@ -125,9 +126,19 @@ void Subkernel::request_data(){
 							if(tmp->RW_master == -42)
 								error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d]): request_data failed to assign RW master\n",
 									run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2);
+#ifdef DDEBUG
+							lprintf(lvl, "Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d]): Set RW_master = %d\n",
+						run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2, tmp->RW_master);
+#endif
 						 }
 						__sync_lock_release(&WR_check_lock);
 						if (tmp->RW_master == run_dev_id) WR_reduce = 0;
+						else{ ;
+#ifdef DDEBUG
+							lprintf(lvl, "Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d]): is a reducer.\n",
+								run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2);
+#endif
+						}
 					}
 					else tmp->RW_master = run_dev_id;
 				 }
@@ -214,6 +225,10 @@ void Subkernel::writeback_data(){
 							CoCacheAddPendingEvent(run_dev_id, operation_complete, writeback_complete, tmp->CacheLocId[run_dev_id], W);
 					}
 #ifdef MULTIDEVICE_REDUCTION_ENABLE
+#ifdef DDEBUG
+					lprintf(lvl, "Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d]): Adding RW_lock(%p) in queue\n",
+						run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2, &tmp->RW_lock);
+#endif
 					d2h_queue[run_dev_id]->add_host_func((void*)&CoCoQueueUnlock, (void*) &tmp->RW_lock);
 				}
 				else if (tmp->W_flag && tmp->RW_master != run_dev_id){
@@ -226,16 +241,27 @@ void Subkernel::writeback_data(){
 						if (WritebackId == -1) WritebackIdCAdr = LOC_NUM - 1;
 						else WritebackIdCAdr = WritebackId;
 						d2h_queue[run_dev_id]->wait_for_event(operation_complete);
-						if (reduce_buf[reduce_buf_it[run_dev_id]*128 + run_dev_id] == NULL) reduce_buf[reduce_buf_it[run_dev_id]*128 + run_dev_id] = CoCoMalloc(CoCoGetBlockSize(run_dev_id), WritebackId);
+						while(__sync_lock_test_and_set(&WR_check_lock, 1));
+						if (reduce_buf[reduce_buf_it[run_dev_id]*128 + run_dev_id] == NULL){
+							reduce_buf[reduce_buf_it[run_dev_id]*128 + run_dev_id]
+								= CoCoMalloc(CoCoGetBlockSize(run_dev_id), WritebackId);
+#ifdef DDEBUG
+							lprintf(lvl, "Subkernel(dev=%d,id=%d): Allocated buffer(%p) in %d\n",
+							run_dev_id, id, reduce_buf[reduce_buf_it[run_dev_id]*128 + run_dev_id],
+							reduce_buf_it[run_dev_id]*128 + run_dev_id);
+#endif
+						}
+						int local_reduce_buf_it = reduce_buf_it[run_dev_id];
+						if(reduce_buf_it[run_dev_id] < MAX_BUFFERING_L - 1) reduce_buf_it[run_dev_id]++;
+						else reduce_buf_it[run_dev_id] = 0;
+						__sync_lock_release(&WR_check_lock);
 						if(!WR_last) error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::writeback_reduce_data:\
 						Subkernel should be a WR_reduce?\n", run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2);
 						else{
-							CoCoMemcpyReduce2D(reduce_buf[reduce_buf_it[run_dev_id]*128 + run_dev_id], reduce_buf_it[run_dev_id], tmp->adrs[WritebackIdCAdr], tmp->ldim[WritebackIdCAdr],
+							CoCoMemcpyReduce2D(reduce_buf[local_reduce_buf_it*128 + run_dev_id], local_reduce_buf_it, tmp->adrs[WritebackIdCAdr], tmp->ldim[WritebackIdCAdr],
 								tmp->adrs[run_dev_id], tmp->ldim[run_dev_id],
 								tmp->dim1, tmp->dim2, tmp->dtypesize(),
 								WritebackId, run_dev_id, (void*)&tmp->RW_lock, d2h_queue[run_dev_id]);
-							if(reduce_buf_it[run_dev_id] < MAX_BUFFERING_L - 1) reduce_buf_it[run_dev_id]++;
-							else reduce_buf_it[run_dev_id] = 0;
 							}
 						//CoCacheAddPendingEvent(run_dev_id, operation_complete, tmp->available[WritebackIdCAdr], tmp->CacheLocId[run_dev_id], W);
 					}

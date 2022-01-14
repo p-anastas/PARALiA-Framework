@@ -166,7 +166,7 @@ void* CoCoMemcpyReduce2DWrapped(void* wrapped_data){
 #ifdef DEBUG
   lprintf(lvl, "CoCoMemcpyReduce2DAsync(buf = %p, dest=%p, ldest =%zu, src=%p, lsrc = %zu, rows = %zu, cols = %zu, elemsize = %d, loc_dest = %d, loc_src = %d)\n",
     reduce_buffer, dest, ldest, src, lsrc, rows, cols, elemSize, loc_dest, loc_src);
-  lprintf(lvl, "Blocking until CoCoSetFlag(%p)\n", &(*Tile_lock));
+  lprintf(lvl, "Blocking until CoCoSetFlag(%p)\n", Tile_lock);
 #endif
 #ifdef TEST
   double cpu_timer = csecond();
