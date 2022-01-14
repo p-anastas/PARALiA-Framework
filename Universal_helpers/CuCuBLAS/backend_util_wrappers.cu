@@ -81,9 +81,9 @@ void CoCoPeLiaSelectDevice(short dev_id){
   }
   else if(dev_id == -1){  /// "Host" device loc id used by CoCoPeLia
     ;
-#ifdef DEBUG
-    warning("CoCoPeLiaSelectDevice: dev_id = %d used, check loc in code\n", dev_id);
-#endif
+//#ifdef DEBUG
+//    warning("CoCoPeLiaSelectDevice: dev_id = %d used, check loc in code\n", dev_id);
+//#endif
   }
   else error("CoCoPeLiaSelectDevice(%d): invalid dev_id\n", dev_id);
 }
@@ -95,14 +95,6 @@ void CoCoPeLiaDevGetMemInfo(long long* free_dev_mem, long long* max_dev_mem){
       "CoCoPeLiaDevGetMemInfo: cudaMemGetInfo failed - %s\n", cudaGetErrorString(err));
     *free_dev_mem = (long long) free_dev_mem_tmp;
     *max_dev_mem = (long long) max_dev_mem_tmp;
-}
-
-void CoCoSetFlag(void* wrapped_int){
-  int* intptr = (int*) wrapped_int;
-  *intptr = 0;
-#ifdef DEBUG
-  lprintf(6, "CoCoSetFlag(%p) ran succesfully. *wrapped_int = %d\n", wrapped_int, *((int*) wrapped_int) );
-#endif
 }
 
 void TransposeTranslate(char TransChar, CBLAS_TRANSPOSE* cblasFlag, cublasOperation_t* cuBLASFlag, size_t* ldim, size_t dim1, size_t dim2){

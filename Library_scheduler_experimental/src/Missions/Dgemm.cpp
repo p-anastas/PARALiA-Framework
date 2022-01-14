@@ -243,10 +243,10 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 		if (gemm_subkernel_data->SubkernelListDev[keri]->WR_last)
 			gemm_subkernel_data->SubkernelListDev[keri]->writeback_data();
 	}
-	for (int keri = 0; keri < gemm_subkernel_data->SubkernelNumDev; keri++){
-		if (gemm_subkernel_data->SubkernelListDev[keri]->WR_last)
-			gemm_subkernel_data->SubkernelListDev[keri]->writeback_reduce_data();
-	}
+	//for (int keri = 0; keri < gemm_subkernel_data->SubkernelNumDev; keri++){
+	//	if (gemm_subkernel_data->SubkernelListDev[keri]->WR_last)
+	//		gemm_subkernel_data->SubkernelListDev[keri]->writeback_reduce_data();
+	//}
 	CoCoSyncCheckErr();
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer;
@@ -487,8 +487,8 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 	cpu_timer = csecond();
 #endif
 	int Subkernel_dev_id_list[num_devices*Subkernel_num] = {-1}, Subkernels_per_dev[num_devices] = {0};
-	//CoCoDistributeSubkernelsRoundRobin(Subkernel_dev_id_list, Subkernels_per_dev, num_devices, Subkernel_num);
-	CoCoDistributeSubkernelsNaive(Subkernel_dev_id_list, Subkernels_per_dev, num_devices, Subkernel_num);
+	CoCoDistributeSubkernelsRoundRobin(Subkernel_dev_id_list, Subkernels_per_dev, num_devices, Subkernel_num);
+	//CoCoDistributeSubkernelsNaive(Subkernel_dev_id_list, Subkernels_per_dev, num_devices, Subkernel_num);
 
 	pthread_attr_t attr;
 	int s = pthread_attr_init(&attr);
@@ -537,6 +537,16 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 		(slowest_problem_t==0)? 0: (slowest_problem_t - cpu_timer )/slowest_problem_t*100);
 	}
 	cpu_timer = csecond();
+#endif
+
+#ifdef MULTIDEVICE_REDUCTION_ENABLE
+	CoCoReduceSyncThreads();
+#ifdef TEST
+	cpu_timer = csecond() - cpu_timer;
+	lprintf(lvl, "Gathered reduce pthreads for all devices -> t_reduce_extra = %lf ms\n",
+		cpu_timer*1000);
+	cpu_timer = csecond();
+#endif
 #endif
 
 #ifndef CACHEBUFFER_REUSE_ENABLE

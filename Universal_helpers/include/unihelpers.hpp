@@ -86,9 +86,6 @@ void CoCoSyncCheckErr();
 // Search for enchountered errors without synchronization.
 void CoCoASyncCheckErr();
 
-// Set then data pointed by an int* to 1, wrapped for add_host_func
-void CoCoSetFlag(void* wrapped_int);
-
 // Enable available links for target device with the provided list of (other) devices
 void CoCoEnableLinks(short target_dev_i, short dev_ids[], short num_devices);
 

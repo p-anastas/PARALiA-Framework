@@ -8,7 +8,7 @@
 
 #include<iostream>
 #include <string>
-#include <mutex>          // std::mutex
+#include <mutex> // std::mutex
 
 #define LOC_NUM (DEV_NUM + 1)
 
@@ -37,7 +37,12 @@ class Tile2D
 	public:
 		int id, GridId1, GridId2;
 		int dim1, dim2;
-		int R_flag, W_flag, RW_lock, RW_master;
+		int R_flag, W_flag, RW_master;
+#ifdef ENABLE_MUTEX_LOCKING
+		std::mutex RW_lock;
+#else
+		int RW_lock;
+#endif
 
 		Event* available[LOC_NUM];
 		void *adrs[LOC_NUM];

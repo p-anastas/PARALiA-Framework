@@ -131,7 +131,11 @@ template<typename dtype>  Tile2D<dtype>::Tile2D(void * in_addr, int in_dim1, int
     }
   }
   W_flag = R_flag = 0;
+#ifdef ENABLE_MUTEX_LOCKING
+	RW_lock.lock();
+#else
   RW_lock = 1;
+#endif
   RW_master = -42;
   #ifdef DEBUG
   	lprintf(lvl-1, "<-----|\n");

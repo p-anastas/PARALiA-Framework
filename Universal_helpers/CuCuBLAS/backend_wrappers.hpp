@@ -37,14 +37,24 @@ void backend_free(short dev_id);
 /// Select and run a wrapped operation (e.g. gemm, axpy) depending on opname
 void backend_run_operation(void* backend_data, const char* opname);
 
+#ifdef MULTIDEVICE_REDUCTION_ENABLE
+
+// Unlock wrapped_lock. This functions is fired in a queue to unlock when it reaches that point.
+void CoCoQueueUnlock(void* wrapped_lock);
+
 // Asunchronous Memcpy in internal buffer AND reduce to dest between two locations WITHOUT synchronous errorchecking. Use with caution.
-void CoCoMemcpyReduce2D(void* reduce_buffer, void* dest, size_t ldest, void* src, size_t lsrc, size_t rows, size_t cols,
-	short elemSize, short loc_dest, short loc_src, int* Tile_lock, CQueue_p reduce_queue);
+void CoCoMemcpyReduce2D(void* reduce_buffer, short reduce_buf_it, void* dest, size_t ldest, void* src, size_t lsrc, size_t rows, size_t cols,
+	short elemSize, short loc_dest, short loc_src, void* Tile_lock, CQueue_p reduce_queue);
+
+// Blocks until all reduce threads are complete and free temp structs.
+void CoCoReduceSyncThreads();
 
 /// Asunchronous add 2D (for block reduce)
 template<typename VALUETYPE>
 void CoCoAdd2Dc(VALUETYPE* dest, size_t ldest, VALUETYPE* src, size_t lsrc,
 	size_t rows, size_t cols, short loc, CQueue_p add_queue);
+
+#endif
 
 void TransposeTranslate(char TransChar, CBLAS_TRANSPOSE* cblasFlag, cublasOperation_t* cuBLASFlag, size_t* ldim, size_t dim1, size_t dim2);
 
