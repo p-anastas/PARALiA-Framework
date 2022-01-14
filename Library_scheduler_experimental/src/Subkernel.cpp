@@ -17,6 +17,7 @@ int Subkernel_num = 0, backend_init_flag[128] = {0};
 #ifdef MULTIDEVICE_REDUCTION_ENABLE
 void* reduce_buf[128*MAX_BUFFERING_L] = {NULL};
 short reduce_buf_it[128] = {0};
+long long reduce_buf_sz[128*MAX_BUFFERING_L] = {0};
 #endif
 
 Subkernel::Subkernel(short TileNum_in, const char* name){
@@ -38,12 +39,15 @@ Subkernel::~Subkernel(){
 	delete operation_complete;
 	if (WR_last) delete writeback_complete;
 #ifdef MULTIDEVICE_REDUCTION_ENABLE
+#ifndef BUFFER_REUSE_ENABLE
 		reduce_buf_it[run_dev_id] = 0;
 		for(int idx = 0; idx < MAX_BUFFERING_L; idx++)
 			if(reduce_buf[idx*128 + run_dev_id]!= NULL){
 				CoCoFree(reduce_buf[idx*128 + run_dev_id], CoCoGetPtrLoc(reduce_buf[idx*128 + run_dev_id]));
 				reduce_buf[idx*128 + run_dev_id] = NULL;
 			}
+#else
+#endif
 #endif
 }
 
@@ -242,14 +246,23 @@ void Subkernel::writeback_data(){
 						else WritebackIdCAdr = WritebackId;
 						d2h_queue[run_dev_id]->wait_for_event(operation_complete);
 						while(__sync_lock_test_and_set(&WR_check_lock, 1));
+						long long tmp_buffsz = CoCoGetBlockSize(run_dev_id);
 						if (reduce_buf[reduce_buf_it[run_dev_id]*128 + run_dev_id] == NULL){
+							reduce_buf_sz[reduce_buf_it[run_dev_id]*128 + run_dev_id] = tmp_buffsz;
 							reduce_buf[reduce_buf_it[run_dev_id]*128 + run_dev_id]
-								= CoCoMalloc(CoCoGetBlockSize(run_dev_id), WritebackId);
+								= CoCoMalloc(reduce_buf_sz[reduce_buf_it[run_dev_id]*128 + run_dev_id], WritebackId);
 #ifdef DDEBUG
 							lprintf(lvl, "Subkernel(dev=%d,id=%d): Allocated buffer(%p) in %d\n",
 							run_dev_id, id, reduce_buf[reduce_buf_it[run_dev_id]*128 + run_dev_id],
 							reduce_buf_it[run_dev_id]*128 + run_dev_id);
 #endif
+						}
+						else if(reduce_buf_sz[reduce_buf_it[run_dev_id]*128 + run_dev_id] != tmp_buffsz){
+							CoCoFree(reduce_buf[reduce_buf_it[run_dev_id]*128 + run_dev_id], CoCoGetPtrLoc(
+								reduce_buf[reduce_buf_it[run_dev_id]*128 + run_dev_id]));
+							reduce_buf_sz[reduce_buf_it[run_dev_id]*128 + run_dev_id] = tmp_buffsz;
+							reduce_buf[reduce_buf_it[run_dev_id]*128 + run_dev_id]
+								= CoCoMalloc(reduce_buf_sz[reduce_buf_it[run_dev_id]*128 + run_dev_id], WritebackId);
 						}
 						int local_reduce_buf_it = reduce_buf_it[run_dev_id];
 						if(reduce_buf_it[run_dev_id] < MAX_BUFFERING_L - 1) reduce_buf_it[run_dev_id]++;

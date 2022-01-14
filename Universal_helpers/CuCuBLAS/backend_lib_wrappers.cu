@@ -171,17 +171,6 @@ void* CoCoMemcpyReduce2DWrapped(void* wrapped_data){
 #ifdef TEST
   double cpu_timer = csecond();
 #endif
-#ifdef ENABLE_MUTEX_LOCKING
-  ((std::mutex*)Tile_lock)->lock();
-#else
-  while(__sync_lock_test_and_set ((int*)Tile_lock, 1));
-#endif
-#ifdef TEST
-  cpu_timer = csecond() - cpu_timer;
-  lprintf(lvl, "CoCoMemcpyReduce2DAsync(buf = %p, loc_dest = %d, loc_src = %d): Blocked waiting for Tile lock: %lf ms\n",
-    reduce_buffer, loc_dest, loc_src, cpu_timer*1000);
-  cpu_timer = csecond();
-#endif
 
 #ifdef ENABLE_MUTEX_LOCKING
   reduce_block_mutex[reduce_buf_it*128 + loc_src].lock();
@@ -195,20 +184,34 @@ void* CoCoMemcpyReduce2DWrapped(void* wrapped_data){
     reduce_buffer, loc_dest, loc_src, loc_src, cpu_timer*1000);
   cpu_timer = csecond();
 #endif
+
   CoCoMemcpy2DAsync(reduce_buffer, lsrc, src, lsrc, rows, cols, elemSize, loc_dest, loc_src, reduce_queue);
   reduce_queue->sync_barrier();
+
+#ifdef ENABLE_MUTEX_LOCKING
+  ((std::mutex*)Tile_lock)->lock();
+#else
+  while(__sync_lock_test_and_set ((int*)Tile_lock, 1));
+#endif
+#ifdef TEST
+  cpu_timer = csecond() - cpu_timer;
+  lprintf(lvl, "CoCoMemcpyReduce2DAsync(buf = %p, loc_dest = %d, loc_src = %d): Blocked waiting for Tile lock: %lf ms\n",
+    reduce_buffer, loc_dest, loc_src, cpu_timer*1000);
+  cpu_timer = csecond();
+#endif
   CoCoAdd2D<VALUE_TYPE>( (VALUE_TYPE*) dest, ldest, (VALUE_TYPE*) reduce_buffer, lsrc, rows, cols, loc_dest, reduce_queue);
+
+  #ifdef ENABLE_MUTEX_LOCKING
+    ((std::mutex*)Tile_lock)->unlock();
+  #else
+    __sync_lock_release((int*)Tile_lock);
+  #endif
+
   #ifdef ENABLE_MUTEX_LOCKING
     reduce_block_mutex[reduce_buf_it*128 + loc_src].unlock();
   #else
     __sync_lock_release(&reduce_block_lock[reduce_buf_it*128 + loc_src]);
   #endif
-
-#ifdef ENABLE_MUTEX_LOCKING
-  ((std::mutex*)Tile_lock)->unlock();
-#else
-  __sync_lock_release((int*)Tile_lock);
-#endif
 
 #ifdef TEST
   cpu_timer = csecond() - cpu_timer;

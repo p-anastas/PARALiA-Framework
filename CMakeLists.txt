@@ -15,8 +15,8 @@ add_definitions(-DASYNC_ENABLE)
 ## Enable GPU backend resourse reuse (streams, handles)
 add_definitions(-DBACKEND_RES_REUSE_ENABLE)
 
-## Enable GPU-allocated cache buffer reuse between different calls
-add_definitions(-DCACHEBUFFER_REUSE_ENABLE)
+## Enable GPU and CPU allocated buffer reuse between different calls
+add_definitions(-DBUFFER_REUSE_ENABLE)
 
 ## Enable lock-free versions of event & Queue management in Universal_helpers
 add_definitions(-DUNIHELPER_LOCKFREE_ENABLE)

@@ -554,7 +554,7 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 #endif
 #endif
 
-#ifndef CACHEBUFFER_REUSE_ENABLE
+#ifndef BUFFER_REUSE_ENABLE
 	for(int i=0; i<used_devices;i++) CoCopeLiaDevCacheFree(i);
 #else
 	for(int i=0; i<used_devices;i++) CoCoPeLiaDevCacheInvalidate(thread_dev_data[i]);
