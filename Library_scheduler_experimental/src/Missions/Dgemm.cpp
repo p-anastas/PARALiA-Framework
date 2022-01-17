@@ -212,7 +212,7 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 #ifdef TEST
 	cpu_timer = csecond();
 #endif
-  CoCoPeLiaRequestBuffer(gemm_subkernel_data);
+  CoCoPeLiaRequestBuffer(gemm_subkernel_data, used_vals->cache_limit);
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer;
 	lprintf(lvl, "Memory management(%d): t_mem = %lf ms\n", dev_id, cpu_timer*1000);
@@ -266,7 +266,7 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 	return NULL;
 }
 
-/// A dgemm wrapper including auto-tuning of T and cpu_ratio, as well as device management
+/// A dgemm wrapper including auto-tuning of T and cache_size, as well as device management
 CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t K, VALUE_TYPE alpha, VALUE_TYPE* A, size_t ldA, VALUE_TYPE* B, size_t ldB, VALUE_TYPE beta, VALUE_TYPE* C, size_t ldC)
 {
 	short lvl = 1;
@@ -460,6 +460,7 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 			used_vals->dev_ids = NULL;
 		}
 		used_vals->T = T;
+		used_vals->cache_limit = predef_vals.cache_limit;
 	}
 
 #ifdef TEST
@@ -492,8 +493,8 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 	cpu_timer = csecond();
 #endif
 	int Subkernel_dev_id_list[num_devices*Subkernel_num] = {-1}, Subkernels_per_dev[num_devices] = {0};
-	CoCoDistributeSubkernelsRoundRobin(Subkernel_dev_id_list, Subkernels_per_dev, num_devices, Subkernel_num);
-	//CoCoDistributeSubkernelsNaive(Subkernel_dev_id_list, Subkernels_per_dev, num_devices, Subkernel_num);
+	//CoCoDistributeSubkernelsRoundRobin(Subkernel_dev_id_list, Subkernels_per_dev, num_devices, Subkernel_num);
+	CoCoDistributeSubkernelsNaive(Subkernel_dev_id_list, Subkernels_per_dev, num_devices, Subkernel_num);
 
 	pthread_attr_t attr;
 	int s = pthread_attr_init(&attr);
@@ -618,6 +619,6 @@ CoControl_p CoCopeLiaDgemmControled(char TransA,  char TransB, size_t M, size_t 
 	predef_vals.T = predef_control_values->T;
 	predef_vals.dev_ids = predef_control_values->dev_ids;
 	predef_vals.dev_num = predef_control_values->dev_num;
-	predef_vals.cpu_ratio = predef_control_values->cpu_ratio;
+	predef_vals.cache_limit = predef_control_values->cache_limit;
 	return CoCopeLiaDgemm(TransA, TransB,  M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC);
 }

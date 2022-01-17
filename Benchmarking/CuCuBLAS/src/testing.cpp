@@ -16,7 +16,7 @@ char* CoControlPrint(CoControl_p input){
 	if (input == NULL) sprintf(outstring,"-1,-1,-1,-1\0");
 	else{
 		if (input->dev_num > 0) for (int i = 0; i < input->dev_num; i++)dev_ids_token+=pow(10,input->dev_ids[i]);
-		sprintf(outstring, "%d,%d,%d,%.3f\0",  input->T, input->dev_num, dev_ids_token, input->cpu_ratio);
+		sprintf(outstring, "%d,%d,%d,%.3f\0",  input->T, input->dev_num, dev_ids_token, input->cache_limit);
 	}
 	return outstring;
 }
@@ -27,23 +27,22 @@ void ParseInputLvl3(const int argc, const char *argv[], CoControl_p* predef_cont
 	int dev_num = atoi(argv[1]);
 	size_t dev_ids_token = atoi(argv[2]);
 	int T = atoi(argv[3]);
-	float cpu_ratio = atof(argv[4]);
+	long long cache_limit = atof(argv[4]);
 
 	CoControl_p temp_p;
 
 	//Tunning Parameters
-	if (dev_num < 0 && cpu_ratio <= 0 && T <=0 ) temp_p = *predef_control_values = NULL;
+	if (dev_num < 0 && cache_limit <= 0 && T <=0 ) temp_p = *predef_control_values = NULL;
 	else{
 		fprintf(stderr, "Using predefined control parameters from input\n");
 		*predef_control_values = (CoControl_p) malloc (sizeof(struct CoControl));
 		temp_p = *predef_control_values;
-		temp_p->cpu_ratio = cpu_ratio;
+		temp_p->cache_limit = cache_limit;
 		temp_p->T = T;
 		if (dev_num < 0){
 			temp_p->dev_num = -1;
 			temp_p->dev_ids = NULL;
 		}
-		else if (dev_num == 0) temp_p->cpu_ratio = 1.0;
 		else{
 			temp_p->dev_num = dev_num;
 			temp_p->dev_ids = (int*) malloc(dev_num*sizeof(int));

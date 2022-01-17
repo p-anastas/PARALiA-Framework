@@ -38,15 +38,20 @@ set (LIBSC_INSTALL_LIB ${LIBSC_INSTALL}/lib)
 file(MAKE_DIRECTORY ${LIBSC_INSTALL_LIB})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${LIBSC_INSTALL_LIB})
 
+# TODO: this is the lesser evil for spliting the software-caching part from the Library scheduler.
+configure_file(${LIBSC_DIR_INC}/Subkernel.hpp ${LIBSC_INSTALL_INC}/Subkernel.hpp COPYONLY)
+ADD_SUBDIRECTORY (Software_caching)
+include_directories(${CACHING_INSTALL_INC})
+message( "Library Scheduler exp - Included DIR: " ${CACHING_INSTALL_INC} )
+
 add_library(cocopelia SHARED
-${LIBSC_DIR_SRC}/DataCaching.cpp
 ${LIBSC_DIR_SRC}/Asset.cpp
 ${LIBSC_DIR_SRC}/Subkernel.cpp
 ${LIBSC_DIR_SRC}/Missions/Dgemm.cpp
 #${BACKEND_LIBSC_DIR}/backend_wrappers.cu
 ${BACKEND_LIBSC_DIR}/Asset_backend.cpp
 )
-target_link_libraries(cocopelia ${INTERNAL_LINK_LIB} autotuning_runtime unihelpers )
+target_link_libraries(cocopelia ${INTERNAL_LINK_LIB} autotuning_runtime unihelpers caching)
 configure_file(${LIBSC_DIR_INC}/CoCoPeLia.hpp ${LIBSC_INSTALL_INC}/CoCoPeLia.hpp COPYONLY)
 
 set (LIBSC_INSTALL_INC ${LIBSC_INSTALL_INC} PARENT_SCOPE)

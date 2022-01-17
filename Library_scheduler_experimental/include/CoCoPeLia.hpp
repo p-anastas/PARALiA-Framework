@@ -10,7 +10,7 @@ typedef struct CoControl{
 	int T = 0;
 	int* dev_ids = NULL;
 	int dev_num = -1;
-	float cpu_ratio = 0.0;
+	long long cache_limit = 0;
 }* CoControl_p;
 
 char* CoControlPrint(CoControl_p input);

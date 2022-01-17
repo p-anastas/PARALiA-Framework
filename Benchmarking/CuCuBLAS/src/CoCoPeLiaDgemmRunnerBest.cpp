@@ -70,7 +70,7 @@ int main(const int argc, const char *argv[]) {
 #endif
 
 	size_t best_T = (size_t) fmin(fmin(fmin(M/DEV_NUM,N/DEV_NUM),K),CBLASXT_MAX_SAFE_TILE);
-	predef_control_values-> cpu_ratio = 0;
+	predef_control_values-> cache_limit = 0;
 	predef_control_values-> dev_num = -1;
 	predef_control_values-> T = best_T;
 	// Warmup

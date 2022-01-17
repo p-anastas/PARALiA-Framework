@@ -14,7 +14,7 @@
 
 int main(const int argc, const char *argv[]) {
 
-	char TransA, TransB; 
+	char TransA, TransB;
   	double alpha, beta;
 	size_t M, N, K;
 	short A_loc, B_loc, C_loc, C_out_loc;
@@ -23,21 +23,21 @@ int main(const int argc, const char *argv[]) {
 	ParseInputLvl3(argc, argv, &predef_control_values, &TransA, &TransB, &alpha, &beta, &M, &N, &K, &A_loc, &B_loc, &C_loc, &C_out_loc);
 
 	char *filename = (char *) malloc(256* sizeof(char));
-	if (predef_control_values!= NULL){ 
+	if (predef_control_values!= NULL){
 		if(predef_control_values->T > 0) {
-			if (predef_control_values->T > M || predef_control_values->T > N || predef_control_values->T > K) error("Given Tin=%d bigger than problem dim\n", predef_control_values->T); 
+			if (predef_control_values->T > M || predef_control_values->T > N || predef_control_values->T > K) error("Given Tin=%d bigger than problem dim\n", predef_control_values->T);
 			else if (predef_control_values->T > CBLASXT_MAX_SAFE_TILE) error("Given Tin=%d bigger than CBLASXT_MAX_SAFE_TILE\n", predef_control_values->T);
 		}
-		sprintf(filename, "%s/cuBLASXtDgemmRunner_predefined_vals_%s.log", TESTLIBDIR, VERSION);	
+		sprintf(filename, "%s/cuBLASXtDgemmRunner_predefined_vals_%s.log", TESTLIBDIR, VERSION);
 	}
 	else sprintf(filename, "%s/cuBLASXtDgemmRunner_%s.log", TESTLIBDIR, VERSION);
 
 	size_t cublasXt_tile;
 	if (predef_control_values!= NULL && predef_control_values->T > 0) return_values->T = cublasXt_tile = predef_control_values->T;
-	else return_values->T = cublasXt_tile = (size_t) fmin(fmin(fmin(M,N),K)/2,CBLASXT_MAX_SAFE_TILE); 
-	double cpu_ratio;
-	if (predef_control_values!= NULL && predef_control_values->cpu_ratio > 0) return_values->cpu_ratio = cpu_ratio = predef_control_values->cpu_ratio;
-	else return_values->cpu_ratio = cpu_ratio = 0; 
+	else return_values->T = cublasXt_tile = (size_t) fmin(fmin(fmin(M,N),K)/2,CBLASXT_MAX_SAFE_TILE);
+	double cache_limit;
+	if (predef_control_values!= NULL && predef_control_values->cache_limit > 0) return_values->cache_limit = cache_limit = predef_control_values->cache_limit;
+	else return_values->cache_limit = cache_limit = 0;
 	int dev_num, *dev_ids;
 	if (predef_control_values!= NULL && predef_control_values->dev_num > 0){
 		return_values->dev_num = dev_num = predef_control_values->dev_num;
@@ -55,12 +55,12 @@ int main(const int argc, const char *argv[]) {
 	/// Matrix Layouts for CPU GEMM
 	CBLAS_TRANSPOSE cpu_op_A, cpu_op_B;    // CblasNoTrans, CblasTrans
 	cublasOperation_t gpu_op_A, gpu_op_B; // CUBLAS_OP_N, CUBLAS_OP_T
-	
+
 	size_t ldA, ldB, ldC = M;
 	TransposeTranslate(TransA, &cpu_op_A, &gpu_op_A, &ldA, M, K);
 	TransposeTranslate(TransB, &cpu_op_B, &gpu_op_B, &ldB, K, N);
 
-	/// Local Timers 
+	/// Local Timers
 	double cpu_timer = csecond();
 
 	fprintf(stderr, "\nAllocating memory...");
@@ -75,7 +75,7 @@ int main(const int argc, const char *argv[]) {
 	cpu_timer  = csecond() - cpu_timer;
 	fprintf(stderr, "done.\nAlloc time:\t%lf ms\n\n",  cpu_timer  * 1000);
 	cpu_timer = csecond();
-	fprintf(stderr, "Initializing to random values (VALIDATE)..."); 
+	fprintf(stderr, "Initializing to random values (VALIDATE)...");
 	CoCoVecInit(A, K * M, 42, A_loc);
 	CoCoVecInit(B, K * N, 43, B_loc);
 	CoCoVecInit(C, M * N, 44, C_loc);
@@ -83,44 +83,44 @@ int main(const int argc, const char *argv[]) {
 	cpu_timer  = csecond() - cpu_timer ;
 	fprintf(stderr, "done.\nInit time:\t%lf ms\n\n",  cpu_timer  * 1000);
 
-	// First call with T set to half the smaller problem dim (unless predefined or larger than CBLASXT_MAX_SAFE_TILE) 
+	// First call with T set to half the smaller problem dim (unless predefined or larger than CBLASXT_MAX_SAFE_TILE)
 	cpu_timer = csecond();
-	cuBLASXtDgemmWrap(TransA,  TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC,  cublasXt_tile, cpu_ratio, dev_num, dev_ids);
+	cuBLASXtDgemmWrap(TransA,  TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC,  cublasXt_tile, cache_limit, dev_num, dev_ids);
 	CoCoSyncCheckErr();
 	cpu_timer  = csecond() - cpu_timer;
-	double best_standard_tile_t = cpu_timer; 
+	double best_standard_tile_t = cpu_timer;
 
 	if (!(predef_control_values!= NULL && predef_control_values->T > 0)){
 		// Second call with T set to smaller problem dim ( can be better for small problems with fat/thin matrices)
-		size_t cublasXt_min_dim = (size_t) fmin(fmin(fmin(M,N),K),CBLASXT_MAX_SAFE_TILE); 
+		size_t cublasXt_min_dim = (size_t) fmin(fmin(fmin(M,N),K),CBLASXT_MAX_SAFE_TILE);
 		cpu_timer = csecond();
-		cuBLASXtDgemmWrap(TransA,  TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC,  cublasXt_min_dim, cpu_ratio, dev_num, dev_ids);
+		cuBLASXtDgemmWrap(TransA,  TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC,  cublasXt_min_dim, cache_limit, dev_num, dev_ids);
 		CoCoSyncCheckErr();
 		cpu_timer  = csecond() - cpu_timer;
 		if ( cpu_timer < best_standard_tile_t) {
 			cublasXt_tile = cublasXt_min_dim;
 			best_standard_tile_t = cpu_timer;
 		}
-			
+
 	}
 #ifdef CHECKLOG
 	CheckLogLvl3(filename, return_values, TransA, TransB, alpha, beta, M, N, K, A_loc, B_loc, C_loc, C_out_loc);
 #endif
-	double cublasXt_t = best_standard_tile_t; 
+	double cublasXt_t = best_standard_tile_t;
 	if (predef_control_values!= NULL && predef_control_values->T > 0){
 		fprintf(stderr,"Running CUBLASXT DGEMM-> M = %zu, N = %zu, K = %zu, T = %zu\n", M, N, K, cublasXt_tile);
 		cpu_timer  = csecond();
-		cuBLASXtDgemmWrap(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC,  cublasXt_tile, cpu_ratio, dev_num, dev_ids);
+		cuBLASXtDgemmWrap(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC,  cublasXt_tile, cache_limit, dev_num, dev_ids);
 		CoCoSyncCheckErr();
 		cpu_timer  = csecond() - cpu_timer;
 		fprintf(stderr, "Total time:\t%lf ms\n", cpu_timer  * 1000);
-		if (cublasXt_t > cpu_timer) cublasXt_t = cpu_timer; 
+		if (cublasXt_t > cpu_timer) cublasXt_t = cpu_timer;
 	}
 	else {
 		for (size_t T_trial = (((size_t)fmax(fmin(fmin(M/8,N/8),K/8),1024))/1024)*1024; T_trial <= fmin(fmin(fmin(M,N),K),CBLASXT_MAX_SAFE_TILE); T_trial+=1024) if (M >= T_trial*1.5 || N >= T_trial*1.5 || K >= T_trial*1.5){
 			fprintf(stderr,"Running CUBLASXT DGEMM-> M = %zu, N = %zu, K = %zu, T = %zu\n", M, N, K, T_trial);
 			cpu_timer  = csecond();
-			cuBLASXtDgemmWrap(TransA,  TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC,  T_trial, cpu_ratio, dev_num, dev_ids);
+			cuBLASXtDgemmWrap(TransA,  TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC,  T_trial, cache_limit, dev_num, dev_ids);
 			CoCoSyncCheckErr();
 			cpu_timer  = csecond() - cpu_timer;
 			fprintf(stderr, "Total time:\t%lf ms\n", cpu_timer  * 1000);
@@ -139,19 +139,19 @@ int main(const int argc, const char *argv[]) {
 	double min_t = cublasXt_t, max_t = 0, avg_t = 0;
 	cpu_timer = csecond();
 	short bench_it = 100;
-	if ( M >= 8192 || N >= 8192 || K >= 8192) bench_it = 10; 
+	if ( M >= 8192 || N >= 8192 || K >= 8192) bench_it = 10;
 	for(int it = 0; it < bench_it; it++){
 		cpu_timer = csecond();
-		cuBLASXtDgemmWrap(TransA,  TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC,  cublasXt_tile, cpu_ratio, dev_num, dev_ids);
+		cuBLASXtDgemmWrap(TransA,  TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC,  cublasXt_tile, cache_limit, dev_num, dev_ids);
 		CoCoSyncCheckErr();
 		cpu_timer = csecond() - cpu_timer;
-		StoreLogLvl3(filename, return_values, TransA, TransB, alpha, beta, M, N, K, A_loc, B_loc, C_loc, C_out_loc, cpu_timer); 
+		StoreLogLvl3(filename, return_values, TransA, TransB, alpha, beta, M, N, K, A_loc, B_loc, C_loc, C_out_loc, cpu_timer);
 		if ( cpu_timer < min_t ) min_t = cpu_timer;
 		if ( cpu_timer > max_t ) max_t = cpu_timer;
 		avg_t += cpu_timer;
 	}
 	avg_t/=bench_it;
-	fprintf(stderr, "cuBLASXt (%s):\n\tavg_t = %lf ms ( %lf Gflops/s )\n\tmin_t = %lf ms ( %lf Gflops/s )\n\tmax_t = %lf ms ( %lf Gflops/s )\n", 
+	fprintf(stderr, "cuBLASXt (%s):\n\tavg_t = %lf ms ( %lf Gflops/s )\n\tmin_t = %lf ms ( %lf Gflops/s )\n\tmax_t = %lf ms ( %lf Gflops/s )\n",
 	CoControlPrint(return_values),
 	avg_t  * 1000, Gval_per_s(dgemm_flops(M,N,K),avg_t),
 	min_t  * 1000, Gval_per_s(dgemm_flops(M,N,K),min_t),
@@ -160,6 +160,6 @@ int main(const int argc, const char *argv[]) {
 	CoCoSyncCheckErr();
 	CoCoFree(A, A_loc);
 	CoCoFree(B, B_loc);
-	CoCoFree(C, C_loc); 
+	CoCoFree(C, C_loc);
 	return 0;
 }

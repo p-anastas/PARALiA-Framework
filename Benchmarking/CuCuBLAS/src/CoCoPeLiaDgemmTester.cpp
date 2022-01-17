@@ -19,7 +19,7 @@ int main(const int argc, const char *argv[]) {
   	double alpha, beta;
 	size_t M, N, K, T;
 	short A_loc, B_loc, C_loc, C_out_loc;
-	double cpu_ratio = 0;
+	double cache_limit = 0;
 	size_t ldA, ldB, ldC;
 
 	if(argc != 4) error("Incorrect input arguments. Usage: ./correct_run run_cpu_mem run_gpu_mem run_large\n");
@@ -82,7 +82,7 @@ int main(const int argc, const char *argv[]) {
 			cpu_timer = csecond();
 			T = fmin(dim,fmin(dim,dim))/2;
 
-			cuBLASXtDgemmWrap(TransA, TransB, dim, dim, dim, alpha, A, ldA, B, ldB, beta, C_comp, ldC,  T, cpu_ratio, DEV_NUM, dev_ids);
+			cuBLASXtDgemmWrap(TransA, TransB, dim, dim, dim, alpha, A, ldA, B, ldB, beta, C_comp, ldC,  T, cache_limit, DEV_NUM, dev_ids);
 			CoCoSyncCheckErr();
 			cpu_timer  = csecond() - cpu_timer;
 			fprintf(stderr, "cuBLASXT: %.1lf\n", Gval_per_s(dgemm_flops(dim,dim,dim),cpu_timer));
@@ -109,7 +109,7 @@ int main(const int argc, const char *argv[]) {
 			fprintf(stderr, "CoCopeLia: %.1lf, ", comp_flops);
 			cpu_timer = csecond();
 			T = fmin(dim1,fmin(dim2,dim3))/2;
-			cuBLASXtDgemmWrap(TransA, TransB, dim1, dim2, dim3, alpha, A, ldA, B, ldB, beta, C_comp, ldC,  T, cpu_ratio, DEV_NUM, dev_ids);
+			cuBLASXtDgemmWrap(TransA, TransB, dim1, dim2, dim3, alpha, A, ldA, B, ldB, beta, C_comp, ldC,  T, cache_limit, DEV_NUM, dev_ids);
 			CoCoSyncCheckErr();
 			cpu_timer  = csecond() - cpu_timer;
 			fprintf(stderr, "cuBLASXT: %.1lf\n", Gval_per_s(dgemm_flops(dim1,dim2,dim3),cpu_timer));
@@ -136,7 +136,7 @@ int main(const int argc, const char *argv[]) {
 			fprintf(stderr, "CoCopeLia: %.1lf, ", comp_flops);
 			cpu_timer = csecond();
 			T = fmin(dim1,fmin(dim2,dim3))/2;
-			cuBLASXtDgemmWrap(TransA, TransB, dim1, dim2, dim3, alpha, A, ldA, B, ldB, beta, C_comp, ldC,  T, cpu_ratio, DEV_NUM, dev_ids);
+			cuBLASXtDgemmWrap(TransA, TransB, dim1, dim2, dim3, alpha, A, ldA, B, ldB, beta, C_comp, ldC,  T, cache_limit, DEV_NUM, dev_ids);
 			CoCoSyncCheckErr();
 			cpu_timer  = csecond() - cpu_timer;
 			fprintf(stderr, "cuBLASXT: %.1lf\n", Gval_per_s(dgemm_flops(dim1,dim2,dim3),cpu_timer));
@@ -164,7 +164,7 @@ int main(const int argc, const char *argv[]) {
 			fprintf(stderr, "CoCopeLia: %.1lf, ", comp_flops);
 			cpu_timer = csecond();
 			T = fmin(dim1,fmin(dim2,dim3))/2;
-			cuBLASXtDgemmWrap(TransA, TransB, dim1, dim2, dim3, alpha, A, ldA, B, ldB, beta, C_comp, ldC,  T, cpu_ratio, DEV_NUM, dev_ids);
+			cuBLASXtDgemmWrap(TransA, TransB, dim1, dim2, dim3, alpha, A, ldA, B, ldB, beta, C_comp, ldC,  T, cache_limit, DEV_NUM, dev_ids);
 			CoCoSyncCheckErr();
 			cpu_timer  = csecond() - cpu_timer;
 			fprintf(stderr, "cuBLASXT: %.1lf\n", Gval_per_s(dgemm_flops(dim1,dim2,dim3),cpu_timer));
@@ -226,7 +226,7 @@ int main(const int argc, const char *argv[]) {
 				fprintf(stderr, "CoCopeLia: %.1lf, ", comp_flops);
 				cpu_timer = csecond();
 				T = fmin(dim1,fmin(dim2,dim3))/2;
-				cuBLASXtDgemmWrap(TransA, TransB, dim1, dim2, dim3, alpha, A, ldA, B, ldB, beta, C_comp, ldC,  T, cpu_ratio, DEV_NUM, dev_ids);
+				cuBLASXtDgemmWrap(TransA, TransB, dim1, dim2, dim3, alpha, A, ldA, B, ldB, beta, C_comp, ldC,  T, cache_limit, DEV_NUM, dev_ids);
 				CoCoSyncCheckErr();
 				cpu_timer  = csecond() - cpu_timer;
 				fprintf(stderr, "cuBLASXT: %.1lf\n", Gval_per_s(dgemm_flops(dim1,dim2,dim3),cpu_timer));
@@ -253,7 +253,7 @@ int main(const int argc, const char *argv[]) {
 				fprintf(stderr, "CoCopeLia: %.1lf, ", comp_flops);
 				cpu_timer = csecond();
 				T = fmin(dim1,fmin(dim2,dim3))/2;
-				cuBLASXtDgemmWrap(TransA, TransB, dim1, dim2, dim3, alpha, A, ldA, B, ldB, beta, C_comp, ldC,  T, cpu_ratio, DEV_NUM, dev_ids);
+				cuBLASXtDgemmWrap(TransA, TransB, dim1, dim2, dim3, alpha, A, ldA, B, ldB, beta, C_comp, ldC,  T, cache_limit, DEV_NUM, dev_ids);
 				CoCoSyncCheckErr();
 				cpu_timer  = csecond() - cpu_timer;
 				fprintf(stderr, "cuBLASXT: %.1lf\n", Gval_per_s(dgemm_flops(dim1,dim2,dim3),cpu_timer));
@@ -318,7 +318,7 @@ int main(const int argc, const char *argv[]) {
 		fprintf(stderr, "CoCopeLia: %.1lf, ", comp_flops);
 		cpu_timer = csecond();
 		T = fmin(M,fmin(N,K))/4;
-		cuBLASXtDgemmWrap(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C_comp, ldC,  T, cpu_ratio, DEV_NUM, dev_ids);
+		cuBLASXtDgemmWrap(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C_comp, ldC,  T, cache_limit, DEV_NUM, dev_ids);
 		CoCoSyncCheckErr();
 		cpu_timer  = csecond() - cpu_timer;
 		fprintf(stderr, "cuBLASXT: %.1lf\n", Gval_per_s(dgemm_flops(M,N,K),cpu_timer));
@@ -348,7 +348,7 @@ int main(const int argc, const char *argv[]) {
 		fprintf(stderr, "CoCopeLia: %.1lf, ", comp_flops);
 		cpu_timer = csecond();
 		T = fmin(M,fmin(N,K))/4;
-		cuBLASXtDgemmWrap(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C_comp, ldC,  T, cpu_ratio, DEV_NUM, dev_ids);
+		cuBLASXtDgemmWrap(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C_comp, ldC,  T, cache_limit, DEV_NUM, dev_ids);
 		CoCoSyncCheckErr();
 		cpu_timer  = csecond() - cpu_timer;
 		fprintf(stderr, "cuBLASXT: %.1lf\n", Gval_per_s(dgemm_flops(M,N,K),cpu_timer));
@@ -376,7 +376,7 @@ int main(const int argc, const char *argv[]) {
 		fprintf(stderr, "CoCopeLia: %.1lf, ", comp_flops);
 		cpu_timer = csecond();
 		T = fmin(M,fmin(N,K))/4;
-		cuBLASXtDgemmWrap(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C_comp, ldC,  T, cpu_ratio, DEV_NUM, dev_ids);
+		cuBLASXtDgemmWrap(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C_comp, ldC,  T, cache_limit, DEV_NUM, dev_ids);
 		CoCoSyncCheckErr();
 		cpu_timer  = csecond() - cpu_timer;
 		fprintf(stderr, "cuBLASXT: %.1lf\n", Gval_per_s(dgemm_flops(M,N,K),cpu_timer));
@@ -452,7 +452,7 @@ int main(const int argc, const char *argv[]) {
 		fprintf(stderr, "CoCopeLia: %.1lf, ", comp_flops);
 		cpu_timer = csecond();
 		T = fmin(M,fmin(N,K))/4;
-		cuBLASXtDgemmWrap(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C_comp, ldC,  T, cpu_ratio, DEV_NUM, dev_ids);
+		cuBLASXtDgemmWrap(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C_comp, ldC,  T, cache_limit, DEV_NUM, dev_ids);
 		CoCoSyncCheckErr();
 		cpu_timer  = csecond() - cpu_timer;
 		fprintf(stderr, "cuBLASXT: %.1lf\n", Gval_per_s(dgemm_flops(M, N, K),cpu_timer));
@@ -479,7 +479,7 @@ int main(const int argc, const char *argv[]) {
 		fprintf(stderr, "CoCopeLia: %.1lf, ", comp_flops);
 		cpu_timer = csecond();
 		T = fmin(M,fmin(N,K))/4;
-		cuBLASXtDgemmWrap(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C_comp, ldC,  T, cpu_ratio, DEV_NUM, dev_ids);
+		cuBLASXtDgemmWrap(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C_comp, ldC,  T, cache_limit, DEV_NUM, dev_ids);
 		CoCoSyncCheckErr();
 		cpu_timer  = csecond() - cpu_timer;
 		fprintf(stderr, "cuBLASXT: %.1lf\n", Gval_per_s(dgemm_flops(M, N, K),cpu_timer));

@@ -77,7 +77,7 @@ DevCachePtr CoCoPeLiaDevCacheInit(kernel_pthread_wrap_p subkernel_data){
 	return result;
 }
 
-void CoCoPeLiaRequestBuffer(kernel_pthread_wrap_p subkernel_data){
+void CoCoPeLiaRequestBuffer(kernel_pthread_wrap_p subkernel_data, long long bufsize_limit){
   short lvl = 3;
 #ifdef DEBUG
   lprintf(lvl-1, "|-----> CoCoPeLiaRequestBuffer(%d)\n", subkernel_data->dev_id);
@@ -102,19 +102,32 @@ void CoCoPeLiaRequestBuffer(kernel_pthread_wrap_p subkernel_data){
 	  	lprintf(lvl, " -Mem required for matrices: %zu MB\n", (size_t) temp_DevCache->gpu_mem_buf_sz/1024/1024);
 	    lprintf(lvl, " -Mem available in GPU: %zu MB\n", (size_t) problem_avail_mem/1024/1024);
 	  #endif
-
-	  if (temp_DevCache->gpu_mem_buf_sz <= problem_avail_mem){
-	#ifdef DEBUG
-	    lprintf(lvl, " -Requested buffer fits in GPU(%d)\n", dev_id);
-	#endif
-		;}
+		if (bufsize_limit <= 0){
+		  if (temp_DevCache->gpu_mem_buf_sz <= problem_avail_mem){
+#ifdef DEBUG
+		    lprintf(lvl, " -Requested buffer fits in GPU(%d)\n", dev_id);
+#endif
+			;}
+			else{
+		    temp_DevCache->BlockNum =  (int) (problem_avail_mem/temp_DevCache->BlockSize);
+				temp_DevCache->gpu_mem_buf_sz = temp_DevCache->BlockNum*temp_DevCache->BlockSize;
+#ifdef DEBUG
+		    lprintf(lvl, " -Requested buffer does not fit in GPU(%d)\n", dev_id);
+#endif
+			}
+	}
+	else{
+		if(bufsize_limit > problem_avail_mem)
+			error("CoCoPeLiaRequestBuffer(dev_id=%d): Requested cache with bufsize_limit =%zu MB bigger than problem_avail_mem = %zu MB\n",
+				dev_id, (size_t) bufsize_limit/1024/1024, (size_t) problem_avail_mem/1024/1024);
+		else if(bufsize_limit < temp_DevCache->BlockSize)
+					error("CoCoPeLiaRequestBuffer(dev_id=%d): Requested cache with bufsize_limit =%zu MB smaller than Blocksize = %zu MB\n",
+						dev_id, (size_t) bufsize_limit/1024/1024, (size_t) temp_DevCache->BlockSize/1024/1024);
 		else{
-	    temp_DevCache->BlockNum =  (int) (problem_avail_mem/temp_DevCache->BlockSize);
+			temp_DevCache->BlockNum =  (int) (bufsize_limit/temp_DevCache->BlockSize);
 			temp_DevCache->gpu_mem_buf_sz = temp_DevCache->BlockNum*temp_DevCache->BlockSize;
-	#ifdef DEBUG
-	    lprintf(lvl, " -Requested buffer does not fit in GPU(%d)\n", dev_id);
-	#endif
 		}
+	}
 
 	#ifdef DEBUG
 	  if (prev_DevCache_sz >= temp_DevCache->gpu_mem_buf_sz)
