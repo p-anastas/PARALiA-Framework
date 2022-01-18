@@ -26,8 +26,12 @@ add_definitions(-DMULTIDEVICE_REDUCTION_ENABLE)
 ## The buffering level used for reduction per-device (e.g. double, triple etc)
 add_definitions(-DMAX_BUFFERING_L=4)
 
-## Enable Spiting Internal dims and using reduction between multiple devices.
+## Enable Locking with mutexes instead of busy-waiting
 add_definitions(-DENABLE_MUTEX_LOCKING)
+
+## Define which subkernel distribution to use
+#add_definitions(-DDISTRIBUTION="ROUND-ROBIN")
+add_definitions(-DDISTRIBUTION="SPLITD1-NAIVE")
 
 #Run in testing mode : details about models, decisions and time spend in operations.
 #add_definitions(-DTEST)

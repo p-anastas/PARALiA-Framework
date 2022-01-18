@@ -14,7 +14,6 @@
 
 int main(const int argc, const char *argv[]) {
 
-
 	char TransA, TransB;
   	double alpha, beta;
 	size_t M, N, K;
@@ -29,9 +28,11 @@ int main(const int argc, const char *argv[]) {
 			if (predef_control_values->T > M || predef_control_values->T > N || predef_control_values->T > K) error("Given Tin=%d bigger than problem dim\n", predef_control_values->T);
 			else if (predef_control_values->T > M/1.5 && predef_control_values->T > N/1.5 && predef_control_values->T > K/1.5) warning("Given Tin=%d bigger than all problem dims/1.5\n", predef_control_values->T);
 		}
-		sprintf(filename, "%s/CoCoPeLiaDgemmRunner_predefined_vals_%s.log", TESTLIBDIR, VERSION);
+		sprintf(filename, "%s/CoCoPeLiaDgemmRunner_predefined_vals_%s_%s_%s.log",
+			TESTLIBDIR, CoCoDistributionPrint(), CoCoImplementationPrint(), VERSION);
 	}
-	else sprintf(filename, "%s/CoCoPeLiaDgemmRunner_%s.log", TESTLIBDIR, VERSION);
+	else sprintf(filename, "%s/CoCoPeLiaDgemmRunner_%s_%s_%s.log",
+		TESTLIBDIR, CoCoDistributionPrint(), CoCoImplementationPrint(), VERSION);
 #ifdef CHECKLOG
 	CheckLogLvl3(filename, predef_control_values, TransA, TransB, alpha, beta, M, N, K, A_loc, B_loc, C_loc, C_out_loc);
 #endif

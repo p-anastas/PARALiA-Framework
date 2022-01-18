@@ -27,7 +27,8 @@ int main(const int argc, const char *argv[]) {
 	if (predef_control_values!= NULL){
 		error("CoCoPeLiaDgemmRunnerBest: I am not supposed to be used with specific inputs. You probably need CoCoPeLiaDgemmRunner\n");
 	}
-	else sprintf(filename, "%s/CoCoPeLiaDgemmRunnerBest_%s.log", TESTLIBDIR, VERSION);
+	else sprintf(filename, "%s/CoCoPeLiaDgemmRunnerBest_%s_%s_%s.log",
+		TESTLIBDIR, CoCoDistributionPrint(), CoCoImplementationPrint(), VERSION);
 #ifdef CHECKLOG
 	CheckLogLvl3(filename, predef_control_values, TransA, TransB, alpha, beta, M, N, K, A_loc, B_loc, C_loc, C_out_loc);
 #endif

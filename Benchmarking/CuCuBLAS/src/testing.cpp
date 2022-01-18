@@ -13,12 +13,46 @@ char* CoControlPrint(CoControl_p input){
 	char* outstring = (char*) malloc(256*sizeof(char));
 	int dev_ids_token = 0;
 	int ctr = 0, itter = 0;
-	if (input == NULL) sprintf(outstring,"-1,-1,-1,-1\0");
+	if (input == NULL) sprintf(outstring,"-1,-1,-1,-1");
 	else{
 		if (input->dev_num > 0) for (int i = 0; i < input->dev_num; i++)dev_ids_token+=pow(10,input->dev_ids[i]);
-		sprintf(outstring, "%d,%d,%d,%ld\0",  input->T, input->dev_num, dev_ids_token, input->cache_limit);
+		sprintf(outstring, "%d,%d,%d,%lld",  input->T, input->dev_num, dev_ids_token, input->cache_limit);
 	}
 	return outstring;
+}
+
+char* CoCoImplementationPrint(){
+	char* string_out = (char*) malloc (256*sizeof(char));
+#ifdef ENABLE_MUTEX_LOCKING
+#ifdef MULTIDEVICE_REDUCTION_ENABLE
+	sprintf(string_out, "ML-MR-BL%d", MAX_BUFFERING_L);
+#else
+	sprintf(string_out, "ML");
+#endif
+#elif MULTIDEVICE_REDUCTION_ENABLE
+	sprintf(string_out, "MR-BL%d", MAX_BUFFERING_L);
+#elif UNIHELPER_LOCKFREE_ENABLE
+	sprintf(string_out, "UL");
+#elif BUFFER_REUSE_ENABLE
+	sprintf(string_out, "BR");
+#elif BACKEND_RES_REUSE_ENABLE
+	sprintf(string_out, "BRR");
+#elif ASYNC_ENABLE
+	sprintf(string_out, "BRR");
+#else
+	sprintf(string_out, "SYNC");
+#endif
+	return string_out;
+}
+
+char* CoCoDistributionPrint(){
+	char* string_out = (char*) malloc (256*sizeof(char));
+#ifdef DISTRIBUTION
+	sprintf(string_out, "%s", DISTRIBUTION);
+#else
+#error
+#endif
+	return string_out;
 }
 
 void ParseInputLvl3(const int argc, const char *argv[], CoControl_p* predef_control_values, char* TransA, char* TransB, double* alpha, double* beta, size_t* D1, size_t* D2, size_t* D3, short* loc1, short* loc2, short* loc3, short* outloc){

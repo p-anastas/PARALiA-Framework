@@ -11,9 +11,14 @@ typedef struct CoControl{
 	int* dev_ids = NULL;
 	int dev_num = -1;
 	float cpu_ratio = 0.0;
-}* CoControl_p; 
+}* CoControl_p;
 
+/// Return a string represenation of the given CoControl
 char* CoControlPrint(CoControl_p input);
+
+/// Return a string with the active Cmake flags used
+char* CoCoActiveFlag();
+
 /// The CoCopeLia Dgemm implementation. A prediction model is used to select a tile from the micro-benchmarked tile candidates with CoCopeLia_optimize3.
 CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t K, double alpha, double* A, size_t ldA, double* B, size_t ldB, double beta, double* C, size_t ldC);
 
