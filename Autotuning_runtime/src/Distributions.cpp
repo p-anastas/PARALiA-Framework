@@ -7,8 +7,9 @@
 #include "unihelpers.hpp"
 
 void CoCoDistributeSubkernelsRoundRobin(int* Subkernel_dev_id_list,
-  int* Subkernels_per_dev, short num_devices, int Subkernel_num){
+  int* Subkernels_per_dev, short num_devices, int MGridSz, int NGridSz, int KGridSz){
   int lvl = 6;
+  int Subkernel_num = MGridSz*NGridSz*KGridSz;
   if (Subkernel_num <= num_devices){
     num_devices = Subkernel_num;
     for (int d = 0 ; d < num_devices; d++){
@@ -36,8 +37,9 @@ void CoCoDistributeSubkernelsRoundRobin(int* Subkernel_dev_id_list,
 }
 
 void CoCoDistributeSubkernelsNaive(int* Subkernel_dev_id_list,
-  int* Subkernels_per_dev, short num_devices, int Subkernel_num){
+  int* Subkernels_per_dev, short num_devices, int MGridSz, int NGridSz, int KGridSz){
   int lvl = 6;
+  int Subkernel_num = MGridSz*NGridSz*KGridSz;
   if (Subkernel_num <= num_devices){
     num_devices = Subkernel_num;
     for (int d = 0 ; d < num_devices; d++){
@@ -53,7 +55,9 @@ void CoCoDistributeSubkernelsNaive(int* Subkernel_dev_id_list,
     if (dev_offset);
     else dev_offset = Subkernel_num;
 #else
-    error("CoCoDistributeSubkernelsNaive: not implemented for undefined MULTIDEVICE_REDUCTION_ENABLE\n");
+    dev_offset = (MGridSz*NGridSz)/num_devices*KGridSz;
+    if (dev_offset);
+    else error("CoCoDistributeSubkernelsNaive: dev_offset = 0 undefined without MULTIDEVICE_REDUCTION_ENABLE");
   #endif
   #ifdef DEBUG
     lprintf(lvl, "Subkernel Split offset = %d\n", dev_offset);

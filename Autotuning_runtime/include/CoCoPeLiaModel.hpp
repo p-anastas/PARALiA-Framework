@@ -95,10 +95,10 @@ const char* printTunableParams(tunableParams_p params);
 
 /// Each device gets 1/num_devices Subkernels without acounting for their size or location
 void CoCoDistributeSubkernelsNaive(int* Subkernel_dev_id_list,
-  int* Subkernels_per_dev, short num_devices, int Subkernel_num);
+  int* Subkernels_per_dev, short num_devices, int MGridSz, int NGridSz, int KGridSz);
 
 /// A classic round-robin distribution
 void CoCoDistributeSubkernelsRoundRobin(int* Subkernel_dev_id_list,
-  int* Subkernels_per_dev, short num_devices, int Subkernel_num);
+  int* Subkernels_per_dev, short num_devices, int MGridSz, int NGridSz, int KGridSz);
 
 #endif
