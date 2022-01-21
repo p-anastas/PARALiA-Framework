@@ -38,7 +38,7 @@ char* CoCoImplementationPrint(){
 #elif BACKEND_RES_REUSE_ENABLE
 	sprintf(string_out, "BRR");
 #elif ASYNC_ENABLE
-	sprintf(string_out, "BRR");
+	sprintf(string_out, "ASYNC");
 #else
 	sprintf(string_out, "SYNC");
 #endif

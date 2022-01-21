@@ -5,6 +5,7 @@ set(BACKEND "CuCuBLAS")
 message("CoCopeLia-Framework - BACKEND: " ${BACKEND})
 add_definitions(-DBACKEND="${BACKEND}")
 ## Define the project version (used in logfiles for result testing)
+
 set(PROJECT_VERSION "1.07")
 message("CoCopeLia-Framework - PROJECT_VERSION: " ${PROJECT_VERSION})
 add_definitions(-DVERSION="${PROJECT_VERSION}")
@@ -24,10 +25,10 @@ add_definitions(-DUNIHELPER_LOCKFREE_ENABLE)
 ## Enable Spiting Internal dims and using reduction between multiple devices.
 add_definitions(-DMULTIDEVICE_REDUCTION_ENABLE)
 ## The buffering level used for reduction per-device (e.g. double, triple etc)
-add_definitions(-DMAX_BUFFERING_L=4)
+add_definitions(-DMAX_BUFFERING_L=2)
 
 ## Enable Locking with mutexes instead of busy-waiting
-add_definitions(-DENABLE_MUTEX_LOCKING)
+#add_definitions(-DENABLE_MUTEX_LOCKING)
 
 ## Define which subkernel distribution to use
 add_definitions(-DDISTRIBUTION="ROUND-ROBIN")

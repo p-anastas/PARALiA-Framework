@@ -51,7 +51,8 @@ class Tile2D
 		//int PendingUsage[LOC_NUM];
 
 		// Constructor
-		Tile2D<dtype>(void* tile_addr, int T1tmp, int T2tmp, int ldim, int inGrid1, int inGrid2);
+		Tile2D<dtype>(void* tile_addr, int T1tmp, int T2tmp,
+			int ldim, int inGrid1, int inGrid2);
 
     // General Functions
 		int dtypesize() { return sizeof(dtype); }
@@ -79,7 +80,8 @@ class Asset2D
 	Tile2D<dtype> **Tile_map;
 
 	// Constructor, sets dim1, dim2, ldim, adrs and derives loc from get_loc(adr)
-	Asset2D<dtype>(void* adrr, int in_dim1, int in_dim2, int in_ldim, char transpose);
+	Asset2D<dtype>(void* adrr, int in_dim1,
+		int in_dim2, int in_ldim, char transpose);
 
 	// General Functions
 	void InitTileMap(int T1, int T2);
@@ -89,7 +91,8 @@ class Asset2D
 	int size() { return dtypesize()*dim1*dim2; }
 
 	// Backend Functions
-	void* prepareAsync(pthread_t* thread_id, pthread_attr_t attr);
+	void* prepareAsync(pthread_t* thread_id,
+		pthread_attr_t attr);
 	void resetProperties();
 };
 

@@ -17,8 +17,6 @@ class Subkernel
 	public:
 		int id, iloc1, iloc2, iloc3;
 		short run_dev_id;
-		// WR_reader must run first to read input chunk of W tile(s), if any.
-		// WR_writer must run last to write back chunk of W tile(s), if any.
 		short WR_first, WR_last, WR_reduce;
 		short TileNum, *TileDimlist;
 		void** TileList;

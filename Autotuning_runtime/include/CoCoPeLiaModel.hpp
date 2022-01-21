@@ -97,8 +97,12 @@ const char* printTunableParams(tunableParams_p params);
 void CoCoDistributeSubkernelsNaive(int* Subkernel_dev_id_list,
   int* Subkernels_per_dev, short num_devices, int MGridSz, int NGridSz, int KGridSz);
 
-/// A classic round-robin distribution
+/// A classic round-robin distribution without acounting for their size or location
 void CoCoDistributeSubkernelsRoundRobin(int* Subkernel_dev_id_list,
   int* Subkernels_per_dev, short num_devices, int MGridSz, int NGridSz, int KGridSz);
+
+/// Each device gets 1/num_devices Subkernels without acounting for their size or location, but the last dimension is reversed in odd devices
+void CoCoDistributeSubkernelsRevLast(int* Subkernel_dev_id_list,
+	  int* Subkernels_per_dev, short num_devices, int MGridSz, int NGridSz, int KGridSz);
 
 #endif

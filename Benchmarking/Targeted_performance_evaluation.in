@@ -73,6 +73,7 @@ do
 			#echo "LD_PRELOAD=/home/users/panastas/PhD_stuff/Other-libs/xkblas-silver1/install/lib/libxkblas_blaswrapper.so XKBLAS_GPUSET=3 XKBLAS_CACHE_LIMIT=80  $XKBLAS_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $Sq $Sq $Sq $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
 			#LD_PRELOAD=/home/users/panastas/PhD_stuff/Other-libs/xkblas-silver1/install/lib/libxkblas_blaswrapper.so XKBLAS_GPUSET=3 XKBLAS_CACHE_LIMIT=80  $XKBLAS_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $Sq $Sq $Sq $A_loc $B_loc $C_loc $C_loc &>> $perf_log
 		done
+		exit 1
 		# II) Large-sized square problems (usually >> GPU memory)
 		for Sq in {16384..40000..4096}
 		do
@@ -93,7 +94,6 @@ do
 			#echo "LD_PRELOAD=/home/users/panastas/PhD_stuff/Other-libs/xkblas-silver1/install/lib/libxkblas_blaswrapper.so XKBLAS_GPUSET=3 XKBLAS_CACHE_LIMIT=80  $XKBLAS_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $Sq $Sq $Sq $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
 			#LD_PRELOAD=/home/users/panastas/PhD_stuff/Other-libs/xkblas-silver1/install/lib/libxkblas_blaswrapper.so XKBLAS_GPUSET=3 XKBLAS_CACHE_LIMIT=80  $XKBLAS_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $Sq $Sq $Sq $A_loc $B_loc $C_loc $C_loc &>> $perf_log
 		done
-		exit 1
 		# III) Non-square Problems
 		for inbalanced in 8192 16384
 		do
