@@ -221,7 +221,7 @@ void* CoCoMemcpyReduce2DWrapped(void* wrapped_data){
 }
 
 // Asunchronous Memcpy in internal buffer AND reduce to dest between two locations WITHOUT synchronous errorchecking. Use with caution.
-void CoCoMemcpyReduce2D(void* reduce_buffer, short reduce_buf_it, void* dest, size_t ldest, void* src, size_t lsrc,
+void CoCoMemcpyReduce2DAsync(void* reduce_buffer, short reduce_buf_it, void* dest, size_t ldest, void* src, size_t lsrc,
 	size_t rows, size_t cols, short elemSize, short loc_dest, short loc_src, void* Tile_lock, CQueue_p reduce_queue){
     int s;
     void* res;
@@ -257,6 +257,11 @@ void CoCoMemcpyReduce2D(void* reduce_buffer, short reduce_buf_it, void* dest, si
     thread_dev_data->reduce_queue = reduce_queue;
   	s = pthread_create(&thread_pool[local_ctr], &thread_pool_attr[local_ctr], &CoCoMemcpyReduce2DWrapped, thread_dev_data);
 }
+
+void CoCoMemcpyReduceAsync(void* reduce_buffer, short reduce_buf_it, void* dest, void* src, long long bytes,
+	short loc_dest, short loc_src, void* Tile_lock, CQueue_p reduce_queue){
+   error("CoCoMemcpyReduceAsync: Not implemented (should it?)\n");
+ }
 
 void CoCoReduceSyncThreads(){
   int s;

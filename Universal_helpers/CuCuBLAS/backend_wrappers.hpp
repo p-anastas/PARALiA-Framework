@@ -42,9 +42,13 @@ void backend_run_operation(void* backend_data, const char* opname);
 // Unlock wrapped_lock. This functions is fired in a queue to unlock when it reaches that point.
 void CoCoQueueUnlock(void* wrapped_lock);
 
-// Asunchronous Memcpy in internal buffer AND reduce to dest between two locations WITHOUT synchronous errorchecking. Use with caution.
-void CoCoMemcpyReduce2D(void* reduce_buffer, short reduce_buf_it, void* dest, size_t ldest, void* src, size_t lsrc, size_t rows, size_t cols,
+// Asunchronous 2D Memcpy in internal buffer AND reduce to dest between two locations WITHOUT synchronous errorchecking. Use with caution.
+void CoCoMemcpyReduce2DAsync(void* reduce_buffer, short reduce_buf_it, void* dest, size_t ldest, void* src, size_t lsrc, size_t rows, size_t cols,
 	short elemSize, short loc_dest, short loc_src, void* Tile_lock, CQueue_p reduce_queue);
+
+// Asunchronous Memcpy in internal buffer AND reduce to dest between two locations WITHOUT synchronous errorchecking. Use with caution.
+void CoCoMemcpyReduceAsync(void* reduce_buffer, short reduce_buf_it, void* dest, void* src, long long bytes,
+	short loc_dest, short loc_src, void* Tile_lock, CQueue_p reduce_queue);
 
 // Blocks until all reduce threads are complete and free temp structs.
 void CoCoReduceSyncThreads();

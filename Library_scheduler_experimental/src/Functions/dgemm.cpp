@@ -21,8 +21,6 @@ struct CoControl predef_vals;
 CoControl_p used_vals = NULL;
 int MGridSz = 0, NGridSz = 0, KGridSz = 0;
 
-int MSplit = 1, NSplit = 1, KSplit = 1;
-
 void CoCoGemmUpdateDevice(Subkernel* ker, short dev_id){
 	gemm_backend_in_p ptr_ker_translate = (gemm_backend_in_p) ker->operation_params;
 	ker->run_dev_id = ptr_ker_translate->dev_id = dev_id;
@@ -302,7 +300,6 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 	Asset2D<VALUE_TYPE>* A_asset, *B_asset, *C_asset;
 	/// Prepare Assets in parallel( e.g. initialize asset classes, pin memory with pthreads)
 	/// return: A_asset, B_asset, C_asset initialized and pinned
-	/// FIXME: high probability the M, N etc dims are reverse (cause of column major stuff)
 	{
 		A_asset = new Asset2D<VALUE_TYPE>( A, M, K, ldA, TransA);
 		B_asset = new Asset2D<VALUE_TYPE>( B, K, N, ldB, TransB);

@@ -8,8 +8,8 @@
 #include "unihelpers.hpp"
 #include "CoCoPeLia.hpp"
 #include "BLASxWrapped.hpp"
-#include "cuBLASXtWrapped.hpp"
-//#include "testing.hpp"
+#include "BackenedLibsWrapped.hpp"
+#include "Testing.hpp"
 
 #define CBLASXT_MAX_SAFE_TILE 10000
 

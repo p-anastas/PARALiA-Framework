@@ -62,8 +62,10 @@ void Subkernel::sync_request_data(){
 	lprintf(lvl-1, "|-----> Subkernel(dev=%d,id=%d)::sync_request_data()\n", run_dev_id, id);
 #endif
 	for (int j = 0; j < TileNum; j++){
-		if (TileDimlist[j] == 1)
-			error("Subkernel(dev=%d,id=%d)::request_data: Tile1D not implemented\n", run_dev_id, id);
+		if (TileDimlist[j] == 1){
+				Tile1D<VALUE_TYPE>* tmp = (Tile1D<VALUE_TYPE>*) TileList[j];
+				if (tmp->R_flag && tmp->CacheLocId[run_dev_id] != -1 && (!tmp->W_flag || WR_first == 42 )) tmp->available[run_dev_id]->sync_barrier();
+		}
 		else if (TileDimlist[j] == 2){
 				Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) TileList[j];
 				if (tmp->R_flag && tmp->CacheLocId[run_dev_id] != -1 && (!tmp->W_flag || WR_first == 42 )) tmp->available[run_dev_id]->sync_barrier();
@@ -73,8 +75,33 @@ void Subkernel::sync_request_data(){
 
 void Subkernel::request_tile(short TileIdx){
 	short lvl = 5;
-	if (TileDimlist[TileIdx] == 1)
-		error("Subkernel(dev=%d,id=%d)::request_tile: Tile1D not implemented\n", run_dev_id, id);
+	if (TileDimlist[TileIdx] == 1){
+			Tile1D<VALUE_TYPE>* tmp = (Tile1D<VALUE_TYPE>*) TileList[TileIdx];
+#ifdef DEBUG
+		lprintf(lvl-1, "|-----> Subkernel(dev=%d,id=%d)::request_tile(Tile(%d.[%d]))\n",
+			run_dev_id, id, tmp->id, tmp->GridId);
+#endif
+		short FetchFromIdCAdr, FetchFromId = tmp->getClosestReadLoc(run_dev_id);
+		if (FetchFromId == -1) FetchFromIdCAdr = LOC_NUM - 1;
+		else{
+#ifdef CDEBUG
+			lprintf(lvl, "Subkernel(dev=%d,id=%d)-Tile(%d.[%d]): Fetching Block(%d) on GPU(%d) from Block(%d) on GPU(%d)\n",
+				run_dev_id, id, tmp->id,  tmp->GridId, tmp->CacheLocId[run_dev_id], run_dev_id,
+				tmp->CacheLocId[FetchFromId], FetchFromId);
+#endif
+			FetchFromIdCAdr = FetchFromId;
+			if (tmp->CacheLocId[FetchFromId] < -1)
+				error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d])::request_data: Fetching from tile in GPU(%d) with loc = %d\n",
+					run_dev_id, id, tmp->id,  tmp->GridId, FetchFromId, tmp->CacheLocId[FetchFromId]);
+			else if (tmp->CacheLocId[FetchFromId] != -1)
+				CoCacheAddPendingEvent(FetchFromId, NULL, tmp->available[run_dev_id], tmp->CacheLocId[FetchFromId], R);
+		}
+		CoCoMemcpyAsync(tmp->adrs[run_dev_id], tmp->adrs[FetchFromIdCAdr],
+											((long long) tmp->inc[run_dev_id]) * tmp->dim * tmp->dtypesize(),
+											run_dev_id, FetchFromId, h2d_queue[run_dev_id]);
+		tmp->available[run_dev_id]->record_to_queue(h2d_queue[run_dev_id]);
+		CoCacheAddPendingEvent(run_dev_id, tmp->available[run_dev_id], NULL, tmp->CacheLocId[run_dev_id], AVAILABLE);
+	}
 	else if (TileDimlist[TileIdx] == 2){
 			Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) TileList[TileIdx];
 #ifdef DEBUG
@@ -114,8 +141,50 @@ void Subkernel::request_data(){
 #endif
 	if (prev!= NULL) prev->sync_request_data();
 	for (int j = 0; j < TileNum; j++){
-		if (TileDimlist[j] == 1)
-			error("Subkernel(dev=%d,id=%d)::request_data: Tile1D not implemented\n", run_dev_id, id);
+		if (TileDimlist[j] == 1){
+			Tile1D<VALUE_TYPE>* tmp = (Tile1D<VALUE_TYPE>*) TileList[j];
+			// Check for tile RW_master - first to enter OR WR Tile initial owner
+			if (tmp->R_flag && tmp->W_flag && WR_first){
+				if(WR_reduce){
+					while(__sync_lock_test_and_set(&WR_check_lock, 1)); // highly unlikely to happen?
+					if(tmp->RW_master == -42){ // First entry, decide on WR_reducer.
+						//Hack that will not work if CPU (-1) also executes split-K subkernels
+						if(tmp->CacheLocId[LOC_NUM-1] == -1) tmp->RW_master = run_dev_id;
+						else for(int idx = 0; idx < LOC_NUM -1; idx++)
+							if(tmp->CacheLocId[idx] == -1) tmp->RW_master = idx;
+						if(tmp->RW_master == -42)
+							error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d]): request_data failed to assign RW master\n",
+								run_dev_id, id, tmp->id, tmp->GridId);
+#ifdef DDEBUG
+						lprintf(lvl, "Subkernel(dev=%d,id=%d)-Tile(%d.[%d]): Set RW_master = %d\n",
+					run_dev_id, id, tmp->id, tmp->GridId, tmp->RW_master);
+#endif
+					 }
+					__sync_lock_release(&WR_check_lock);
+					if (tmp->RW_master == run_dev_id) WR_reduce = 0;
+					else{ ;
+#ifdef DDEBUG
+						lprintf(lvl, "Subkernel(dev=%d,id=%d)-Tile(%d.[%d]): is a reducer.\n",
+							run_dev_id, id, tmp->id, tmp->GridId);
+#endif
+					}
+				}
+				else tmp->RW_master = run_dev_id;
+			 }
+			if (tmp->CacheLocId[run_dev_id] == -1) continue; // Skip if block native to run_dev_id
+			else if(tmp->CacheLocId[run_dev_id] < -1){
+				tmp->adrs[run_dev_id] = CoCacheAsignBlock(run_dev_id, TileList[j], TileDimlist[j]);
+#ifdef CDEBUG
+		lprintf(lvl, "Subkernel(dev=%d,id=%d)-Tile(%d.[%d]): Asigned buffer Block in GPU(%d)= %d\n",
+					run_dev_id, id, tmp->id, tmp->GridId, run_dev_id, tmp->CacheLocId[run_dev_id]);
+#endif
+				if (tmp->R_flag && (!tmp->W_flag || tmp->RW_master == run_dev_id )) request_tile(j);
+			}
+			if (tmp->W_flag) CoCacheAddPendingEvent(run_dev_id, tmp->available[run_dev_id],
+				writeback_complete, tmp->CacheLocId[run_dev_id], W);
+			else CoCacheAddPendingEvent(run_dev_id, tmp->available[run_dev_id],
+				operation_complete, tmp->CacheLocId[run_dev_id], R);
+		}
 		else if (TileDimlist[j] == 2){
 				Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) TileList[j];
 				// Check for tile RW_master - first to enter OR WR Tile initial owner
@@ -177,8 +246,14 @@ void Subkernel::run_operation(){
 	lprintf(lvl-1, "|-----> Subkernel(dev=%d,id=%d)::run_operation()\n", run_dev_id, id);
 #endif
 	for (int j = 0; j < TileNum; j++){
-		if (TileDimlist[j] == 1)
-			error("Subkernel(dev=%d,id=%d)::run_operation: Tile1D not implemented\n", run_dev_id, id);
+		if (TileDimlist[j] == 1){
+				Tile1D<VALUE_TYPE>* tmp = (Tile1D<VALUE_TYPE>*) TileList[j];
+				if (tmp->CacheLocId[run_dev_id] == -1) continue;
+				else if (tmp->CacheLocId[run_dev_id] < -1)
+					error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d])::run_operation: Tile(j=%d) has loc = %d\n",
+						run_dev_id, id, tmp->id, tmp->GridId, j, tmp->CacheLocId[run_dev_id]);
+				else if(tmp->R_flag) exec_queue[run_dev_id]->wait_for_event(tmp->available[run_dev_id]);
+		}
 		else if (TileDimlist[j] == 2){
 				Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) TileList[j];
 				if (tmp->CacheLocId[run_dev_id] == -1) continue;
@@ -207,8 +282,77 @@ void Subkernel::writeback_data(){
 
 	d2h_queue[run_dev_id]->wait_for_event(operation_complete);
 	for (int j = 0; j < TileNum; j++){
-		if (TileDimlist[j] == 1)
-		error("Subkernel(dev=%d,id=%d)::writeback_data: Tile1D not implemented\n", run_dev_id, id);
+		if (TileDimlist[j] == 1){
+				Tile1D<VALUE_TYPE>* tmp = (Tile1D<VALUE_TYPE>*) TileList[j];
+				if (tmp->W_flag && tmp->RW_master == run_dev_id){
+					if (tmp->CacheLocId[run_dev_id] == -1);
+					else if (tmp->CacheLocId[run_dev_id] < -1)
+						error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d])::writeback_data: invoked with tile with loc = %d\n",
+							run_dev_id, id, tmp->id, tmp->GridId, tmp->CacheLocId[run_dev_id]);
+					else{
+						short WritebackIdCAdr, WritebackId = tmp->getWriteBackLoc(); //to MASTER
+						if (WritebackId == -1) WritebackIdCAdr = LOC_NUM - 1;
+						else WritebackIdCAdr = WritebackId;
+						if(!WR_last) error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d])::writeback_data:\
+						Subkernel should be a WR_writer?\n", run_dev_id, id, tmp->id, tmp->GridId);
+							CoCoMemcpyAsync(tmp->adrs[WritebackIdCAdr], tmp->adrs[run_dev_id],
+								((long long) tmp->inc[run_dev_id]) * tmp->dim * tmp->dtypesize(),
+								WritebackId, run_dev_id, d2h_queue[run_dev_id]);
+							CoCacheAddPendingEvent(run_dev_id, operation_complete, writeback_complete, tmp->CacheLocId[run_dev_id], W);
+					}
+#ifdef MULTIDEVICE_REDUCTION_ENABLE
+#ifdef DDEBUG
+					lprintf(lvl, "Subkernel(dev=%d,id=%d)-Tile(%d.[%d]): Adding RW_lock(%p) in queue\n",
+						run_dev_id, id, tmp->id, tmp->GridId, &tmp->RW_lock);
+#endif
+					d2h_queue[run_dev_id]->add_host_func((void*)&CoCoQueueUnlock, (void*) &tmp->RW_lock);
+				}
+				else if (tmp->W_flag && tmp->RW_master != run_dev_id){
+					if (tmp->CacheLocId[run_dev_id] == -1) continue;
+					else if (tmp->CacheLocId[run_dev_id] < -1)
+						error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d])::writeback_reduce_data: invoked with tile with loc = %d\n",
+							run_dev_id, id, tmp->id, tmp->GridId, tmp->CacheLocId[run_dev_id]);
+					else{
+						short WritebackIdCAdr, WritebackId = tmp->getWriteBackLoc(); //to MASTER
+						if (WritebackId == -1) WritebackIdCAdr = LOC_NUM - 1;
+						else WritebackIdCAdr = WritebackId;
+						d2h_queue[run_dev_id]->wait_for_event(operation_complete);
+						while(__sync_lock_test_and_set(&WR_check_lock, 1));
+						long long tmp_buffsz = CoCoGetBlockSize(run_dev_id);
+						if (reduce_buf[reduce_buf_it[run_dev_id]*128 + run_dev_id] == NULL){
+							reduce_buf_sz[reduce_buf_it[run_dev_id]*128 + run_dev_id] = tmp_buffsz;
+							reduce_buf[reduce_buf_it[run_dev_id]*128 + run_dev_id]
+								= CoCoMalloc(reduce_buf_sz[reduce_buf_it[run_dev_id]*128 + run_dev_id], WritebackId);
+#ifdef DDEBUG
+							lprintf(lvl, "Subkernel(dev=%d,id=%d): Allocated buffer(%p) in %d\n",
+							run_dev_id, id, reduce_buf[reduce_buf_it[run_dev_id]*128 + run_dev_id],
+							reduce_buf_it[run_dev_id]*128 + run_dev_id);
+#endif
+						}
+						else if(reduce_buf_sz[reduce_buf_it[run_dev_id]*128 + run_dev_id] != tmp_buffsz){
+							CoCoFree(reduce_buf[reduce_buf_it[run_dev_id]*128 + run_dev_id], CoCoGetPtrLoc(
+								reduce_buf[reduce_buf_it[run_dev_id]*128 + run_dev_id]));
+							reduce_buf_sz[reduce_buf_it[run_dev_id]*128 + run_dev_id] = tmp_buffsz;
+							reduce_buf[reduce_buf_it[run_dev_id]*128 + run_dev_id]
+								= CoCoMalloc(reduce_buf_sz[reduce_buf_it[run_dev_id]*128 + run_dev_id], WritebackId);
+						}
+						int local_reduce_buf_it = reduce_buf_it[run_dev_id];
+						if(reduce_buf_it[run_dev_id] < MAX_BUFFERING_L - 1) reduce_buf_it[run_dev_id]++;
+						else reduce_buf_it[run_dev_id] = 0;
+						__sync_lock_release(&WR_check_lock);
+						if(!WR_last) error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d,])::writeback_reduce_data:\
+						Subkernel should be a WR_reduce?\n", run_dev_id, id, tmp->id, tmp->GridId);
+						else{
+							CoCoMemcpyReduceAsync(reduce_buf[local_reduce_buf_it*128 + run_dev_id], local_reduce_buf_it,
+								tmp->adrs[WritebackIdCAdr], tmp->adrs[run_dev_id],
+								((long long) tmp->inc[run_dev_id]) * tmp->dim * tmp->dtypesize(),
+								WritebackId, run_dev_id, (void*)&tmp->RW_lock, d2h_queue[run_dev_id]);
+							}
+						//CoCacheAddPendingEvent(run_dev_id, operation_complete, tmp->available[WritebackIdCAdr], tmp->CacheLocId[run_dev_id], W);
+					}
+#endif
+				}
+		}
 		else if (TileDimlist[j] == 2){
 				Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) TileList[j];
 				if (tmp->W_flag && tmp->RW_master == run_dev_id){
@@ -271,7 +415,7 @@ void Subkernel::writeback_data(){
 						if(!WR_last) error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::writeback_reduce_data:\
 						Subkernel should be a WR_reduce?\n", run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2);
 						else{
-							CoCoMemcpyReduce2D(reduce_buf[local_reduce_buf_it*128 + run_dev_id], local_reduce_buf_it, tmp->adrs[WritebackIdCAdr], tmp->ldim[WritebackIdCAdr],
+							CoCoMemcpyReduce2DAsync(reduce_buf[local_reduce_buf_it*128 + run_dev_id], local_reduce_buf_it, tmp->adrs[WritebackIdCAdr], tmp->ldim[WritebackIdCAdr],
 								tmp->adrs[run_dev_id], tmp->ldim[run_dev_id],
 								tmp->dim1, tmp->dim2, tmp->dtypesize(),
 								WritebackId, run_dev_id, (void*)&tmp->RW_lock, d2h_queue[run_dev_id]);

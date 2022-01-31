@@ -7,7 +7,7 @@
 #include "Asset.hpp"
 #include "unihelpers.hpp"
 
-int Tile_num = 0;
+int Tile2D_num = 0;
 
 template class Tile2D<double>;
 template class Asset2D<double>;
@@ -85,7 +85,7 @@ template<typename dtype> void Asset2D<dtype>::DestroyTileMap(){
     for (int itt2 = 0 ; itt2 < GridSz2; itt2++){
       current_ctr = itt1*GridSz2 + itt2;
       delete Tile_map[current_ctr];
-      Tile_num--;
+      Tile2D_num--;
     }
   free(Tile_map);
 }
@@ -98,15 +98,15 @@ template<typename dtype>  Tile2D<dtype>::Tile2D(void * in_addr, int in_dim1, int
 
   #ifdef DEBUG
     lprintf(lvl-1, "|-----> Tile2D(%d)::Tile2D(in_addr(%d),%d,%d,%d, %d, %d)\n",
-      Tile_num, CoCoGetPtrLoc(in_addr), in_dim1, in_dim2, in_ldim, inGrid1, inGrid2);
+      Tile2D_num, CoCoGetPtrLoc(in_addr), in_dim1, in_dim2, in_ldim, inGrid1, inGrid2);
   #endif
 
   dim1 = in_dim1;
   dim2 = in_dim2;
   GridId1 = inGrid1;
   GridId2 = inGrid2;
-  id = Tile_num;
-  Tile_num++;
+  id = Tile2D_num;
+  Tile2D_num++;
   short prev_loc = CoCoPeLiaGetDevice();
   for (int iloc = 0; iloc < LOC_NUM -1; iloc++){
     	CoCoPeLiaSelectDevice(iloc);

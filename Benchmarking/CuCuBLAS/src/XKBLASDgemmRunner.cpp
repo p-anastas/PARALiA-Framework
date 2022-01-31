@@ -8,7 +8,8 @@
 #include "unihelpers.hpp"
 #include "CoCoPeLia.hpp"
 //#include "XKBLASWrapped.hpp"
-#include "cuBLASXtWrapped.hpp"
+#include "BackenedLibsWrapped.hpp"
+#include "Testing.hpp"
 
 #define KAAPI_NO_DEFAULT_BLAS_ENUM
 #ifdef __cplusplus

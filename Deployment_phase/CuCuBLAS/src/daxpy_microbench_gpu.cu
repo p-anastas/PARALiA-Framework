@@ -7,12 +7,12 @@
 #include <cassert>
 #include "microbenchmarks.hpp"
 
-void report_run(char* filename, short dev_id, size_t N, double mean_t, double margin_err, size_t sample_sz, double bench_t){
+void report_run(char* filename, size_t N, double mean_t, double margin_err, size_t sample_sz, double bench_t){
 
 	FILE* fp = fopen(filename,"a");
 	if (!fp) error("report_run: LogFile failed to open");
    	fprintf(fp,"%d, %e,%e,%zu,%e\n", N, mean_t, margin_err, sample_sz, bench_t);
-        fclose(fp); 
+        fclose(fp);
 }
 
 int main(const int argc, const char *argv[]) {
@@ -36,14 +36,14 @@ int main(const int argc, const char *argv[]) {
 	sprintf(filename, "%s/Benchmark-Results/cublasDaxpy_dev-%d_min-%d_step-%d_%s.log", DEPLOYDB, dev_id, MIN_DIM_BLAS1, STEP_BLAS1, VERSION);
 	check_benchmark(filename);
 
-	size_t free_cuda_mem, max_cuda_mem; 
-	massert(cudaSuccess == cudaMemGetInfo(&free_cuda_mem, &max_cuda_mem), "CoCopeLiaDgemm: cudaMemGetInfo failed"); 
+	size_t free_cuda_mem, max_cuda_mem;
+	massert(cudaSuccess == cudaMemGetInfo(&free_cuda_mem, &max_cuda_mem), "CoCopeLiaDgemm: cudaMemGetInfo failed");
 	if (free_cuda_mem*1.2 < 1.0*max_cuda_mem) error("dgemm_microbench_gpu: Free memory is much less than max ( Free: %d, Max: %d ), device under utilization", free_cuda_mem, max_cuda_mem);
 
-	// Define the max size of a benchmark kernel to run on this machine. 
+	// Define the max size of a benchmark kernel to run on this machine.
 	size_t maxDim = CoCoGetMaxDimAsset1D(2, sizeof(double), STEP_BLAS1, dev_id);
 
-	/// Set device 
+	/// Set device
 	cudaSetDevice(dev_id);
 
 	cublasHandle_t handle0;
@@ -64,44 +64,44 @@ int main(const int argc, const char *argv[]) {
 	cpu_timer  = csecond() - cpu_timer ;
 	fprintf(stderr, "done.\nAlloc time:\t%lf ms\n\n",  cpu_timer  * 1000);
 
-	fprintf(stderr, "Initializing to random values..."); 
+	fprintf(stderr, "Initializing to random values...");
 	cpu_timer = csecond();
 
 	CoCoVecInit(x_dev, maxDim, 42, dev_id);
 	CoCoVecInit(y_dev, maxDim, 43, dev_id);
 
 	CoCoSyncCheckErr();
-	cpu_timer  = csecond() - cpu_timer ;	
+	cpu_timer  = csecond() - cpu_timer ;
 	fprintf(stderr, "done.\nInit time:\t%lf ms\n\n",  cpu_timer  * 1000);
 
 	fprintf(stderr, "\nTile details: x(inc=%d) y(inc=%d) -> maxDim = %d\n", 1, 1, maxDim);
 
 	fprintf(stderr, "Constants: alpha = %lf\n", alpha);
 
-	// Warmup 
+	// Warmup
 	for ( int itt = 0; itt <1; itt++){
 		assert(CUBLAS_STATUS_SUCCESS == cublasDaxpy(handle0, maxDim, &alpha, x_dev, incx, y_dev, incy));
 		cudaStreamSynchronize(host_stream);
 	}
 	CoCoSyncCheckErr();
 #ifdef AUTO_BENCH_USE_BOOST
-	double cublas_t_vals[MICRO_MAX_ITER], cublas_t_sum, cublas_t_mean, bench_t, error_margin; 
+	double cublas_t_vals[MICRO_MAX_ITER], cublas_t_sum, cublas_t_mean, bench_t, error_margin;
 	size_t bench_ctr = 0, sample_sz, step = STEP_BLAS1;
 	for (size_t T = MIN_DIM_BLAS1; T < maxDim + 1; T+=step){
-		if (T >= step * 16) step *=2; 
+		if (T >= step * 16) step *=2;
 		fprintf(stderr,"Running cublasDaxpy-> T = %d:\n", T);
 		cublas_t_mean = cublas_t_sum = error_margin = 0;
-		sample_sz = 0; 
+		sample_sz = 0;
 		bench_t = csecond();
-		double std_dev = 0; 
-		for (sample_sz = 1; sample_sz < MICRO_MAX_ITER + 1; sample_sz++) {	
+		double std_dev = 0;
+		for (sample_sz = 1; sample_sz < MICRO_MAX_ITER + 1; sample_sz++) {
 			cpu_timer = csecond();
 			assert(CUBLAS_STATUS_SUCCESS == cublasDaxpy(handle0, T, &alpha, x_dev, incx, y_dev, incy));
 			cudaStreamSynchronize(host_stream);
 			cpu_timer  = csecond() - cpu_timer ;
 			cublas_t_vals[sample_sz-1] = cpu_timer;
 			cublas_t_sum += cublas_t_vals[sample_sz-1];
-			cublas_t_mean = cublas_t_sum/sample_sz; 
+			cublas_t_mean = cublas_t_sum/sample_sz;
 			if (sample_sz < 2) continue;
 			for (int i = 0; i < sample_sz; i++) std_dev += pow(cublas_t_vals[i] - cublas_t_mean, 2);
 			std_dev /= sample_sz;
@@ -110,20 +110,20 @@ int main(const int argc, const char *argv[]) {
 			double T = boost::math::quantile(boost::math::complement(dist, alphaCI / 2));
 			error_margin = T*std_dev/sqrt(sample_sz);
 			//fprintf(stderr, "\tItter %d:\t mean=%lf, std_dev = %lf, Error margin =%lf\n", sample_sz, cublas_t_mean , std_dev, error_margin);
-			if (sample_sz > MICRO_MIN_ITER && error_margin/cublas_t_mean  * 100 <= 5) break; 
+			if (sample_sz > MICRO_MIN_ITER && error_margin/cublas_t_mean  * 100 <= 5) break;
 		}
 		bench_t = csecond() - bench_t;
 		fprintf(stderr, "Microbenchmark (M = N = K = %zu) complete:\t mean_exec_t=%lf ms ( %.1lf Gflops/s ), Error Margin (percentage of mean) = %lf %, Itter = %d, Microbench_t = %lf\n\n", T, cublas_t_mean  * 1000, Gval_per_s(daxpy_flops(T), cublas_t_mean), error_margin/cublas_t_mean  * 100, sample_sz, bench_t);
 		CoCoSyncCheckErr();
 
-		report_run(filename, dev_id, T, cublas_t_mean, error_margin, sample_sz, bench_t); 
+		report_run(filename, T, cublas_t_mean, error_margin, sample_sz, bench_t);
 		bench_ctr++;
 	}
 #else
-	double  bench_t, cublas_t_av, cublas_t_min , cublas_t_max; 
+	double  bench_t, cublas_t_av, cublas_t_min , cublas_t_max;
 	size_t bench_ctr = 0, step = STEP_BLAS1;
 	for (size_t T = MIN_DIM_BLAS1; T < maxDim + 1; T+=step){
-		if (T >= step * 16) step *=2; 
+		if (T >= step * 16) step *=2;
 		fprintf(stderr,"Running cublasDaxpy-> T = %d:\n", T);
 		cublas_t_av = cublas_t_max = 0;
 		cublas_t_min = 1e9;
@@ -134,15 +134,15 @@ int main(const int argc, const char *argv[]) {
 			cudaStreamSynchronize(host_stream);
 			cpu_timer  = csecond() - cpu_timer ;
 			cublas_t_av += cpu_timer;
-			if (cpu_timer > cublas_t_max) cublas_t_max = cpu_timer; 
-			if (cpu_timer < cublas_t_min) cublas_t_min = cpu_timer; 
+			if (cpu_timer > cublas_t_max) cublas_t_max = cpu_timer;
+			if (cpu_timer < cublas_t_min) cublas_t_min = cpu_timer;
 		}
 		bench_t = csecond() - bench_t;
 		cublas_t_av /= ITER;
 		fprintf(stderr, "GPU exec time:\t Average=%lf ms, Min = %lf ms, Max = %lf ms\n", cublas_t_av  * 1000, cublas_t_min  * 1000, cublas_t_max  * 1000);
 		CoCoSyncCheckErr();
 
-		report_run(filename, dev_id, T, cublas_t_av, fmax(cublas_t_max - cublas_t_av, cublas_t_av - cublas_t_min), ITER, cublas_t_max); 
+		report_run(filename, T, cublas_t_av, fmax(cublas_t_max - cublas_t_av, cublas_t_av - cublas_t_min), ITER, cublas_t_max);
 		bench_ctr++;
 	}
 #endif

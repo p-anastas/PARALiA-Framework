@@ -14,18 +14,36 @@
 
 #include "DataCaching.hpp"
 
-// TODO: Not used yet (BLAS 3 only use Asset2D)
 template <typename dtype>
-class Asset1D
+class Tile1D
 {
+		// Variables
 	private:
 	public:
-		int loc;
-		dtype *adrs;
+		int id, GridId;
 		int dim;
-		std::string name;
+		int R_flag, W_flag, RW_master;
+#ifdef ENABLE_MUTEX_LOCKING
+		std::mutex RW_lock;
+#else
+		int RW_lock;
+#endif
 
-		int dsize() { return sizeof(dtype); }
+		Event* available[LOC_NUM];
+		void *adrs[LOC_NUM];
+		int inc[LOC_NUM];
+		int CacheLocId[LOC_NUM];
+
+		// Constructor
+		Tile1D<dtype>(void* tile_addr, int T1tmp,
+			int inc, int inGrid1);
+
+    // General Functions
+		int dtypesize() { return sizeof(dtype); }
+		int size() { return dtypesize()*dim; }
+		short getWriteBackLoc();
+		short getClosestReadLoc(short dev_id_in);
+		void Set_RW_lock(void* wrapped_value);
 
 };
 
@@ -48,7 +66,6 @@ class Tile2D
 		void *adrs[LOC_NUM];
 		int ldim[LOC_NUM];
 		int CacheLocId[LOC_NUM];
-		//int PendingUsage[LOC_NUM];
 
 		// Constructor
 		Tile2D<dtype>(void* tile_addr, int T1tmp, int T2tmp,
@@ -89,6 +106,37 @@ class Asset2D
 	Tile2D<dtype>* getTile(int iloc1, int iloc2);
 	int dtypesize() { return sizeof(dtype); }
 	int size() { return dtypesize()*dim1*dim2; }
+
+	// Backend Functions
+	void* prepareAsync(pthread_t* thread_id,
+		pthread_attr_t attr);
+	void resetProperties();
+};
+
+template <typename dtype>
+class Asset1D
+{
+	// Variables
+	private:
+	public:
+	int id;
+	int GridSz;
+	int loc;
+	dtype *adrs;
+	int dim;
+	int inc;
+	short pin_internally;
+	Tile1D<dtype> **Tile_map;
+
+	// Constructor, sets dim1, dim2, ldim, adrs and derives loc from get_loc(adr)
+	Asset1D<dtype>(void* adrr, int in_dim, int in_inc);
+
+	// General Functions
+	void InitTileMap(int T);
+	void DestroyTileMap();
+	Tile1D<dtype>* getTile(int iloc);
+	int dtypesize() { return sizeof(dtype); }
+	int size() { return dtypesize()*dim; }
 
 	// Backend Functions
 	void* prepareAsync(pthread_t* thread_id,

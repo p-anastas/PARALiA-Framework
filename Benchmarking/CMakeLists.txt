@@ -1,5 +1,5 @@
 cmake_minimum_required (VERSION 3.10)
-### Initialize the project 
+### Initialize the project
 project (CoCopeLia-Benchmarks VERSION ${PROJECT_VERSION} DESCRIPTION "Library wrappers for performance comparisson with CoCoPeLia" LANGUAGES CXX) #CUDA
 message( "------------------------------------------------------------------------------------------------")
 message( "Benchmarking - PROJECT_SOURCE_DIR: " ${PROJECT_SOURCE_DIR} )
@@ -42,7 +42,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${BENCH_INSTALL_BIN})
 file(MAKE_DIRECTORY ${BENCH_INSTALL}/testLogs)
 add_definitions(-DTESTLIBDIR="${BENCH_INSTALL}/testLogs")
 
-#BLASX libs and includes 
+#BLASX libs and includes
 set (BLASX_PREFIX "/home/users/panastas/PhD_stuff/Other-libs/BLASX-pinned") #  (testbed-II-TeslaV100 build)
 #set (BLASX_PREFIX "/home/users/panastas/PhD_stuff/BLASX-dungani") (testbed-I-TeslaK40)
 set (BLASX_INCLUDE_DIRS ${BLASX_PREFIX}/include)
@@ -52,7 +52,7 @@ set (BLASX_LD ${BLASX_PREFIX}/lib)
 set (BLASX_LINK  "-L${BLASX_LD} -lblasx" )
 message( "Benchmarking - Linking BLASx: " ${BLASX_LINK} )
 
-#XKBLAS libs and includes 
+#XKBLAS libs and includes
 set (XKBLAS_PREFIX "/home/users/panastas/PhD_stuff/Other-libs/xkblas-silver1/install") #  (testbed-II-TeslaV100 build)
 set (XKBLAS_INCLUDE_DIRS ${XKBLAS_PREFIX}/include)
 include_directories(${XKBLAS_INCLUDE_DIRS} )
@@ -62,12 +62,13 @@ set (XKBLAS_LD ${XKBLAS_PREFIX}/lib)
 set (XKBLAS_LINK  "-L${XKBLAS_LD}  -lm -lpthread -lkaapi -lxkblas" )
 message( "Benchmarking - Linking XKBLAS: " ${XKBLAS_LINK} )
 
-add_library(benchcocopelia SHARED 
+add_library(benchcocopelia SHARED
+${BENCH_DIR_SRC}/cuBLASWrappers.cpp
 ${BENCH_DIR_SRC}/cuBLASXtWrappers.cpp
 ${BENCH_DIR_SRC}/testing.cpp
 )
 target_link_libraries(benchcocopelia cocopelia ${INTERNAL_LINK_LIB} ${OPENBLAS_LINK} cocopelia autotuning_runtime unihelpers )
-configure_file(${BENCH_DIR_INC}/cuBLASXtWrapped.hpp ${BENCH_INSTALL_INC}/cuBLASXtWrapped.hpp COPYONLY)
+configure_file(${BENCH_DIR_INC}/BackenedLibsWrapped.hpp ${BENCH_INSTALL_INC}/BackenedLibsWrapped.hpp COPYONLY)
 configure_file(${BENCH_DIR_INC}/BLASxWrapped.hpp ${BENCH_INSTALL_INC}/BLASxWrapped.hpp COPYONLY)
 #configure_file(${BENCH_DIR_INC}/XKBLASWrapped.hpp ${BENCH_INSTALL_INC}/XKBLASWrapped.hpp COPYONLY)
 
@@ -77,7 +78,7 @@ add_definitions(-DRUNVALIDATION)
 #add_definitions(-DCHECKLOG)
 
 # ${BENCH_DIR_SRC}/XKBLASWrappers.cpp
-# 
+#
 
 add_executable (cuBLASXtDgemmRunner ${BENCH_DIR_SRC}/cuBLASXtDgemmRunner.cpp )
 add_executable (BLASxDgemmRunner ${BENCH_DIR_SRC}/BLASxDgemmRunner.cpp ${BENCH_DIR_SRC}/BLASXWrappers.cpp)
@@ -93,7 +94,7 @@ if (${EXPERIMENTAL_VERSION} EQUAL 0)
 	add_executable (CoCoPeLiaDgemmTesterOld ${BENCH_DIR_SRC}/CoCoPeLiaDgemmTester.cpp )
 	add_executable (CoCoPeLiaDgemmRunnerOld ${BENCH_DIR_SRC}/CoCoPeLiaDgemmRunner.cpp )
 	add_executable (CoCoPeLiaDgemmRunnerBestOld ${BENCH_DIR_SRC}/CoCoPeLiaDgemmRunnerBest.cpp )
-	
+
 	target_link_libraries(CoCoPeLiaDgemmTesterOld ${INTERNAL_LINK_LIB} benchcocopelia)
 	target_link_libraries(CoCoPeLiaDgemmRunnerOld ${INTERNAL_LINK_LIB} benchcocopelia unihelpers)
 	target_link_libraries(CoCoPeLiaDgemmRunnerBestOld ${INTERNAL_LINK_LIB} benchcocopelia unihelpers)
@@ -101,10 +102,13 @@ elseif(${EXPERIMENTAL_VERSION} EQUAL 1)
 	add_executable (CoCoPeLiaDgemmTester ${BENCH_DIR_SRC}/CoCoPeLiaDgemmTester.cpp )
 	add_executable (CoCoPeLiaDgemmRunner ${BENCH_DIR_SRC}/CoCoPeLiaDgemmRunner.cpp )
 	add_executable (CoCoPeLiaDgemmRunnerBest ${BENCH_DIR_SRC}/CoCoPeLiaDgemmRunnerBest.cpp )
-	
+
+	add_executable (CoCoPeLiaDaxpyRunnerBest ${BENCH_DIR_SRC}/CoCoPeLiaDaxpyRunnerBest.cpp )
+
 	target_link_libraries(CoCoPeLiaDgemmTester ${INTERNAL_LINK_LIB} benchcocopelia)
 	target_link_libraries(CoCoPeLiaDgemmRunner ${INTERNAL_LINK_LIB} benchcocopelia unihelpers)
 	target_link_libraries(CoCoPeLiaDgemmRunnerBest ${INTERNAL_LINK_LIB} benchcocopelia unihelpers)
+	target_link_libraries(CoCoPeLiaDaxpyRunnerBest ${INTERNAL_LINK_LIB} benchcocopelia unihelpers)
 else()
 endif()
 
@@ -113,5 +117,3 @@ set (BENCH_INSTALL_INC ${BENCH_INSTALL_INC} PARENT_SCOPE)
 #message( "Benchmarking - Shared Library headers: " ${BENCH_INSTALL_INC} )
 message( "Benchmarking - Library testing bin DIR: " ${BENCH_INSTALL_BIN} )
 message( "------------------------------------------------------------------------------------------------")
-
-
