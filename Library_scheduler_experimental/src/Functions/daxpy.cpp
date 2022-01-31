@@ -24,10 +24,11 @@ int NGridSz_daxpy = 0;
 void CoCoDaxpyUpdateDevice(Subkernel* ker, short dev_id){
 	axpy_backend_in_p ptr_ker_translate = (axpy_backend_in_p) ker->operation_params;
 	ker->run_dev_id = ptr_ker_translate->dev_id = dev_id;
-	ptr_ker_translate->x = &((Tile1D<VALUE_TYPE>*) ker->TileList[0])->adrs[dev_id];
-	ptr_ker_translate->y = &((Tile1D<VALUE_TYPE>*) ker->TileList[1])->adrs[dev_id];
-	ptr_ker_translate->incx = ((Tile1D<VALUE_TYPE>*) ker->TileList[0])->inc[dev_id];
-	ptr_ker_translate->incy = ((Tile1D<VALUE_TYPE>*) ker->TileList[1])->inc[dev_id];
+	short dev_id_idx = (dev_id == -1) ? LOC_NUM - 1: dev_id;
+	ptr_ker_translate->x = &((Tile1D<VALUE_TYPE>*) ker->TileList[0])->adrs[dev_id_idx];
+	ptr_ker_translate->y = &((Tile1D<VALUE_TYPE>*) ker->TileList[1])->adrs[dev_id_idx];
+	ptr_ker_translate->incx = ((Tile1D<VALUE_TYPE>*) ker->TileList[0])->inc[dev_id_idx];
+	ptr_ker_translate->incy = ((Tile1D<VALUE_TYPE>*) ker->TileList[1])->inc[dev_id_idx];
 }
 
 Subkernel** CoCoAsignTilesToSubkernelsDaxpy(Asset1D<VALUE_TYPE>* x_asset, Asset1D<VALUE_TYPE>* y_asset,
@@ -157,7 +158,7 @@ CoControl_p CoCopeLiaDaxpy(size_t N, VALUE_TYPE alpha, VALUE_TYPE* x, size_t inc
 	short lvl = 1;
 #ifdef DEBUG
 	lprintf(lvl-1, "|-----> CoCopeLiaDaxpy(%zu,%lf,x=%p(%d),%zu,y=%p(%d),%zu)\n",
-		N, alpha, x, CoCoGetPtrLoc(x), incx, y, CoCoGetPtrLoc(y), inxy);
+		N, alpha, x, CoCoGetPtrLoc(x), incx, y, CoCoGetPtrLoc(y), incy);
 #endif
 
 #ifdef TEST
@@ -221,9 +222,9 @@ CoControl_p CoCopeLiaDaxpy(size_t N, VALUE_TYPE alpha, VALUE_TYPE* x, size_t inc
 		}
 		else if (predef_vals_daxpy.dev_num == 0) error("CoCopeLiaDaxpy: CPU-only version not implemented\n");
 		else{
-			num_devices = DEV_NUM;
+			num_devices = LOC_NUM;
 			dev_id = (short*) malloc (num_devices*sizeof(short));
-			for (int i =0; i < num_devices; i++) dev_id[i] = (short) i;
+			for (int i = 0; i < num_devices; i++) dev_id[i] = (i != num_devices - 1)? i : -1;
 		}
 
 		if(used_vals_daxpy == NULL) {

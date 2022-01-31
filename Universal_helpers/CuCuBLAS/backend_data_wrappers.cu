@@ -283,7 +283,7 @@ void backend_enableGPUPeer(short target_dev_i, short dev_ids[], short num_device
 #endif
 	cudaSetDevice(dev_ids[target_dev_i]);
 	for(int j=0; j<num_devices;j++){
-		if (dev_ids[target_dev_i] == dev_ids[j]) continue;
+		if (dev_ids[target_dev_i] == dev_ids[j] || dev_ids[target_dev_i] == -1 || dev_ids[j] == -1) continue;
 		int can_access_peer;
 		massert(cudaSuccess == cudaDeviceCanAccessPeer(&can_access_peer, dev_ids[target_dev_i], dev_ids[j]), "CoCopeLiaDgemm: cudaDeviceCanAccessPeer failed\n");
 		if(can_access_peer){
