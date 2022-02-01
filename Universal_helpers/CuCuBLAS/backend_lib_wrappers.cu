@@ -1,7 +1,7 @@
 ///
 /// \author Anastasiadis Petros (panastas@cslab.ece.ntua.gr)
 ///
-/// \brief The DGEMM CoCopeLia implementation.
+/// \brief Backend library wrappers for various cuda/cublas calls
 ///
 
 #include <cublas_v2.h>
@@ -26,7 +26,6 @@ int reduce_block_lock[128*MAX_BUFFERING_L] = {0};
 #endif
 #endif
 
-
 void backend_init(short dev_id, CQueue_p h2d_q, CQueue_p d2h_q, CQueue_p exec_q){
   int dev_idc = -1;
   cudaError_t err = cudaGetDevice(&dev_idc);
@@ -45,65 +44,41 @@ void backend_free(short dev_id){
   return;
 }
 
-void backend_run_operation(void* backend_data, const char* opname){
+
+void backend_run_operation(void* backend_data, const char* opname, CQueue_p run_queue){
   short lvl = 5;
   if (!strcmp(opname, "gemm")){
     gemm_backend_in_p ptr_ker_translate = (gemm_backend_in_p) backend_data;
-#ifdef DDEBUG
-    int cur_dev_id = CoCoPeLiaGetDevice();
-    if (ptr_ker_translate->dev_id != cur_dev_id) warning("backend_run_operation: Changing device %d -> %d\n",
-      cur_dev_id, ptr_ker_translate->dev_id);
-#endif
-    CoCoPeLiaSelectDevice(ptr_ker_translate->dev_id);
-#ifdef DDEBUG
-  	lprintf(lvl, "backend_run_operation: cublasDgemm(dev_id = %d, TransA = %c, TransB = %c, M = %d, N = %d, K = %d, alpha = %lf, A = %p, lda = %d, \n\
-  	B = %p, ldb = %d, beta = %lf, C = %p, ldC = %d)\n", ptr_ker_translate->dev_id, ptr_ker_translate->TransA, ptr_ker_translate->TransB,
-  		ptr_ker_translate->M, ptr_ker_translate->N, ptr_ker_translate->K, ptr_ker_translate->alpha, (VALUE_TYPE*) *ptr_ker_translate->A, ptr_ker_translate->ldA,
-  		(VALUE_TYPE*) *ptr_ker_translate->B, ptr_ker_translate->ldB, ptr_ker_translate->beta, (VALUE_TYPE*) *ptr_ker_translate->C, ptr_ker_translate->ldC);
-#endif
-  massert(CUBLAS_STATUS_SUCCESS == cublasDgemm(handle[ptr_ker_translate->dev_id], OpCharToCublas(ptr_ker_translate->TransA), OpCharToCublas(ptr_ker_translate->TransB),
-  		ptr_ker_translate->M, ptr_ker_translate->N, ptr_ker_translate->K, &ptr_ker_translate->alpha, (VALUE_TYPE*) *ptr_ker_translate->A, ptr_ker_translate->ldA,
-  		(VALUE_TYPE*) *ptr_ker_translate->B, ptr_ker_translate->ldB, &ptr_ker_translate->beta, (VALUE_TYPE*) *ptr_ker_translate->C, ptr_ker_translate->ldC),
-  		"backend_run_operation: cublasDgemm failed\n");
+    if (std::is_same<VALUE_TYPE, double>::value){
+      if(ptr_ker_translate->dev_id == -1) run_queue->add_host_func((void*)&cblas_wrap_dgemm, backend_data);
+      else if(ptr_ker_translate->dev_id >= 0) cublas_wrap_dgemm(backend_data, &handle[ptr_ker_translate->dev_id]);
+      else error("backend_run_operation(gemm,double): Not implemented for dev_id = %d\n", ptr_ker_translate->dev_id);
+    }
+    else if (std::is_same<VALUE_TYPE, float>::value){
+      if(ptr_ker_translate->dev_id == -1) run_queue->add_host_func((void*)&cblas_wrap_sgemm, backend_data);
+      else if(ptr_ker_translate->dev_id >= 0) cublas_wrap_sgemm(backend_data, &handle[ptr_ker_translate->dev_id]);
+      else error("backend_run_operation(gemm,float): Not implemented for dev_id = %d\n", ptr_ker_translate->dev_id);
+    }
+    else error("backend_run_operation(gemm): Not implemented for VALUETYPE\n");
   }
   else if(!strcmp(opname, "axpy")){
     axpy_backend_in_p ptr_ker_translate = (axpy_backend_in_p) backend_data;
-    CoCoPeLiaSelectDevice(ptr_ker_translate->dev_id);
     if (std::is_same<VALUE_TYPE, double>::value){
-      if(ptr_ker_translate->dev_id == -1) cblas_daxpy(ptr_ker_translate->N, ptr_ker_translate->alpha,
-          (double*) *ptr_ker_translate->x, ptr_ker_translate->incx, (double*) *ptr_ker_translate->y, ptr_ker_translate->incy);
-      else if(ptr_ker_translate->dev_id >= 0) massert(CUBLAS_STATUS_SUCCESS == cublasDaxpy(handle[ptr_ker_translate->dev_id], ptr_ker_translate->N,
-          (double*) &ptr_ker_translate->alpha, (double*) *ptr_ker_translate->x, ptr_ker_translate->incx, (double*) *ptr_ker_translate->y, ptr_ker_translate->incy),
-  		     "backend_run_operation: cublasDaxpy failed\n");
+      if(ptr_ker_translate->dev_id == -1) run_queue->add_host_func((void*)&cblas_wrap_daxpy, backend_data);
+      else if(ptr_ker_translate->dev_id >= 0) cublas_wrap_daxpy(backend_data, &handle[ptr_ker_translate->dev_id]);
       else error("backend_run_operation(axpy,double): Not implemented for dev_id = %d\n", ptr_ker_translate->dev_id);
     }
     else if (std::is_same<VALUE_TYPE, float>::value){
-      if(ptr_ker_translate->dev_id == -1) cblas_saxpy(ptr_ker_translate->N, ptr_ker_translate->alpha,
-          (float*) *ptr_ker_translate->x, ptr_ker_translate->incx, (float*) *ptr_ker_translate->y, ptr_ker_translate->incy);
-      else if(ptr_ker_translate->dev_id >= 0) massert(CUBLAS_STATUS_SUCCESS == cublasSaxpy(handle[ptr_ker_translate->dev_id], ptr_ker_translate->N,
-          (float*) &ptr_ker_translate->alpha, (float*) *ptr_ker_translate->x, ptr_ker_translate->incx, (float*) *ptr_ker_translate->y, ptr_ker_translate->incy),
-  		     "backend_run_operation: cublasSaxpy failed\n");
+      if(ptr_ker_translate->dev_id == -1) run_queue->add_host_func((void*)&cblas_wrap_saxpy, backend_data);
+      else if(ptr_ker_translate->dev_id >= 0) cublas_wrap_saxpy(backend_data, &handle[ptr_ker_translate->dev_id]);
       else error("backend_run_operation(axpy,float): Not implemented for dev_id = %d\n", ptr_ker_translate->dev_id);
     }
     else error("backend_run_operation(axpy): Not implemented for VALUETYPE\n");
   }
-  else error("backend_run_operation: unkown opname=%s\n", opname);
+  else error("backend_run_operation: unkown/not implemented opname=%s\n", opname);
 }
 
 #ifdef MULTIDEVICE_REDUCTION_ENABLE
-
-void CoCoQueueUnlock(void* wrapped_lock){
-#ifdef ENABLE_MUTEX_LOCKING
-	((std::mutex*)wrapped_lock)->unlock();
-#else
-  int* intptr = (int*) wrapped_lock;
-  *intptr = 0;
-#endif
-
-#ifdef DEBUG
-  lprintf(6, "CoCoSetFlag(%p) ran succesfully.\n", wrapped_lock);
-#endif
-}
 
 template<typename VALUETYPE>
 void CoCoAdd2D(VALUETYPE* dest, size_t ldest, VALUETYPE* src, size_t lsrc,
@@ -116,6 +91,7 @@ void CoCoAdd2D(VALUETYPE* dest, size_t ldest, VALUETYPE* src, size_t lsrc,
 #ifdef TEST
 	double cpu_timer = csecond();
 #endif
+
   axpy_backend_in_p backend_axpy_wrapper = (axpy_backend_in_p) malloc(sizeof(struct axpy_backend_in));
   backend_axpy_wrapper->N = rows;
   backend_axpy_wrapper->incx = backend_axpy_wrapper->incy = 1;
@@ -129,9 +105,10 @@ void CoCoAdd2D(VALUETYPE* dest, size_t ldest, VALUETYPE* src, size_t lsrc,
 		VALUETYPE* y = &dest[colidx*ldest];
 		backend_axpy_wrapper->x = (void**) &x;
 		backend_axpy_wrapper->y = (void**) &y;
-		backend_run_operation(backend_axpy_wrapper, "axpy");
+		backend_run_operation(backend_axpy_wrapper, "axpy", add_queue);
+    //add_queue->add_host_func((void*)&CoCoFreeAllocAsync, (void*)backend_axpy_wrapper);
+    add_queue->sync_barrier();
   }
-  //add_queue->sync_barrier();
   free(backend_axpy_wrapper);
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer;
@@ -188,20 +165,34 @@ void* CoCoMemcpyReduce2DWrapped(void* wrapped_data){
 #endif
 
   CoCoMemcpy2DAsync(reduce_buffer, lsrc, src, lsrc, rows, cols, elemSize, loc_dest, loc_src, reduce_queue);
-  reduce_queue->sync_barrier();
+  //reduce_queue->add_host_func((void*)&CoCoQueueLock, (void*)Tile_lock);
+  //reduce_queue->sync_barrier();
 
 #ifdef ENABLE_MUTEX_LOCKING
   ((std::mutex*)Tile_lock)->lock();
 #else
   while(__sync_lock_test_and_set ((int*)Tile_lock, 1));
 #endif
+
 #ifdef TEST
   cpu_timer = csecond() - cpu_timer;
   lprintf(lvl, "CoCoMemcpyReduce2DAsync(buf = %p, loc_dest = %d, loc_src = %d): Blocked waiting for Tile lock: %lf ms\n",
     reduce_buffer, loc_dest, loc_src, cpu_timer*1000);
   cpu_timer = csecond();
 #endif
+
   CoCoAdd2D<VALUE_TYPE>( (VALUE_TYPE*) dest, ldest, (VALUE_TYPE*) reduce_buffer, lsrc, rows, cols, loc_dest, reduce_queue);
+
+/*  reduce_queue->add_host_func((void*)&CoCoQueueUnlock, (void*)Tile_lock);
+#ifdef ENABLE_MUTEX_LOCKING
+  reduce_queue->add_host_func((void*)&CoCoQueueUnlock,
+    (void*)reduce_block_mutex[reduce_buf_it*128 + loc_src]);
+#else
+  reduce_queue->add_host_func((void*)&CoCoQueueUnlock,
+    (void*)reduce_block_lock[reduce_buf_it*128 + loc_src]);
+#endif
+  reduce_queue->sync_barrier();
+*/
 
   #ifdef ENABLE_MUTEX_LOCKING
     ((std::mutex*)Tile_lock)->unlock();
@@ -214,6 +205,7 @@ void* CoCoMemcpyReduce2DWrapped(void* wrapped_data){
   #else
     __sync_lock_release(&reduce_block_lock[reduce_buf_it*128 + loc_src]);
   #endif
+
 
 #ifdef TEST
   cpu_timer = csecond() - cpu_timer;

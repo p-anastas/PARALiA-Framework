@@ -76,11 +76,11 @@ int main(const int argc, const char *argv[]) {
 	cpu_timer  = csecond() - cpu_timer;
 
 	short bench_it = 10;
-	double best_t = cpu_timer;
+	double best_t = 10e9;//cpu_timer;
 	for (size_t T_trial = (((size_t)fmax(N/(32*32),512*512))/(512*512))*(512*512);
 		T_trial <= (size_t) fmin(N/DEV_NUM,DAXPY_MAX_SAFE_TILE); T_trial+=(512*512)){
 			fprintf(stderr,"Running CoCopeLia DAXPY-> N = %zu, T = %zu\n", N, T_trial);
-			predef_control_values-> T = T_trial;
+			predef_control_values->T = T_trial;
 			cpu_timer  = csecond();
 			for(int it = 0; it < bench_it; it++){
 				return_values = CoCopeLiaDaxpyControled(N, alpha, x, incx, y, incy, predef_control_values);

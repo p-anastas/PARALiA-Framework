@@ -222,9 +222,13 @@ CoControl_p CoCopeLiaDaxpy(size_t N, VALUE_TYPE alpha, VALUE_TYPE* x, size_t inc
 		}
 		else if (predef_vals_daxpy.dev_num == 0) error("CoCopeLiaDaxpy: CPU-only version not implemented\n");
 		else{
+#ifdef ENABLE_CPU_WORKLOAD
 			num_devices = LOC_NUM;
+#else
+			num_devices = DEV_NUM;
+#endif
 			dev_id = (short*) malloc (num_devices*sizeof(short));
-			for (int i = 0; i < num_devices; i++) dev_id[i] = (i != num_devices - 1)? i : -1;
+			for (int i = 0; i < num_devices; i++) dev_id[i] = (i != LOC_NUM - 1)? i : -1;
 		}
 
 		if(used_vals_daxpy == NULL) {

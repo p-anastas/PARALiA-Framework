@@ -35,12 +35,9 @@ void backend_init(short dev_id, CQueue_p h2d_q, CQueue_p d2h_q, CQueue_p exec_q)
 void backend_free(short dev_id);
 
 /// Select and run a wrapped operation (e.g. gemm, axpy) depending on opname
-void backend_run_operation(void* backend_data, const char* opname);
+void backend_run_operation(void* backend_data, const char* opname, CQueue_p run_queue);
 
 #ifdef MULTIDEVICE_REDUCTION_ENABLE
-
-// Unlock wrapped_lock. This functions is fired in a queue to unlock when it reaches that point.
-void CoCoQueueUnlock(void* wrapped_lock);
 
 // Asunchronous 2D Memcpy in internal buffer AND reduce to dest between two locations WITHOUT synchronous errorchecking. Use with caution.
 void CoCoMemcpyReduce2DAsync(void* reduce_buffer, short reduce_buf_it, void* dest, size_t ldest, void* src, size_t lsrc, size_t rows, size_t cols,
@@ -70,5 +67,22 @@ char PrintCublasOp(cublasOperation_t src);
 
 /// Internally used utils TODO: Is this the correct way softeng wise?
 void cudaCheckErrors();
+
+// Lock wrapped_lock. This functions is fired in a queue to lock when it reaches that point.
+void CoCoQueueLock(void* wrapped_lock);
+// Unlock wrapped_lock. This functions is fired in a queue to unlock when it reaches that point.
+void CoCoQueueUnlock(void* wrapped_lock);
+
+void CoCoFreeAllocAsync(void* backend_data);
+
+void cublas_wrap_daxpy(void* backend_data, void* libhandle_p);
+void cublas_wrap_saxpy(void* backend_data, void* libhandle_p);
+void cublas_wrap_dgemm(void* backend_data, void* libhandle_p);
+void cublas_wrap_sgemm(void* backend_data, void* libhandle_p);
+
+void cblas_wrap_daxpy(void* backend_data);
+void cblas_wrap_saxpy(void* backend_data);
+void cblas_wrap_dgemm(void* backend_data);
+void cblas_wrap_sgemm(void* backend_data);
 
 #endif

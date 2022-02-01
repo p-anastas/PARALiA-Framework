@@ -37,6 +37,7 @@ ${BACKEND_UNIHELP_DIR_SRC}/backend_util_wrappers.cu
 ${BACKEND_UNIHELP_DIR_SRC}/backend_data_wrappers.cu
 ${BACKEND_UNIHELP_DIR_SRC}/backend_class_wrappers.cu
 ${BACKEND_UNIHELP_DIR_SRC}/backend_lib_wrappers.cu
+${BACKEND_UNIHELP_DIR_SRC}/backend_routine_wrappers.cu
 )
 target_link_libraries(unihelpers ${INTERNAL_LINK_LIB} ${OPENBLAS_LINK})
 configure_file(${UNIHELP_DIR_INC}/unihelpers.hpp ${UNIHELP_INSTALL_INC}/unihelpers.hpp COPYONLY)

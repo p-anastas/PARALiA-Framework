@@ -267,7 +267,7 @@ void Subkernel::run_operation(){
 				else if(tmp->R_flag) exec_queue[run_dev_id_idx]->wait_for_event(tmp->available[run_dev_id_idx]);
 		}
 	}
-	backend_run_operation(operation_params, op_name);
+	backend_run_operation(operation_params, op_name, exec_queue[run_dev_id_idx]);
 	operation_complete->record_to_queue(exec_queue[run_dev_id_idx]);
 	//if (prev!= NULL) prev->operation_complete->sync_barrier();
 #ifndef ASYNC_ENABLE

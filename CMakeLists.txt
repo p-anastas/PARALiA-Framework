@@ -25,10 +25,13 @@ add_definitions(-DUNIHELPER_LOCKFREE_ENABLE)
 ## Enable Spiting Internal dims and using reduction between multiple devices.
 add_definitions(-DMULTIDEVICE_REDUCTION_ENABLE)
 ## The buffering level used for reduction per-device (e.g. double, triple etc)
-add_definitions(-DMAX_BUFFERING_L=2)
+add_definitions(-DMAX_BUFFERING_L=4)
 
 ## Enable Locking with mutexes instead of busy-waiting
 #add_definitions(-DENABLE_MUTEX_LOCKING)
+
+## Enable using the CPU as an extra device for part of the total workload, if applicable
+add_definitions(-DENABLE_CPU_WORKLOAD)
 
 ## Define which subkernel distribution to use
 add_definitions(-DDISTRIBUTION="ROUND-ROBIN")
