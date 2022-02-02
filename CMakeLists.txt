@@ -38,16 +38,19 @@ add_definitions(-DDISTRIBUTION="ROUND-ROBIN")
 #add_definitions(-DDISTRIBUTION="SPLITD1-NAIVE")
 
 #Run in testing mode : details about models, decisions and time spend in operations.
-#add_definitions(-DTEST)
+add_definitions(-DTEST)
 
 #Run in debug mode, which includes detailed function calls and info for error-checking
-#add_definitions(-DDEBUG)
+add_definitions(-DDEBUG)
 
 #Run in deep debug mode, for command-to-command debugging
-#add_definitions(-DDDEBUG)
+add_definitions(-DDDEBUG)
 
 #Run in caching debug mode, for cache-related deep debugging
 #add_definitions(-DCDEBUG)
+
+#Run Prediction debug mode (autotuning runtime stuff)
+#add_definitions(-DPDEBUG)
 
 project (CoCopeLia-Framework VERSION ${PROJECT_VERSION} DESCRIPTION "The complete CoCoPeLia Framework")
 
