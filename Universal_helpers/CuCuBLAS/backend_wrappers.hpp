@@ -41,11 +41,11 @@ void backend_run_operation(void* backend_data, const char* opname, CQueue_p run_
 
 // Asunchronous 2D Memcpy in internal buffer AND reduce to dest between two locations WITHOUT synchronous errorchecking. Use with caution.
 void CoCoMemcpyReduce2DAsync(void* reduce_buffer, short reduce_buf_it, void* dest, size_t ldest, void* src, size_t lsrc, size_t rows, size_t cols,
-	short elemSize, short loc_dest, short loc_src, void* Tile_lock, CQueue_p reduce_queue);
+	short elemSize, short loc_dest, short loc_src, void* Tile_lock, CQueue_p src_reduce_queue, CQueue_p dest_reduce_queue);
 
 // Asunchronous Memcpy in internal buffer AND reduce to dest between two locations WITHOUT synchronous errorchecking. Use with caution.
 void CoCoMemcpyReduceAsync(void* reduce_buffer, short reduce_buf_it, void* dest, void* src, long long bytes,
-	short loc_dest, short loc_src, void* Tile_lock, CQueue_p reduce_queue);
+	short loc_dest, short loc_src, void* Tile_lock, CQueue_p src_reduce_queue, CQueue_p dest_reduce_queue);
 
 // Blocks until all reduce threads are complete and free temp structs.
 void CoCoReduceSyncThreads();
@@ -75,10 +75,10 @@ void CoCoQueueUnlock(void* wrapped_lock);
 
 void CoCoFreeAllocAsync(void* backend_data);
 
-void cublas_wrap_daxpy(void* backend_data, void* libhandle_p);
-void cublas_wrap_saxpy(void* backend_data, void* libhandle_p);
-void cublas_wrap_dgemm(void* backend_data, void* libhandle_p);
-void cublas_wrap_sgemm(void* backend_data, void* libhandle_p);
+void cublas_wrap_daxpy(void* backend_data, void* queue_wrap_p);
+void cublas_wrap_saxpy(void* backend_data, void* queue_wrap_p);
+void cublas_wrap_dgemm(void* backend_data, void* queue_wrap_p);
+void cublas_wrap_sgemm(void* backend_data, void* queue_wrap_p);
 
 void cblas_wrap_daxpy(void* backend_data);
 void cblas_wrap_saxpy(void* backend_data);

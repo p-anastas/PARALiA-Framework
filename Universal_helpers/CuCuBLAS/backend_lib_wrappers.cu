@@ -11,7 +11,6 @@
 
 #include "backend_wrappers.hpp"
 
-cublasHandle_t handle[128] = {NULL};
 #define THREAD_POOL_SZ 128
 pthread_t thread_pool[THREAD_POOL_SZ];
 pthread_attr_t thread_pool_attr[THREAD_POOL_SZ];
@@ -31,19 +30,14 @@ void backend_init(short dev_id, CQueue_p h2d_q, CQueue_p d2h_q, CQueue_p exec_q)
   cudaError_t err = cudaGetDevice(&dev_idc);
   if(dev_idc != dev_id && dev_id != -1)
     warning("backend_init: called on different device - actual(%d) vs called(%d)\n", dev_idc, dev_id);
-  if (dev_id != -1){
-    massert(CUBLAS_STATUS_SUCCESS == cublasCreate(&(handle[dev_id])), "cublasCreate failed\n");
-    massert(CUBLAS_STATUS_SUCCESS == cublasSetStream(handle[dev_id],
-    *(cudaStream_t*) (exec_q->cqueue_backend_ptr)), "cublasSetStream failed\n");
-  }
-  else{
-    ; // If cublas required some initialization, it would be here
-  }
   return;
 }
 
 void backend_free(short dev_id){
-  if (dev_id != -1) massert(CUBLAS_STATUS_SUCCESS == cublasDestroy(handle[dev_id]), "cublasDestroy failed\n");
+  if (dev_id != -1){
+    cudaSetDevice(dev_id);
+    cudaDeviceSynchronize();
+  }
   return;
 }
 
@@ -54,12 +48,12 @@ void backend_run_operation(void* backend_data, const char* opname, CQueue_p run_
     gemm_backend_in_p ptr_ker_translate = (gemm_backend_in_p) backend_data;
     if (std::is_same<VALUE_TYPE, double>::value){
       if(ptr_ker_translate->dev_id == -1) run_queue->add_host_func((void*)&cblas_wrap_dgemm, backend_data);
-      else if(ptr_ker_translate->dev_id >= 0) cublas_wrap_dgemm(backend_data, &handle[ptr_ker_translate->dev_id]);
+      else if(ptr_ker_translate->dev_id >= 0) cublas_wrap_dgemm(backend_data, run_queue);
       else error("backend_run_operation(gemm,double): Not implemented for dev_id = %d\n", ptr_ker_translate->dev_id);
     }
     else if (std::is_same<VALUE_TYPE, float>::value){
       if(ptr_ker_translate->dev_id == -1) run_queue->add_host_func((void*)&cblas_wrap_sgemm, backend_data);
-      else if(ptr_ker_translate->dev_id >= 0) cublas_wrap_sgemm(backend_data, &handle[ptr_ker_translate->dev_id]);
+      else if(ptr_ker_translate->dev_id >= 0) cublas_wrap_sgemm(backend_data, run_queue);
       else error("backend_run_operation(gemm,float): Not implemented for dev_id = %d\n", ptr_ker_translate->dev_id);
     }
     else error("backend_run_operation(gemm): Not implemented for VALUETYPE\n");
@@ -68,12 +62,12 @@ void backend_run_operation(void* backend_data, const char* opname, CQueue_p run_
     axpy_backend_in_p ptr_ker_translate = (axpy_backend_in_p) backend_data;
     if (std::is_same<VALUE_TYPE, double>::value){
       if(ptr_ker_translate->dev_id == -1) run_queue->add_host_func((void*)&cblas_wrap_daxpy, backend_data);
-      else if(ptr_ker_translate->dev_id >= 0) cublas_wrap_daxpy(backend_data, &handle[ptr_ker_translate->dev_id]);
+      else if(ptr_ker_translate->dev_id >= 0) cublas_wrap_daxpy(backend_data, run_queue);
       else error("backend_run_operation(axpy,double): Not implemented for dev_id = %d\n", ptr_ker_translate->dev_id);
     }
     else if (std::is_same<VALUE_TYPE, float>::value){
       if(ptr_ker_translate->dev_id == -1) run_queue->add_host_func((void*)&cblas_wrap_saxpy, backend_data);
-      else if(ptr_ker_translate->dev_id >= 0) cublas_wrap_saxpy(backend_data, &handle[ptr_ker_translate->dev_id]);
+      else if(ptr_ker_translate->dev_id >= 0) cublas_wrap_saxpy(backend_data, run_queue);
       else error("backend_run_operation(axpy,float): Not implemented for dev_id = %d\n", ptr_ker_translate->dev_id);
     }
     else error("backend_run_operation(axpy): Not implemented for VALUETYPE\n");
@@ -130,7 +124,7 @@ typedef struct CoCoMemcpyReduce2D_pthread_wrap{
   size_t lsrc, rows, cols;
   short elemSize, loc_dest, loc_src, reduce_buf_it;
   void* Tile_lock;
-  CQueue_p reduce_queue;
+  CQueue_p src_reduce_queue, dest_reduce_queue;
 }* CoCoMemcpyReduce2D_pthread_wrap_p;
 
 void* CoCoMemcpyReduce2DWrapped(void* wrapped_data){
@@ -143,12 +137,13 @@ void* CoCoMemcpyReduce2DWrapped(void* wrapped_data){
   size_t lsrc = unwrap->lsrc, rows = unwrap->rows, cols = unwrap->cols;
   short elemSize = unwrap->elemSize, loc_dest = unwrap->loc_dest, loc_src = unwrap->loc_src;
   void* Tile_lock = unwrap->Tile_lock;
-  CQueue_p reduce_queue = unwrap->reduce_queue;
+  CQueue_p src_reduce_queue = unwrap->src_reduce_queue,
+    dest_reduce_queue = unwrap->dest_reduce_queue;
   short lvl = 5;
 #ifdef DEBUG
   lprintf(lvl, "CoCoMemcpyReduce2DAsync(buf = %p, dest=%p, ldest =%zu, src=%p, lsrc = %zu, rows = %zu, cols = %zu, elemsize = %d, loc_dest = %d, loc_src = %d)\n",
     reduce_buffer, dest, ldest, src, lsrc, rows, cols, elemSize, loc_dest, loc_src);
-  lprintf(lvl, "Blocking until CoCoSetFlag(%p)\n", Tile_lock);
+  lprintf(lvl, "Blocking until reduce_block_lock[%d]\n", reduce_buf_it*128 +loc_src);
 #endif
 #ifdef TEST
   double cpu_timer = csecond();
@@ -163,13 +158,17 @@ void* CoCoMemcpyReduce2DWrapped(void* wrapped_data){
 #ifdef TEST
   cpu_timer = csecond() - cpu_timer;
   lprintf(lvl, "CoCoMemcpyReduce2DAsync(buf = %p, loc_dest = %d, loc_src = %d): Blocked waiting for reduce_block_lock[%d] lock: %lf ms\n",
-    reduce_buffer, loc_dest, loc_src, loc_src, cpu_timer*1000);
+    reduce_buffer, loc_dest, loc_src, reduce_buf_it*128 +loc_src, cpu_timer*1000);
   cpu_timer = csecond();
 #endif
 
-  CoCoMemcpy2DAsync(reduce_buffer, lsrc, src, lsrc, rows, cols, elemSize, loc_dest, loc_src, reduce_queue);
+  CoCoMemcpy2DAsync(reduce_buffer, lsrc, src, lsrc, rows, cols, elemSize, loc_dest, loc_src, src_reduce_queue);
   //reduce_queue->add_host_func((void*)&CoCoQueueLock, (void*)Tile_lock);
-  //reduce_queue->sync_barrier();
+  src_reduce_queue->sync_barrier();
+
+#ifdef DEBUG
+  lprintf(lvl, "CoCoMemcpyReduce2DAsync(dest=%d, src=%d): Blocking until Tile_lock(%p)\n", loc_dest, loc_src, Tile_lock);
+#endif
 
 #ifdef ENABLE_MUTEX_LOCKING
   ((std::mutex*)Tile_lock)->lock();
@@ -184,7 +183,7 @@ void* CoCoMemcpyReduce2DWrapped(void* wrapped_data){
   cpu_timer = csecond();
 #endif
 
-  CoCoAdd2D<VALUE_TYPE>( (VALUE_TYPE*) dest, ldest, (VALUE_TYPE*) reduce_buffer, lsrc, rows, cols, loc_dest, reduce_queue);
+  CoCoAdd2D<VALUE_TYPE>( (VALUE_TYPE*) dest, ldest, (VALUE_TYPE*) reduce_buffer, lsrc, rows, cols, loc_dest, dest_reduce_queue);
 
 /*  reduce_queue->add_host_func((void*)&CoCoQueueUnlock, (void*)Tile_lock);
 #ifdef ENABLE_MUTEX_LOCKING
@@ -219,7 +218,7 @@ void* CoCoMemcpyReduce2DWrapped(void* wrapped_data){
 
 // Asunchronous Memcpy in internal buffer AND reduce to dest between two locations WITHOUT synchronous errorchecking. Use with caution.
 void CoCoMemcpyReduce2DAsync(void* reduce_buffer, short reduce_buf_it, void* dest, size_t ldest, void* src, size_t lsrc,
-	size_t rows, size_t cols, short elemSize, short loc_dest, short loc_src, void* Tile_lock, CQueue_p reduce_queue){
+	size_t rows, size_t cols, short elemSize, short loc_dest, short loc_src, void* Tile_lock, CQueue_p src_reduce_queue, CQueue_p dest_reduce_queue){
     int s;
     void* res;
     while(__sync_lock_test_and_set (&thread_lock, 1));
@@ -251,12 +250,13 @@ void CoCoMemcpyReduce2DAsync(void* reduce_buffer, short reduce_buf_it, void* des
     thread_dev_data->loc_dest = loc_dest;
     thread_dev_data->loc_src = loc_src;
     thread_dev_data->Tile_lock = Tile_lock;
-    thread_dev_data->reduce_queue = reduce_queue;
+    thread_dev_data->src_reduce_queue = src_reduce_queue;
+    thread_dev_data->dest_reduce_queue = dest_reduce_queue;
   	s = pthread_create(&thread_pool[local_ctr], &thread_pool_attr[local_ctr], &CoCoMemcpyReduce2DWrapped, thread_dev_data);
 }
 
 void CoCoMemcpyReduceAsync(void* reduce_buffer, short reduce_buf_it, void* dest, void* src, long long bytes,
-	short loc_dest, short loc_src, void* Tile_lock, CQueue_p reduce_queue){
+	short loc_dest, short loc_src, void* Tile_lock, CQueue_p src_reduce_queue, CQueue_p dest_reduce_queue){
    error("CoCoMemcpyReduceAsync: Not implemented (should it?)\n");
  }
 

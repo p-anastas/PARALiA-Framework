@@ -81,16 +81,16 @@ void cblas_wrap_sgemm(void* backend_data){
 error("cblas_wrap_sgemm: never let empty unimplimented wrapped functions, moron\n");
 }
 
-void cublas_wrap_daxpy(void* backend_data, void* libhandle_p){
+void cublas_wrap_daxpy(void* backend_data, void* queue_wrap_p){
   axpy_backend_in_p ptr_ker_translate = (axpy_backend_in_p) backend_data;
   CoCoPeLiaSelectDevice(ptr_ker_translate->dev_id);
-  massert(CUBLAS_STATUS_SUCCESS == cublasDaxpy(*((cublasHandle_t*)libhandle_p),
+  massert(CUBLAS_STATUS_SUCCESS == cublasDaxpy(*((cublasHandle_t*)((CQueue_p)queue_wrap_p)->cqueue_backend_data),
     ptr_ker_translate->N, (double*) &ptr_ker_translate->alpha, (double*) *ptr_ker_translate->x,
     ptr_ker_translate->incx, (double*) *ptr_ker_translate->y, ptr_ker_translate->incy),
-    "backend_run_operation: cublasDaxpy failed\n");
+    "cublas_wrap_daxpy failed\n");
 }
 
-void cublas_wrap_dgemm(void* backend_data, void* libhandle_p){
+void cublas_wrap_dgemm(void* backend_data, void* queue_wrap_p){
   short lvl = 6;
   gemm_backend_in_p ptr_ker_translate = (gemm_backend_in_p) backend_data;
 #ifdef DDEBUG
@@ -109,11 +109,11 @@ void cublas_wrap_dgemm(void* backend_data, void* libhandle_p){
     (VALUE_TYPE*) *ptr_ker_translate->B, ptr_ker_translate->ldB,
     ptr_ker_translate->beta, (VALUE_TYPE*) *ptr_ker_translate->C, ptr_ker_translate->ldC);
 #endif
-  massert(CUBLAS_STATUS_SUCCESS == cublasDgemm(*((cublasHandle_t*)libhandle_p),
+  massert(CUBLAS_STATUS_SUCCESS == cublasDgemm(*((cublasHandle_t*)((CQueue_p)queue_wrap_p)->cqueue_backend_data),
     OpCharToCublas(ptr_ker_translate->TransA), OpCharToCublas(ptr_ker_translate->TransB),
     ptr_ker_translate->M, ptr_ker_translate->N, ptr_ker_translate->K, &ptr_ker_translate->alpha,
     (VALUE_TYPE*) *ptr_ker_translate->A, ptr_ker_translate->ldA,
     (VALUE_TYPE*) *ptr_ker_translate->B, ptr_ker_translate->ldB,
     &ptr_ker_translate->beta, (VALUE_TYPE*) *ptr_ker_translate->C, ptr_ker_translate->ldC),
-    "backend_run_operation: cublasDgemm failed\n");
+    "cublas_wrap_dgemm: cublasDgemm failed\n");
 }

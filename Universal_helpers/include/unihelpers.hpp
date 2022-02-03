@@ -26,8 +26,12 @@ typedef class CommandQueue
 	private:
 	public:
 		void* cqueue_backend_ptr;
-
+		void* cqueue_backend_data;
+		//Constructor
 		CommandQueue();
+
+		//Destructor
+		~CommandQueue();
 		void sync_barrier();
 		void add_host_func(void* func, void* data);
 		void wait_for_event(Event_p Wevent);

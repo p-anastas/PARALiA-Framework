@@ -32,6 +32,7 @@ Subkernel::Subkernel(short TileNum_in, const char* name){
 }
 
 Subkernel::~Subkernel(){
+	short run_dev_id_idx = (run_dev_id == -1)?  LOC_NUM - 1 : run_dev_id;
 	Subkernel_num--;
 	free(TileDimlist);
 	free(TileList);
@@ -71,9 +72,6 @@ void Subkernel::update_RunTileMaps(){
 			Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) TileList[j];
 			if(!tmp->RunTileMap[run_dev_id_idx]) {
 				tmp->RunTileMap[run_dev_id_idx] = 1;
-#ifdef DDEBUG
-				lprintf(lvl-1, "|-----> Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d]:: RunTileMap(%d) = 1\n", run_dev_id, id, tmp->id,  tmp->GridId1, tmp->GridId2, run_dev_id);
-#endif
 			}
 		}
 	}
@@ -174,16 +172,16 @@ void Subkernel::request_data(){
 				if(WR_reduce){
 					while(__sync_lock_test_and_set(&WR_check_lock, 1)); // highly unlikely to happen?
 					if(tmp->RW_master == -42){ // First entry, decide on WR_reducer.
-#ifdef ENABLE_CPU_WORKLOAD
+//#ifdef ENABLE_CPU_WORKLOAD
 						for(int idx = 0; idx < LOC_NUM; idx++)
 							if(tmp->CacheLocId[idx] == -1 && tmp->RunTileMap[idx] == 1) tmp->RW_master = (idx == LOC_NUM - 1)?  -1 : idx;
 						if(tmp->RW_master == -42) tmp->RW_master = run_dev_id;
-#else
-						//Hack that will not work if CPU (-1) also executes split-K subkernels
-						if(tmp->CacheLocId[LOC_NUM-1] == -1) tmp->RW_master = run_dev_id;
-						else for(int idx = 0; idx < LOC_NUM -1; idx++)
-							if(tmp->CacheLocId[idx] == -1) tmp->RW_master = idx;
-#endif
+//#else
+//						//Hack that will not work if CPU (-1) also executes split-K subkernels
+//						if(tmp->CacheLocId[LOC_NUM-1] == -1) tmp->RW_master = run_dev_id;
+//						else for(int idx = 0; idx < LOC_NUM -1; idx++)
+//							if(tmp->CacheLocId[idx] == -1) tmp->RW_master = idx;
+//#endif
 						if(tmp->RW_master == -42)
 							error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d]): request_data failed to assign RW master\n",
 								run_dev_id, id, tmp->id, tmp->GridId);
@@ -224,17 +222,17 @@ void Subkernel::request_data(){
 					if(WR_reduce){
 						while(__sync_lock_test_and_set(&WR_check_lock, 1)); // highly unlikely to happen?
 						if(tmp->RW_master == -42){ // First entry, decide on WR_reducer.
-#ifdef ENABLE_CPU_WORKLOAD
+//#ifdef ENABLE_CPU_WORKLOAD
 							for(int idx = 0; idx < LOC_NUM; idx++)
 								if(tmp->CacheLocId[idx] == -1 && tmp->RunTileMap[idx] == 1)
 									tmp->RW_master = (idx == LOC_NUM - 1)?  -1 : idx;
 							if(tmp->RW_master == -42) tmp->RW_master = run_dev_id;
-#else
-							//Hack that will not work if CPU (-1) also executes split-K subkernels
-							if(tmp->CacheLocId[LOC_NUM-1] == -1) tmp->RW_master = run_dev_id;
-							else for(int idx = 0; idx < LOC_NUM -1; idx++)
-								if(tmp->CacheLocId[idx] == -1) tmp->RW_master = idx;
-#endif
+//#else
+////Hack that will not work if CPU (-1) also executes split-K subkernels
+//if(tmp->CacheLocId[LOC_NUM-1] == -1) tmp->RW_master = run_dev_id;
+//							else for(int idx = 0; idx < LOC_NUM -1; idx++)
+//								if(tmp->CacheLocId[idx] == -1) tmp->RW_master = idx;
+//#endif
 							if(tmp->RW_master == -42)
 								error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d]): request_data failed to assign RW master\n",
 									run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2);
@@ -387,7 +385,7 @@ void Subkernel::writeback_data(){
 							CoCoMemcpyReduceAsync(reduce_buf[local_reduce_buf_it*128 + run_dev_id], local_reduce_buf_it,
 								tmp->adrs[WritebackIdCAdr], tmp->adrs[run_dev_id_idx],
 								((long long) tmp->inc[run_dev_id_idx]) * tmp->dim * tmp->dtypesize(),
-								WritebackId, run_dev_id, (void*)&tmp->RW_lock, d2h_queue[run_dev_id_idx]);
+								WritebackId, run_dev_id, (void*)&tmp->RW_lock, d2h_queue[run_dev_id_idx], exec_queue[WritebackIdCAdr]);
 							}
 						//CoCacheAddPendingEvent(run_dev_id, operation_complete, tmp->available[WritebackIdCAdr], tmp->CacheLocId[run_dev_id_idx], W);
 					}
@@ -459,7 +457,7 @@ void Subkernel::writeback_data(){
 							CoCoMemcpyReduce2DAsync(reduce_buf[local_reduce_buf_it*128 + run_dev_id], local_reduce_buf_it, tmp->adrs[WritebackIdCAdr], tmp->ldim[WritebackIdCAdr],
 								tmp->adrs[run_dev_id_idx], tmp->ldim[run_dev_id_idx],
 								tmp->dim1, tmp->dim2, tmp->dtypesize(),
-								WritebackId, run_dev_id, (void*)&tmp->RW_lock, d2h_queue[run_dev_id_idx]);
+								WritebackId, run_dev_id, (void*)&tmp->RW_lock, d2h_queue[run_dev_id_idx], exec_queue[WritebackIdCAdr]);
 							}
 						//CoCacheAddPendingEvent(run_dev_id, operation_complete, tmp->available[WritebackIdCAdr], tmp->CacheLocId[run_dev_id_idx], W);
 					}
@@ -503,10 +501,6 @@ void 	CoCoPeLiaInitResources(short dev_id){
   if (!h2d_queue[dev_id_idx]) h2d_queue[dev_id_idx] = new CommandQueue();
   if (!d2h_queue[dev_id_idx])  d2h_queue[dev_id_idx] = new CommandQueue();
   if (!exec_queue[dev_id_idx])  exec_queue[dev_id_idx] = new CommandQueue();
-  if (!backend_init_flag[dev_id_idx]){
-		backend_init_flag[dev_id_idx] = 1;
-		backend_init(dev_id, h2d_queue[dev_id_idx], d2h_queue[dev_id_idx], exec_queue[dev_id_idx]);
-	}
 }
 
 void 	CoCoPeLiaFreeResources(short dev_id){
@@ -522,9 +516,5 @@ void 	CoCoPeLiaFreeResources(short dev_id){
   if (exec_queue[dev_id_idx]){
 		delete exec_queue[dev_id_idx];
 		exec_queue[dev_id_idx] = NULL;
-	}
-  if (backend_init_flag[dev_id_idx]){
-		backend_init_flag[dev_id_idx] = 0;
-		backend_free(dev_id);
 	}
 }

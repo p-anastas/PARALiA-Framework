@@ -41,7 +41,7 @@ add_definitions(-DDISTRIBUTION="ROUND-ROBIN")
 #add_definitions(-DTEST)
 
 #Run in debug mode, which includes detailed function calls and info for error-checking
-add_definitions(-DDEBUG)
+#add_definitions(-DDEBUG)
 
 #Run in deep debug mode, for command-to-command debugging
 #add_definitions(-DDDEBUG)
@@ -61,7 +61,7 @@ message("CoCopeLia-Framework - TESTBED_NAME: " ${TESTBED_NAME})
 add_definitions(-DTESTBED="${TESTBED_NAME}")
 
 ## Define the (max) number of devices for utilization (0-num_devices)
-set(NUM_DEVICES 2)
+set(NUM_DEVICES 3)
 message("CoCopeLia-Framework - NUM_DEVICES: " ${NUM_DEVICES})
 add_definitions(-DDEV_NUM=${NUM_DEVICES})
 

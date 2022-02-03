@@ -56,6 +56,27 @@ CommandQueue::CommandQueue()
 	cqueue_backend_ptr = malloc(sizeof(cudaStream_t));
 	cudaError_t err = cudaStreamCreate((cudaStream_t*) cqueue_backend_ptr);
 	massert(cudaSuccess == err, "CommandQueue::CommandQueue - %s\n", cudaGetErrorString(err));
+	cudaStream_t stream = *((cudaStream_t*) cqueue_backend_ptr);
+
+	cqueue_backend_data = malloc(sizeof(cublasHandle_t));
+	massert(CUBLAS_STATUS_SUCCESS == cublasCreate((cublasHandle_t*) cqueue_backend_data),
+		"CommandQueue::CommandQueue: cublasCreate failed\n");
+	massert(CUBLAS_STATUS_SUCCESS == cublasSetStream(*((cublasHandle_t*) cqueue_backend_data), stream),
+		"cublasSetStream failed\n");
+}
+
+CommandQueue::~CommandQueue()
+{
+	cudaStream_t stream = *((cudaStream_t*) cqueue_backend_ptr);
+	cudaError_t err = cudaStreamSynchronize(stream);
+	massert(cudaSuccess == err, "CommandQueue::CommandQueue - cudaStreamSynchronize: %s\n", cudaGetErrorString(err));
+	err = cudaStreamDestroy(stream);
+	massert(cudaSuccess == err, "CommandQueue::CommandQueue - cudaStreamDestroy: %s\n", cudaGetErrorString(err));
+	free(cqueue_backend_ptr);
+	cublasHandle_t handle = *((cublasHandle_t*) cqueue_backend_data);
+	massert(CUBLAS_STATUS_SUCCESS == cublasDestroy(handle),
+		"CommandQueue::CommandQueue - cublasDestroy(handle) failed\n");
+	return;
 }
 
 void CommandQueue::sync_barrier()
@@ -101,6 +122,7 @@ Event::Event()
 
 Event::~Event()
 {
+	sync_barrier();
 	get_lock();
 	int dev_id;  cudaGetDevice(&dev_id);
 	Event_num_device[dev_id]--;

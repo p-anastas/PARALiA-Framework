@@ -47,7 +47,7 @@ void CoCoASyncCheckErr(){
 }
 
 void cudaCheckErrors(){
-	CoCoASyncCheckErr();
+	//CoCoASyncCheckErr();
 	CoCoSyncCheckErr();
 }
 
@@ -80,7 +80,7 @@ void CoCoPeLiaDevGetMemInfo(long long* free_dev_mem, long long* max_dev_mem){
   size_t free_dev_mem_tmp, max_dev_mem_tmp;
     int tmp_dev_id;
     cudaError_t err = cudaGetDevice(&tmp_dev_id);
-    // TODO: For the CPU this function returns device 0 memory availability. Its a feature not a bug. 
+    // TODO: For the CPU this function returns device 0 memory availability. Its a feature not a bug.
     massert(cudaSuccess == err,
       "CoCoPeLiaDevGetMemInfo: cudaGetDevice failed - %s\n", cudaGetErrorString(err));
     err = cudaMemGetInfo(&free_dev_mem_tmp, &max_dev_mem_tmp);

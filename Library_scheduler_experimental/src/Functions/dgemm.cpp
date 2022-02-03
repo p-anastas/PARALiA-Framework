@@ -588,19 +588,21 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 		cpu_timer*1000);
 	cpu_timer = csecond();
 #endif
-
-	//C_asset->DrawTileMap();
-
 #endif
 
+#ifdef DEBUG
+	C_asset->DrawTileMap();
+#endif
+
+
 #ifndef BUFFER_REUSE_ENABLE
-	for(int i=0; i<used_devices;i++) CoCopeLiaDevCacheFree(i);
+	for(int i=0; i<used_devices;i++) CoCopeLiaDevCacheFree((i == LOC_NUM - 1) ? -1 : i );
 #else
 	for(int i=0; i<used_devices;i++) CoCoPeLiaDevCacheInvalidate(thread_dev_data[i]);
 #endif
 
 #ifndef BACKEND_RES_REUSE_ENABLE
-	for(int i=0; i<used_devices;i++) CoCoPeLiaFreeResources(i);
+	for(int i=0; i<used_devices;i++) CoCoPeLiaFreeResources((i == LOC_NUM - 1) ? -1 : i );
 #endif
 
 #ifdef TEST
