@@ -34,6 +34,7 @@ class Subkernel
 
 		/// Functions
 		void init_events();
+		void update_RunTileMaps();
 		void request_data();
 		void request_tile(short TileIdx);
 		void sync_request_data();

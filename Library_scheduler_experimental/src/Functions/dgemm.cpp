@@ -13,6 +13,7 @@
 #include "DataCaching.hpp"
 
 #include <pthread.h>
+pthread_barrier_t  RunTileMap_sync_barrier;
 
 gemm_backend_in_p initial_gemm = NULL;
 
@@ -145,7 +146,7 @@ void CoCoPeLiaGemmFixKReduction(kernel_pthread_wrap_p gemm_subkernel_data){
 			}
 			if(first_k[mi][ni] == -1) continue;
 			else {
-#ifdef DEBUG
+#ifdef DDEBUG
 					lprintf(lvl, "CoCoPeLiaGemmFixKReduction(%d): First k=%d subkernel(%d) for (mi=%d, ni = %d)\n",
 					dev_id, gemm_subkernel_data->SubkernelListDev[first_k[mi][ni]]->iloc3, gemm_subkernel_data->SubkernelListDev[first_k[mi][ni]]->id,  mi, ni);
 					lprintf(lvl, "CoCoPeLiaGemmFixKReduction(%d): Last k=%d subkernel(%d) for (mi=%d, ni = %d)\n",
@@ -211,13 +212,34 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 #ifdef TEST
 	cpu_timer = csecond();
 #endif
+
+	for (int keri = 0; keri < gemm_subkernel_data->SubkernelNumDev; keri++)
+		gemm_subkernel_data->SubkernelListDev[keri]->update_RunTileMaps();
+
+#ifdef TEST
+	cpu_timer = csecond() - cpu_timer;
+	lprintf(lvl, "Update RunTileMap(%d): t_tm = %lf ms\n", dev_id, cpu_timer*1000);
+	cpu_timer = csecond();
+#endif
+
+	pthread_barrier_wait (&RunTileMap_sync_barrier);
+
+#ifdef TEST
+	cpu_timer = csecond() - cpu_timer;
+	lprintf(lvl, "Wait RunTileMap barrier(%d): t_wb = %lf ms\n", dev_id, cpu_timer*1000);
+	cpu_timer = csecond();
+#endif
+
   CoCoPeLiaRequestBuffer(gemm_subkernel_data, used_vals->cache_limit);
+
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer;
 	lprintf(lvl, "Memory management(%d): t_mem = %lf ms\n", dev_id, cpu_timer*1000);
 	cpu_timer = csecond();
 #endif
+
 	CoCoPeLiaInitResources(dev_id);
+
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer;
 	lprintf(lvl, "Stream/Lib Handle Initialization(%d): t_resource = %lf ms\n", dev_id, cpu_timer*1000);
@@ -380,7 +402,7 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 			/// Naive for multiple equivalent devices.
 			int slowest_problem_T = std::min((size_t) 1024, std::min((size_t) M, (size_t)std::min(N, K)));
 			tunableParams_p pred_p[num_devices];
-			for (int d = 0 ; d < num_devices; d++){
+			for (int d = 0 ; d < num_devices; d++) if (dev_id[d]!= -1){
 				model = CoCoPeLiaModelInit(dev_id[d], "Dgemm", 'X', TransA, TransB,
 					M/num_devices, N, K,
 					(CoCoGetPtrLoc(A) == dev_id[d])? 0 : 1, (CoCoGetPtrLoc(B) == dev_id[d])? 0 : 1,
@@ -405,11 +427,10 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 #endif
 
 			}
-
 			/// Extra: check if running in multiple GPUs seems to have a point performance-wise.
 			/// Currently only comparing single vs multi GPU
 			/// Can be extended to complex (e.g. 1 vs 2 vs 3 etc)
-			if (predef_vals.dev_num < 0 && num_devices > 1) {
+			if (predef_vals.dev_num < 0 && num_devices > 1 && dev_id[0] == 0) {
 				short best_dev_id = 0;
 			 	model = CoCoPeLiaModelInit(0, "Dgemm", 'X', TransA, TransB, M, N, K,
 				 (CoCoGetPtrLoc(A) == 0)? 0 : 1, (CoCoGetPtrLoc(B) == 0)? 0 : 1,
@@ -516,6 +537,9 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 	cpu_timer = csecond();
 #endif
 
+	// create a barrier object with a count of used_devices
+	pthread_barrier_init (&RunTileMap_sync_barrier, NULL, used_devices + 1);
+
 	for(int d=0; d<used_devices;d++){
 
 		// Check/Enable peer access between participating GPUs
@@ -534,6 +558,12 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
                                   &CoCopeLiaDgemmAgentVoid, thread_dev_data[d]);
 
 	}
+	pthread_barrier_wait (&RunTileMap_sync_barrier);
+
+	//A_asset->DrawTileMap();
+	//B_asset->DrawTileMap();
+	//C_asset->DrawTileMap();
+
 	for(int d=0; d<used_devices;d++){
 		s = pthread_join(thread_id[d], &res);
 		if (s != 0) error("CoCopeLiaDgemm: pthread_join failed with exit value %d", s);
@@ -558,6 +588,9 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 		cpu_timer*1000);
 	cpu_timer = csecond();
 #endif
+
+	//C_asset->DrawTileMap();
+
 #endif
 
 #ifndef BUFFER_REUSE_ENABLE

@@ -56,6 +56,29 @@ void Subkernel::init_events(){
 	if (WR_last) writeback_complete = new Event();
 }
 
+void Subkernel::update_RunTileMaps(){
+	short lvl = 4;
+#ifdef DEBUG
+	lprintf(lvl-1, "|-----> Subkernel(dev=%d,id=%d)::update_RunTileMap()\n", run_dev_id, id);
+#endif
+	short run_dev_id_idx = (run_dev_id == -1)?  LOC_NUM - 1 : run_dev_id;
+	for (int j = 0; j < TileNum; j++){
+		if (TileDimlist[j] == 1){
+				Tile1D<VALUE_TYPE>* tmp = (Tile1D<VALUE_TYPE>*) TileList[j];
+				tmp->RunTileMap[run_dev_id_idx] = 1;
+		}
+		else if (TileDimlist[j] == 2){
+			Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) TileList[j];
+			if(!tmp->RunTileMap[run_dev_id_idx]) {
+				tmp->RunTileMap[run_dev_id_idx] = 1;
+#ifdef DDEBUG
+				lprintf(lvl-1, "|-----> Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d]:: RunTileMap(%d) = 1\n", run_dev_id, id, tmp->id,  tmp->GridId1, tmp->GridId2, run_dev_id);
+#endif
+			}
+		}
+	}
+}
+
 void Subkernel::sync_request_data(){
 	short lvl = 4;
 #ifdef DEBUG
@@ -70,8 +93,8 @@ void Subkernel::sync_request_data(){
 		else if (TileDimlist[j] == 2){
 				Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) TileList[j];
 				if (tmp->R_flag && tmp->CacheLocId[run_dev_id_idx] != -1 && (!tmp->W_flag || WR_first == 42 )) tmp->available[run_dev_id_idx]->sync_barrier();
-			}
 		}
+	}
 }
 
 void Subkernel::request_tile(short TileIdx){
@@ -151,10 +174,16 @@ void Subkernel::request_data(){
 				if(WR_reduce){
 					while(__sync_lock_test_and_set(&WR_check_lock, 1)); // highly unlikely to happen?
 					if(tmp->RW_master == -42){ // First entry, decide on WR_reducer.
+#ifdef ENABLE_CPU_WORKLOAD
+						for(int idx = 0; idx < LOC_NUM; idx++)
+							if(tmp->CacheLocId[idx] == -1 && tmp->RunTileMap[idx] == 1) tmp->RW_master = (idx == LOC_NUM - 1)?  -1 : idx;
+						if(tmp->RW_master == -42) tmp->RW_master = run_dev_id;
+#else
 						//Hack that will not work if CPU (-1) also executes split-K subkernels
 						if(tmp->CacheLocId[LOC_NUM-1] == -1) tmp->RW_master = run_dev_id;
 						else for(int idx = 0; idx < LOC_NUM -1; idx++)
 							if(tmp->CacheLocId[idx] == -1) tmp->RW_master = idx;
+#endif
 						if(tmp->RW_master == -42)
 							error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d]): request_data failed to assign RW master\n",
 								run_dev_id, id, tmp->id, tmp->GridId);
@@ -195,10 +224,17 @@ void Subkernel::request_data(){
 					if(WR_reduce){
 						while(__sync_lock_test_and_set(&WR_check_lock, 1)); // highly unlikely to happen?
 						if(tmp->RW_master == -42){ // First entry, decide on WR_reducer.
+#ifdef ENABLE_CPU_WORKLOAD
+							for(int idx = 0; idx < LOC_NUM; idx++)
+								if(tmp->CacheLocId[idx] == -1 && tmp->RunTileMap[idx] == 1)
+									tmp->RW_master = (idx == LOC_NUM - 1)?  -1 : idx;
+							if(tmp->RW_master == -42) tmp->RW_master = run_dev_id;
+#else
 							//Hack that will not work if CPU (-1) also executes split-K subkernels
 							if(tmp->CacheLocId[LOC_NUM-1] == -1) tmp->RW_master = run_dev_id;
 							else for(int idx = 0; idx < LOC_NUM -1; idx++)
 								if(tmp->CacheLocId[idx] == -1) tmp->RW_master = idx;
+#endif
 							if(tmp->RW_master == -42)
 								error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d]): request_data failed to assign RW master\n",
 									run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2);

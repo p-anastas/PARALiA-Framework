@@ -47,6 +47,8 @@ message( "Library Scheduler exp - Included DIR: " ${CACHING_INSTALL_INC} )
 add_library(cocopelia SHARED
 ${LIBSC_DIR_SRC}/Asset1D.cpp
 ${LIBSC_DIR_SRC}/Asset2D.cpp
+${LIBSC_DIR_SRC}/Tile1D.cpp
+${LIBSC_DIR_SRC}/Tile2D.cpp
 ${LIBSC_DIR_SRC}/Subkernel.cpp
 ${LIBSC_DIR_SRC}/Functions/dgemm.cpp
 ${LIBSC_DIR_SRC}/Functions/daxpy.cpp

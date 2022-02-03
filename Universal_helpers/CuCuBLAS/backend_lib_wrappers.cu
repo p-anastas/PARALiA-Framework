@@ -29,12 +29,15 @@ int reduce_block_lock[128*MAX_BUFFERING_L] = {0};
 void backend_init(short dev_id, CQueue_p h2d_q, CQueue_p d2h_q, CQueue_p exec_q){
   int dev_idc = -1;
   cudaError_t err = cudaGetDevice(&dev_idc);
-  if(dev_idc != dev_id)
+  if(dev_idc != dev_id && dev_id != -1)
     warning("backend_init: called on different device - actual(%d) vs called(%d)\n", dev_idc, dev_id);
   if (dev_id != -1){
     massert(CUBLAS_STATUS_SUCCESS == cublasCreate(&(handle[dev_id])), "cublasCreate failed\n");
     massert(CUBLAS_STATUS_SUCCESS == cublasSetStream(handle[dev_id],
     *(cudaStream_t*) (exec_q->cqueue_backend_ptr)), "cublasSetStream failed\n");
+  }
+  else{
+    ; // If cublas required some initialization, it would be here
   }
   return;
 }
