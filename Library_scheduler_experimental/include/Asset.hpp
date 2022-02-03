@@ -33,17 +33,20 @@ class Tile1D
 		void *adrs[LOC_NUM];
 		int inc[LOC_NUM];
 		int CacheLocId[LOC_NUM];
+		int RunTileMap[LOC_NUM];
 
 		// Constructor
 		Tile1D<dtype>(void* tile_addr, int T1tmp,
 			int inc, int inGrid1);
+
+		//Destructor
+		~Tile1D();
 
     // General Functions
 		int dtypesize() { return sizeof(dtype); }
 		int size() { return dtypesize()*dim; }
 		short getWriteBackLoc();
 		short getClosestReadLoc(short dev_id_in);
-		void Set_RW_lock(void* wrapped_value);
 
 };
 
@@ -66,10 +69,14 @@ class Tile2D
 		void *adrs[LOC_NUM];
 		int ldim[LOC_NUM];
 		int CacheLocId[LOC_NUM];
+		int RunTileMap[LOC_NUM];
 
 		// Constructor
 		Tile2D<dtype>(void* tile_addr, int T1tmp, int T2tmp,
 			int ldim, int inGrid1, int inGrid2);
+
+		//Destructor
+		~Tile2D();
 
     // General Functions
 		int dtypesize() { return sizeof(dtype); }
@@ -106,6 +113,7 @@ class Asset2D
 	Tile2D<dtype>* getTile(int iloc1, int iloc2);
 	int dtypesize() { return sizeof(dtype); }
 	int size() { return dtypesize()*dim1*dim2; }
+	void DrawTileMap();
 
 	// Backend Functions
 	void* prepareAsync(pthread_t* thread_id,
@@ -137,6 +145,7 @@ class Asset1D
 	Tile1D<dtype>* getTile(int iloc);
 	int dtypesize() { return sizeof(dtype); }
 	int size() { return dtypesize()*dim; }
+	void drawTileMap();
 
 	// Backend Functions
 	void* prepareAsync(pthread_t* thread_id,
