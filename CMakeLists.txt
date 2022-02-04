@@ -87,6 +87,8 @@ message("CoCopeLia-Framework - CMAKE_CXX_FLAGS: " ${CMAKE_CXX_FLAGS})
 ## 2) CUCUBLAS TODO: Other backends?
 set (CUDA_PREFIX "/usr/local/cuda-11.0")
 add_definitions(-DCUDA_VER=1100)
+#set (CUDA_PREFIX "/usr/local/cuda-9.2")
+#add_definitions(-DCUDA_VER=920)
 if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
   set(CMAKE_CUDA_ARCHITECTURES 70) #35 for Tesla K40, 70 for V100, 61 for GTX 1060/70
 endif()

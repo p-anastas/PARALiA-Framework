@@ -10,8 +10,6 @@
 #include <string>
 #include <mutex> // std::mutex
 
-#define LOC_NUM (DEV_NUM + 1)
-
 #include "DataCaching.hpp"
 
 template <typename dtype>

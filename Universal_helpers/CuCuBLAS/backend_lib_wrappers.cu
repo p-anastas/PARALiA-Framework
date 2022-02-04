@@ -89,24 +89,37 @@ void CoCoAdd2D(VALUETYPE* dest, size_t ldest, VALUETYPE* src, size_t lsrc,
 	double cpu_timer = csecond();
 #endif
 
+  // Stable implementation with sync
   axpy_backend_in_p backend_axpy_wrapper = (axpy_backend_in_p) malloc(sizeof(struct axpy_backend_in));
   backend_axpy_wrapper->N = rows;
   backend_axpy_wrapper->incx = backend_axpy_wrapper->incy = 1;
   backend_axpy_wrapper->alpha = 1.0;
   backend_axpy_wrapper->dev_id = loc;
 	for(int colidx = 0; colidx < cols; colidx++){
-//#ifdef DDEBUG
-//		lprintf(lvl, "colidx: %d x_offset = %d, y_offset = %d\n", colidx, colidx*lsrc, colidx*ldest);
-//#endif
 		VALUETYPE* x = &src[colidx*lsrc];
 		VALUETYPE* y = &dest[colidx*ldest];
 		backend_axpy_wrapper->x = (void**) &x;
 		backend_axpy_wrapper->y = (void**) &y;
 		backend_run_operation(backend_axpy_wrapper, "axpy", add_queue);
-    //add_queue->add_host_func((void*)&CoCoFreeAllocAsync, (void*)backend_axpy_wrapper);
     add_queue->sync_barrier();
   }
   free(backend_axpy_wrapper);
+  /* Better implementation without sync - not working in CPU reduction?
+  for(int colidx = 0; colidx < cols; colidx++){
+    axpy_backend_in_p backend_axpy_wrapper = (axpy_backend_in_p) malloc(sizeof(struct axpy_backend_in));
+    backend_axpy_wrapper->N = rows;
+    backend_axpy_wrapper->incx = backend_axpy_wrapper->incy = 1;
+    backend_axpy_wrapper->alpha = 1.0;
+    backend_axpy_wrapper->dev_id = loc;
+    VALUETYPE* x = &src[colidx*lsrc];
+    VALUETYPE* y = &dest[colidx*ldest];
+    backend_axpy_wrapper->x = (void**) &x;
+    backend_axpy_wrapper->y = (void**) &y;
+    backend_run_operation(backend_axpy_wrapper, "axpy", add_queue);
+    add_queue->add_host_func((void*)&CoCoFreeAllocAsync, (void*)backend_axpy_wrapper);
+  }
+  add_queue->sync_barrier();
+  */
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer;
   lprintf(lvl, "CoCoAdd2D(loc=%d, cols=%d, rows=%d): t_reduce_add = %lf ms\n", loc, cols, rows, cpu_timer*1000);
@@ -149,26 +162,37 @@ void* CoCoMemcpyReduce2DWrapped(void* wrapped_data){
   double cpu_timer = csecond();
 #endif
 
+
 #ifdef ENABLE_MUTEX_LOCKING
-  reduce_block_mutex[reduce_buf_it*128 + loc_src].lock();
+  reduce_block_mutex[reduce_buf_it*128 + (loc_src == -1)? LOC_NUM - 1: loc_src].lock();
 #else
-  while(__sync_lock_test_and_set (&reduce_block_lock[reduce_buf_it*128 +loc_src], 1));
+  while(__sync_lock_test_and_set (&reduce_block_lock[reduce_buf_it*128 + (loc_src == -1)? LOC_NUM - 1: loc_src], 1));
 #endif
 
 #ifdef TEST
   cpu_timer = csecond() - cpu_timer;
-  lprintf(lvl, "CoCoMemcpyReduce2DAsync(buf = %p, loc_dest = %d, loc_src = %d): Blocked waiting for reduce_block_lock[%d] lock: %lf ms\n",
-    reduce_buffer, loc_dest, loc_src, reduce_buf_it*128 +loc_src, cpu_timer*1000);
+  lprintf(lvl, "CoCoMemcpyReduce2DAsync(buf = %p, loc_dest = %d, (loc_src == -1)? LOC_NUM - 1: loc_src = %d): Blocked waiting for reduce_block_lock[%d] lock: %lf ms\n",
+    reduce_buffer, loc_dest, loc_src, reduce_buf_it*128 + (loc_src == -1)? LOC_NUM - 1: loc_src, cpu_timer*1000);
   cpu_timer = csecond();
 #endif
+/*
 
+#ifdef ENABLE_MUTEX_LOCKING
+  src_reduce_queue->add_host_func((void*)&CoCoQueueLock,
+    (void*)reduce_block_mutex[reduce_buf_it*128 + (loc_src == -1)? LOC_NUM - 1: loc_src ]);
+#else
+  src_reduce_queue->add_host_func((void*)&CoCoQueueLock, (void*)reduce_block_lock[reduce_buf_it*128 + (loc_src == -1)? LOC_NUM - 1: loc_src]);
+#endif
+*/
   CoCoMemcpy2DAsync(reduce_buffer, lsrc, src, lsrc, rows, cols, elemSize, loc_dest, loc_src, src_reduce_queue);
-  //reduce_queue->add_host_func((void*)&CoCoQueueLock, (void*)Tile_lock);
   src_reduce_queue->sync_barrier();
 
 #ifdef DEBUG
   lprintf(lvl, "CoCoMemcpyReduce2DAsync(dest=%d, src=%d): Blocking until Tile_lock(%p)\n", loc_dest, loc_src, Tile_lock);
 #endif
+
+ //src_reduce_queue->add_host_func((void*)&CoCoQueueLock, (void*)Tile_lock);
+
 
 #ifdef ENABLE_MUTEX_LOCKING
   ((std::mutex*)Tile_lock)->lock();
@@ -185,15 +209,16 @@ void* CoCoMemcpyReduce2DWrapped(void* wrapped_data){
 
   CoCoAdd2D<VALUE_TYPE>( (VALUE_TYPE*) dest, ldest, (VALUE_TYPE*) reduce_buffer, lsrc, rows, cols, loc_dest, dest_reduce_queue);
 
-/*  reduce_queue->add_host_func((void*)&CoCoQueueUnlock, (void*)Tile_lock);
+/*
+  dest_reduce_queue->add_host_func((void*)&CoCoQueueUnlock, (void*)Tile_lock);
 #ifdef ENABLE_MUTEX_LOCKING
-  reduce_queue->add_host_func((void*)&CoCoQueueUnlock,
-    (void*)reduce_block_mutex[reduce_buf_it*128 + loc_src]);
+  dest_reduce_queue->add_host_func((void*)&CoCoQueueUnlock,
+    (void*)reduce_block_mutex[reduce_buf_it*128 + (loc_src == -1)? LOC_NUM - 1: loc_src]);
 #else
-  reduce_queue->add_host_func((void*)&CoCoQueueUnlock,
-    (void*)reduce_block_lock[reduce_buf_it*128 + loc_src]);
+  dest_reduce_queue->add_host_func((void*)&CoCoQueueUnlock,
+    (void*)reduce_block_lock[reduce_buf_it*128 + (loc_src == -1)? LOC_NUM - 1: loc_src]);
 #endif
-  reduce_queue->sync_barrier();
+  dest_reduce_queue->sync_barrier();
 */
 
   #ifdef ENABLE_MUTEX_LOCKING
@@ -203,16 +228,16 @@ void* CoCoMemcpyReduce2DWrapped(void* wrapped_data){
   #endif
 
   #ifdef ENABLE_MUTEX_LOCKING
-    reduce_block_mutex[reduce_buf_it*128 + loc_src].unlock();
+    reduce_block_mutex[reduce_buf_it*128 + (loc_src == -1)? LOC_NUM - 1: loc_src].unlock();
   #else
-    __sync_lock_release(&reduce_block_lock[reduce_buf_it*128 + loc_src]);
+    __sync_lock_release(&reduce_block_lock[reduce_buf_it*128 + (loc_src == -1)? LOC_NUM - 1: loc_src]);
   #endif
-
 
 #ifdef TEST
   cpu_timer = csecond() - cpu_timer;
   lprintf(lvl, "CoCoMemcpyReduce2D(loc_src=%d, loc_dest=%d, cols=%d, rows=%d): t_reduce_total = %lf ms\n", loc_src, loc_dest, cols, rows, cpu_timer*1000);
 #endif
+
   return wrapped_data;
 }
 

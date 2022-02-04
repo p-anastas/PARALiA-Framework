@@ -16,6 +16,8 @@
 #include <stdio.h>
 #include <stdarg.h>
 
+#define LOC_NUM (DEV_NUM + 1)
+
 /*****************************************************/
 /// Generalised "Command queue" and "Event" definition (e.g. CUDA streams and Events for CUDA backend)
 
@@ -28,7 +30,7 @@ typedef class CommandQueue
 		void* cqueue_backend_ptr;
 		void* cqueue_backend_data;
 		int dev_id;
-		
+
 		//Constructor
 		CommandQueue(int dev_id);
 
