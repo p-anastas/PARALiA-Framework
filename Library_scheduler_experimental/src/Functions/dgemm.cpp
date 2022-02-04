@@ -222,11 +222,19 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 	cpu_timer = csecond();
 #endif
 
+	CoCoPeLiaInitResources(dev_id);
+
+#ifdef TEST
+	cpu_timer = csecond() - cpu_timer;
+	lprintf(lvl, "Stream/Lib Handle Initialization(%d): t_resource = %lf ms\n", dev_id, cpu_timer*1000);
+	cpu_timer = csecond();
+#endif
+
 	pthread_barrier_wait (&RunTileMap_sync_barrier);
 
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer;
-	lprintf(lvl, "Wait RunTileMap barrier(%d): t_wb = %lf ms\n", dev_id, cpu_timer*1000);
+	lprintf(lvl, "Wait barrier(%d): t_wb = %lf ms\n", dev_id, cpu_timer*1000);
 	cpu_timer = csecond();
 #endif
 
@@ -235,14 +243,6 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer;
 	lprintf(lvl, "Memory management(%d): t_mem = %lf ms\n", dev_id, cpu_timer*1000);
-	cpu_timer = csecond();
-#endif
-
-	CoCoPeLiaInitResources(dev_id);
-
-#ifdef TEST
-	cpu_timer = csecond() - cpu_timer;
-	lprintf(lvl, "Stream/Lib Handle Initialization(%d): t_resource = %lf ms\n", dev_id, cpu_timer*1000);
 	cpu_timer = csecond();
 #endif
 

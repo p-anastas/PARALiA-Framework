@@ -65,13 +65,10 @@ void CoCoPeLiaSelectDevice(short dev_id){
   if(dev_id >= 0 && dev_id < dev_count){
   cudaError_t err = cudaSetDevice(dev_id);
   massert(cudaSuccess == err,
-    "CoCoPeLiaSelectDevice: cudaSetDevice failed - %s\n", cudaGetErrorString(err));
+    "CoCoPeLiaSelectDevice(%d): cudaSetDevice(%d) failed - %s\n", dev_id, dev_id, cudaGetErrorString(err));
   }
   else if(dev_id == -1){  /// "Host" device loc id used by CoCoPeLia
     ;
-//#ifdef DEBUG
-//    warning("CoCoPeLiaSelectDevice: dev_id = %d used, check loc in code\n", dev_id);
-//#endif
   }
   else error("CoCoPeLiaSelectDevice(%d): invalid dev_id\n", dev_id);
 }

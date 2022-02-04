@@ -27,8 +27,10 @@ typedef class CommandQueue
 	public:
 		void* cqueue_backend_ptr;
 		void* cqueue_backend_data;
+		int dev_id;
+		
 		//Constructor
-		CommandQueue();
+		CommandQueue(int dev_id);
 
 		//Destructor
 		~CommandQueue();

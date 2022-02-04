@@ -51,18 +51,22 @@ const char* print_event_status(event_status in_status){
 
 /*****************************************************/
 /// Command queue class functions
-CommandQueue::CommandQueue()
+CommandQueue::CommandQueue(int dev_id_in)
 {
+	int prev_dev_id = CoCoPeLiaGetDevice();
+	dev_id = dev_id_in;
+	CoCoPeLiaSelectDevice(dev_id);
 	cqueue_backend_ptr = malloc(sizeof(cudaStream_t));
 	cudaError_t err = cudaStreamCreate((cudaStream_t*) cqueue_backend_ptr);
-	massert(cudaSuccess == err, "CommandQueue::CommandQueue - %s\n", cudaGetErrorString(err));
+	massert(cudaSuccess == err, "CommandQueue::CommandQueue(%d) - %s\n", dev_id, cudaGetErrorString(err));
 	cudaStream_t stream = *((cudaStream_t*) cqueue_backend_ptr);
 
 	cqueue_backend_data = malloc(sizeof(cublasHandle_t));
 	massert(CUBLAS_STATUS_SUCCESS == cublasCreate((cublasHandle_t*) cqueue_backend_data),
-		"CommandQueue::CommandQueue: cublasCreate failed\n");
+		"CommandQueue::CommandQueue(%d): cublasCreate failed\n", dev_id);
 	massert(CUBLAS_STATUS_SUCCESS == cublasSetStream(*((cublasHandle_t*) cqueue_backend_data), stream),
-		"cublasSetStream failed\n");
+		"CommandQueue::CommandQueue(%d): cublasSetStream failed\n", dev_id);
+	CoCoPeLiaSelectDevice(prev_dev_id);
 }
 
 CommandQueue::~CommandQueue()
@@ -178,10 +182,14 @@ event_status Event::query_status(){
 			warning("Event::query_status: cudaErrorNotReady with status == UNRECORDED should not happen\n");
 			status = RECORDED;
 		}
-		else if (err == cudaSuccess &&  status == CHECKED)
+		else if (err == cudaSuccess &&  status == CHECKED){
+			;
 			// TODO: This should not happen in a healthy locked update scenario.
 			// But it does since no locking yet. Not sure of its effects.
+#ifdef DEBUG
 			warning("Event::query_status: cudaSuccess with status == CHECKED should not happen\n");
+#endif
+		}
 		else error("Event::query_status - %s, status=%s\n", cudaGetErrorString(err), print_event_status(status));
 	}
 	release_lock();
