@@ -78,6 +78,7 @@ GPUexec3Model_p GPUexec3Model_init(short dev_id, char* func){
 		lprintf(lvl, "Scanned entry %d: T = %zu, TransA = %c, TransB = %c -> t_av = %lf ms\n", i, out_model->T_lookup_buf[i], out_model->TransA_buf[i], out_model->TransB_buf[i], out_model->av_time_buf[i]*1000);
 #endif
     	}
+	fclose(fp);
 	out_model->dev_id = dev_id;
 	out_model->func = func;
 #ifdef TEST
