@@ -180,19 +180,9 @@ void Subkernel::request_data(){
 				if(WR_reduce){
 					while(__sync_lock_test_and_set(&WR_check_lock, 1)); // highly unlikely to happen?
 					if(tmp->RW_master == -42){ // First entry, decide on WR_reducer.
-//#ifdef ENABLE_CPU_WORKLOAD
 						for(int idx = 0; idx < LOC_NUM; idx++)
 							if(tmp->CacheLocId[idx] == -1 && tmp->RunTileMap[idx] == 1) tmp->RW_master = (idx == LOC_NUM - 1)?  -1 : idx;
 						if(tmp->RW_master == -42) tmp->RW_master = run_dev_id;
-//#else
-//						//Hack that will not work if CPU (-1) also executes split-K subkernels
-//						if(tmp->CacheLocId[LOC_NUM-1] == -1) tmp->RW_master = run_dev_id;
-//						else for(int idx = 0; idx < LOC_NUM -1; idx++)
-//							if(tmp->CacheLocId[idx] == -1) tmp->RW_master = idx;
-//#endif
-						if(tmp->RW_master == -42)
-							error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d]): request_data failed to assign RW master\n",
-								run_dev_id, id, tmp->id, tmp->GridId);
 #ifdef DDEBUG
 						lprintf(lvl, "Subkernel(dev=%d,id=%d)-Tile(%d.[%d]): Set RW_master = %d\n",
 					run_dev_id, id, tmp->id, tmp->GridId, tmp->RW_master);
@@ -230,20 +220,10 @@ void Subkernel::request_data(){
 					if(WR_reduce){
 						while(__sync_lock_test_and_set(&WR_check_lock, 1)); // highly unlikely to happen?
 						if(tmp->RW_master == -42){ // First entry, decide on WR_reducer.
-//#ifdef ENABLE_CPU_WORKLOAD
 							for(int idx = 0; idx < LOC_NUM; idx++)
 								if(tmp->CacheLocId[idx] == -1 && tmp->RunTileMap[idx] == 1)
 									tmp->RW_master = (idx == LOC_NUM - 1)?  -1 : idx;
 							if(tmp->RW_master == -42) tmp->RW_master = run_dev_id;
-//#else
-////Hack that will not work if CPU (-1) also executes split-K subkernels
-//if(tmp->CacheLocId[LOC_NUM-1] == -1) tmp->RW_master = run_dev_id;
-//							else for(int idx = 0; idx < LOC_NUM -1; idx++)
-//								if(tmp->CacheLocId[idx] == -1) tmp->RW_master = idx;
-//#endif
-							if(tmp->RW_master == -42)
-								error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d]): request_data failed to assign RW master\n",
-									run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2);
 #ifdef DDEBUG
 							lprintf(lvl, "Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d]): Set RW_master = %d\n",
 						run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2, tmp->RW_master);
@@ -311,7 +291,6 @@ void Subkernel::run_operation(){
 	}
 	backend_run_operation(operation_params, op_name, exec_queue[run_dev_id_idx]);
 	operation_complete->record_to_queue(exec_queue[run_dev_id_idx]);
-	//if (prev!= NULL) prev->operation_complete->sync_barrier();
 #ifndef ASYNC_ENABLE
 	CoCoSyncCheckErr();
 #endif
@@ -366,22 +345,23 @@ void Subkernel::writeback_data(){
 						d2h_queue[run_dev_id_idx]->wait_for_event(operation_complete);
 						while(__sync_lock_test_and_set(&WR_check_lock, 1));
 						long long tmp_buffsz = CoCoGetBlockSize(run_dev_id);
-						if (reduce_buf[reduce_buf_it[WritebackIdCAdr]*128 + WritebackIdCAdr] == NULL){
-							reduce_buf_sz[reduce_buf_it[WritebackIdCAdr]*128 + WritebackIdCAdr] = tmp_buffsz;
-							reduce_buf[reduce_buf_it[WritebackIdCAdr]*128 + WritebackIdCAdr]
-								= CoCoMalloc(reduce_buf_sz[reduce_buf_it[WritebackIdCAdr]*128 + WritebackIdCAdr], WritebackId);
+						int buf_idx = reduce_buf_it[WritebackIdCAdr]*128 + WritebackIdCAdr;
+						if (reduce_buf[buf_idx] == NULL){
+							reduce_buf_sz[buf_idx] = tmp_buffsz;
+							reduce_buf[buf_idx]
+								= CoCoMalloc(reduce_buf_sz[buf_idx], WritebackId);
 #ifdef DDEBUG
 							lprintf(lvl, "Subkernel(dev=%d,id=%d): Allocated buffer(%p) in %d\n",
-							run_dev_id, id, reduce_buf[reduce_buf_it[WritebackIdCAdr]*128 + WritebackIdCAdr],
-							reduce_buf_it[WritebackIdCAdr]*128 + WritebackIdCAdr);
+							run_dev_id, id, reduce_buf[buf_idx],
+							buf_idx);
 #endif
 						}
-						else if(reduce_buf_sz[reduce_buf_it[WritebackIdCAdr]*128 + WritebackIdCAdr] != tmp_buffsz){
-							CoCoFree(reduce_buf[reduce_buf_it[WritebackIdCAdr]*128 + WritebackIdCAdr], CoCoGetPtrLoc(
-								reduce_buf[reduce_buf_it[WritebackIdCAdr]*128 + WritebackIdCAdr]));
-							reduce_buf_sz[reduce_buf_it[WritebackIdCAdr]*128 + WritebackIdCAdr] = tmp_buffsz;
-							reduce_buf[reduce_buf_it[WritebackIdCAdr]*128 + WritebackIdCAdr]
-								= CoCoMalloc(reduce_buf_sz[reduce_buf_it[WritebackIdCAdr]*128 + WritebackIdCAdr], WritebackId);
+						else if(reduce_buf_sz[buf_idx] != tmp_buffsz){
+							CoCoFree(reduce_buf[buf_idx], CoCoGetPtrLoc(
+								reduce_buf[buf_idx]));
+							reduce_buf_sz[buf_idx] = tmp_buffsz;
+							reduce_buf[buf_idx]
+								= CoCoMalloc(reduce_buf_sz[buf_idx], WritebackId);
 						}
 						int local_reduce_buf_it = reduce_buf_it[WritebackIdCAdr];
 						if(reduce_buf_it[WritebackIdCAdr] < MAX_BUFFERING_L - 1) reduce_buf_it[WritebackIdCAdr]++;
@@ -396,7 +376,6 @@ void Subkernel::writeback_data(){
 								((long long) tmp->inc[run_dev_id_idx]) * tmp->dim * tmp->dtypesize(),
 								WritebackId, run_dev_id, (void*)&tmp->RW_lock, d2h_queue[run_dev_id_idx], exec_queue[WritebackIdCAdr]);
 							}
-						//CoCacheAddPendingEvent(run_dev_id, operation_complete, tmp->available[WritebackIdCAdr], tmp->CacheLocId[run_dev_id_idx], W);
 					}
 #endif
 				}
@@ -476,7 +455,6 @@ void Subkernel::writeback_data(){
 								tmp->dim1, tmp->dim2, tmp->dtypesize(),
 								WritebackId, run_dev_id, (void*)&tmp->RW_lock, d2h_queue[run_dev_id_idx], exec_queue[WritebackIdCAdr]);
 							}
-						//CoCacheAddPendingEvent(run_dev_id, operation_complete, tmp->available[WritebackIdCAdr], tmp->CacheLocId[run_dev_id_idx], W);
 					}
 #endif
 				}
