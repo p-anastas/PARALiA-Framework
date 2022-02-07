@@ -111,7 +111,7 @@ void* CoCopeLiaDaxpyAgentVoid(void* kernel_pthread_wrapped){
 #ifdef TEST
 	cpu_timer = csecond();
 #endif
-  CoCoPeLiaRequestBuffer(axpy_subkernel_data, used_vals_daxpy->cache_limit);
+  CoCoPeLiaRequestBuffer(axpy_subkernel_data, used_vals_daxpy->cache_limit, used_vals_daxpy->T*sizeof(VALUE_TYPE));
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer;
 	lprintf(lvl, "Memory management(%d): t_mem = %lf ms\n", dev_id, cpu_timer*1000);

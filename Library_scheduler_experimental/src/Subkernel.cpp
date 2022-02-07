@@ -32,6 +32,10 @@ Subkernel::Subkernel(short TileNum_in, const char* name){
 }
 
 Subkernel::~Subkernel(){
+	short lvl = 5;
+#ifdef DDEBUG
+	lprintf(lvl, "Subkernel(dev=%d,id=%d):~Subkernel\n", run_dev_id, id);
+#endif
 	short run_dev_id_idx = (run_dev_id == -1)?  LOC_NUM - 1 : run_dev_id;
 	Subkernel_num--;
 	free(TileDimlist);
@@ -46,6 +50,10 @@ Subkernel::~Subkernel(){
 			if(reduce_buf[idx*128 + run_dev_id]!= NULL){
 				CoCoFree(reduce_buf[idx*128 + run_dev_id], CoCoGetPtrLoc(reduce_buf[idx*128 + run_dev_id]));
 				reduce_buf[idx*128 + run_dev_id] = NULL;
+#ifdef DDEBUG
+				lprintf(lvl, "Subkernel(dev=%d,id=%d):~Subkernel - CoCoFreed reduce_buf[%d*128 + %d]\n",
+				run_dev_id, id, idx, run_dev_id);
+#endif
 			}
 #else
 #endif
@@ -358,35 +366,35 @@ void Subkernel::writeback_data(){
 						d2h_queue[run_dev_id_idx]->wait_for_event(operation_complete);
 						while(__sync_lock_test_and_set(&WR_check_lock, 1));
 						long long tmp_buffsz = CoCoGetBlockSize(run_dev_id);
-						if (reduce_buf[reduce_buf_it[run_dev_id_idx]*128 + run_dev_id_idx] == NULL){
-							reduce_buf_sz[reduce_buf_it[run_dev_id_idx]*128 + run_dev_id_idx] = tmp_buffsz;
-							reduce_buf[reduce_buf_it[run_dev_id_idx]*128 + run_dev_id_idx]
-								= CoCoMalloc(reduce_buf_sz[reduce_buf_it[run_dev_id_idx]*128 + run_dev_id_idx], WritebackId);
+						if (reduce_buf[reduce_buf_it[WritebackIdCAdr]*128 + WritebackIdCAdr] == NULL){
+							reduce_buf_sz[reduce_buf_it[WritebackIdCAdr]*128 + WritebackIdCAdr] = tmp_buffsz;
+							reduce_buf[reduce_buf_it[WritebackIdCAdr]*128 + WritebackIdCAdr]
+								= CoCoMalloc(reduce_buf_sz[reduce_buf_it[WritebackIdCAdr]*128 + WritebackIdCAdr], WritebackId);
 #ifdef DDEBUG
 							lprintf(lvl, "Subkernel(dev=%d,id=%d): Allocated buffer(%p) in %d\n",
-							run_dev_id, id, reduce_buf[reduce_buf_it[run_dev_id_idx]*128 + run_dev_id_idx],
-							reduce_buf_it[run_dev_id_idx]*128 + run_dev_id_idx);
+							run_dev_id, id, reduce_buf[reduce_buf_it[WritebackIdCAdr]*128 + WritebackIdCAdr],
+							reduce_buf_it[WritebackIdCAdr]*128 + WritebackIdCAdr);
 #endif
 						}
-						else if(reduce_buf_sz[reduce_buf_it[run_dev_id_idx]*128 + run_dev_id_idx] != tmp_buffsz){
-							CoCoFree(reduce_buf[reduce_buf_it[run_dev_id_idx]*128 + run_dev_id_idx], CoCoGetPtrLoc(
-								reduce_buf[reduce_buf_it[run_dev_id_idx]*128 + run_dev_id_idx]));
-							reduce_buf_sz[reduce_buf_it[run_dev_id_idx]*128 + run_dev_id_idx] = tmp_buffsz;
-							reduce_buf[reduce_buf_it[run_dev_id_idx]*128 + run_dev_id_idx]
-								= CoCoMalloc(reduce_buf_sz[reduce_buf_it[run_dev_id_idx]*128 + run_dev_id_idx], WritebackId);
+						else if(reduce_buf_sz[reduce_buf_it[WritebackIdCAdr]*128 + WritebackIdCAdr] != tmp_buffsz){
+							CoCoFree(reduce_buf[reduce_buf_it[WritebackIdCAdr]*128 + WritebackIdCAdr], CoCoGetPtrLoc(
+								reduce_buf[reduce_buf_it[WritebackIdCAdr]*128 + WritebackIdCAdr]));
+							reduce_buf_sz[reduce_buf_it[WritebackIdCAdr]*128 + WritebackIdCAdr] = tmp_buffsz;
+							reduce_buf[reduce_buf_it[WritebackIdCAdr]*128 + WritebackIdCAdr]
+								= CoCoMalloc(reduce_buf_sz[reduce_buf_it[WritebackIdCAdr]*128 + WritebackIdCAdr], WritebackId);
 						}
-						int local_reduce_buf_it = reduce_buf_it[run_dev_id_idx];
-						if(reduce_buf_it[run_dev_id_idx] < MAX_BUFFERING_L - 1) reduce_buf_it[run_dev_id_idx]++;
-						else reduce_buf_it[run_dev_id_idx] = 0;
+						int local_reduce_buf_it = reduce_buf_it[WritebackIdCAdr];
+						if(reduce_buf_it[WritebackIdCAdr] < MAX_BUFFERING_L - 1) reduce_buf_it[WritebackIdCAdr]++;
+						else reduce_buf_it[WritebackIdCAdr] = 0;
 						__sync_lock_release(&WR_check_lock);
 						if(!WR_last) error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d,])::writeback_reduce_data:\
 						Subkernel should be a WR_reduce?\n", run_dev_id, id, tmp->id, tmp->GridId);
 						else{
 							if (exec_queue[WritebackIdCAdr] == NULL) exec_queue[WritebackIdCAdr] = new CommandQueue(WritebackId);
-							CoCoMemcpyReduceAsync(reduce_buf[local_reduce_buf_it*128 + run_dev_id_idx], local_reduce_buf_it,
+							CoCoMemcpyReduceAsync(reduce_buf[local_reduce_buf_it*128 + WritebackIdCAdr], local_reduce_buf_it,
 								tmp->adrs[WritebackIdCAdr], tmp->adrs[run_dev_id_idx],
 								((long long) tmp->inc[run_dev_id_idx]) * tmp->dim * tmp->dtypesize(),
-								WritebackId, run_dev_id, (void*)&tmp->RW_lock, d2h_queue[run_dev_id_idx], exec_queue[WritebackId]);
+								WritebackId, run_dev_id, (void*)&tmp->RW_lock, d2h_queue[run_dev_id_idx], exec_queue[WritebackIdCAdr]);
 							}
 						//CoCacheAddPendingEvent(run_dev_id, operation_complete, tmp->available[WritebackIdCAdr], tmp->CacheLocId[run_dev_id_idx], W);
 					}
@@ -431,33 +439,39 @@ void Subkernel::writeback_data(){
 						d2h_queue[run_dev_id_idx]->wait_for_event(operation_complete);
 						while(__sync_lock_test_and_set(&WR_check_lock, 1));
 						long long tmp_buffsz = CoCoGetBlockSize(run_dev_id);
-						if (reduce_buf[reduce_buf_it[run_dev_id_idx]*128 + run_dev_id_idx] == NULL){
-							reduce_buf_sz[reduce_buf_it[run_dev_id_idx]*128 + run_dev_id_idx] = tmp_buffsz;
-							reduce_buf[reduce_buf_it[run_dev_id_idx]*128 + run_dev_id_idx]
-								= CoCoMalloc(reduce_buf_sz[reduce_buf_it[run_dev_id_idx]*128 + run_dev_id_idx], WritebackId);
+						int buf_idx = reduce_buf_it[WritebackIdCAdr]*128 + WritebackIdCAdr;
+						if (reduce_buf[buf_idx] == NULL){
+							reduce_buf_sz[buf_idx] = tmp_buffsz;
+							reduce_buf[buf_idx]	= CoCoMalloc(reduce_buf_sz[buf_idx], WritebackId);
 #ifdef DDEBUG
 							lprintf(lvl, "Subkernel(dev=%d,id=%d): Allocated buffer(%p, loc = %d, buf_sz = %lld) in reduce_buf[%d*128 + %d]\n",
-							run_dev_id, id, reduce_buf[reduce_buf_it[run_dev_id_idx]*128 + run_dev_id_idx], WritebackId,
-							reduce_buf_sz[reduce_buf_it[run_dev_id_idx]*128 + run_dev_id_idx],
-							reduce_buf_it[run_dev_id_idx], run_dev_id_idx);
+							run_dev_id, id, reduce_buf[buf_idx], WritebackId, reduce_buf_sz[buf_idx],
+							reduce_buf_it[WritebackIdCAdr], WritebackIdCAdr);
 #endif
 						}
-						else if(reduce_buf_sz[reduce_buf_it[run_dev_id_idx]*128 + run_dev_id_idx] != tmp_buffsz){
-							CoCoFree(reduce_buf[reduce_buf_it[run_dev_id_idx]*128 + run_dev_id_idx], CoCoGetPtrLoc(
-								reduce_buf[reduce_buf_it[run_dev_id_idx]*128 + run_dev_id_idx]));
-							reduce_buf_sz[reduce_buf_it[run_dev_id_idx]*128 + run_dev_id_idx] = tmp_buffsz;
-							reduce_buf[reduce_buf_it[run_dev_id_idx]*128 + run_dev_id_idx]
-								= CoCoMalloc(reduce_buf_sz[reduce_buf_it[run_dev_id_idx]*128 + run_dev_id_idx], WritebackId);
+						else if(reduce_buf_sz[buf_idx] != tmp_buffsz){
+#ifdef DDEBUG
+							lprintf(lvl, "Subkernel(dev=%d,id=%d): Free buffer(%p, loc = %d, buf_sz = %lld) in reduce_buf[%d*128 + %d]\
+							\n Replace with new buffer(buf_sz = %lld)\n",
+							run_dev_id, id, reduce_buf[buf_idx], WritebackId, reduce_buf_sz[buf_idx],
+							reduce_buf_it[WritebackIdCAdr], WritebackIdCAdr, tmp_buffsz);
+#endif
+							CoCoFree(reduce_buf[buf_idx], CoCoGetPtrLoc(
+								reduce_buf[buf_idx]));
+							reduce_buf_sz[buf_idx] = tmp_buffsz;
+							reduce_buf[buf_idx]
+								= CoCoMalloc(reduce_buf_sz[buf_idx], WritebackId);
 						}
-						int local_reduce_buf_it = reduce_buf_it[run_dev_id_idx];
-						if(reduce_buf_it[run_dev_id_idx] < MAX_BUFFERING_L - 1) reduce_buf_it[run_dev_id_idx]++;
-						else reduce_buf_it[run_dev_id_idx] = 0;
+						int local_reduce_buf_it = reduce_buf_it[WritebackIdCAdr];
+						if(reduce_buf_it[WritebackIdCAdr] < MAX_BUFFERING_L - 1) reduce_buf_it[WritebackIdCAdr]++;
+						else reduce_buf_it[WritebackIdCAdr] = 0;
 						__sync_lock_release(&WR_check_lock);
 						if(!WR_last) error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::writeback_reduce_data:\
 						Subkernel should be a WR_reduce?\n", run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2);
 						else{
 							if (exec_queue[WritebackIdCAdr] == NULL) exec_queue[WritebackIdCAdr] = new CommandQueue(WritebackId);
-							CoCoMemcpyReduce2DAsync(reduce_buf[local_reduce_buf_it*128 + run_dev_id_idx], local_reduce_buf_it, tmp->adrs[WritebackIdCAdr], tmp->ldim[WritebackIdCAdr],
+							CoCoMemcpyReduce2DAsync(reduce_buf[local_reduce_buf_it*128 + WritebackIdCAdr], local_reduce_buf_it,
+								tmp->adrs[WritebackIdCAdr], tmp->ldim[WritebackIdCAdr],
 								tmp->adrs[run_dev_id_idx], tmp->ldim[run_dev_id_idx],
 								tmp->dim1, tmp->dim2, tmp->dtypesize(),
 								WritebackId, run_dev_id, (void*)&tmp->RW_lock, d2h_queue[run_dev_id_idx], exec_queue[WritebackIdCAdr]);

@@ -238,7 +238,7 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 	cpu_timer = csecond();
 #endif
 
-  CoCoPeLiaRequestBuffer(gemm_subkernel_data, used_vals->cache_limit);
+  CoCoPeLiaRequestBuffer(gemm_subkernel_data, used_vals->cache_limit, used_vals->T*used_vals->T *sizeof(VALUE_TYPE));
 
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer;

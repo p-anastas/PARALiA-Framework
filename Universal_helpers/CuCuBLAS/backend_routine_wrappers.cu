@@ -10,9 +10,9 @@
 
 void CoCoQueueLock(void* wrapped_lock){
 #ifdef ENABLE_MUTEX_LOCKING
-  ((std::mutex*)wrapped_lock)->lock();
+  (*(std::mutex*)wrapped_lock).lock();
 #else
-  while(__sync_lock_test_and_set ((int*)wrapped_lock, 1));
+  while(__sync_lock_test_and_set ((&(*((int*)wrapped_lock))), 1));
 #endif
 #ifdef DEBUG
   lprintf(6, "CoCoQueueLock(%p) ran succesfully.\n", wrapped_lock);
@@ -21,11 +21,11 @@ void CoCoQueueLock(void* wrapped_lock){
 
 void CoCoQueueUnlock(void* wrapped_lock){
 #ifdef ENABLE_MUTEX_LOCKING
-	((std::mutex*)wrapped_lock)->unlock();
+	(*(std::mutex*)wrapped_lock).unlock();
 #else
   //int* intptr = (int*) wrapped_lock;
   //*intptr = 0;
-  __sync_lock_release((int*) wrapped_lock);
+  __sync_lock_release((&(*((int*) wrapped_lock))));
 #endif
 
 #ifdef DEBUG

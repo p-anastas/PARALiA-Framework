@@ -45,21 +45,23 @@ short CoCoGetPtrLoc(const void * in_ptr)
 #elif (CUDA_VER == 920)
 	short loc = -2;
 	cudaPointerAttributes ptr_att;
-	if (cudaSuccess != cudaPointerGetAttributes(&ptr_att, in_ptr)) warning("CoCoBLAS_ptr_check_cuda_9_2: Pointer not visible to CUDA, host alloc or error");
+	if (cudaSuccess != cudaPointerGetAttributes(&ptr_att, in_ptr)) warning("CoCoGetPtrLoc(9.2 version, ptr =%p):\
+	Pointer not visible to CUDA, host alloc or error\n", in_ptr);
 	if (ptr_att.memoryType == cudaMemoryTypeHost) loc = -1;
 	else if (ptr_att.memoryType == cudaMemoryTypeDevice) loc = ptr_att.device;
 	else if (ptr_att.isManaged) loc = ptr_att.device;
-	else error("CoCoBLAS_ptr_check_cuda_9_2: Invalid memory type");
+	else error("CoCoGetPtrLoc(9.2 version, ptr =%p): Invalid memory type", in_ptr);
 	return loc;
 #elif (CUDA_VER == 1100)
 	short loc = -2;
 	cudaPointerAttributes ptr_att;
-	if (cudaSuccess != cudaPointerGetAttributes(&ptr_att, in_ptr)) warning("CoCopeLia_ptr_check_cuda_11: Pointer not visible to CUDA, host alloc or error");
+	if (cudaSuccess != cudaPointerGetAttributes(&ptr_att, in_ptr)) warning("CoCoGetPtrLoc(11.0 version, ptr =%p):\
+	Pointer not visible to CUDA, host alloc or error\n", in_ptr);
 	if (ptr_att.type == cudaMemoryTypeHost) loc = -1;
 	else if (ptr_att.type == cudaMemoryTypeDevice) loc = ptr_att.device;
 	// TODO: Unified memory is considered available in the GPU as cuBLASXt ( not bad, not great)
 	else if (ptr_att.type == cudaMemoryTypeManaged) loc = ptr_att.device;
-	else error("CoCoBLAS_ptr_check_cuda_11: Invalid memory type");
+	else error("CoCoGetPtrLoc(11.0 version, ptr =%p): Invalid memory type", in_ptr);
 	return loc;
 #else
 #error Unknown CUDA_VER!
@@ -192,7 +194,8 @@ void CoCoMemcpy2D(void* dest, size_t ldest, void* src, size_t lsrc, size_t rows,
 	else if (loc_src < 0) kind = cudaMemcpyHostToDevice;
 	else kind = cudaMemcpyDeviceToDevice;
 
-	massert(cudaSuccess == cudaMemcpy2D(dest, ldest*elemSize, src, lsrc*elemSize, rows*elemSize, cols, kind),  "CoCoMemcpy2D: cudaMemcpy2D failed\n");
+	massert(cudaSuccess == cudaMemcpy2D(dest, ldest*elemSize, src, lsrc*elemSize, rows*elemSize, cols, kind),
+	"CoCoMemcpy2D: cudaMemcpy2D failed\n");
 	//if (loc_src == -1 && loc_dest >=0) massert(CUBLAS_STATUS_SUCCESS == cublasSetMatrix(rows, cols, elemSize, src, lsrc, dest, ldest), "CoCoMemcpy2DAsync: cublasSetMatrix failed\n");
 	//else if (loc_src >=0 && loc_dest == -1) massert(CUBLAS_STATUS_SUCCESS == cublasGetMatrix(rows, cols, elemSize, src, lsrc, dest, ldest),  "CoCoMemcpy2DAsync: cublasGetMatrix failed");
 
@@ -217,7 +220,9 @@ void CoCoMemcpy2DAsync(void* dest, size_t ldest, void* src, size_t lsrc, size_t 
 	else kind = cudaMemcpyDeviceToDevice;
 
 	massert(cudaSuccess == cudaMemcpy2DAsync(dest, ldest*elemSize, src, lsrc*elemSize,
-		rows*elemSize, cols, kind, stream),  "CoCoMemcpy2D: cudaMemcpy2DAsync failed\n");
+		rows*elemSize, cols, kind, stream),  "CoCoMemcpy2DAsync(dest=%p, ldest =%zu, src=%p, lsrc = %zu,\
+			\nrows = %zu, cols = %zu, elemsize = %d, loc_dest = %d, loc_src = %d): cudaMemcpy2DAsync failed\n",
+			dest, ldest, src, lsrc, rows, cols, elemSize, loc_dest, loc_src);
 	//if (loc_src == -1 && loc_dest >=0) massert(CUBLAS_STATUS_SUCCESS == cublasSetMatrixAsync(rows, cols, elemSize, src, lsrc, dest, ldest, stream), "CoCoMemcpy2DAsync: cublasSetMatrixAsync failed\n");
 	//else if (loc_src >=0 && loc_dest == -1) massert(CUBLAS_STATUS_SUCCESS == cublasGetMatrixAsync(rows, cols, elemSize, src, lsrc, dest, ldest, stream),  "CoCoMemcpy2DAsync: cublasGetMatrixAsync failed");
 }
