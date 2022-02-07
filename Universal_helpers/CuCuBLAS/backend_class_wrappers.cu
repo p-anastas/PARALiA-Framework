@@ -170,30 +170,34 @@ void Event::record_to_queue(CQueue_p Rr){
 
 event_status Event::query_status(){
 	get_lock();
-	if (status != CHECKED){
+	enum event_status local_status = status;
+	if (local_status != CHECKED){
 		cudaEvent_t cuda_event= *(cudaEvent_t*) event_backend_ptr;
 		cudaError_t err = cudaEventQuery(cuda_event);
 
-		if (err == cudaSuccess && (status == UNRECORDED ||  status == COMPLETE));
-		else if (err == cudaSuccess && status == RECORDED) status = COMPLETE;
-		else if (err == cudaErrorNotReady && status == RECORDED);
-		else if (err == cudaErrorNotReady && status == UNRECORDED){
-			// this should not happen in a healthy implementation
+		if (err == cudaSuccess && (local_status == UNRECORDED ||  local_status == COMPLETE));
+		else if (err == cudaSuccess && local_status == RECORDED) local_status = status = COMPLETE;
+		else if (err == cudaErrorNotReady && local_status == RECORDED);
+		else if (err == cudaErrorNotReady && local_status == UNRECORDED){
+#ifdef DEBUG
+			// this should not happen in a healthy locked update scenario.
 			warning("Event::query_status: cudaErrorNotReady with status == UNRECORDED should not happen\n");
-			status = RECORDED;
+#endif
+			local_status = status = RECORDED;
 		}
-		else if (err == cudaSuccess &&  status == CHECKED){
+		else if (err == cudaSuccess &&  local_status == CHECKED){
 			;
 			// TODO: This should not happen in a healthy locked update scenario.
 			// But it does since no locking yet. Not sure of its effects.
 #ifdef DEBUG
-			warning("Event::query_status: cudaSuccess with status == CHECKED should not happen\n");
+			warning("Event::query_status: cudaSuccess with local_status == CHECKED should not happen\n");
 #endif
 		}
-		else error("Event::query_status - %s, status=%s\n", cudaGetErrorString(err), print_event_status(status));
+		else error("Event::query_status - %s, local_status=%s, status = %s\n",
+		cudaGetErrorString(err), print_event_status(local_status), print_event_status(status));
 	}
 	release_lock();
-	return status;
+	return local_status;
 }
 
 void Event::checked(){
