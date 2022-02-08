@@ -4,10 +4,8 @@ DEPLOY_DIR=@CMAKE_INSTALL_PROJECT@/Deployment_phase
 
 devices=@NUM_DEVICES@
 
-for (( i = 0; i < $devices; i++ ))
-do 
+for (( i = -1; i < $devices; i++ ))
+do
 	$DEPLOY_DIR/RunMicrobenchmarks.sh $i
 	$DEPLOY_DIR/ProcessDatabase.sh $i
 done
-
-
