@@ -78,11 +78,9 @@ void ParseInputLvl1(const int argc, const char *argv[], CoControl_p* predef_cont
 		temp_p->T = T;
 		if (dev_num < 0){
 			temp_p->dev_num = -1;
-			temp_p->dev_ids = NULL;
 		}
 		else{
 			temp_p->dev_num = dev_num;
-			temp_p->dev_ids = (int*) malloc(dev_num*sizeof(int));
 			int ctr = 0, itter = 0;
 			do {
 				if (dev_ids_token%10 == 1) temp_p->dev_ids[ctr++] = itter;
@@ -135,11 +133,9 @@ void ParseInputLvl3(const int argc, const char *argv[], CoControl_p* predef_cont
 		temp_p->T = T;
 		if (dev_num < 0){
 			temp_p->dev_num = -1;
-			temp_p->dev_ids = NULL;
 		}
 		else{
 			temp_p->dev_num = dev_num;
-			temp_p->dev_ids = (int*) malloc(dev_num*sizeof(int));
 			int ctr = 0, itter = 0;
 			do {
 				if (dev_ids_token%10 == 1) temp_p->dev_ids[ctr++] = itter;

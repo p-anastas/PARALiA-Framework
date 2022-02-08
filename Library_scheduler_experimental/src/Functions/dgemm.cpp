@@ -17,8 +17,8 @@ pthread_barrier_t  RunTileMap_sync_barrier;
 
 gemm_backend_in_p initial_gemm = NULL;
 
-CoCoModel_p glob_model;
-struct CoControl predef_vals;
+CoCoModel_p glob_model_gemm[128] = {NULL};
+CoControl_p predef_vals_gemm;
 CoControl_p used_vals = NULL;
 int MGridSz = 0, NGridSz = 0, KGridSz = 0;
 
@@ -304,15 +304,38 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 
 	int prev_dev_id = CoCoPeLiaGetDevice();
 
-	if(!initial_gemm) initial_gemm = (gemm_backend_in_p) malloc(sizeof(struct gemm_backend_in));
+	short reuse_model_flag = 1;
+	if(!initial_gemm){
+		initial_gemm = (gemm_backend_in_p) malloc(sizeof(struct gemm_backend_in));
+		reuse_model_flag = 0;
+	}
+	if(reuse_model_flag && initial_gemm->TransA != TransA)
+		reuse_model_flag = 0;
 	initial_gemm->TransA = TransA;
+	if(reuse_model_flag && initial_gemm->TransB != TransB)
+		reuse_model_flag = 0;
 	initial_gemm->TransB = TransB;
+	if(reuse_model_flag && initial_gemm->M != M)
+		reuse_model_flag = 0;
 	initial_gemm->M = M;
+	if(reuse_model_flag && initial_gemm->N != N)
+		reuse_model_flag = 0;
 	initial_gemm->N = N;
+	if(reuse_model_flag && initial_gemm->K != K)
+		reuse_model_flag = 0;
 	initial_gemm->K = K;
+	if(reuse_model_flag && initial_gemm->A!= NULL && *initial_gemm->A != A)
+		reuse_model_flag = 0;
 	initial_gemm->A = (void**) &A;
+
+	if(reuse_model_flag && initial_gemm->B!= NULL && *initial_gemm->B != B)
+		reuse_model_flag = 0;
 	initial_gemm->B = (void**) &B;
+
+	if(reuse_model_flag && initial_gemm->C!= NULL && *initial_gemm->C != C)
+		reuse_model_flag = 0;
 	initial_gemm->C = (void**) &C;
+
 	initial_gemm->alpha = alpha;
 	initial_gemm->beta = beta;
 	initial_gemm->ldA = ldA;
@@ -351,139 +374,68 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 #endif
 	}
 
-	/// Read predefined values for device selection or use default.
-	/// return: num_devices, dev_id initialized, update used_vals
-	short num_devices = 0, *dev_id = NULL;
-	{
-		if (predef_vals.dev_num > 0){
-			num_devices = predef_vals.dev_num;
-			dev_id = (short*) malloc (num_devices*sizeof(short));
-			for (int i =0; i < num_devices; i++) dev_id[i] = predef_vals.dev_ids[i];
+	CoControl_p autotuned_vals = (CoControl_p) malloc(sizeof(struct CoControl));
+	int autotune_eval_devices = 0;
+	if (predef_vals_gemm->dev_num > 0){
+		autotuned_vals->dev_num = predef_vals_gemm->dev_num;
+		for (int i =0; i < autotuned_vals->dev_num; i++) autotuned_vals->dev_ids[i] = predef_vals_gemm->dev_ids[i];
 #ifdef DEBUG
-			lprintf(lvl, "Running on %d devices with dev_ids=[ ", num_devices);
-			for (int i =0; i < num_devices; i++) fprintf(stderr, "%d ", predef_vals.dev_ids[i]);
-			fprintf(stderr, "]\n");
+		lprintf(lvl, "Running on %d devices with dev_ids=[ ", autotuned_vals->dev_num);
+		for (int i =0; i < autotuned_vals->dev_num; i++) fprintf(stderr, "%d ", autotuned_vals->dev_ids[i]);
+		fprintf(stderr, "]\n");
 #endif
-		}
-		else if (predef_vals.dev_num == 0) error("CoCopeLiaDgemm: CPU-only version not implemented (why should it?)\n");
-		else{
+	}
+	else{
 #ifdef ENABLE_CPU_WORKLOAD
-			num_devices = LOC_NUM;
+		autotuned_vals->dev_num = LOC_NUM;
 #else
-			num_devices = DEV_NUM;
+		autotuned_vals->dev_num = DEV_NUM;
 #endif
-			dev_id = (short*) malloc (num_devices*sizeof(short));
-			for (int i = 0; i < num_devices; i++) dev_id[i] = (i != LOC_NUM - 1)? i : -1;
-		}
-
-		if(used_vals == NULL) {
-			used_vals = (CoControl_p) malloc(sizeof(struct CoControl));
-			used_vals->dev_ids = NULL;
-		}
-		used_vals->dev_num = num_devices;
-		if(used_vals->dev_ids != NULL)  free(used_vals->dev_ids);
-		used_vals->dev_ids = (int*) malloc(num_devices*sizeof(int));
-		for (int d = 0; d< num_devices; d++) used_vals->dev_ids[d] = dev_id[d];
+		autotune_eval_devices = 1;
+		for (int i =0; i < autotuned_vals->dev_num; i++)
+			autotuned_vals->dev_ids[i] = (i == DEV_NUM - 1)? -1 : i;
 	}
 
-	/// Read predefined values for T or use Tile selection.
-	/// return: T size for datum
-	size_t T = 256;
+	for (int i =0; i < autotuned_vals->dev_num; i++)
+		if(!reuse_model_flag || glob_model_gemm[i] == NULL) glob_model_gemm[i] =
+			CoCoPeLiaTileModelInit(autotuned_vals->dev_ids[i], "Dgemm", initial_gemm);
+
 	double slowest_problem_t = 0;
 	CoCoModel_p model = NULL;
-	{
-		if(predef_vals.T <= 0){
-			/// For each asset: find datum dimension, taking into account shared dimensions for the problem (e.g. here M, N, K are shared between two matrices each)
-			/// 1) Ideally we would want a method to find the optimal Tm, Tn, Tk
-			/// 2) Currently only square for 2D (sufficient for CoCoPeLia and BLAS in the general case)
-			/// 3) Interesting point for exploration (how to find datum, performance impact etc.)
-			/// 4)  Basically its the tile selection part of CoCoPeLia, but for multiple devices.
-
-			/// Naive for multiple equivalent devices.
-			int slowest_problem_T = std::min((size_t) 1024, std::min((size_t) M, (size_t)std::min(N, K)));
-			tunableParams_p pred_p[num_devices];
-			for (int d = 0 ; d < num_devices; d++) if (dev_id[d]!= -1){
-				model = CoCoPeLiaModelInit(dev_id[d], "Dgemm", 'X', TransA, TransB,
-					M/num_devices, N, K,
-					(CoCoGetPtrLoc(A) == dev_id[d])? 0 : 1, (CoCoGetPtrLoc(B) == dev_id[d])? 0 : 1,
-					(CoCoGetPtrLoc(C) == dev_id[d])? 0 : 1, (CoCoGetPtrLoc(A) == dev_id[d])? 0 : 1,
-					(CoCoGetPtrLoc(B) == dev_id[d])? 0 : 1, (CoCoGetPtrLoc(C) == dev_id[d])? 0 : 1,
-					ldA, ldB, ldC);
-#ifdef TEST
-				cpu_timer = csecond() - cpu_timer;
-				lprintf(lvl, "Model Initialization(dev = %d): t_mod_init = %lf ms\n", dev_id[d], cpu_timer*1000);
-				cpu_timer = csecond();
-#endif
-
-				pred_p[d] = CoCoPeLiaModelOptimizeTile(model, COCOPELIA_PIPELINE_EMULATE);
-				if (pred_p[d]->pred_t > slowest_problem_t){
-					slowest_problem_t = pred_p[d]->pred_t;
-					slowest_problem_T = pred_p[d]->T;
-				}
-#ifdef TEST
-				cpu_timer = csecond() - cpu_timer;
-				lprintf(lvl, "Model Selected T=%zu for dev = %d with t_predicted = %lf ms : t_mod_opt = %lf ms\n", pred_p[d]->T, dev_id[d], pred_p[d]->pred_t*1000, cpu_timer*1000);
-				cpu_timer = csecond();
-#endif
-
-			}
-			/// Extra: check if running in multiple GPUs seems to have a point performance-wise.
-			/// Currently only comparing single vs multi GPU
-			/// Can be extended to complex (e.g. 1 vs 2 vs 3 etc)
-			if (predef_vals.dev_num < 0 && num_devices > 1 && dev_id[0] == 0) {
-				short best_dev_id = 0;
-			 	model = CoCoPeLiaModelInit(0, "Dgemm", 'X', TransA, TransB, M, N, K,
-				 (CoCoGetPtrLoc(A) == 0)? 0 : 1, (CoCoGetPtrLoc(B) == 0)? 0 : 1,
-				 (CoCoGetPtrLoc(C) == 0)? 0 : 1, (CoCoGetPtrLoc(A) == 0)? 0 : 1,
-				 (CoCoGetPtrLoc(B) == 0)? 0 : 1, (CoCoGetPtrLoc(C) == 0)? 0 : 1,
-				 ldA, ldB, ldC);
-
-				tunableParams_p pred_p_single_dev = CoCoPeLiaModelOptimizeTile(model, COCOPELIA_PIPELINE_EMULATE);
-
-#ifdef TEST
-			 cpu_timer = csecond() - cpu_timer;
-			 lprintf(lvl, "Model Selected T=%zu for single-device execution(%d) with t_predicted = %lf ms : t_mod_opt = %lf ms\n", pred_p_single_dev->T, best_dev_id, pred_p_single_dev->pred_t*1000, cpu_timer*1000);
-			 cpu_timer = csecond();
-#endif
-
-				/// How much performance improvent justifies adding one more GPU?
-				/// Aren't there better metrics for this?
-				if (slowest_problem_t > pred_p_single_dev->pred_t){
-				 	slowest_problem_T = pred_p_single_dev->T;
-				 	warning("Chose to run on only 1 device: Model implies %lf\% better performance\n",
-						(slowest_problem_t - pred_p_single_dev->pred_t)/slowest_problem_t*100);
-					slowest_problem_t = pred_p_single_dev->pred_t;
-					num_devices = 1;
-					dev_id[0] = best_dev_id;
-			 	}
-			}
-
-			T = slowest_problem_T;
-#ifdef TEST
-			cpu_timer = csecond() - cpu_timer;
-			lprintf(lvl, "Model Selected T=%zu with t_predicted = %lf ms : t_mod_opt = %lf ms\n", T, slowest_problem_t*1000, cpu_timer*1000);
-			cpu_timer = csecond();
-#endif
-
+	short *dev_ids[autotuned_vals->dev_num] = {NULL}, best_dev_num = 0;
+	tunableParams_p pred_p[autotuned_vals->dev_num] = {NULL}, best_pred_p = NULL;
+	if(predef_vals_gemm->T > 0){
+		autotuned_vals->T = predef_vals_gemm->T;
 #ifdef DEBUG
-			lprintf(lvl, "Model Selected T=%zu : t_predicted = %lf ms\n", T, slowest_problem_t*1000);
-			lprintf(lvl, "====================================\n");
+		lprintf(lvl, "====================================\n");
+		lprintf(lvl, "Using predefined T=%zu\n", autotuned_vals->T);
+		lprintf(lvl, "====================================\n");
 #endif
+	}
+	else if (predef_vals_gemm->dev_num > 0){
+		best_pred_p = CoCoPeLiaModelMultidevOptimizeTile(autotuned_vals->dev_num,
+			autotuned_vals->dev_ids, glob_model_gemm);
+		autotuned_vals->T = best_pred_p->T;
+	}
+	else{
+		for (int used_devs = 0; used_devs < autotuned_vals->dev_num; used_devs++){
+			dev_ids[used_devs] = CoCoPeLiaDeviceSelectBest(used_devs + 1, autotuned_vals->dev_num,
+				autotuned_vals->dev_ids, glob_model_gemm);
+			pred_p[used_devs] = CoCoPeLiaModelMultidevOptimizeTile(used_devs + 1,
+				dev_ids[used_devs], glob_model_gemm);
+			if (best_pred_p == NULL){
+				best_pred_p = pred_p[used_devs];
+				best_dev_num = used_devs + 1;
+			}
+			else if(best_pred_p->pred_t > pred_p[used_devs]->pred_t){
+				best_pred_p = pred_p[used_devs];
+				best_dev_num = used_devs + 1;
+			}
 		}
-		else{
-			T = predef_vals.T;
-#ifdef DEBUG
-			lprintf(lvl, "====================================\n");
-			lprintf(lvl, "Using predefined T=%zu\n", T);
-			lprintf(lvl, "====================================\n");
-#endif
-		}
-		if(used_vals == NULL) {
-			used_vals = (CoControl_p) malloc(sizeof(struct CoControl));
-			used_vals->dev_ids = NULL;
-		}
-		used_vals->T = T;
-		used_vals->cache_limit = predef_vals.cache_limit;
+		autotuned_vals->T = best_pred_p->T;
+		autotuned_vals->dev_num = best_dev_num;
+		for (int idx = 0; idx < autotuned_vals->dev_num; idx++)
+			autotuned_vals->dev_ids[idx] = dev_ids[autotuned_vals->dev_num][idx];
 	}
 
 #ifdef TEST
@@ -491,6 +443,8 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 	lprintf(lvl, "Device/T selection -> t_configure = %lf ms\n", cpu_timer*1000);
 	cpu_timer = csecond();
 #endif
+
+	size_t T = autotuned_vals->T;
 
 	/// TODO: Split each asset to Tiles
 	A_asset->InitTileMap(T, T);
@@ -507,19 +461,20 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 	Subkernel** Subkernel_list = CoCoAsignTilesToSubkernelsGemm(A_asset, B_asset, C_asset, T,
 		&Subkernel_num);
 #ifdef DEBUG
-	lprintf(lvl, "Subkernel_num = %d {M,N,K}GridSz = {%d, %d, %d}, num_devices = %d\n\n",
-		Subkernel_num, MGridSz, NGridSz, KGridSz, num_devices);
+	lprintf(lvl, "Subkernel_num = %d {M,N,K}GridSz = {%d, %d, %d}, autotuned_vals->dev_num = %d\n\n",
+		Subkernel_num, MGridSz, NGridSz, KGridSz, autotuned_vals->dev_num);
 #endif
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer;
 	lprintf(lvl, "Subkernel init -> t_subkernel_init = %lf ms\n", cpu_timer*1000);
 	cpu_timer = csecond();
 #endif
-	int Subkernel_dev_id_list[num_devices*Subkernel_num] = {-1}, Subkernels_per_dev[num_devices] = {0};
+
+	int Subkernel_dev_id_list[autotuned_vals->dev_num*Subkernel_num] = {-1}, Subkernels_per_dev[autotuned_vals->dev_num] = {0};
 	if (!strcmp(DISTRIBUTION, "ROUND-ROBIN"))
-		CoCoDistributeSubkernelsRoundRobin(Subkernel_dev_id_list, Subkernels_per_dev, num_devices, MGridSz, NGridSz, KGridSz);
+		CoCoDistributeSubkernelsRoundRobin(Subkernel_dev_id_list, Subkernels_per_dev, autotuned_vals->dev_num, MGridSz, NGridSz, KGridSz);
 	else if (!strcmp(DISTRIBUTION, "SPLITD1-NAIVE"))
-		CoCoDistributeSubkernelsNaive(Subkernel_dev_id_list, Subkernels_per_dev, num_devices, MGridSz, NGridSz, KGridSz);
+		CoCoDistributeSubkernelsNaive(Subkernel_dev_id_list, Subkernels_per_dev, autotuned_vals->dev_num, MGridSz, NGridSz, KGridSz);
 	else error("CoCopeLiaDgemm: Unknown Subkernel Distribution %s\n", DISTRIBUTION);
 
 	pthread_attr_t attr;
@@ -527,7 +482,7 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 	if (s != 0) error("CoCopeLiaDgemm: pthread_attr_init failed s=%d\n", s);
 	void* res;
 	int used_devices = 0;
-	for (int d = 0 ; d < num_devices; d++) if(Subkernels_per_dev[d] > 0 ) used_devices++;
+	for (int d = 0 ; d < autotuned_vals->dev_num; d++) if(Subkernels_per_dev[d] > 0 ) used_devices++;
 	pthread_t thread_id[used_devices];
 	kernel_pthread_wrap_p thread_dev_data[used_devices];
 
@@ -543,10 +498,10 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 	for(int d=0; d<used_devices;d++){
 
 		// Check/Enable peer access between participating GPUs
-		CoCoEnableLinks(d, dev_id, num_devices);
+		CoCoEnableLinks(d, autotuned_vals->dev_ids, autotuned_vals->dev_num);
 
 		thread_dev_data[d] = (kernel_pthread_wrap_p) malloc(sizeof(struct kernel_pthread_wrap));
-		thread_dev_data[d]->dev_id = dev_id[d];
+		thread_dev_data[d]->dev_id = autotuned_vals->dev_ids[d];
 
 		thread_dev_data[d]->SubkernelListDev = (Subkernel**) malloc(Subkernels_per_dev[d]* sizeof(Subkernel*));
 		for(int skitt = 0; skitt < Subkernels_per_dev[d]; skitt++)
@@ -572,7 +527,7 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer;
 	lprintf(lvl, "Fire and gather pthreads for all devices -> t_exec_full = %lf ms\n", cpu_timer*1000);
-	if(predef_vals.T <= 0){
+	if(predef_vals_gemm->T <= 0){
 		lprintf(lvl, "t_predicted for T=%zu was %.2lf ms : %lf \% error\n",
 		T, slowest_problem_t*1000,
 		(slowest_problem_t==0)? 0: (slowest_problem_t - cpu_timer )/slowest_problem_t*100);
@@ -656,9 +611,11 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 /// A modification of CoCopeLiaDgemm but with given parameters (mainly for performance/debug purposes)
 CoControl_p CoCopeLiaDgemmControled(char TransA,  char TransB, size_t M, size_t N, size_t K, VALUE_TYPE alpha, VALUE_TYPE* A, size_t ldA, VALUE_TYPE* B, size_t ldB, VALUE_TYPE beta, VALUE_TYPE* C, size_t ldC, CoControl_p predef_control_values){
 	if (predef_control_values == NULL) return CoCopeLiaDgemm(TransA, TransB,  M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC);
-	predef_vals.T = predef_control_values->T;
-	predef_vals.dev_ids = predef_control_values->dev_ids;
-	predef_vals.dev_num = predef_control_values->dev_num;
-	predef_vals.cache_limit = predef_control_values->cache_limit;
+	if (predef_vals_gemm == NULL) predef_vals_gemm = (CoControl_p) malloc(sizeof(struct CoControl));
+	predef_vals_gemm->T = predef_control_values->T;
+	predef_vals_gemm->dev_num = predef_control_values->dev_num;
+	for(int idx =0; idx < LOC_NUM; idx++)
+		predef_vals_gemm->dev_ids[idx] = predef_control_values->dev_ids[idx];
+	predef_vals_gemm->cache_limit = predef_control_values->cache_limit;
 	return CoCopeLiaDgemm(TransA, TransB,  M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC);
 }

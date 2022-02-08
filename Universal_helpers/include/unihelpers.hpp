@@ -16,7 +16,9 @@
 #include <stdio.h>
 #include <stdarg.h>
 
+#ifndef LOC_NUM
 #define LOC_NUM (DEV_NUM + 1)
+#endif
 
 /*****************************************************/
 /// Generalised "Command queue" and "Event" definition (e.g. CUDA streams and Events for CUDA backend)

@@ -47,8 +47,8 @@ target_link_libraries(autotuning_runtime ${INTERNAL_LINK_LIB} unihelpers)
 configure_file(${AUTOTUNE_DIR_INC}/CoCoPeLiaCoModel.hpp ${AUTOTUNE_INSTALL_INC}/CoCoPeLiaCoModel.hpp COPYONLY)
 configure_file(${AUTOTUNE_DIR_INC}/CoCoPeLiaModel.hpp ${AUTOTUNE_INSTALL_INC}/CoCoPeLiaModel.hpp COPYONLY)
 
-add_executable (CoCoPeLiaPredictTileTester ${AUTOTUNE_DIR}/testing/CoCoPeLiaPredictTileTester.cpp )
-target_link_libraries(CoCoPeLiaPredictTileTester ${INTERNAL_LINK_LIB} autotuning_runtime unihelpers)
+#add_executable (CoCoPeLiaPredictTileTester ${AUTOTUNE_DIR}/testing/CoCoPeLiaPredictTileTester.cpp )
+#target_link_libraries(CoCoPeLiaPredictTileTester ${INTERNAL_LINK_LIB} autotuning_runtime unihelpers)
 
 set (AUTOTUNE_INSTALL_INC ${AUTOTUNE_INSTALL_INC} PARENT_SCOPE)
 message( "->\nAutotuning Runtime - Shared Library: " ${CMAKE_LIBRARY_OUTPUT_DIRECTORY} )

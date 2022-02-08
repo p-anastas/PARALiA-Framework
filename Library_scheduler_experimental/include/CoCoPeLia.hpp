@@ -6,12 +6,20 @@
 #ifndef COCOPELIA_H
 #define COCOPELIA_H
 
+#ifndef LOC_NUM
+#define LOC_NUM (DEV_NUM + 1)
+#endif
+
+#ifndef COCONTROL_H
 typedef struct CoControl{
 	int T = 0;
-	int* dev_ids = NULL;
-	int dev_num = -1;
+	short dev_num = -1;
+	short dev_ids[LOC_NUM];
+	int Subkernels_per_dev[LOC_NUM];
+	int *Subkernel_dev_id_list;
 	long long cache_limit = 0;
 }* CoControl_p;
+#endif
 
 /// Return a string represenation of the given CoControl
 char* CoControlPrint(CoControl_p input);

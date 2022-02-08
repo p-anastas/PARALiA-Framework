@@ -233,11 +233,8 @@ CoControl_p CoCopeLiaDaxpy(size_t N, VALUE_TYPE alpha, VALUE_TYPE* x, size_t inc
 
 		if(used_vals_daxpy == NULL) {
 			used_vals_daxpy = (CoControl_p) malloc(sizeof(struct CoControl));
-			used_vals_daxpy->dev_ids = NULL;
 		}
 		used_vals_daxpy->dev_num = num_devices;
-		if(used_vals_daxpy->dev_ids != NULL)  free(used_vals_daxpy->dev_ids);
-		used_vals_daxpy->dev_ids = (int*) malloc(num_devices*sizeof(int));
 		for (int d = 0; d< num_devices; d++) used_vals_daxpy->dev_ids[d] = dev_id[d];
 	}
 
@@ -248,6 +245,8 @@ CoControl_p CoCopeLiaDaxpy(size_t N, VALUE_TYPE alpha, VALUE_TYPE* x, size_t inc
 	CoCoModel_p model = NULL;
 	{
 		if(predef_vals_daxpy.T <= 0){
+			error("daxpy prediction under construction\n");
+			/*
 			/// Naive for multiple equivalent devices.
 			int slowest_problem_T = std::min((size_t) 512*512, N);
 			tunableParams_p pred_p[num_devices];
@@ -319,6 +318,7 @@ CoControl_p CoCopeLiaDaxpy(size_t N, VALUE_TYPE alpha, VALUE_TYPE* x, size_t inc
 			lprintf(lvl, "Model Selected T=%zu : t_predicted = %lf ms\n", T, slowest_problem_t*1000);
 			lprintf(lvl, "====================================\n");
 #endif
+*/
 		}
 		else{
 			T = predef_vals_daxpy.T;
@@ -330,7 +330,6 @@ CoControl_p CoCopeLiaDaxpy(size_t N, VALUE_TYPE alpha, VALUE_TYPE* x, size_t inc
 		}
 		if(used_vals_daxpy == NULL) {
 			used_vals_daxpy = (CoControl_p) malloc(sizeof(struct CoControl));
-			used_vals_daxpy->dev_ids = NULL;
 		}
 		used_vals_daxpy->T = T;
 		used_vals_daxpy->cache_limit = predef_vals_daxpy.cache_limit;
@@ -489,8 +488,9 @@ CoControl_p CoCopeLiaDaxpy(size_t N, VALUE_TYPE alpha, VALUE_TYPE* x, size_t inc
 CoControl_p CoCopeLiaDaxpyControled(size_t N, VALUE_TYPE alpha, VALUE_TYPE* x, size_t incx, VALUE_TYPE* y, size_t incy, CoControl_p predef_control_values){
 	if (predef_control_values == NULL) return CoCopeLiaDaxpy(N, alpha, x, incx, y, incy);
 	predef_vals_daxpy.T = predef_control_values->T;
-	predef_vals_daxpy.dev_ids = predef_control_values->dev_ids;
 	predef_vals_daxpy.dev_num = predef_control_values->dev_num;
+	for(int idx =0; idx < LOC_NUM; idx++)
+		predef_vals_daxpy.dev_ids[idx] = predef_control_values->dev_ids[idx];
 	predef_vals_daxpy.cache_limit = predef_control_values->cache_limit;
 	return CoCopeLiaDaxpy(N, alpha, x, incx, y, incy);
 }

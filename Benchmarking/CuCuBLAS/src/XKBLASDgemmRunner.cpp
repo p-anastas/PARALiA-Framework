@@ -88,10 +88,9 @@ int main(const int argc, const char *argv[]) {
 	int dev_num, *dev_ids;
 	if (predef_control_values!= NULL && predef_control_values->dev_num > 0) error("XKBLASDgemmRunner: XKBLAS not modified to accept devices from within script\n");
 	else{
-		return_values->dev_num = -1;
+		return_values->dev_num = dev_num = DEV_NUM;
 		dev_ids = (int*) malloc(dev_num*sizeof(int));
-		for (int i = 0; i < dev_num; i++) dev_ids[i] = -1;
-		return_values->dev_ids = dev_ids;
+		for (int i = 0; i < dev_num; i++) return_values->dev_ids[i] = dev_ids[i] = i;
 	}
 #ifdef CHECKLOG
 	CheckLogLvl3(filename, return_values, TransA, TransB, alpha, beta, M, N, K, A_loc, B_loc, C_loc, C_out_loc);

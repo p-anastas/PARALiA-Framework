@@ -7,6 +7,7 @@
 #define COCOPELIA_MODEL_H
 
 #include "CoCoPeLiaCoModel.hpp"
+#include "backend_wrappers.hpp"
 
 // TODO: To avoid mallocs, define a set vec size of 4 (No BLAS has that many data arguments anyway)
 typedef struct V_struct{
@@ -38,7 +39,6 @@ enum ModelType{
 typedef struct tunableParams{
 	size_t T;
 	double pred_t;
-	double cpuRatio;
 }* tunableParams_p;
 
 typedef struct flagParams{
@@ -60,6 +60,12 @@ typedef struct CoCo_model{
 
 }* CoCoModel_p;
 
+short* CoCoPeLiaDeviceSelectBest(short used_devs, short avail_devs, short* avail_dev_ids,
+	CoCoModel_p* avail_dev_model_list);
+	
+tunableParams_p CoCoPeLiaModelMultidevOptimizeTile(short used_devs, short* used_dev_ids,
+	CoCoModel_p* dev_model_list);
+
 ///  Mode-Generalized prediction wrapper
 double CoCoPeLiaModelPredict(CoCoModel_p model, size_t T, ModelType mode);
 
@@ -70,6 +76,7 @@ double CoCopeLiaPredictBidirectional(CoCoModel_p model, size_t T);
 double CoCopeLiaPredictReuse(CoCoModel_p model, size_t T);
 double CoCopeLiaPipelineEmulate(CoCoModel_p model, size_t T);
 
+CoCoModel_p CoCoPeLiaTileModelInit(short dev_id, char* func_name, void* func_data);
 ///  Predicts Best tile size for 3-way overlaped execution time for BLAS3 2-dim blocking.
 tunableParams_p CoCoPeLiaModelOptimizeTile(CoCoModel_p model, ModelType mode);
 
@@ -79,12 +86,8 @@ short CoCoModel_choose_transfer_mode3(CoCoModel_p model, size_t T);
 ///  Predicts Best tile size for 3-way overlaped execution time for BLAS1 1-dim blocking.
 size_t CoCoModel_optimize1(CoCoModel_p model);
 
-CoCoModel_p CoCoPeLiaModelInit(short dev_id, char* func, char flag1, char flag2, char flag3, size_t Dim1, size_t Dim2, size_t Dim3, short Loc1, short Loc2, short Loc3, short OutLoc1, short OutLoc2, short OutLoc3, size_t offset1, size_t offset2, size_t offset3);
 
-CoCoModel_p CoCoModel_gemm_init(CoCoModel_p base_model, char TransA, char TransB, size_t M, size_t N, size_t K, short A_loc, short B_loc, short C_loc, short A_out_loc, short B_out_loc, short C_out_loc, size_t ldA, size_t ldB, size_t ldC, short dev_id, char* func);
-
-CoCoModel_p CoCoModel_gemv_init(size_t M, size_t N, short A_loc, short x_loc, short y_loc, short dev_id, char* func);
-
+CoCoModel_p CoCoModel_gemm_init(CoCoModel_p base_model, short dev_id, char* func, gemm_backend_in_p func_data);
 CoCoModel_p CoCoModel_axpy_init(size_t N, short x_loc, short y_loc, short dev_id, char* func);
 
 const char* printModel(ModelType mode);
