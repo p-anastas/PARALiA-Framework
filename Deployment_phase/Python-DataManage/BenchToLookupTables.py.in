@@ -1,3 +1,4 @@
+
 import argparse
 import os
 import fnmatch
@@ -23,13 +24,15 @@ if (libID == 0): # CuCuBLAS
 else:
 	exit("Invalid libID")
 
+version='@PROJECT_VERSION@'
+
 
 entries = os.listdir(InDataDir)
 outdata = pd.DataFrame()
 for filename in entries:
-	if fnmatch.fnmatch(filename, 'cublas%s_dev-%d*.log' %(func,dev_id)):
+	if fnmatch.fnmatch(filename, 'cublas%s_dev-%d*_%s.log' %(func,dev_id, version)):
 		print(filename)	
-		parts = filename.split('.')[0::-1].split('_')
+		parts = filename.split('_')[0:-1]
 		indata = pd.read_csv(InDataDir+'/'+filename, header = None)
 		if len(parts) == 2:
 			print('%s : no flags' %filename)

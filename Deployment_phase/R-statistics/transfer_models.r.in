@@ -1,0 +1,84 @@
+#TODO: Input is complex and contains numbers, should be generalized
+args = commandArgs(trailingOnly=TRUE)
+if (length(args)!=4) {
+  stop("Usage: Rscript --vanilla Rprogram InDataDir OutDataDir dev_id libID", call.=FALSE)
+}
+InDataDir = args[1]
+OutDataDir = args[2]
+dev_id = as.integer(args[3])
+libID= as.integer(args[4]) 
+
+devices <-@NUM_DEVICES@
+version="@PROJECT_VERSION@"
+
+for (i in -1:(devices-1)) if(dev_id != i){
+	if (libID == 0){ # CuCuBLAS
+		infile_send = sprintf("%s/CoCoMemcpy2DAsync_to-%d_from-%d_%s.log", InDataDir, i, dev_id, version)
+		infile_recv = sprintf("%s/CoCoMemcpy2DAsync_to-%d_from-%d_%s.log", InDataDir, dev_id, i, version)
+	} else {
+		stop("Invalid libID", call.=FALSE)
+	}
+	
+	send_dataset <- read.table(infile_send,  header = FALSE, sep = ",")
+	summary(send_dataset)
+
+	simple_send_train_set <- subset(send_dataset, select=c("V1", "V3", "V6"))
+	simple_send_train_set$bytes <- c(I(simple_send_train_set$V1*simple_send_train_set$V1*8))
+	#summary(simple_send_train_set)
+
+	#Simple linear regression
+	regression_send <- lm(V3 ~ bytes , data = subset(simple_send_train_set))
+	#summary(regression_recv)
+	inter_send <- regression_send$coefficients[1]
+	G_send <- regression_send$coefficients[2]
+
+	#Bidirectional linear regression - Calculate slowdown 
+	regression_send_bid <- lm(V6 ~ bytes , data = subset(simple_send_train_set))
+	slowdown_send <- regression_send_bid$coefficients[2]/ G_send
+
+	recv_dataset <- read.table(infile_recv,  header = FALSE, sep = ",")
+	#summary(recv_dataset)
+	
+	simple_recv_train_set <- subset(recv_dataset, select=c("V1", "V3", "V6"))
+	simple_recv_train_set$bytes <- c(I(simple_recv_train_set$V1*simple_recv_train_set$V1*8))
+	#summary(simple_recv_train_set)
+
+	#Simple linear regression
+	regression_recv <- lm(V3 ~ bytes , data = subset(simple_recv_train_set))
+	#summary(regression_recv)
+	inter_recv <- regression_recv$coefficients[1]
+	G_recv <- regression_recv$coefficients[2]
+
+	#Bidirectional linear regression - Calculate slowdown 
+	regression_recv_bid <- lm(V6 ~ bytes , data = subset(simple_recv_train_set))
+	slowdown_recv <- regression_recv_bid$coefficients[2]/ G_recv
+	
+	cat("\nLogP ", dev_id, "->", i, " model:","\n")
+	cat("Intercept = ", inter_send,"\n")
+	cat("Coefficient =", G_send,"\n")
+	cat("Slowdown =", slowdown_send,"\n")
+	
+	cat("\nLogP ", dev_id, "<-", i, " model:","\n")
+	cat("Intercept = ", inter_recv,"\n")
+	cat("Coefficient =", G_recv,"\n")
+	cat("Slowdown =", slowdown_recv,"\n")
+
+	# Add calculated overhead as intercept
+	#recv <- c("inter" = inter_recv, "coef" = G_recv$coefficients[1], "sl" = slowdown_recv)
+	#send <- c("inter" = inter_send, "coef" = G_send$coefficients[1], "sl" = slowdown_send)
+	# Store for C use. 
+	#write.csv(data.frame(recv, send) ,"../Models/transfer_model_dungani.log")
+
+	#outfile_recv<-file("../Models/transfer_model_dungani_2_-1.log")
+	#outfile_send<-file("../Models/transfer_model_dungani_-1_2.log")
+	outfile_recv_name = sprintf("%s/Linear-Model_to-%d_from--1.log", OutDataDir, dev_id)
+	outfile_send_name = sprintf("%s/Linear-Model_to--1_from-%d.log", OutDataDir, dev_id)
+	outfile_recv<-file(outfile_recv_name)
+	outfile_send<-file(outfile_send_name)
+
+	writeLines(c(toString(inter_recv),toString(G_recv), toString(slowdown_recv)), outfile_recv)
+	close(outfile_recv)
+
+	writeLines(c(toString(inter_send),toString(G_send), toString(slowdown_send)), outfile_send)
+	close(outfile_send)
+}

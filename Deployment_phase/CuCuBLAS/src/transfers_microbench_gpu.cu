@@ -37,6 +37,8 @@ int main(const int argc, const char *argv[]) {
 		error("Incorrect input arguments. Usage: ./correct_run to from\n");
   	}
 
+	if (from == to) error("Transfer benchmark@%s %d->%d: Same device\n",TESTBED, from, to);
+	
 	char *filename = (char *) malloc(256* sizeof(char));
 	sprintf(filename, "%s/Benchmark-Results/CoCoMemcpy2DAsync_to-%d_from-%d_%s.log", DEPLOYDB, to, from, VERSION);
 	check_benchmark(filename);
@@ -79,7 +81,7 @@ int main(const int argc, const char *argv[]) {
 	CoCoVecInit((double*)src, maxDim*(maxDim+1), 42, from);
 	CoCoVecInit((double*)rev_src, maxDim*(maxDim+1), 43, to);
 
-	CQueue_p transfer_link = new CommandQueue(from), reverse_link = new CommandQueue(to);
+	CQueue_p transfer_link = new CommandQueue(from), reverse_link = new CommandQueue(from);
 
 	CoCoSyncCheckErr();
 	fprintf(stderr, "Warming up...\n");
@@ -90,6 +92,7 @@ int main(const int argc, const char *argv[]) {
 	double cpu_timer, transfer_t_vals[MICRO_MAX_ITER], transfer_t_sum, transfer_t_mean, bench_t, error_margin;
 	double transfer_t_bid_sum, transfer_t_bid_mean, error_margin_bid;
 	size_t sample_sz, sample_sz_bid;
+	CoCoPeLiaSelectDevice(from);
 	Event_timer_p device_timer = new Event_timer();
 	for (size_t dim = minDim; dim < maxDim+1; dim+=step){
 		if (dim >= step * 16) step*=2;

@@ -2,7 +2,7 @@
 echo "Bash version ${BASH_VERSION}..."
 
 DEPLOY_DIR=@PROJECT_SOURCE_DIR@
-BACKEND=@BACKENED@
+BACKEND=@BACKEND@
 
 machine=@TESTBED_NAME@
 device=$1
@@ -30,7 +30,7 @@ micro_sgemm_exec="${BIN_DIR}/RunCuCuBlasSgemmBench"
 
 echo "Performing microbenchmarks for transfers..."
 rm $transfer_log
-for end_device in $(seq -1 $devices);
+for (( end_device = -1; end_device < $devices; end_device++ ))
 do
 	echo "$micro_transfer_exec $device $end_device &>> $transfer_log"
 	$micro_transfer_exec $device $end_device &>> $transfer_log
