@@ -71,8 +71,8 @@ for (i in -1:(devices-1)) if(dev_id != i){
 
 	#outfile_recv<-file("../Models/transfer_model_dungani_2_-1.log")
 	#outfile_send<-file("../Models/transfer_model_dungani_-1_2.log")
-	outfile_recv_name = sprintf("%s/Linear-Model_to-%d_from--1.log", OutDataDir, dev_id)
-	outfile_send_name = sprintf("%s/Linear-Model_to--1_from-%d.log", OutDataDir, dev_id)
+	outfile_recv_name = sprintf("%s/Linear-Model_to-%d_from-%d.log", OutDataDir, dev_id, i)
+	outfile_send_name = sprintf("%s/Linear-Model_to-%d_from-%d.log", OutDataDir, i, dev_id)
 	outfile_recv<-file(outfile_recv_name)
 	outfile_send<-file(outfile_send_name)
 

@@ -36,12 +36,12 @@ int main(const int argc, const char *argv[]) {
 		error("Incorrect input arguments. Usage: ./correct_run dev_id TransA TransB\n");
   	}
 
-	// Define the max size of a benchmark kernel to run on this machine.
-	size_t maxDim = CoCoGetMaxDimSqAsset2D(3, sizeof(double), STEP_TRANS, dev_id);
-
 	char *filename = (char *) malloc(256* sizeof(char));
 	sprintf(filename, "%s/Benchmark-Results/cublasDgemm_dev-%d_TransA-%c_TransB-%c_%s.log", DEPLOYDB, dev_id, TransA, TransB, VERSION);
 	check_benchmark(filename);
+
+	// Define the max size of a benchmark kernel to run on this machine.
+	size_t maxDim = CoCoGetMaxDimSqAsset2D(3, sizeof(double), STEP_TRANS, dev_id);
 
 	size_t ldA = maxDim, ldB = maxDim, ldC = maxDim;
 

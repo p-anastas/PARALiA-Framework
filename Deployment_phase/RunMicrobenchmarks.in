@@ -18,13 +18,12 @@ fi
 
 mkdir -p "${RES_DIR}/microbench_logs"
 
-transfer_log="${RES_DIR}/microbench_logs/transfer_microbench_gpu.log"
-dgemm_log="${RES_DIR}/microbench_logs/dgemm_microbench_gpu.log"
-sgemm_log="${RES_DIR}/microbench_logs/sgemm_microbench_gpu.log"
+transfer_log="${RES_DIR}/microbench_logs/transfer_microbench.log"
+dgemm_log="${RES_DIR}/microbench_logs/dgemm_microbench.log"
+sgemm_log="${RES_DIR}/microbench_logs/sgemm_microbench.log"
 
 micro_transfer_exec="${BIN_DIR}/RunCuCuBlasTransferBench"
-micro_dgemm_gpu_exec="${BIN_DIR}/RunCuCuBlasDgemmBench"
-micro_dgemm_cpu_exec="${BIN_DIR}/RunCBlasDgemmBench"
+micro_dgemm_exec="${BIN_DIR}/RunCuCuBlasDgemmBench"
 micro_sgemm_exec="${BIN_DIR}/RunCuCuBlasSgemmBench"
 
 
