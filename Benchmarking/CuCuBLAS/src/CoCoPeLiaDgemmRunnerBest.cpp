@@ -71,7 +71,7 @@ int main(const int argc, const char *argv[]) {
 	CoCoMemcpy(C_buf, C,  M * N *sizeof(double), -2, C_loc);
 #endif
 
-	size_t best_T = (size_t) fmin(fmin(fmin(M/DEV_NUM,N/DEV_NUM),K),CBLASXT_MAX_SAFE_TILE);
+	size_t best_T = (size_t) fmin(fmin(fmin(M/LOC_NUM,N/LOC_NUM),K),CBLASXT_MAX_SAFE_TILE);
 	predef_control_values-> cache_limit = 0;
 	predef_control_values-> dev_num = -1;
 	predef_control_values-> T = best_T;

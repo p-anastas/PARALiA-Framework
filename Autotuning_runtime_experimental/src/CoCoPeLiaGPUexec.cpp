@@ -65,17 +65,20 @@ GPUexec3Model_p GPUexec3Model_init(short dev_id, char* func){
 	out_model->av_time_buf = (double*) malloc( bench_lines* sizeof(double));
 	out_model->TransA_buf = (char*) malloc( bench_lines* sizeof(char));
 	out_model->TransB_buf = (char*) malloc( bench_lines* sizeof(char));
-#ifdef DEBUG
+#ifdef PDEBUG
 	lprintf(lvl, "Reading %zu lines from %s\n", bench_lines, filename);
 #endif
 	int items;
 	size_t trashdata, trashdata2, conv_itter;
 	double error_margin, Dtrashdata;
 	for (int i = 0; i < bench_lines; i++){
-		items = fscanf(fp, "%c,%c,%zu,%zu,%zu, %lf,%lf,%zu,%lf\n", &out_model->TransA_buf[i], &out_model->TransB_buf[i], &out_model->T_lookup_buf[i], &trashdata, &trashdata2, &out_model->av_time_buf[i], &error_margin, &conv_itter, &Dtrashdata);
+		items = fscanf(fp, "%c,%c,%zu,%zu,%zu, %lf,%lf,%zu,%lf\n",
+			&out_model->TransA_buf[i], &out_model->TransB_buf[i], &out_model->T_lookup_buf[i],
+			&trashdata, &trashdata2, &out_model->av_time_buf[i], &error_margin, &conv_itter, &Dtrashdata);
 		if (items != 9) error("GPUexec3Model_init: Problem in reading model");
-#ifdef PDEBUG
-		lprintf(lvl, "Scanned entry %d: T = %zu, TransA = %c, TransB = %c -> t_av = %lf ms\n", i, out_model->T_lookup_buf[i], out_model->TransA_buf[i], out_model->TransB_buf[i], out_model->av_time_buf[i]*1000);
+#ifdef DPDEBUG
+		lprintf(lvl, "Scanned entry %d: T = %zu, TransA = %c, TransB = %c -> t_av = %lf ms\n",
+		i, out_model->T_lookup_buf[i], out_model->TransA_buf[i], out_model->TransB_buf[i], out_model->av_time_buf[i]*1000);
 #endif
     	}
 	fclose(fp);
@@ -95,6 +98,12 @@ GPUexec3Model_p GPUexec3Model_init(short dev_id, char* func){
 double GPUexec3Model_predict(GPUexec3Model_p model, size_t T, char TransA, char TransB){
 	double result = -1;
 	//TODO: Ultra naive, not (currently) important for performance but come on mate...
-	for (int i = 0; i < model->lines; i++) if(model->T_lookup_buf[i] == T && model->TransA_buf[i] == TransA && model->TransB_buf[i] == TransB) return model->av_time_buf[i];
+	for (int i = 0; i < model->lines; i++) if(model->T_lookup_buf[i] == T && model->TransA_buf[i] == TransA && model->TransB_buf[i] == TransB){
+#ifdef DPDEBUG
+		lprintf(4, "GPUexec3Model_predict: Found T = %d, TransA = %c, TransB = %c in loc %d -> t_av = %lf ms\n",
+			model->T_lookup_buf[i], model->TransA_buf[i], model->TransB_buf[i], i, model->av_time_buf[i]*1000);
+#endif
+		return model->av_time_buf[i];
+	}
 	return result;
 }

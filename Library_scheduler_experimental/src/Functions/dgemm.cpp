@@ -18,8 +18,8 @@ pthread_barrier_t  RunTileMap_sync_barrier;
 gemm_backend_in_p initial_gemm = NULL;
 
 CoCoModel_p glob_model_gemm[128] = {NULL};
-CoControl_p predef_vals_gemm;
-CoControl_p used_vals = NULL;
+CoControl_p predef_vals_gemm = NULL;
+CoControl_p autotuned_vals = NULL;
 int MGridSz = 0, NGridSz = 0, KGridSz = 0;
 
 void CoCoGemmUpdateDevice(Subkernel* ker, short dev_id){
@@ -238,7 +238,7 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 	cpu_timer = csecond();
 #endif
 
-  CoCoPeLiaRequestBuffer(gemm_subkernel_data, used_vals->cache_limit, used_vals->T*used_vals->T *sizeof(VALUE_TYPE));
+  CoCoPeLiaRequestBuffer(gemm_subkernel_data, autotuned_vals->cache_limit, autotuned_vals->T*autotuned_vals->T *sizeof(VALUE_TYPE));
 
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer;
@@ -343,6 +343,14 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 	initial_gemm->ldC = ldC;
 	initial_gemm->dev_id = -1;
 
+	if(!reuse_model_flag && autotuned_vals){
+#ifdef DEBUG
+	lprintf(lvl, "Freeing autotuned_vals because reuse_model_flag = %d\n", reuse_model_flag);
+#endif
+		free(autotuned_vals);
+		autotuned_vals = NULL;
+	}
+
 	Asset2D<VALUE_TYPE>* A_asset, *B_asset, *C_asset;
 	/// Prepare Assets in parallel( e.g. initialize asset classes, pin memory with pthreads)
 	/// return: A_asset, B_asset, C_asset initialized and pinned
@@ -374,9 +382,9 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 #endif
 	}
 
-	CoControl_p autotuned_vals = (CoControl_p) malloc(sizeof(struct CoControl));
+	if(autotuned_vals == NULL) autotuned_vals = (CoControl_p) malloc(sizeof(struct CoControl));
 	int autotune_eval_devices = 0;
-	if (predef_vals_gemm->dev_num > 0){
+	if (predef_vals_gemm && predef_vals_gemm->dev_num > 0){
 		autotuned_vals->dev_num = predef_vals_gemm->dev_num;
 		for (int i =0; i < autotuned_vals->dev_num; i++) autotuned_vals->dev_ids[i] = predef_vals_gemm->dev_ids[i];
 #ifdef DEBUG
@@ -393,50 +401,72 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 #endif
 		autotune_eval_devices = 1;
 		for (int i =0; i < autotuned_vals->dev_num; i++)
-			autotuned_vals->dev_ids[i] = (i == DEV_NUM - 1)? -1 : i;
+			autotuned_vals->dev_ids[i] = (i == LOC_NUM - 1)? -1 : i;
 	}
 
-	for (int i =0; i < autotuned_vals->dev_num; i++)
-		if(!reuse_model_flag || glob_model_gemm[i] == NULL) glob_model_gemm[i] =
-			CoCoPeLiaTileModelInit(autotuned_vals->dev_ids[i], "Dgemm", initial_gemm);
+	for (int i =0; i < autotuned_vals->dev_num; i++){
+		short dev_id_idx = (autotuned_vals->dev_ids[i] == -1)? LOC_NUM-1 : autotuned_vals->dev_ids[i];
+		if(!reuse_model_flag || glob_model_gemm[dev_id_idx] == NULL)
+			if(glob_model_gemm[dev_id_idx] != NULL) free(glob_model_gemm[dev_id_idx]);
+			glob_model_gemm[dev_id_idx] = CoCoPeLiaTileModelInit(autotuned_vals->dev_ids[i], "Dgemm", initial_gemm);
+	}
 
 	double slowest_problem_t = 0;
 	CoCoModel_p model = NULL;
 	short *dev_ids[autotuned_vals->dev_num] = {NULL}, best_dev_num = 0;
 	tunableParams_p pred_p[autotuned_vals->dev_num] = {NULL}, best_pred_p = NULL;
-	if(predef_vals_gemm->T > 0){
+	if(predef_vals_gemm && predef_vals_gemm->T > 0){
 		autotuned_vals->T = predef_vals_gemm->T;
-#ifdef DEBUG
+#ifdef PDEBUG
 		lprintf(lvl, "====================================\n");
 		lprintf(lvl, "Using predefined T=%zu\n", autotuned_vals->T);
 		lprintf(lvl, "====================================\n");
 #endif
 	}
-	else if (predef_vals_gemm->dev_num > 0){
+	else if (predef_vals_gemm && predef_vals_gemm->dev_num > 0){
 		best_pred_p = CoCoPeLiaModelMultidevOptimizeTile(autotuned_vals->dev_num,
 			autotuned_vals->dev_ids, glob_model_gemm);
 		autotuned_vals->T = best_pred_p->T;
+#ifdef PDEBUG
+		lprintf(lvl, "====================================\n");
+		lprintf(lvl, "Using predicted T=%zu : t_pred = %lf\n", autotuned_vals->T, best_pred_p->pred_t);
+		lprintf(lvl, "====================================\n");
+#endif
 	}
 	else{
 		for (int used_devs = 0; used_devs < autotuned_vals->dev_num; used_devs++){
 			dev_ids[used_devs] = CoCoPeLiaDeviceSelectBest(used_devs + 1, autotuned_vals->dev_num,
 				autotuned_vals->dev_ids, glob_model_gemm);
+#ifdef PDEBUG
+			lprintf(lvl, "====================================\n");
+			lprintf(lvl, "Best %d devices: [ ", used_devs + 1);
+			for (int i =0; i < used_devs + 1; i++) fprintf(stderr, "%d ", dev_ids[used_devs][i]);
+			lprintf(0, "]\n");
+#endif
 			pred_p[used_devs] = CoCoPeLiaModelMultidevOptimizeTile(used_devs + 1,
 				dev_ids[used_devs], glob_model_gemm);
 			if (best_pred_p == NULL){
 				best_pred_p = pred_p[used_devs];
 				best_dev_num = used_devs + 1;
 			}
-			else if(best_pred_p->pred_t > pred_p[used_devs]->pred_t){
+			else if(best_pred_p->pred_t >= pred_p[used_devs]->pred_t){
 				best_pred_p = pred_p[used_devs];
 				best_dev_num = used_devs + 1;
 			}
+
+#ifdef PDEBUG
+		lprintf(lvl, "Predict T=%zu : t_pred = %lf\n", pred_p[used_devs]->T, pred_p[used_devs]->pred_t);
+		lprintf(lvl, "====================================\n");
+#endif
 		}
 		autotuned_vals->T = best_pred_p->T;
 		autotuned_vals->dev_num = best_dev_num;
 		for (int idx = 0; idx < autotuned_vals->dev_num; idx++)
-			autotuned_vals->dev_ids[idx] = dev_ids[autotuned_vals->dev_num][idx];
+			autotuned_vals->dev_ids[idx] = dev_ids[autotuned_vals->dev_num - 1][idx];
 	}
+	if (predef_vals_gemm && predef_vals_gemm->cache_limit > 0)
+		autotuned_vals->cache_limit = predef_vals_gemm->cache_limit;
+	else autotuned_vals->cache_limit = 0;
 
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer;
@@ -483,6 +513,11 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 	void* res;
 	int used_devices = 0;
 	for (int d = 0 ; d < autotuned_vals->dev_num; d++) if(Subkernels_per_dev[d] > 0 ) used_devices++;
+
+	#ifdef DEBUG
+		lprintf(lvl, "used_devices=%d out of autotuned_vals->dev_num=%d\n", used_devices, autotuned_vals->dev_num);
+	#endif
+
 	pthread_t thread_id[used_devices];
 	kernel_pthread_wrap_p thread_dev_data[used_devices];
 
@@ -527,7 +562,7 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer;
 	lprintf(lvl, "Fire and gather pthreads for all devices -> t_exec_full = %lf ms\n", cpu_timer*1000);
-	if(predef_vals_gemm->T <= 0){
+	if(predef_vals_gemm && predef_vals_gemm->T <= 0){
 		lprintf(lvl, "t_predicted for T=%zu was %.2lf ms : %lf \% error\n",
 		T, slowest_problem_t*1000,
 		(slowest_problem_t==0)? 0: (slowest_problem_t - cpu_timer )/slowest_problem_t*100);
@@ -605,7 +640,7 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 #ifdef TEST
 	lprintf(lvl-1, "<-----|\n");
 #endif
-	return used_vals;
+	return autotuned_vals;
 }
 
 /// A modification of CoCopeLiaDgemm but with given parameters (mainly for performance/debug purposes)
@@ -617,5 +652,7 @@ CoControl_p CoCopeLiaDgemmControled(char TransA,  char TransB, size_t M, size_t 
 	for(int idx =0; idx < LOC_NUM; idx++)
 		predef_vals_gemm->dev_ids[idx] = predef_control_values->dev_ids[idx];
 	predef_vals_gemm->cache_limit = predef_control_values->cache_limit;
-	return CoCopeLiaDgemm(TransA, TransB,  M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC);
+	CoControl_p return_vals = CoCopeLiaDgemm(TransA, TransB,  M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC);
+	free(predef_vals_gemm);
+	return return_vals;
 }

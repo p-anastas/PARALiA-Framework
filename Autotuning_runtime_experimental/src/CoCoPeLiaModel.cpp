@@ -15,22 +15,97 @@
 
 short* CoCoPeLiaDeviceSelectBest(short used_devs, short avail_devs, short* avail_dev_ids,
 	CoCoModel_p* avail_dev_model_list){
-			return avail_dev_ids;
+	if(used_devs > avail_devs)
+		error("CoCoPeLiaDeviceSelectBest: used_devs(%d) > avail_devs(%d)\n", used_devs, avail_devs);
+	short* used_dev_ids = (short*) malloc(sizeof(short)* used_devs), dev_ctr = 0;
+	while(dev_ctr < used_devs){
+		// FIXME: always use first used_devs devices from avail_devs
+		used_dev_ids[dev_ctr] = avail_dev_ids[dev_ctr];
+		dev_ctr++;
 	}
+	return used_dev_ids;
+}
 
 tunableParams_p CoCoPeLiaModelMultidevOptimizeTile(short used_devs, short* used_dev_ids,
 	CoCoModel_p* dev_model_list){
-		tunableParams_p result = tunableParamsInit();
-		result->T = 256;
-		result->pred_t = 1;
-		return result;
+	short lvl = 3;
+#ifdef DEBUG
+	lprintf(lvl-1, "|-----> CoCoPeLiaModelMultidevOptimizeTile(used_devs=%d, used_dev_ids= [ ", used_devs);
+	for (int i =0; i < used_devs; i++) lprintf(0, "%d ", used_dev_ids[i]);
+	lprintf(0, "]\n");
+#endif
+	short first_model_idx = (used_dev_ids[0] == -1) ? LOC_NUM - 1 : used_dev_ids[0];
+	CoCoModel_p model = dev_model_list[first_model_idx];
+	tunableParams_p outparams = tunableParamsInit();
+	//TODO: Naive naive naive! Should replace with something better at some point.
+	size_t min_T = 0, max_allowed_T = 0, ctr = 0;
+	max_allowed_T = fmin(fmin(model->D1, model->D2),model->D3);
+	min_T = ((GPUexec3Model_p)model->GPUexec_model_ptr)->T_lookup_buf[0];
+#ifdef PDEBUG
+		lprintf(lvl, "min_T = %d, max_allowed_T = %d\n",
+			min_T, max_allowed_T);
+#endif
+	if (min_T > max_allowed_T){
+		outparams->T = max_allowed_T;
+		// FIXME: Undefined performance for tiles < than the smaller microbenchmark
+		outparams->pred_t = 0;
+#ifdef PDEBUG
+		lprintf(lvl, "min_T = %d > max_allowed_T = %d: returning T = %d",
+			min_T, max_allowed_T, max_allowed_T);
+#endif
+		return outparams;
 	}
+	double temp_t, min_t = -42;
+	size_t prev_trial_T = 0;
+	for (ctr = 0 ; ctr < ((GPUexec3Model_p)model->GPUexec_model_ptr)->lines ; ctr++){
+		size_t trial_T = ((GPUexec3Model_p)model->GPUexec_model_ptr)->T_lookup_buf[ctr];
+		if (trial_T > max_allowed_T) break;
+		if (trial_T ==  prev_trial_T) continue;
+		temp_t = 0;
+		for(int idx = 0; idx < used_devs; idx++){
+			short cur_dev_id = used_dev_ids[idx], cur_dev_idx = (cur_dev_id == -1)? LOC_NUM - 1 : cur_dev_id;
+			model = dev_model_list[cur_dev_idx];
+			temp_t += CoCoPeLiaModelPredict(model, trial_T, COCOPELIA_PIPELINE_EMULATE);
+#ifdef PDEBUG
+			lprintf(lvl, "Added model %p prediction for dev_id = %d (idx = %d ) with trial_T = %d: temp_t = %lf\n",
+				model, cur_dev_id, cur_dev_idx, trial_T, temp_t);
+#endif
+		}
+		if (temp_t >= 0 && (min_t == - 42 || temp_t < min_t) ){
+			min_t = temp_t;
+			min_T = trial_T;
+		}
+		prev_trial_T = trial_T;
+	}
+	outparams->T = min_T;
+	outparams->pred_t = min_t;
+#ifdef TEST
+	timer = csecond() - timer;
+	lprintf(lvl, "Optimization time:%lf ms\n", timer*1000);
+	lprintf(lvl-1, "<-----|\n");
+#endif
+#ifdef DEBUG
+	lprintf(lvl, "T = %zu\n : t_min = %lf ms\n", min_T, min_t*1000);
+	lprintf(lvl-1, "<-----|\n");
+#endif
+	return outparams;
+}
 
 ///  Initializes the model for gemm
 CoCoModel_p CoCoPeLiaTileModelInit(short dev_id, char* func, void* func_data){
+	short lvl = 3;
+#ifdef DEBUG
+	lprintf(lvl-1, "|-----> CoCoPeLiaTileModelInit(dev_id=%d,func=%s)\n", dev_id, func);
+#endif
 	CoCoModel_p out_model = (CoCoModel_p) malloc(sizeof(struct CoCo_model));
-	out_model->h2d = CoModel_init(dev_id, -1);
-	out_model->d2h = CoModel_init(-1, dev_id);
+	for(int idx = 0; idx < LOC_NUM; idx++){
+		short dev_idx_id = (idx == LOC_NUM - 1)? -1 : idx;
+		if(dev_idx_id!= dev_id){
+			out_model->link[idx] = CoModel_init(dev_id, dev_idx_id);
+			out_model->revlink[idx] = CoModel_init(dev_idx_id, dev_id);
+		}
+		else out_model->link[idx] = out_model->revlink[idx] = CoModel_init_local(dev_id);
+	}
 	out_model->GPUexec_model_ptr = (void*) GPUexec3Model_init(dev_id, func);
 	out_model->V = (Vdata_p) malloc(sizeof(struct V_struct));
 	out_model->flags = (flagParams_p) malloc(sizeof(struct flagParams));
@@ -64,10 +139,11 @@ double CoCoPeLiaModelPredict(CoCo_model* model, size_t T, ModelType mode){
 
 double CoCopeLiaPredictBaseline(CoCoModel_p model, size_t T)
 {
+	CoModel_p h2d_model = model->revlink[LOC_NUM-1], d2h_model = model->link[LOC_NUM-1];
 	double t_h2d_T3 = 0, t_d2h_T3 = 0, t_exec_T3 = 0, t_total = 0, t_over_T3 = 0;
 	t_exec_T3 = GPUexec3Model_predict((GPUexec3Model_p) model->GPUexec_model_ptr, T, model->flags->TransA, model->flags->TransB);
-	t_h2d_T3 = t_com_predict(model->h2d, T*T*model->V->dtype_sz); //CoTile_predict(model->h2d, T, model->V->dtype_sz);
-	t_d2h_T3 = t_com_predict(model->d2h, T*T*model->V->dtype_sz);//CoTile_predict(model->d2h, T, model->V->dtype_sz);
+	t_h2d_T3 = t_com_predict(h2d_model, T*T*model->V->dtype_sz); //CoTile_predict(h2d_model, T, model->V->dtype_sz);
+	t_d2h_T3 = t_com_predict(d2h_model, T*T*model->V->dtype_sz);//CoTile_predict(d2h_model, T, model->V->dtype_sz);
 	if ( t_exec_T3 < 0 || t_h2d_T3 < 0 || t_d2h_T3 < 0 ){
 		if(t_exec_T3 < 0) warning("CoCopeLiaPredictBaseline: GPUexec3Model_predict submodel returned negative value, abort prediction");
 		if(t_h2d_T3 < 0) warning("CoCopeLiaPredictBaseline: t_com_predict submodel returned negative value, abort prediction");
@@ -107,10 +183,11 @@ double CoCopeLiaPredictBaseline(CoCoModel_p model, size_t T)
 
 double CoCopeLiaPredictDataLoc(CoCoModel_p model, size_t T)
 {
+	CoModel_p h2d_model = model->revlink[LOC_NUM-1], d2h_model = model->link[LOC_NUM-1];
 	double t_h2d_T3 = 0, t_d2h_T3 = 0, t_exec_T3 = 0, t_total = 0, t_over_T3 = 0;
 	t_exec_T3 = GPUexec3Model_predict((GPUexec3Model_p) model->GPUexec_model_ptr, T, model->flags->TransA, model->flags->TransB);
-	t_h2d_T3 = t_com_predict(model->h2d, T*T*model->V->dtype_sz); //CoTile_predict(model->h2d, T, model->V->dtype_sz);
-	t_d2h_T3 = t_com_predict(model->d2h, T*T*model->V->dtype_sz);//CoTile_predict(model->d2h, T, model->V->dtype_sz);
+	t_h2d_T3 = t_com_predict(h2d_model, T*T*model->V->dtype_sz); //CoTile_predict(h2d_model, T, model->V->dtype_sz);
+	t_d2h_T3 = t_com_predict(d2h_model, T*T*model->V->dtype_sz);//CoTile_predict(d2h_model, T, model->V->dtype_sz);
 
 	if ( t_exec_T3 < 0 || t_h2d_T3 < 0 || t_d2h_T3 < 0 ){
 		if(t_exec_T3 < 0) warning("CoCopeLiaPredictDataLoc: GPUexec3Model_predict submodel returned negative value, abort prediction");
@@ -152,10 +229,11 @@ double CoCopeLiaPredictDataLoc(CoCoModel_p model, size_t T)
 ///  Predicts 3-way overlaped execution time for BLAS3 Square tilling blocking without data reuse.
 double CoCopeLiaPredictBidirectional(CoCoModel_p model, size_t T)
 {
+	CoModel_p h2d_model = model->revlink[LOC_NUM-1], d2h_model = model->link[LOC_NUM-1];
 	double t_h2d_T3 = 0, t_d2h_T3 = 0, t_exec_T3 = 0, t_total = 0, t_over_T3 = 0;
 	t_exec_T3 = GPUexec3Model_predict((GPUexec3Model_p) model->GPUexec_model_ptr, T, model->flags->TransA, model->flags->TransB);
-	t_h2d_T3 = t_com_predict(model->h2d, T*T*model->V->dtype_sz); //CoTile_predict(model->h2d, T, model->V->dtype_sz);
-	t_d2h_T3 = t_com_predict(model->d2h, T*T*model->V->dtype_sz);//CoTile_predict(model->d2h, T, model->V->dtype_sz);
+	t_h2d_T3 = t_com_predict(h2d_model, T*T*model->V->dtype_sz); //CoTile_predict(h2d_model, T, model->V->dtype_sz);
+	t_d2h_T3 = t_com_predict(d2h_model, T*T*model->V->dtype_sz);//CoTile_predict(d2h_model, T, model->V->dtype_sz);
 
 	if ( t_exec_T3 < 0 || t_h2d_T3 < 0 || t_d2h_T3 < 0 ){
 		if(t_exec_T3 < 0) warning("CoCopeLiaPredictBidirectional: GPUexec3Model_predict submodel returned negative value, abort prediction");
@@ -174,7 +252,7 @@ double CoCopeLiaPredictBidirectional(CoCoModel_p model, size_t T)
 		numTout += model->V->out[i] * model->V->loc[i];
 	}
 	// Use bidirectional magic here if needed
-	t_over_T3 = t_com_bid_predict(model->h2d, model->d2h, T*T*model->V->dtype_sz*numTin,  T*T*model->V->dtype_sz*numTout);
+	t_over_T3 = t_com_bid_predict(h2d_model, d2h_model, T*T*model->V->dtype_sz*numTin,  T*T*model->V->dtype_sz*numTout);
 	t_total = fmax(t_exec_T3, t_over_T3)* ker_over +
 	+ t_exec_T3 + numTin * t_h2d_T3 + numTout * t_d2h_T3;
 
@@ -200,13 +278,18 @@ double CoCopeLiaPredictBidirectional(CoCoModel_p model, size_t T)
 
 double CoCopeLiaPredictReuse(CoCoModel_p model, size_t T)
 {
+	short lvl = 4;
 	//fprintf(stderr, "\nCoCopeLiaPredictReuse ->\nProblem dims: D1 = %zu, D2 = %zu, D3 = %zu\nVdata(%d)->\n", model->D1, model->D2, model->D3, model->V->numT);
-
+	CoModel_p h2d_model = model->revlink[LOC_NUM-1], d2h_model = model->link[LOC_NUM-1];
 	double t_h2d_T3 = 0, t_d2h_T3 = 0, t_exec_T3 = 0, t_total = 0;
 	t_exec_T3 = GPUexec3Model_predict((GPUexec3Model_p) model->GPUexec_model_ptr, T, model->flags->TransA, model->flags->TransB);
-	t_h2d_T3 = t_com_predict(model->h2d, T*T*model->V->dtype_sz); //CoTile_predict(model->h2d, T, model->V->dtype_sz);
-	t_d2h_T3 = t_com_predict(model->d2h, T*T*model->V->dtype_sz);//CoTile_predict(model->d2h, T, model->V->dtype_sz);
-
+	t_h2d_T3 = t_com_predict(h2d_model, T*T*model->V->dtype_sz); //CoTile_predict(h2d_model, T, model->V->dtype_sz);
+	t_d2h_T3 = t_com_predict(d2h_model, T*T*model->V->dtype_sz);//CoTile_predict(d2h_model, T, model->V->dtype_sz);
+#ifdef DPDEBUG
+	lprintf(lvl, "CoCopeLiaPredictReuse t_exec_T3 = %lf\n", t_exec_T3);
+	lprintf(lvl, "CoCopeLiaPredictReuse t_h2d_T3 = %lf\n", t_h2d_T3);
+	lprintf(lvl, "CoCopeLiaPredictReuse t_d2h_T3 = %lf\n", t_d2h_T3);
+#endif
 	if ( t_exec_T3 < 0 || t_h2d_T3 < 0 || t_d2h_T3 < 0 ){
 		if(t_exec_T3 < 0) warning("CoCopeLiaPredictReuse: GPUexec3Model_predict submodel returned negative value, abort prediction");
 		if(t_h2d_T3 < 0) warning("CoCopeLiaPredictReuse: t_com_predict submodel returned negative value, abort prediction");
@@ -263,10 +346,11 @@ double CoCopeLiaPredictReuse(CoCoModel_p model, size_t T)
 
 /// TODO: currently d2h overlap is ignored
 double CoCopeLiaPipelineEmulate(CoCoModel_p model, size_t T){
+	CoModel_p h2d_model = model->revlink[LOC_NUM-1], d2h_model = model->link[LOC_NUM-1];
 	double t_h2d_T3 = 0, t_d2h_T3 = 0, t_exec_T3 = 0, t_total = 0;
 	t_exec_T3 = GPUexec3Model_predict((GPUexec3Model_p) model->GPUexec_model_ptr, T, model->flags->TransA, model->flags->TransB);
-	t_h2d_T3 = t_com_predict(model->h2d, T*T*model->V->dtype_sz); //CoTile_predict(model->h2d, T, model->V->dtype_sz);
-	t_d2h_T3 = t_com_predict(model->d2h, T*T*model->V->dtype_sz);//CoTile_predict(model->d2h, T, model->V->dtype_sz);
+	t_h2d_T3 = t_com_predict(h2d_model, T*T*model->V->dtype_sz); //CoTile_predict(h2d_model, T, model->V->dtype_sz);
+	t_d2h_T3 = t_com_predict(d2h_model, T*T*model->V->dtype_sz);//CoTile_predict(d2h_model, T, model->V->dtype_sz);
 
 	if ( t_exec_T3 < 0 || t_h2d_T3 < 0 || t_d2h_T3 < 0 ){
 		if(t_exec_T3 < 0) warning("CoCopeLiaPipelineEmulate: GPUexec3Model_predict submodel returned negative value, abort prediction");
@@ -359,8 +443,6 @@ double CoCopeLiaPipelineEmulate(CoCoModel_p model, size_t T){
 	t_d2h_T3*1000, Gval_per_s(T*T*model->V->dtype_sz,t_d2h_T3),
 	t_total*1000, Gval_per_s(dgemm_flops(model->D1,model->D2,model->D3), t_total));
 	*/
-
-
 	return t_total;
 }
 
@@ -446,10 +528,12 @@ tunableParams_p CoCoPeLiaModelOptimizeTile(CoCoModel_p model, ModelType mode){
 		return outparams;
 	}
 	double temp_t, min_t = CoCoPeLiaModelPredict(model, ((GPUexec3Model_p)model->GPUexec_model_ptr)->T_lookup_buf[0], mode);
+	size_t prev_trial_T = 0;
 	if(min_t < 0) error("CoCoPeLiaModelOptimizeTile: First value in DM results in negative prediction");
 	for (ctr = 1 ; ctr < ((GPUexec3Model_p)model->GPUexec_model_ptr)->lines ; ctr++){
 		size_t trial_T = ((GPUexec3Model_p)model->GPUexec_model_ptr)->T_lookup_buf[ctr];
 		if (trial_T > max_allowed_T) break;
+		if (trial_T == prev_trial_T) continue;
 		temp_t = CoCoPeLiaModelPredict(model, trial_T, mode);
 
 		//fprintf(stderr, "Checking T = %zu\n : t = %lf ms\n", trial_T, temp_t*1000);
@@ -457,6 +541,7 @@ tunableParams_p CoCoPeLiaModelOptimizeTile(CoCoModel_p model, ModelType mode){
 			min_t = temp_t;
 			min_T = trial_T;
 		}
+		prev_trial_T = trial_T;
 	}
 	outparams->T = min_T;
 	outparams->pred_t = min_t;

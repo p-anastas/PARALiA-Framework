@@ -41,6 +41,7 @@ int main(const int argc, const char *argv[]) {
 	for(int i = 0; i< DEV_NUM; i++) dev_ids[i] = i;
 	double *A, *B, *C, *C_comp;
 
+	CoControl_p ret_autotune_val;
 	if(run_cpu_mem){
 		fprintf(stderr, "\n==============================================================================================================================\n");
 		fprintf(stderr, "CoCoPeLiaDgemmTester: Allocating CPU buffers...->100 MB...");
@@ -75,7 +76,7 @@ int main(const int argc, const char *argv[]) {
 		for (int dim = 256; dim <= M; dim*=2){
 			fprintf(stderr, "M=N=K=%d: Gflops/s -> ", dim);
 			cpu_timer = csecond();
-			CoCopeLiaDgemm(TransA, TransB, dim, dim, dim, alpha, A, ldA, B, ldB, beta, C , ldC);
+			ret_autotune_val = CoCopeLiaDgemm(TransA, TransB, dim, dim, dim, alpha, A, ldA, B, ldB, beta, C , ldC);
 			CoCoSyncCheckErr();
 			cpu_timer  = csecond() - cpu_timer;
 			double comp_flops = Gval_per_s(dgemm_flops(dim,dim,dim),cpu_timer);
@@ -87,6 +88,7 @@ int main(const int argc, const char *argv[]) {
 			CoCoSyncCheckErr();
 			cpu_timer  = csecond() - cpu_timer;
 			fprintf(stderr, "cuBLASXT: %.1lf\n", Gval_per_s(dgemm_flops(dim,dim,dim),cpu_timer));
+			fprintf(stderr, "%s\n", CoControlPrint(ret_autotune_val));
 			if (comp_flops < Gval_per_s(dgemm_flops(dim,dim,dim),cpu_timer)) warning("Inferior Perf to cublasXt\n");
 			Dtest_equality(C_comp, C, dim * dim);
 			CoCoMemcpy(C, C_comp, M * N *sizeof(double), C_loc, C_loc);
@@ -103,7 +105,7 @@ int main(const int argc, const char *argv[]) {
 		for (int dim1 = 256; dim1 <= M; dim1*=4) for (int dim2 = 256; dim2 <= N; dim2*=4) for (int dim3 = 256; dim3 <= K; dim3*=4) if ( dim1 != dim2 || dim2 != dim3 || dim1!= dim3){
 			fprintf(stderr, "M=%d,N=%d,K=%d: Gflops/s -> ", dim1, dim2, dim3);
 			cpu_timer = csecond();
-			CoCopeLiaDgemm(TransA, TransB, dim1, dim2, dim3, alpha, A, ldA, B, ldB, beta, C , ldC);
+			ret_autotune_val = CoCopeLiaDgemm(TransA, TransB, dim1, dim2, dim3, alpha, A, ldA, B, ldB, beta, C , ldC);
 			CoCoSyncCheckErr();
 			cpu_timer  = csecond() - cpu_timer;
 			double comp_flops =  Gval_per_s(dgemm_flops(dim1,dim2,dim3),cpu_timer);
@@ -114,6 +116,7 @@ int main(const int argc, const char *argv[]) {
 			CoCoSyncCheckErr();
 			cpu_timer  = csecond() - cpu_timer;
 			fprintf(stderr, "cuBLASXT: %.1lf\n", Gval_per_s(dgemm_flops(dim1,dim2,dim3),cpu_timer));
+			fprintf(stderr, "%s\n", CoControlPrint(ret_autotune_val));
 			if (comp_flops < Gval_per_s(dgemm_flops(dim1,dim2,dim3),cpu_timer)) warning("Inferior Perf to cublasXt\n");
 			Dtest_equality(C_comp, C, dim1 * dim2);
 			CoCoMemcpy(C, C_comp, M * N *sizeof(double), C_loc, C_loc);
@@ -130,7 +133,7 @@ int main(const int argc, const char *argv[]) {
 		for (int dim1 = 289; dim1 <= M; dim1*=4) for (int dim2 = 353; dim2 <= N; dim2*=4) for (int dim3 = 307; dim3 <= K; dim3*=4) if ( dim1 != dim2 || dim2 != dim3 || dim1!= dim3){
 			fprintf(stderr, "M=%d,N=%d,K=%d: Gflops/s -> ", dim1, dim2, dim3);
 			cpu_timer = csecond();
-			CoCopeLiaDgemm(TransA, TransB, dim1, dim2, dim3, alpha, A, ldA, B, ldB, beta, C , ldC);
+			ret_autotune_val = CoCopeLiaDgemm(TransA, TransB, dim1, dim2, dim3, alpha, A, ldA, B, ldB, beta, C , ldC);
 			CoCoSyncCheckErr();
 			cpu_timer  = csecond() - cpu_timer;
 			double comp_flops =  Gval_per_s(dgemm_flops(dim1,dim2,dim3),cpu_timer);
@@ -141,6 +144,7 @@ int main(const int argc, const char *argv[]) {
 			CoCoSyncCheckErr();
 			cpu_timer  = csecond() - cpu_timer;
 			fprintf(stderr, "cuBLASXT: %.1lf\n", Gval_per_s(dgemm_flops(dim1,dim2,dim3),cpu_timer));
+			fprintf(stderr, "%s\n", CoControlPrint(ret_autotune_val));
 			if (comp_flops < Gval_per_s(dgemm_flops(dim1,dim2,dim3),cpu_timer)) warning("Inferior Perf to cublasXt\n");
 			Dtest_equality(C_comp, C, dim1 * dim2);
 			CoCoMemcpy(C, C_comp, M * N *sizeof(double), C_loc, C_loc);
@@ -158,7 +162,7 @@ int main(const int argc, const char *argv[]) {
 		for  (int dim1 = 289; dim1 <= M; dim1*=4) for (int dim2 = 353; dim2 <= N; dim2*=4) for (int dim3 = 307; dim3 <= K; dim3*=4){
 			fprintf(stderr, "M=%d,N=%d,K=%d: Gflops/s -> ", dim1, dim2, dim3);
 			cpu_timer = csecond();
-			CoCopeLiaDgemm(TransA, TransB, dim1, dim2, dim3, alpha, A, ldA, B, ldB, beta, C , ldC);
+			ret_autotune_val = CoCopeLiaDgemm(TransA, TransB, dim1, dim2, dim3, alpha, A, ldA, B, ldB, beta, C , ldC);
 			CoCoSyncCheckErr();
 			cpu_timer  = csecond() - cpu_timer;
 			double comp_flops =  Gval_per_s(dgemm_flops(dim1,dim2,dim3),cpu_timer);
@@ -169,6 +173,7 @@ int main(const int argc, const char *argv[]) {
 			CoCoSyncCheckErr();
 			cpu_timer  = csecond() - cpu_timer;
 			fprintf(stderr, "cuBLASXT: %.1lf\n", Gval_per_s(dgemm_flops(dim1,dim2,dim3),cpu_timer));
+			fprintf(stderr, "%s\n", CoControlPrint(ret_autotune_val));
 			if (comp_flops < Gval_per_s(dgemm_flops(dim1,dim2,dim3),cpu_timer)) warning("Inferior Perf to cublasXt\n");
 			Dtest_equality(C_comp, C, dim1 * dim2);
 			CoCoMemcpy(C, C_comp, M * N *sizeof(double), C_loc, C_loc);
@@ -220,7 +225,7 @@ int main(const int argc, const char *argv[]) {
 			for (int dim1 = 289; dim1 <= M; dim1*=4) for (int dim2 = 353; dim2 <= N; dim2*=4) for (int dim3 = 307; dim3 <= K; dim3*=4){
 				fprintf(stderr, "M=%d,N=%d,K=%d: Gflops/s -> ", dim1, dim2, dim3);
 				cpu_timer = csecond();
-				CoCopeLiaDgemm(TransA, TransB, dim1, dim2, dim3, alpha, A, ldA, B, ldB, beta, C , ldC);
+				ret_autotune_val = CoCopeLiaDgemm(TransA, TransB, dim1, dim2, dim3, alpha, A, ldA, B, ldB, beta, C , ldC);
 				CoCoSyncCheckErr();
 				cpu_timer  = csecond() - cpu_timer;
 				double comp_flops =  Gval_per_s(dgemm_flops(dim1,dim2,dim3),cpu_timer);
@@ -231,6 +236,7 @@ int main(const int argc, const char *argv[]) {
 				CoCoSyncCheckErr();
 				cpu_timer  = csecond() - cpu_timer;
 				fprintf(stderr, "cuBLASXT: %.1lf\n", Gval_per_s(dgemm_flops(dim1,dim2,dim3),cpu_timer));
+				fprintf(stderr, "%s\n", CoControlPrint(ret_autotune_val));
 				if (comp_flops < Gval_per_s(dgemm_flops(dim1,dim2,dim3),cpu_timer)) warning("Inferior Perf to cublasXt\n");
 				CoCoMemcpy(C_host_buf, C,  dim1 * dim2 *sizeof(double), -2, C_loc);
 				CoCoMemcpy(C_host_comp_buf, C_comp,  dim1 * dim2 *sizeof(double), -2, C_loc);
@@ -247,7 +253,7 @@ int main(const int argc, const char *argv[]) {
 			for (int dim1 = 289; dim1 <= M; dim1*=4) for (int dim2 = 353; dim2 <= N; dim2*=4) for (int dim3 = 307; dim3 <= K; dim3*=4){
 				fprintf(stderr, "M=%d,N=%d,K=%d: Gflops/s -> ", dim1, dim2, dim3);
 				cpu_timer = csecond();
-				CoCopeLiaDgemm(TransA, TransB, dim1, dim2, dim3, alpha, A, ldA, B, ldB, beta, C , ldC);
+				ret_autotune_val = CoCopeLiaDgemm(TransA, TransB, dim1, dim2, dim3, alpha, A, ldA, B, ldB, beta, C , ldC);
 				CoCoSyncCheckErr();
 				cpu_timer  = csecond() - cpu_timer;
 				double comp_flops =  Gval_per_s(dgemm_flops(dim1,dim2,dim3),cpu_timer);
@@ -258,6 +264,7 @@ int main(const int argc, const char *argv[]) {
 				CoCoSyncCheckErr();
 				cpu_timer  = csecond() - cpu_timer;
 				fprintf(stderr, "cuBLASXT: %.1lf\n", Gval_per_s(dgemm_flops(dim1,dim2,dim3),cpu_timer));
+				fprintf(stderr, "%s\n", CoControlPrint(ret_autotune_val));
 				if (comp_flops < Gval_per_s(dgemm_flops(dim1,dim2,dim3),cpu_timer)) warning("Inferior Perf to cublasXt\n");
 				CoCoMemcpy(C_host_buf, C,  dim1 * dim2 *sizeof(double), -2, C_loc);
 				CoCoMemcpy(C_host_comp_buf, C_comp,  dim1 * dim2 *sizeof(double), -2, C_loc);
@@ -309,11 +316,10 @@ int main(const int argc, const char *argv[]) {
 		beta = 0.9876;
 		fprintf(stderr, "M=%zu, N=%zu, K=%zu: Gflops/s -> ", M, N, K);
 		cpu_timer = csecond();
-		CoControl_p return_values = NULL;
-		return_values = CoCopeLiaDgemm(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC);
+		ret_autotune_val = CoCopeLiaDgemm(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC);
 		CoCoSyncCheckErr();
 		cpu_timer  = csecond() - cpu_timer;
-		for (int i = 0; i< return_values->dev_num; i++) CoCopeLiaDevCacheFree(return_values->dev_ids[i]);
+		for (int i = 0; i< ret_autotune_val->dev_num; i++) CoCopeLiaDevCacheFree(ret_autotune_val->dev_ids[i]);
 		CoCoSyncCheckErr();
 		double comp_flops = Gval_per_s(dgemm_flops(M,N,K),cpu_timer);
 		fprintf(stderr, "CoCopeLia: %.1lf, ", comp_flops);
@@ -323,6 +329,7 @@ int main(const int argc, const char *argv[]) {
 		CoCoSyncCheckErr();
 		cpu_timer  = csecond() - cpu_timer;
 		fprintf(stderr, "cuBLASXT: %.1lf\n", Gval_per_s(dgemm_flops(M,N,K),cpu_timer));
+		fprintf(stderr, "%s\n", CoControlPrint(ret_autotune_val));
 		if (comp_flops < Gval_per_s(dgemm_flops(M,N,K),cpu_timer)) warning("Inferior Perf to cublasXt\n");
 		Dtest_equality(C_comp, C, M * N);
 		CoCoMemcpy(C, C_comp, M * N *sizeof(double), C_loc, C_loc);
@@ -340,10 +347,10 @@ int main(const int argc, const char *argv[]) {
 		beta = 0.9876;
 		fprintf(stderr, "M=%zu, N=%zu, K=%zu: Gflops/s -> ", M, N, K);
 		cpu_timer = csecond();
-		return_values = CoCopeLiaDgemm(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC);
+		ret_autotune_val = CoCopeLiaDgemm(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC);
 		CoCoSyncCheckErr();
 		cpu_timer  = csecond() - cpu_timer;
-		for (int i = 0; i< return_values->dev_num; i++) CoCopeLiaDevCacheFree(return_values->dev_ids[i]);
+		for (int i = 0; i< ret_autotune_val->dev_num; i++) CoCopeLiaDevCacheFree(ret_autotune_val->dev_ids[i]);
 		CoCoSyncCheckErr();
 		comp_flops = Gval_per_s(dgemm_flops(M,N,K),cpu_timer);
 		fprintf(stderr, "CoCopeLia: %.1lf, ", comp_flops);
@@ -353,6 +360,7 @@ int main(const int argc, const char *argv[]) {
 		CoCoSyncCheckErr();
 		cpu_timer  = csecond() - cpu_timer;
 		fprintf(stderr, "cuBLASXT: %.1lf\n", Gval_per_s(dgemm_flops(M,N,K),cpu_timer));
+		fprintf(stderr, "%s\n", CoControlPrint(ret_autotune_val));
 		if (comp_flops < Gval_per_s(dgemm_flops(M,N,K),cpu_timer)) warning("Inferior Perf to cublasXt\n");
 		Dtest_equality(C_comp, C, M * N);
 		CoCoMemcpy(C, C_comp, M * N *sizeof(double), C_loc, C_loc);
@@ -368,10 +376,10 @@ int main(const int argc, const char *argv[]) {
 		beta = 0.9876;
 		fprintf(stderr, "M=%zu, N=%zu, K=%zu: Gflops/s -> ", M, N, K);
 		cpu_timer = csecond();
-		return_values = CoCopeLiaDgemm(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC);
+		ret_autotune_val = CoCopeLiaDgemm(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC);
 		CoCoSyncCheckErr();
 		cpu_timer  = csecond() - cpu_timer;
-		for (int i = 0; i< return_values->dev_num; i++) CoCopeLiaDevCacheFree(return_values->dev_ids[i]);
+		for (int i = 0; i< ret_autotune_val->dev_num; i++) CoCopeLiaDevCacheFree(ret_autotune_val->dev_ids[i]);
 		CoCoSyncCheckErr();
 		comp_flops = Gval_per_s(dgemm_flops(M,N,K),cpu_timer);
 		fprintf(stderr, "CoCopeLia: %.1lf, ", comp_flops);
@@ -381,6 +389,7 @@ int main(const int argc, const char *argv[]) {
 		CoCoSyncCheckErr();
 		cpu_timer  = csecond() - cpu_timer;
 		fprintf(stderr, "cuBLASXT: %.1lf\n", Gval_per_s(dgemm_flops(M,N,K),cpu_timer));
+		fprintf(stderr, "%s\n", CoControlPrint(ret_autotune_val));
 		if (comp_flops < Gval_per_s(dgemm_flops(M,N,K),cpu_timer)) warning("Inferior Perf to cublasXt\n");
 		Dtest_equality(C_comp, C, M * N);
 		CoCoMemcpy(C, C_comp, M * N *sizeof(double), C_loc, C_loc);
@@ -443,11 +452,10 @@ int main(const int argc, const char *argv[]) {
 		beta = 0.9876;
 		fprintf(stderr, "M=%zu,N=%zu,K=%zu: Gflops/s -> ", M, N, K);
 		cpu_timer = csecond();
-		CoControl_p return_values = NULL;
-		return_values = CoCopeLiaDgemm(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC);
+		ret_autotune_val = CoCopeLiaDgemm(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC);
 		CoCoSyncCheckErr();
 		cpu_timer  = csecond() - cpu_timer;
-		for (int i = 0; i< return_values->dev_num; i++) CoCopeLiaDevCacheFree(return_values->dev_ids[i]);
+		for (int i = 0; i< ret_autotune_val->dev_num; i++) CoCopeLiaDevCacheFree(ret_autotune_val->dev_ids[i]);
 		CoCoSyncCheckErr();
 		double comp_flops =  Gval_per_s(dgemm_flops(M,N,K),cpu_timer);
 		fprintf(stderr, "CoCopeLia: %.1lf, ", comp_flops);
@@ -457,6 +465,7 @@ int main(const int argc, const char *argv[]) {
 		CoCoSyncCheckErr();
 		cpu_timer  = csecond() - cpu_timer;
 		fprintf(stderr, "cuBLASXT: %.1lf\n", Gval_per_s(dgemm_flops(M, N, K),cpu_timer));
+		fprintf(stderr, "%s\n", CoControlPrint(ret_autotune_val));
 		if (comp_flops < Gval_per_s(dgemm_flops(M, N, K),cpu_timer)) warning("Inferior Perf to cublasXt\n");
 		CoCoMemcpy(C_host_buf, C,  M * N *sizeof(double), -2, C_loc);
 		CoCoMemcpy(C_host_comp_buf, C_comp,  M * N  *sizeof(double), -2, C_loc);
@@ -471,10 +480,10 @@ int main(const int argc, const char *argv[]) {
 		beta = 0.9876;
 		fprintf(stderr, "M=%zu,N=%zu,K=%zu: Gflops/s -> ", M, N, K);
 		cpu_timer = csecond();
-		return_values = CoCopeLiaDgemm(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC);
+		ret_autotune_val = CoCopeLiaDgemm(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC);
 		CoCoSyncCheckErr();
 		cpu_timer  = csecond() - cpu_timer;
-		for (int i = 0; i< return_values->dev_num; i++) CoCopeLiaDevCacheFree(return_values->dev_ids[i]);
+		for (int i = 0; i< ret_autotune_val->dev_num; i++) CoCopeLiaDevCacheFree(ret_autotune_val->dev_ids[i]);
 		CoCoSyncCheckErr();
 		comp_flops =  Gval_per_s(dgemm_flops(M,N,K),cpu_timer);
 		fprintf(stderr, "CoCopeLia: %.1lf, ", comp_flops);
@@ -484,6 +493,7 @@ int main(const int argc, const char *argv[]) {
 		CoCoSyncCheckErr();
 		cpu_timer  = csecond() - cpu_timer;
 		fprintf(stderr, "cuBLASXT: %.1lf\n", Gval_per_s(dgemm_flops(M, N, K),cpu_timer));
+		fprintf(stderr, "%s\n", CoControlPrint(ret_autotune_val));
 		if (comp_flops < Gval_per_s(dgemm_flops(M, N, K),cpu_timer)) warning("Inferior Perf to cublasXt\n");
 		CoCoMemcpy(C_host_buf, C,  M * N *sizeof(double), -2, C_loc);
 		CoCoMemcpy(C_host_comp_buf, C_comp,  M * N  *sizeof(double), -2, C_loc);

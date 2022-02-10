@@ -37,7 +37,7 @@ enum ModelType{
 };
 
 typedef struct tunableParams{
-	size_t T;
+	int T;
 	double pred_t;
 }* tunableParams_p;
 
@@ -49,10 +49,7 @@ typedef struct flagParams{
 
 typedef struct CoCo_model{
 	Vdata_p V;
-	//TODO: Legacy h2d/d2h links for Werkhoven/old models
-	CoModel_p h2d;
-	CoModel_p d2h;
-	CoModel_p link[DEV_NUM];
+	CoModel_p link[LOC_NUM], revlink[LOC_NUM];
 	char* func;
 	double Ker_pot;
 	size_t D1, D2, D3;
@@ -81,13 +78,6 @@ double CoCopeLiaPipelineEmulate(CoCoModel_p model, size_t T);
 CoCoModel_p CoCoPeLiaTileModelInit(short dev_id, char* func_name, void* func_data);
 ///  Predicts Best tile size for 3-way overlaped execution time for BLAS3 2-dim blocking.
 tunableParams_p CoCoPeLiaModelOptimizeTile(CoCoModel_p model, ModelType mode);
-
-/// Choose the best way to approach h2d/d2h overlap
-short CoCoModel_choose_transfer_mode3(CoCoModel_p model, size_t T);
-
-///  Predicts Best tile size for 3-way overlaped execution time for BLAS1 1-dim blocking.
-size_t CoCoModel_optimize1(CoCoModel_p model);
-
 
 CoCoModel_p CoCoModel_gemm_init(CoCoModel_p base_model, short dev_id, char* func, gemm_backend_in_p func_data);
 CoCoModel_p CoCoModel_axpy_init(size_t N, short x_loc, short y_loc, short dev_id, char* func);
