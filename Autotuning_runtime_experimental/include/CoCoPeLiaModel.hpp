@@ -33,7 +33,8 @@ enum ModelType{
 	COCOPELIA_DATALOC = 4,
 	COCOPELIA_BIDIRECTIONAL = 5,
 	COCOPELIA_REUSE = 6,
-	COCOPELIA_PIPELINE_EMULATE = 7
+	COCOPELIA_PIPELINE_EMULATE = 7,
+	COCOPELIA_HETERO_REUSE = 8
 };
 
 typedef struct tunableParams{
@@ -51,11 +52,12 @@ typedef struct CoCo_model{
 	Vdata_p V;
 	CoModel_p link[LOC_NUM], revlink[LOC_NUM];
 	char* func;
-	double Ker_pot;
+	//double Ker_pot;
 	size_t D1, D2, D3;
 	flagParams_p flags;
 	void* GPUexec_model_ptr;
 	// FIXME: Add cpu_exec prediction
+	int dev_id;
 
 }* CoCoModel_p;
 
@@ -67,6 +69,10 @@ tunableParams_p CoCoPeLiaModelMultidevOptimizeTile(short used_devs, short* used_
 
 ///  Mode-Generalized prediction wrapper
 double CoCoPeLiaModelPredict(CoCoModel_p model, size_t T, ModelType mode);
+
+/// Mode-Generalized prediction wrapper for heterogeneous
+double CoCoPeLiaModelPredictHetero(CoCo_model* model, short used_devs,
+	short* used_dev_ids, double* used_dev_relative_scores, size_t T, ModelType mode);
 
 double WerkhovenModelPredictWrapper(CoCo_model* model, size_t T, short t_exec_method);
 double CoCopeLiaPredictBaseline(CoCoModel_p model, size_t T);
