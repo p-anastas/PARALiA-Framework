@@ -455,6 +455,9 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 			}
 
 #ifdef PDEBUG
+		lprintf(lvl, "Best %d percentages : [ ", used_devs + 1);
+		for (int i =0; i < used_devs + 1; i++) fprintf(stderr, "%.3lf ", pred_p[used_devs]->rel_dev_score[i]);
+		lprintf(0, "]\n");
 		lprintf(lvl, "Predict T=%zu : t_pred = %lf\n", pred_p[used_devs]->T, pred_p[used_devs]->pred_t);
 		lprintf(lvl, "====================================\n");
 #endif
@@ -499,12 +502,11 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 	lprintf(lvl, "Subkernel init -> t_subkernel_init = %lf ms\n", cpu_timer*1000);
 	cpu_timer = csecond();
 #endif
-
-	int Subkernel_dev_id_list[autotuned_vals->dev_num*Subkernel_num] = {-1}, Subkernels_per_dev[autotuned_vals->dev_num] = {0};
+	autotuned_vals->Subkernel_dev_id_list = (int*) malloc(autotuned_vals->dev_num*Subkernel_num*sizeof(int));
 	if (!strcmp(DISTRIBUTION, "ROUND-ROBIN"))
-		CoCoDistributeSubkernelsRoundRobin(Subkernel_dev_id_list, Subkernels_per_dev, autotuned_vals->dev_num, MGridSz, NGridSz, KGridSz);
+		CoCoDistributeSubkernelsRoundRobin(autotuned_vals, best_pred_p, MGridSz, NGridSz, KGridSz);
 	else if (!strcmp(DISTRIBUTION, "SPLITD1-NAIVE"))
-		CoCoDistributeSubkernelsNaive(Subkernel_dev_id_list, Subkernels_per_dev, autotuned_vals->dev_num, MGridSz, NGridSz, KGridSz);
+		CoCoDistributeSubkernelsNaive(autotuned_vals, best_pred_p, MGridSz, NGridSz, KGridSz);
 	else error("CoCopeLiaDgemm: Unknown Subkernel Distribution %s\n", DISTRIBUTION);
 
 	pthread_attr_t attr;
@@ -512,7 +514,7 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 	if (s != 0) error("CoCopeLiaDgemm: pthread_attr_init failed s=%d\n", s);
 	void* res;
 	int used_devices = 0;
-	for (int d = 0 ; d < autotuned_vals->dev_num; d++) if(Subkernels_per_dev[d] > 0 ) used_devices++;
+	for (int d = 0 ; d < autotuned_vals->dev_num; d++) if(autotuned_vals->Subkernels_per_dev[d] > 0 ) used_devices++;
 
 	#ifdef DEBUG
 		lprintf(lvl, "used_devices=%d out of autotuned_vals->dev_num=%d\n", used_devices, autotuned_vals->dev_num);
@@ -530,19 +532,19 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 	// create a barrier object with a count of used_devices
 	pthread_barrier_init (&RunTileMap_sync_barrier, NULL, used_devices + 1);
 
-	for(int d=0; d<used_devices;d++){
-
+	for(int d=0; d < autotuned_vals->dev_num; d++){
+		if(autotuned_vals->Subkernels_per_dev[d] == 0) continue;
 		// Check/Enable peer access between participating GPUs
 		CoCoEnableLinks(d, autotuned_vals->dev_ids, autotuned_vals->dev_num);
 
 		thread_dev_data[d] = (kernel_pthread_wrap_p) malloc(sizeof(struct kernel_pthread_wrap));
 		thread_dev_data[d]->dev_id = autotuned_vals->dev_ids[d];
 
-		thread_dev_data[d]->SubkernelListDev = (Subkernel**) malloc(Subkernels_per_dev[d]* sizeof(Subkernel*));
-		for(int skitt = 0; skitt < Subkernels_per_dev[d]; skitt++)
-			thread_dev_data[d]->SubkernelListDev[skitt] = Subkernel_list[Subkernel_dev_id_list[d*Subkernel_num + skitt]];
+		thread_dev_data[d]->SubkernelListDev = (Subkernel**) malloc(autotuned_vals->Subkernels_per_dev[d]* sizeof(Subkernel*));
+		for(int skitt = 0; skitt < autotuned_vals->Subkernels_per_dev[d]; skitt++)
+			thread_dev_data[d]->SubkernelListDev[skitt] = Subkernel_list[autotuned_vals->Subkernel_dev_id_list[d*Subkernel_num + skitt]];
 
-		thread_dev_data[d]->SubkernelNumDev = Subkernels_per_dev[d];
+		thread_dev_data[d]->SubkernelNumDev = autotuned_vals->Subkernels_per_dev[d];
 
 		s = pthread_create(&thread_id[d], &attr,
                                   &CoCopeLiaDgemmAgentVoid, thread_dev_data[d]);

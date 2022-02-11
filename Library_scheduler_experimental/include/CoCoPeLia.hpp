@@ -11,6 +11,7 @@
 #endif
 
 #ifndef COCONTROL_H
+#define COCONTROL_H
 typedef struct CoControl{
 	int T = 0;
 	short dev_num = -1;

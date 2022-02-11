@@ -363,11 +363,11 @@ CoControl_p CoCopeLiaDaxpy(size_t N, VALUE_TYPE alpha, VALUE_TYPE* x, size_t inc
 	lprintf(lvl, "Subkernel init -> t_subkernel_init = %lf ms\n", cpu_timer*1000);
 	cpu_timer = csecond();
 #endif
-	int Subkernel_dev_id_list[num_devices*Subkernel_num] = {-1}, Subkernels_per_dev[num_devices] = {0};
+	tunableParams_p dummy;
 	if (!strcmp(DISTRIBUTION, "ROUND-ROBIN"))
-		CoCoDistributeSubkernelsRoundRobin(Subkernel_dev_id_list, Subkernels_per_dev, num_devices, NGridSz_daxpy, -1, -1);
+		CoCoDistributeSubkernelsRoundRobin(used_vals_daxpy, dummy, NGridSz_daxpy, -1, -1);
 	else if (!strcmp(DISTRIBUTION, "SPLITD1-NAIVE"))
-		CoCoDistributeSubkernelsNaive(Subkernel_dev_id_list, Subkernels_per_dev, num_devices, NGridSz_daxpy, -1, -1);
+		CoCoDistributeSubkernelsNaive(used_vals_daxpy, dummy, NGridSz_daxpy, -1, -1);
 	else error("CoCopeLiaDaxpy: Unknown Subkernel Distribution %s\n", DISTRIBUTION);
 
 	pthread_attr_t attr;
@@ -375,7 +375,7 @@ CoControl_p CoCopeLiaDaxpy(size_t N, VALUE_TYPE alpha, VALUE_TYPE* x, size_t inc
 	if (s != 0) error("CoCopeLiaDaxpy: pthread_attr_init failed s=%d\n", s);
 	void* res;
 	int used_devices = 0;
-	for (int d = 0 ; d < num_devices; d++) if(Subkernels_per_dev[d] > 0 ) used_devices++;
+	for (int d = 0 ; d < num_devices; d++) if(used_vals_daxpy->Subkernels_per_dev[d] > 0 ) used_devices++;
 	pthread_t thread_id[used_devices];
 	kernel_pthread_wrap_p thread_dev_data[used_devices];
 
@@ -393,11 +393,11 @@ CoControl_p CoCopeLiaDaxpy(size_t N, VALUE_TYPE alpha, VALUE_TYPE* x, size_t inc
 		thread_dev_data[d] = (kernel_pthread_wrap_p) malloc(sizeof(struct kernel_pthread_wrap));
 		thread_dev_data[d]->dev_id = dev_id[d];
 
-		thread_dev_data[d]->SubkernelListDev = (Subkernel**) malloc(Subkernels_per_dev[d]* sizeof(Subkernel*));
-		for(int skitt = 0; skitt < Subkernels_per_dev[d]; skitt++)
-			thread_dev_data[d]->SubkernelListDev[skitt] = Subkernel_list[Subkernel_dev_id_list[d*Subkernel_num + skitt]];
+		thread_dev_data[d]->SubkernelListDev = (Subkernel**) malloc(used_vals_daxpy->Subkernels_per_dev[d]* sizeof(Subkernel*));
+		for(int skitt = 0; skitt < used_vals_daxpy->Subkernels_per_dev[d]; skitt++)
+			thread_dev_data[d]->SubkernelListDev[skitt] = Subkernel_list[used_vals_daxpy->Subkernel_dev_id_list[d*Subkernel_num + skitt]];
 
-		thread_dev_data[d]->SubkernelNumDev = Subkernels_per_dev[d];
+		thread_dev_data[d]->SubkernelNumDev = used_vals_daxpy->Subkernels_per_dev[d];
 
 		s = pthread_create(&thread_id[d], &attr,
                                   &CoCopeLiaDaxpyAgentVoid, thread_dev_data[d]);

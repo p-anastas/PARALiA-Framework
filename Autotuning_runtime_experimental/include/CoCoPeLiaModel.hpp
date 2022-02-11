@@ -39,6 +39,7 @@ enum ModelType{
 
 typedef struct tunableParams{
 	int T;
+	double* rel_dev_score;
 	double pred_t;
 }* tunableParams_p;
 
@@ -67,6 +68,9 @@ short* CoCoPeLiaDeviceSelectBest(short used_devs, short avail_devs, short* avail
 tunableParams_p CoCoPeLiaModelMultidevOptimizeTile(short used_devs, short* used_dev_ids,
 	CoCoModel_p* dev_model_list);
 
+/// A naive prediction of the full-overlap (~unreachable) performance of a modeled routine
+double CoCopeLiaPredictFullOverlap(CoCoModel_p model);
+
 ///  Mode-Generalized prediction wrapper
 double CoCoPeLiaModelPredict(CoCoModel_p model, size_t T, ModelType mode);
 
@@ -94,16 +98,24 @@ tunableParams_p tunableParamsInit();
 
 const char* printTunableParams(tunableParams_p params);
 
+#ifndef COCONTROL_H
+#define COCONTROL_H
+typedef struct CoControl{
+	int T = 0;
+	short dev_num = -1;
+	short dev_ids[LOC_NUM];
+	int Subkernels_per_dev[LOC_NUM];
+	int *Subkernel_dev_id_list;
+	long long cache_limit = 0;
+}* CoControl_p;
+#endif
+
 /// Each device gets 1/num_devices Subkernels without acounting for their size or location
-void CoCoDistributeSubkernelsNaive(int* Subkernel_dev_id_list,
-  int* Subkernels_per_dev, short num_devices, int MGridSz, int NGridSz, int KGridSz);
+void CoCoDistributeSubkernelsNaive(CoControl_p autotune_vals, tunableParams_p best_pred_p,
+	int MGridSz, int NGridSz, int KGridSz);
 
 /// A classic round-robin distribution without acounting for their size or location
-void CoCoDistributeSubkernelsRoundRobin(int* Subkernel_dev_id_list,
-  int* Subkernels_per_dev, short num_devices, int MGridSz, int NGridSz, int KGridSz);
-
-/// Each device gets 1/num_devices Subkernels without acounting for their size or location, but the last dimension is reversed in odd devices
-void CoCoDistributeSubkernelsRevLast(int* Subkernel_dev_id_list,
-	  int* Subkernels_per_dev, short num_devices, int MGridSz, int NGridSz, int KGridSz);
+void CoCoDistributeSubkernelsRoundRobin(CoControl_p autotune_vals, tunableParams_p best_pred_p,
+	int MGridSz, int NGridSz, int KGridSz);
 
 #endif
