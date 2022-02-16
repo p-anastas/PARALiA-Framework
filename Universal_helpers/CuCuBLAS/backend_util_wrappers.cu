@@ -68,7 +68,7 @@ void CoCoPeLiaSelectDevice(short dev_id){
     "CoCoPeLiaSelectDevice(%d): cudaSetDevice(%d) failed - %s\n", dev_id, dev_id, cudaGetErrorString(err));
   }
   else if(dev_id == -1){  /// "Host" device loc id used by CoCoPeLia
-    ;
+    cudaSetDevice(0);
   }
   else error("CoCoPeLiaSelectDevice(%d): invalid dev_id\n", dev_id);
 }

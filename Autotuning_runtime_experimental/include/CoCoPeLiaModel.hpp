@@ -37,6 +37,18 @@ enum ModelType{
 	COCOPELIA_HETERO_REUSE = 8
 };
 
+#ifndef COCONTROL_H
+#define COCONTROL_H
+typedef struct CoControl{
+	int T = 0;
+	short dev_num = -1;
+	short dev_ids[LOC_NUM];
+	int Subkernels_per_dev[LOC_NUM];
+	int **Subkernel_dev_id_list;
+	long long cache_limit = 0;
+}* CoControl_p;
+#endif
+
 typedef struct tunableParams{
 	int T;
 	double* rel_dev_score;
@@ -97,18 +109,6 @@ const char* printModel(ModelType mode);
 tunableParams_p tunableParamsInit();
 
 const char* printTunableParams(tunableParams_p params);
-
-#ifndef COCONTROL_H
-#define COCONTROL_H
-typedef struct CoControl{
-	int T = 0;
-	short dev_num = -1;
-	short dev_ids[LOC_NUM];
-	int Subkernels_per_dev[LOC_NUM];
-	int *Subkernel_dev_id_list;
-	long long cache_limit = 0;
-}* CoControl_p;
-#endif
 
 /// Each device gets 1/num_devices Subkernels without acounting for their size or location
 void CoCoDistributeSubkernelsNaive(CoControl_p autotune_vals, tunableParams_p best_pred_p,

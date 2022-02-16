@@ -90,8 +90,8 @@ void* CoCopeLiaDaxpyAgentVoid(void* kernel_pthread_wrapped){
 	CoCoPeLiaSelectDevice(dev_id);
 
 	for (int keri = 0; keri < axpy_subkernel_data->SubkernelNumDev; keri++){
-		axpy_subkernel_data->SubkernelListDev[keri]->init_events();
 		CoCoDaxpyUpdateDevice(axpy_subkernel_data->SubkernelListDev[keri], dev_id);
+		axpy_subkernel_data->SubkernelListDev[keri]->init_events();
 	}
 
 #ifdef TEST
@@ -363,6 +363,9 @@ CoControl_p CoCopeLiaDaxpy(size_t N, VALUE_TYPE alpha, VALUE_TYPE* x, size_t inc
 	lprintf(lvl, "Subkernel init -> t_subkernel_init = %lf ms\n", cpu_timer*1000);
 	cpu_timer = csecond();
 #endif
+	used_vals_daxpy->Subkernel_dev_id_list = (int**) malloc(used_vals_daxpy->dev_num*sizeof(int*));
+	for (int devidx = 0; devidx < used_vals_daxpy->dev_num; devidx++)
+		used_vals_daxpy->Subkernel_dev_id_list[devidx] = (int*) malloc(Subkernel_num*sizeof(int));
 	tunableParams_p dummy;
 	if (!strcmp(DISTRIBUTION, "ROUND-ROBIN"))
 		CoCoDistributeSubkernelsRoundRobin(used_vals_daxpy, dummy, NGridSz_daxpy, -1, -1);
@@ -395,7 +398,7 @@ CoControl_p CoCopeLiaDaxpy(size_t N, VALUE_TYPE alpha, VALUE_TYPE* x, size_t inc
 
 		thread_dev_data[d]->SubkernelListDev = (Subkernel**) malloc(used_vals_daxpy->Subkernels_per_dev[d]* sizeof(Subkernel*));
 		for(int skitt = 0; skitt < used_vals_daxpy->Subkernels_per_dev[d]; skitt++)
-			thread_dev_data[d]->SubkernelListDev[skitt] = Subkernel_list[used_vals_daxpy->Subkernel_dev_id_list[d*Subkernel_num + skitt]];
+			thread_dev_data[d]->SubkernelListDev[skitt] = Subkernel_list[used_vals_daxpy->Subkernel_dev_id_list[d][skitt]];
 
 		thread_dev_data[d]->SubkernelNumDev = used_vals_daxpy->Subkernels_per_dev[d];
 

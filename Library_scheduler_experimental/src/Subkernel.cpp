@@ -61,8 +61,8 @@ Subkernel::~Subkernel(){
 }
 
 void Subkernel::init_events(){
-	operation_complete = new Event();
-	if (WR_last) writeback_complete = new Event();
+	operation_complete = new Event(run_dev_id);
+	if (WR_last) writeback_complete = new Event(run_dev_id);
 }
 
 void Subkernel::update_RunTileMaps(){

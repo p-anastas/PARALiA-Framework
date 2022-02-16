@@ -111,13 +111,13 @@ void CommandQueue::wait_for_event(Event_p Wevent)
 
 /*****************************************************/
 /// Event class functions. TODO: Do status = .. commands need lock?
-Event::Event()
+Event::Event(int dev_id_in)
 {
 	get_lock();
 	event_backend_ptr = malloc(sizeof(cudaEvent_t));
-	int dev_id;  cudaGetDevice(&dev_id);
-	Event_num_device[dev_id]++;
-	id = Event_num_device[dev_id];
+	dev_id = dev_id_in;
+	Event_num_device[idxize(dev_id)]++;
+	id = Event_num_device[idxize(dev_id)];
 	cudaError_t err = cudaEventCreate(( cudaEvent_t*) event_backend_ptr);
 	status = UNRECORDED;
 	massert(cudaSuccess == err, "Event::Event - %s\n", cudaGetErrorString(err));
@@ -128,8 +128,7 @@ Event::~Event()
 {
 	sync_barrier();
 	get_lock();
-	int dev_id;  cudaGetDevice(&dev_id);
-	Event_num_device[dev_id]--;
+	Event_num_device[idxize(dev_id)]--;
 	cudaError_t err = cudaEventDestroy(*(( cudaEvent_t*) event_backend_ptr));
 	free(event_backend_ptr);
 	massert(cudaSuccess == err, "Event::~Event - %s\n", cudaGetErrorString(err));
@@ -157,13 +156,13 @@ void Event::record_to_queue(CQueue_p Rr){
 	if (Rr == NULL) status = CHECKED;
 	else{
 		if (status != UNRECORDED){
-			warning("Event::record_to_queue: Recording %s event\n", print_event_status(status));
+			warning("Event(%d,dev_id = %d)::record_to_queue(%d): Recording %s event\n", id, dev_id, Rr->dev_id, print_event_status(status));
 		}
 		cudaEvent_t cuda_event= *(cudaEvent_t*) event_backend_ptr;
 		cudaStream_t stream = *((cudaStream_t*) Rr->cqueue_backend_ptr);
 		cudaError_t err = cudaEventRecord(cuda_event, stream);
 		status = RECORDED;
-		massert(cudaSuccess == err, "Event::record_to_queue - %s\n", cudaGetErrorString(err));
+		massert(cudaSuccess == err, "Event(%d,dev_id = %d)::record_to_queue(%d) - %s\n",  id, dev_id, Rr->dev_id, cudaGetErrorString(err));
 	}
 	release_lock();
 }
@@ -216,9 +215,9 @@ void Event::reset(){
 /*****************************************************/
 /// Event-based timer class functions
 
-Event_timer::Event_timer() {
-  Event_start = new Event();
-  Event_stop = new Event();
+Event_timer::Event_timer(int dev_id) {
+  Event_start = new Event(dev_id);
+  Event_stop = new Event(dev_id);
   time_ms = 0;
 }
 

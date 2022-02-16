@@ -15,6 +15,10 @@
 
 short* CoCoPeLiaDeviceSelectBest(short used_devs, short avail_devs, short* avail_dev_ids,
 	CoCoModel_p* avail_dev_model_list){
+	short lvl = 3;
+#ifdef PDEBUG
+	lprintf(lvl, "====================================\n");
+#endif
 	if(used_devs > avail_devs)
 		error("CoCoPeLiaDeviceSelectBest: used_devs(%d) > avail_devs(%d)\n", used_devs, avail_devs);
 	short* used_dev_ids = (short*) malloc(sizeof(short)* used_devs), dev_ctr = 0;
@@ -35,9 +39,17 @@ short* CoCoPeLiaDeviceSelectBest(short used_devs, short avail_devs, short* avail
 			if(best_idx == -1) error("CoCoPeLiaDeviceSelectBest: best_idx not found in full itteration\n");
 			checked[best_idx] = 1;
 			used_dev_ids[dev_ctr] = deidxize(best_idx);
+#ifdef PDEBUG
+			lprintf(lvl, "Best_score(dev_ctr=%d, dev_id = %d) = %lf\n", dev_ctr, deidxize(best_idx), best_score);
+#endif
 			dev_ctr++;
 		}
 	}
+#ifdef PDEBUG
+	lprintf(lvl, "Best %d devices: [ ", used_devs);
+	for (int i =0; i < used_devs; i++) fprintf(stderr, "%d ", used_dev_ids[i]);
+	lprintf(0, "]\n");
+#endif
 	return used_dev_ids;
 }
 
@@ -137,6 +149,14 @@ tunableParams_p CoCoPeLiaModelMultidevOptimizeTile(short used_devs, short* used_
 	}
 	outparams->T = min_T;
 	outparams->pred_t = min_overlap_t;
+
+#ifdef PDEBUG
+	lprintf(lvl, "====================================\n");
+	lprintf(lvl, "Best %d percentages : [ ", used_devs);
+	for (int i =0; i < used_devs; i++) fprintf(stderr, "%.3lf ", outparams->rel_dev_score[i]);
+	lprintf(0, "]\n");
+	lprintf(lvl, "Predict T=%zu : t_pred = %lf\n", outparams->T, outparams->pred_t);
+#endif
 #ifdef TEST
 	timer = csecond() - timer;
 	lprintf(lvl, "Optimization time:%lf ms\n", timer*1000);

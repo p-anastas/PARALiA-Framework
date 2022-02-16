@@ -38,7 +38,7 @@ int main(const int argc, const char *argv[]) {
   	}
 
 	if (from == to) error("Transfer benchmark@%s %d->%d: Same device\n",TESTBED, from, to);
-	
+
 	char *filename = (char *) malloc(256* sizeof(char));
 	sprintf(filename, "%s/Benchmark-Results/CoCoMemcpy2DAsync_to-%d_from-%d_%s.log", DEPLOYDB, to, from, VERSION);
 	check_benchmark(filename);
@@ -93,7 +93,7 @@ int main(const int argc, const char *argv[]) {
 	double transfer_t_bid_sum, transfer_t_bid_mean, error_margin_bid;
 	size_t sample_sz, sample_sz_bid;
 	CoCoPeLiaSelectDevice(from);
-	Event_timer_p device_timer = new Event_timer();
+	Event_timer_p device_timer = new Event_timer(from);
 	for (size_t dim = minDim; dim < maxDim+1; dim+=step){
 		if (dim >= step * 16) step*=2;
 		transfer_t_sum = transfer_t_mean = bench_t = error_margin = 0;

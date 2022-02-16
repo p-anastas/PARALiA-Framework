@@ -63,10 +63,10 @@ class Event
 		event_status status;
 	public:
 		void* event_backend_ptr;
-		int id;
+		int id, dev_id;
 
 		/// Constructors
-		Event();
+		Event(int dev_id);
 		/// Destructors
 		~Event();
 		/// Functions
@@ -146,8 +146,9 @@ typedef class Event_timer
 		Event_p Event_stop;
 		double time_ms;
 	public:
+		int dev_id;
 
-		Event_timer();
+		Event_timer(int dev_id);
 		void start_point(CQueue_p start_queue);
 		void stop_point(CQueue_p stop_queue);
 		double sync_get_time();

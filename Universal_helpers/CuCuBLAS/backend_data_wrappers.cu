@@ -286,7 +286,7 @@ void backend_enableGPUPeer(short target_dev_i, short dev_ids[], short num_device
 	lprintf(lvl-1, "|-----> CoCoPeLiaEnableGPUPeer\n");
 	double cpu_timer = csecond();
 #endif
-	cudaSetDevice(dev_ids[target_dev_i]);
+	CoCoPeLiaSelectDevice(dev_ids[target_dev_i]);
 	for(int j=0; j<num_devices;j++){
 		if (dev_ids[target_dev_i] == dev_ids[j] || dev_ids[target_dev_i] == -1 || dev_ids[j] == -1) continue;
 		int can_access_peer;

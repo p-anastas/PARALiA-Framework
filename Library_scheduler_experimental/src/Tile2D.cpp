@@ -27,17 +27,16 @@ template<typename dtype>  Tile2D<dtype>::Tile2D(void * in_addr, int in_dim1, int
   id = Tile2D_num;
   Tile2D_num++;
   short prev_loc = CoCoPeLiaGetDevice();
-  for (int iloc = 0; iloc < LOC_NUM -1; iloc++){
-    	CoCoPeLiaSelectDevice(iloc);
-      available[iloc] = new Event();
-      if(!iloc) available[LOC_NUM -1] = new Event(); // "Host" event is initialized in device 0
+  for (int iloc = 0; iloc < LOC_NUM; iloc++){
+    	CoCoPeLiaSelectDevice(deidxize(iloc));
+      available[iloc] = new Event(deidxize(iloc));
   }
   CoCoPeLiaSelectDevice(prev_loc);
-  short init_loc = CoCoGetPtrLoc(in_addr);
-  if (init_loc < 0) init_loc = LOC_NUM -1;
+  short init_loc_idx = CoCoGetPtrLoc(in_addr);
+  if (init_loc_idx < 0) init_loc_idx = LOC_NUM -1;
   for (int iloc = 0; iloc < LOC_NUM; iloc++){
     RunTileMap[iloc] = 0;
-    if (iloc == init_loc){
+    if (iloc == init_loc_idx){
        adrs[iloc] = in_addr;
        ldim[iloc] = in_ldim;
        CacheLocId[iloc] = -1;

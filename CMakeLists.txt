@@ -34,8 +34,8 @@ add_definitions(-DMAX_BUFFERING_L=4)
 add_definitions(-DENABLE_CPU_WORKLOAD)
 
 ## Define which subkernel distribution to use
-#add_definitions(-DDISTRIBUTION="ROUND-ROBIN")
-add_definitions(-DDISTRIBUTION="SPLITD1-NAIVE")
+add_definitions(-DDISTRIBUTION="ROUND-ROBIN")
+#add_definitions(-DDISTRIBUTION="SPLITD1-NAIVE")
 
 #Run in testing mode : details about models, decisions and time spend in operations.
 #add_definitions(-DTEST)
