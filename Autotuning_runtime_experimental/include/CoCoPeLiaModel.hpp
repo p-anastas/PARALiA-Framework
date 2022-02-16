@@ -77,8 +77,11 @@ typedef struct CoCo_model{
 short* CoCoPeLiaDeviceSelectBest(short used_devs, short avail_devs, short* avail_dev_ids,
 	CoCoModel_p* avail_dev_model_list);
 
-tunableParams_p CoCoPeLiaModelMultidevOptimizeTile(short used_devs, short* used_dev_ids,
+tunableParams_p CoCoPeLiaModelMultidevOptimizeTileAndSplit(short used_devs, short* used_dev_ids,
 	CoCoModel_p* dev_model_list);
+
+tunableParams_p CoCoPeLiaModelMultidevOptimizeSplit(short used_devs, short* used_dev_ids,
+	CoCoModel_p* dev_model_list, int T);
 
 /// A naive prediction of the full-overlap (~unreachable) performance of a modeled routine
 double CoCopeLiaPredictFullOverlap(CoCoModel_p model);

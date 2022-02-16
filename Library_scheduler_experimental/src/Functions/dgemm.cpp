@@ -403,11 +403,11 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 #endif
 		autotune_eval_devices = 1;
 		for (int i =0; i < autotuned_vals->dev_num; i++)
-			autotuned_vals->dev_ids[i] = (i == LOC_NUM - 1)? -1 : i;
+			autotuned_vals->dev_ids[i] = deidxize(i);
 	}
 
 	for (int i =0; i < autotuned_vals->dev_num; i++){
-		short dev_id_idx = (autotuned_vals->dev_ids[i] == -1)? LOC_NUM-1 : autotuned_vals->dev_ids[i];
+		short dev_id_idx = idxize(autotuned_vals->dev_ids[i]);
 		if(!reuse_model_flag || glob_model_gemm[dev_id_idx] == NULL)
 			if(glob_model_gemm[dev_id_idx] != NULL) free(glob_model_gemm[dev_id_idx]);
 			glob_model_gemm[dev_id_idx] = CoCoPeLiaTileModelInit(autotuned_vals->dev_ids[i], "Dgemm", initial_gemm);
@@ -424,9 +424,11 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 		lprintf(lvl, "Using predefined T=%zu\n", autotuned_vals->T);
 		lprintf(lvl, "====================================\n");
 #endif
+		best_pred_p = CoCoPeLiaModelMultidevOptimizeSplit(autotuned_vals->dev_num,
+			autotuned_vals->dev_ids, glob_model_gemm, autotuned_vals->T);
 	}
 	else if (predef_vals_gemm && predef_vals_gemm->dev_num > 0){
-		best_pred_p = CoCoPeLiaModelMultidevOptimizeTile(autotuned_vals->dev_num,
+		best_pred_p = CoCoPeLiaModelMultidevOptimizeTileAndSplit(autotuned_vals->dev_num,
 			autotuned_vals->dev_ids, glob_model_gemm);
 		autotuned_vals->T = best_pred_p->T;
 #ifdef PDEBUG
@@ -439,7 +441,7 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 		for (int used_devs = 0; used_devs < autotuned_vals->dev_num; used_devs++){
 			dev_ids[used_devs] = CoCoPeLiaDeviceSelectBest(used_devs + 1, autotuned_vals->dev_num,
 				autotuned_vals->dev_ids, glob_model_gemm);
-			pred_p[used_devs] = CoCoPeLiaModelMultidevOptimizeTile(used_devs + 1,
+			pred_p[used_devs] = CoCoPeLiaModelMultidevOptimizeTileAndSplit(used_devs + 1,
 				dev_ids[used_devs], glob_model_gemm);
 
 			if (best_pred_p == NULL){
@@ -662,5 +664,6 @@ CoControl_p CoCopeLiaDgemmControled(char TransA,  char TransB, size_t M, size_t 
 	predef_vals_gemm->cache_limit = predef_control_values->cache_limit;
 	CoControl_p return_vals = CoCopeLiaDgemm(TransA, TransB,  M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC);
 	free(predef_vals_gemm);
+	predef_vals_gemm = NULL;
 	return return_vals;
 }

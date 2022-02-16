@@ -53,11 +53,11 @@ short* CoCoPeLiaDeviceSelectBest(short used_devs, short avail_devs, short* avail
 	return used_dev_ids;
 }
 
-tunableParams_p CoCoPeLiaModelMultidevOptimizeTile(short used_devs, short* used_dev_ids,
+tunableParams_p CoCoPeLiaModelMultidevOptimizeTileAndSplit(short used_devs, short* used_dev_ids,
 	CoCoModel_p* dev_model_list){
 	short lvl = 3;
 #ifdef DEBUG
-	lprintf(lvl-1, "|-----> CoCoPeLiaModelMultidevOptimizeTile(used_devs=%d, used_dev_ids= [ ", used_devs);
+	lprintf(lvl-1, "|-----> CoCoPeLiaModelMultidevOptimizeTileAndSplit(used_devs=%d, used_dev_ids= [ ", used_devs);
 	for (int i =0; i < used_devs; i++) lprintf(0, "%d ", used_dev_ids[i]);
 	lprintf(0, "]\n");
 #endif
@@ -93,7 +93,7 @@ tunableParams_p CoCoPeLiaModelMultidevOptimizeTile(short used_devs, short* used_
 	for(int idx = 0; idx < used_devs; idx++){
 		outparams->rel_dev_score[idx] = CoCopeLiaPredictFullOverlap(dev_model_list[idx]);
 		if (outparams->rel_dev_score[idx] != 0) outparams->rel_dev_score[idx] = 1/outparams->rel_dev_score[idx];
-		else warning("CoCoPeLiaModelMultidevOptimizeTile: rel_dev_score[%d] == 0\n", idx);
+		else warning("CoCoPeLiaModelMultidevOptimizeTileAndSplit: rel_dev_score[%d] == 0\n", idx);
 		temp_score+= outparams->rel_dev_score[idx];
 	}
 	for(int idx = 0; idx < used_devs; idx++){
@@ -122,7 +122,7 @@ tunableParams_p CoCoPeLiaModelMultidevOptimizeTile(short used_devs, short* used_
 			else error("CoCoPeLiaModelPredict(%p(dev_id = %d, (idx = %d )), trial_T = %d): negative prediction temp_t = %lf\n",
 				model, cur_dev_id, cur_dev_idx, trial_T, temp_t);
 #ifdef PDEBUG
-			lprintf(lvl, "CoCoPeLiaModelMultidevOptimizeTile(%p) for dev_id = %d (idx = %d ) with trial_T = %d: dev_score = %e, temp_t = %e\n",
+			lprintf(lvl, "CoCoPeLiaModelMultidevOptimizeTileAndSplit(%p) for dev_id = %d (idx = %d ) with trial_T = %d: dev_score = %e, temp_t = %e\n",
 				model, cur_dev_id, cur_dev_idx, trial_T, rel_dev_score[idx], temp_t);
 #endif
 		}
@@ -149,6 +149,81 @@ tunableParams_p CoCoPeLiaModelMultidevOptimizeTile(short used_devs, short* used_
 	}
 	outparams->T = min_T;
 	outparams->pred_t = min_overlap_t;
+
+#ifdef PDEBUG
+	lprintf(lvl, "====================================\n");
+	lprintf(lvl, "Best %d percentages : [ ", used_devs);
+	for (int i =0; i < used_devs; i++) fprintf(stderr, "%.3lf ", outparams->rel_dev_score[i]);
+	lprintf(0, "]\n");
+	lprintf(lvl, "Predict T=%zu : t_pred = %lf\n", outparams->T, outparams->pred_t);
+#endif
+#ifdef TEST
+	timer = csecond() - timer;
+	lprintf(lvl, "Optimization time:%lf ms\n", timer*1000);
+	lprintf(lvl-1, "<-----|\n");
+#endif
+#ifdef DEBUG
+	lprintf(lvl, "outparams->T = %zu\n : outparams->pred_t = %lf ms\n", outparams->T, outparams->pred_t);
+	lprintf(lvl-1, "<-----|\n");
+#endif
+	return outparams;
+}
+
+tunableParams_p CoCoPeLiaModelMultidevOptimizeSplit(short used_devs, short* used_dev_ids,
+	CoCoModel_p* dev_model_list, int T){
+	short lvl = 3;
+#ifdef DEBUG
+	lprintf(lvl-1, "|-----> CoCoPeLiaModelMultidevOptimizeSplit(used_devs=%d, used_dev_ids= [ ", used_devs);
+	for (int i =0; i < used_devs; i++) lprintf(0, "%d ", used_dev_ids[i]);
+	lprintf(0, "]\n");
+#endif
+#ifdef TEST
+	double timer = csecond();
+#endif
+	short first_model_idx = (used_dev_ids[0] == -1) ? LOC_NUM - 1 : used_dev_ids[0];
+	CoCoModel_p model = dev_model_list[first_model_idx];
+	tunableParams_p outparams = tunableParamsInit();
+	//TODO: Naive naive naive! Should replace with something better at some point.
+	size_t max_allowed_T = 0, ctr = 0;
+	max_allowed_T = fmin(fmin(model->D1, model->D2),model->D3);
+#ifdef PDEBUG
+		lprintf(lvl, "max_allowed_T = %d\n", max_allowed_T);
+#endif
+	if (T > max_allowed_T)
+		error("CoCoPeLiaModelMultidevOptimizeSplit: Give T = %d > max_allowed_T = %d\n", T, max_allowed_T);
+
+	double temp_t, min_overlap_t = 10000000, temp_score = 0;
+
+	outparams->rel_dev_score = (double*) malloc(sizeof(double)*used_devs);
+	for(int idx = 0; idx < used_devs; idx++){
+		outparams->rel_dev_score[idx] = CoCopeLiaPredictFullOverlap(dev_model_list[idx]);
+		if (outparams->rel_dev_score[idx] != 0) outparams->rel_dev_score[idx] = 1/outparams->rel_dev_score[idx];
+		else warning("CoCoPeLiaModelMultidevOptimizeSplit: rel_dev_score[%d] == 0\n", idx);
+		temp_score+= outparams->rel_dev_score[idx];
+	}
+	for(int idx = 0; idx < used_devs; idx++){
+		outparams->rel_dev_score[idx] /= temp_score;
+#ifdef PDEBUG
+		lprintf(lvl, "Calculating Relative score for dev_id = %d (idx = %d ): outparams->rel_dev_score = %e\n",
+				used_dev_ids[idx], idx, outparams->rel_dev_score[idx]);
+#endif
+	}
+	double temp_overlap_t = 0;
+	for(int idx = 0; idx < used_devs; idx++){
+		short cur_dev_id = used_dev_ids[idx], cur_dev_idx = (cur_dev_id == -1)? LOC_NUM - 1 : cur_dev_id;
+		model = dev_model_list[cur_dev_idx];
+		temp_t = CoCoPeLiaModelPredictHetero(model, used_devs, used_dev_ids, outparams->rel_dev_score, T, COCOPELIA_HETERO_REUSE);
+		if(temp_t > 0) temp_overlap_t = fmax(temp_overlap_t, temp_t);
+		else error("CoCoPeLiaModelPredictHetero(%p(dev_id = %d, (idx = %d )), T = %d): negative prediction temp_t = %lf\n",
+			model, cur_dev_id, cur_dev_idx, T, temp_t);
+#ifdef PDEBUG
+		lprintf(lvl, "CoCoPeLiaModelPredictHetero(%p) for dev_id = %d (idx = %d ) with T = %d: temp_overlap_t = %lf, temp_t = %lf\n",
+			model, cur_dev_id, cur_dev_idx, T, temp_overlap_t, temp_t);
+#endif
+	}
+
+	outparams->T = T;
+	outparams->pred_t = temp_overlap_t;
 
 #ifdef PDEBUG
 	lprintf(lvl, "====================================\n");

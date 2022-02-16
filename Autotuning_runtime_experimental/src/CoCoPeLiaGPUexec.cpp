@@ -98,12 +98,25 @@ GPUexec3Model_p GPUexec3Model_init(short dev_id, char* func){
 double GPUexec3Model_predict(GPUexec3Model_p model, size_t T, char TransA, char TransB){
 	double result = -1;
 	//TODO: Ultra naive, not (currently) important for performance but come on mate...
-	for (int i = 0; i < model->lines; i++) if(model->T_lookup_buf[i] == T && model->TransA_buf[i] == TransA && model->TransB_buf[i] == TransB){
+	for (int i = 0; i < model->lines; i++)
+		if(model->T_lookup_buf[i] == T && model->TransA_buf[i] == TransA && model->TransB_buf[i] == TransB){
 #ifdef DPDEBUG
-		lprintf(4, "GPUexec3Model_predict: Found T = %d, TransA = %c, TransB = %c in loc %d -> t_av = %lf ms\n",
-			model->T_lookup_buf[i], model->TransA_buf[i], model->TransB_buf[i], i, model->av_time_buf[i]*1000);
+			lprintf(4, "GPUexec3Model_predict: Found T = %d, TransA = %c, TransB = %c in loc %d -> t_av = %lf ms\n",
+				model->T_lookup_buf[i], model->TransA_buf[i], model->TransB_buf[i], i, model->av_time_buf[i]*1000);
 #endif
-		return model->av_time_buf[i];
+			return model->av_time_buf[i];
 	}
+	if (result == -1) warning("GPUexec3Model_predict: Performing Linear regression for prediction of exec_t of T_in=%d based on T=%d\n",
+		T, GPUexec3NearestT(model, T));
+	int nearest_T = GPUexec3NearestT(model, T);
+	long double reg_t = 0;
+	for (int i = 0; i < model->lines; i++)
+		if(model->T_lookup_buf[i] == nearest_T && model->TransA_buf[i] == TransA && model->TransB_buf[i] == TransB){
+			reg_t = model->av_time_buf[i];
+			break;
+		}
+	if(reg_t == 0) error("Failed to find nearest_T = %d for regression\n", nearest_T);
+	// Cheat for gemm, not generic (?)
+	result = (double) (reg_t*pow(T,3)/(pow(nearest_T,3)));
 	return result;
 }

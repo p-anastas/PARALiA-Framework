@@ -88,7 +88,7 @@ int main(const int argc, const char *argv[]) {
 
 	short bench_it = 10;
 	double best_t = cpu_timer;
-	for (size_t T_trial = (((size_t)fmax(fmin(fmin(M/32,N/32),K/32),512))/512)*512; T_trial <= (size_t) fmin(fmin(fmin(M/DEV_NUM,N/DEV_NUM),K),CBLASXT_MAX_SAFE_TILE); T_trial+=512){
+	for (size_t T_trial = (((size_t)fmax(fmin(fmin(M/32,N/32),K/32),512))/512)*512; T_trial <= (size_t) fmin(fmin(fmin(M/sqrt(DEV_NUM),N/sqrt(DEV_NUM)),K),CBLASXT_MAX_SAFE_TILE); T_trial+=512){
 			fprintf(stderr,"Running CoCopeLia DGEMM-> M = %zu, N = %zu, K = %zu, T = %zu\n", M, N, K, T_trial);
 			predef_control_values-> T = T_trial;
 			cpu_timer  = csecond();
