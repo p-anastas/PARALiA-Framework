@@ -47,7 +47,7 @@ add_definitions(-DDISTRIBUTION="SPLITD1-NAIVE")
 #add_definitions(-DDDEBUG)
 
 #Run Prediction debug mode (autotuning runtime stuff)
-add_definitions(-DPDEBUG)
+#add_definitions(-DPDEBUG)
 
 #Run Prediction deep debug mode (all autotuning runtime stuff)
 #add_definitions(-DDPDEBUG)

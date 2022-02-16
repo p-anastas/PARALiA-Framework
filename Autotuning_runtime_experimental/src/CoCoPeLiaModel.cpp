@@ -49,6 +49,9 @@ tunableParams_p CoCoPeLiaModelMultidevOptimizeTile(short used_devs, short* used_
 	for (int i =0; i < used_devs; i++) lprintf(0, "%d ", used_dev_ids[i]);
 	lprintf(0, "]\n");
 #endif
+#ifdef TEST
+	double timer = csecond();
+#endif
 	short first_model_idx = (used_dev_ids[0] == -1) ? LOC_NUM - 1 : used_dev_ids[0];
 	CoCoModel_p model = dev_model_list[first_model_idx];
 	tunableParams_p outparams = tunableParamsInit();
@@ -70,7 +73,7 @@ tunableParams_p CoCoPeLiaModelMultidevOptimizeTile(short used_devs, short* used_
 #endif
 		return outparams;
 	}
-	double temp_t, max_score_t = 10000000, temp_score = 0;
+	double temp_t, min_overlap_t = 10000000, temp_score = 0;
 	size_t prev_trial_T = 0;
 
 	outparams->rel_dev_score = (double*) malloc(sizeof(double)*used_devs);
@@ -113,34 +116,34 @@ tunableParams_p CoCoPeLiaModelMultidevOptimizeTile(short used_devs, short* used_
 		}
 		for(int idx = 0; idx < used_devs; idx++) rel_dev_score[idx] /= temp_score;
 */
-		double temp_score_t = 0;
+		double temp_overlap_t = 0;
 		for(int idx = 0; idx < used_devs; idx++){
 			short cur_dev_id = used_dev_ids[idx], cur_dev_idx = (cur_dev_id == -1)? LOC_NUM - 1 : cur_dev_id;
 			model = dev_model_list[cur_dev_idx];
 			temp_t = CoCoPeLiaModelPredictHetero(model, used_devs, used_dev_ids, outparams->rel_dev_score, trial_T, COCOPELIA_HETERO_REUSE);
-			if(temp_t > 0) temp_score_t = fmax(temp_score_t, temp_t);
+			if(temp_t > 0) temp_overlap_t = fmax(temp_overlap_t, temp_t);
 			else error("CoCoPeLiaModelPredictHetero(%p(dev_id = %d, (idx = %d )), trial_T = %d): negative prediction temp_t = %lf\n",
 				model, cur_dev_id, cur_dev_idx, trial_T, temp_t);
 #ifdef PDEBUG
-			lprintf(lvl, "CoCoPeLiaModelPredictHetero(%p) for dev_id = %d (idx = %d ) with trial_T = %d: temp_score_t = %lf, temp_t = %lf\n",
-				model, cur_dev_id, cur_dev_idx, trial_T, temp_score_t, temp_t);
+			lprintf(lvl, "CoCoPeLiaModelPredictHetero(%p) for dev_id = %d (idx = %d ) with trial_T = %d: temp_overlap_t = %lf, temp_t = %lf\n",
+				model, cur_dev_id, cur_dev_idx, trial_T, temp_overlap_t, temp_t);
 #endif
 		}
-		if (temp_score_t < max_score_t){
-			max_score_t = temp_score_t;
+		if (temp_overlap_t < min_overlap_t){
+			min_overlap_t = temp_overlap_t;
 			min_T = trial_T;
 		}
 		prev_trial_T = trial_T;
 	}
 	outparams->T = min_T;
-	outparams->pred_t = max_score_t;
+	outparams->pred_t = min_overlap_t;
 #ifdef TEST
 	timer = csecond() - timer;
 	lprintf(lvl, "Optimization time:%lf ms\n", timer*1000);
 	lprintf(lvl-1, "<-----|\n");
 #endif
 #ifdef DEBUG
-	lprintf(lvl, "T = %zu\n : t_min = %lf ms\n", min_T, min_t*1000);
+	lprintf(lvl, "outparams->T = %zu\n : outparams->pred_t = %lf ms\n", outparams->T, outparams->pred_t);
 	lprintf(lvl-1, "<-----|\n");
 #endif
 	return outparams;

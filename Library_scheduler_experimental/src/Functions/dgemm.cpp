@@ -445,6 +445,7 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 #endif
 			pred_p[used_devs] = CoCoPeLiaModelMultidevOptimizeTile(used_devs + 1,
 				dev_ids[used_devs], glob_model_gemm);
+
 			if (best_pred_p == NULL){
 				best_pred_p = pred_p[used_devs];
 				best_dev_num = used_devs + 1;
@@ -532,19 +533,27 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 	// create a barrier object with a count of used_devices
 	pthread_barrier_init (&RunTileMap_sync_barrier, NULL, used_devices + 1);
 
-	for(int d=0; d < autotuned_vals->dev_num; d++){
-		if(autotuned_vals->Subkernels_per_dev[d] == 0) continue;
+	int skip_id_ctr = 0;
+	for(int d=0; d < used_devices; d++){
+		int d_actual = d + skip_id_ctr;
+		while(autotuned_vals->Subkernels_per_dev[d_actual] == 0){
+			skip_id_ctr++;
+			d_actual = d + skip_id_ctr;
+			if (d_actual == autotuned_vals->dev_num) break;
+		}
+		if (d_actual == autotuned_vals->dev_num) break;
+
 		// Check/Enable peer access between participating GPUs
-		CoCoEnableLinks(d, autotuned_vals->dev_ids, autotuned_vals->dev_num);
+		CoCoEnableLinks(d_actual, autotuned_vals->dev_ids, autotuned_vals->dev_num);
 
 		thread_dev_data[d] = (kernel_pthread_wrap_p) malloc(sizeof(struct kernel_pthread_wrap));
-		thread_dev_data[d]->dev_id = autotuned_vals->dev_ids[d];
+		thread_dev_data[d]->dev_id = autotuned_vals->dev_ids[d_actual];
 
-		thread_dev_data[d]->SubkernelListDev = (Subkernel**) malloc(autotuned_vals->Subkernels_per_dev[d]* sizeof(Subkernel*));
-		for(int skitt = 0; skitt < autotuned_vals->Subkernels_per_dev[d]; skitt++)
-			thread_dev_data[d]->SubkernelListDev[skitt] = Subkernel_list[autotuned_vals->Subkernel_dev_id_list[d*Subkernel_num + skitt]];
+		thread_dev_data[d]->SubkernelListDev = (Subkernel**) malloc(autotuned_vals->Subkernels_per_dev[d_actual]* sizeof(Subkernel*));
+		for(int skitt = 0; skitt < autotuned_vals->Subkernels_per_dev[d_actual]; skitt++)
+			thread_dev_data[d]->SubkernelListDev[skitt] = Subkernel_list[autotuned_vals->Subkernel_dev_id_list[d_actual*Subkernel_num + skitt]];
 
-		thread_dev_data[d]->SubkernelNumDev = autotuned_vals->Subkernels_per_dev[d];
+		thread_dev_data[d]->SubkernelNumDev = autotuned_vals->Subkernels_per_dev[d_actual];
 
 		s = pthread_create(&thread_id[d], &attr,
                                   &CoCopeLiaDgemmAgentVoid, thread_dev_data[d]);

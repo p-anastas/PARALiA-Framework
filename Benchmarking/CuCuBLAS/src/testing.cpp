@@ -15,7 +15,7 @@ char* CoControlPrint(CoControl_p input){
 	int ctr = 0, itter = 0;
 	if (input == NULL) sprintf(outstring,"-1,-1,-1,-1");
 	else{
-		if (input->dev_num > 0) for (int i = 0; i < input->dev_num; i++)dev_ids_token+=pow(10,input->dev_ids[i]);
+		if (input->dev_num > 0)for (int i = 0; i < input->dev_num; i++)dev_ids_token+=pow(10,idxize(input->dev_ids[i]));
 		sprintf(outstring, "%d,%d,%d,%lld",  input->T, input->dev_num, dev_ids_token, input->cache_limit);
 	}
 	return outstring;

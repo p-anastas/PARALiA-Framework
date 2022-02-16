@@ -56,14 +56,14 @@ void CoCoDistributeSubkernelsNaive(CoControl_p autotune_vals,
 #ifdef MULTIDEVICE_REDUCTION_ENABLE
     int rem_dev = Subkernel_num;
     for (int d = 0 ; d < autotune_vals->dev_num; d++){
-       autotune_vals->Subkernels_per_dev[idxize(autotune_vals->dev_ids[d])] =
-        (int) (1.0* pred_p->rel_dev_score[idxize(autotune_vals->dev_ids[d])]* Subkernel_num);
-       rem_dev-= autotune_vals->Subkernels_per_dev[idxize(autotune_vals->dev_ids[d])];
+       autotune_vals->Subkernels_per_dev[d] =
+        (int) (1.0* pred_p->rel_dev_score[d]* Subkernel_num);
+       rem_dev-= autotune_vals->Subkernels_per_dev[d];
     }
     while(rem_dev!= 0){
       for (int d = 0 ; d < autotune_vals->dev_num; d++){
          if(rem_dev!= 0){
-           autotune_vals->Subkernels_per_dev[idxize(autotune_vals->dev_ids[d])] += 1;
+           autotune_vals->Subkernels_per_dev[d] += 1;
            rem_dev--;
          }
          else break;
@@ -92,7 +92,7 @@ void CoCoDistributeSubkernelsNaive(CoControl_p autotune_vals,
     }*/
     short dev_sk_ctr = 0, cur_dev_id_ctr = 0;
     while(total_sk_ctr<Subkernel_num && cur_dev_id_ctr < autotune_vals->dev_num){
-      while(dev_sk_ctr == autotune_vals->Subkernels_per_dev[idxize(autotune_vals->dev_ids[cur_dev_id_ctr])]){
+      while(dev_sk_ctr == autotune_vals->Subkernels_per_dev[cur_dev_id_ctr]){
         dev_sk_ctr = 0;
         cur_dev_id_ctr++;
       }
@@ -109,11 +109,11 @@ void CoCoDistributeSubkernelsNaive(CoControl_p autotune_vals,
     lprintf(0, "]\n");
     lprintf(lvl, "Subker Num : [ ");
     for (int i =0; i < autotune_vals->dev_num; i++) fprintf(stderr, "%d ",
-      autotune_vals->Subkernels_per_dev[idxize(autotune_vals->dev_ids[i])]);
+      autotune_vals->Subkernels_per_dev[i]);
     lprintf(0, "]\n");
     for (int i =0; i < autotune_vals->dev_num; i++){
       lprintf(lvl, "Subker Id list for dev_id = %d: [ ", autotune_vals->dev_ids[i]);
-      for (int j =0; j < autotune_vals->Subkernels_per_dev[idxize(autotune_vals->dev_ids[i])]; j++) fprintf(stderr, "%d ",
+      for (int j =0; j < autotune_vals->Subkernels_per_dev[i]; j++) fprintf(stderr, "%d ",
         autotune_vals->Subkernel_dev_id_list[i*Subkernel_num + j]);
       lprintf(0, "]\n");
     }
