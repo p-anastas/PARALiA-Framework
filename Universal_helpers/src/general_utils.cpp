@@ -86,6 +86,28 @@ const char *print_mem(mem_layout mem) {
     return "ERROR";
 }
 
+template<typename VALUETYPE>
+const char *printlist(VALUETYPE *list, int length)
+{
+  char* outstring = (char*) malloc(256*sizeof(char));
+  sprintf(outstring, "[ ");
+  if (std::is_same<VALUETYPE, short>::value)
+    for (int i =0; i < length; i++) sprintf(outstring + strlen(outstring), "%d ", list[i]);
+	if (std::is_same<VALUETYPE, int>::value)
+    for (int i =0; i < length; i++) sprintf(outstring + strlen(outstring), "%d ", list[i]);
+  else if (std::is_same<VALUETYPE, float>::value)
+    for (int i =0; i < length; i++) sprintf(outstring + strlen(outstring), "%f ", list[i]);
+  else if (std::is_same<VALUETYPE, double>::value)
+    for (int i =0; i < length; i++) sprintf(outstring + strlen(outstring), "%lf ", list[i]);
+	sprintf(outstring + strlen(outstring), "]");
+  return outstring;
+}
+
+template const char *printlist<double>(double *list, int length);
+template const char *printlist<float>(float *list, int length);
+template const char *printlist<int>(int *list, int length);
+template const char *printlist<short>(short *list, int length);
+
 double dabs(double x){
 	if (x < 0) return -x;
 	else return x;

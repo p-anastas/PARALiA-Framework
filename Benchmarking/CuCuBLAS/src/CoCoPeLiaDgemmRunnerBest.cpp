@@ -20,7 +20,6 @@ int main(const int argc, const char *argv[]) {
   	double alpha, beta;
 	size_t M, N, K;
 	short A_loc, B_loc, C_loc, C_out_loc;
-
 	CoControl_p predef_control_values = NULL, return_values = NULL;
 	ParseInputLvl3(argc, argv, &predef_control_values, &TransA, &TransB, &alpha, &beta, &M, &N, &K, &A_loc, &B_loc, &C_loc, &C_out_loc);
 

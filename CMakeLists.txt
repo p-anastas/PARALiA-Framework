@@ -35,7 +35,11 @@ add_definitions(-DENABLE_CPU_WORKLOAD)
 
 ## Define which subkernel distribution to use
 #add_definitions(-DDISTRIBUTION="ROUND-ROBIN")
-add_definitions(-DDISTRIBUTION="SPLITD1-NAIVE")
+add_definitions(-DDISTRIBUTION="SPLIT-NAIVE")
+
+## Define which cost function to use for device selection
+#add_definitions(-DDEV_COST_FUNC="FULL-OVERLAP")
+add_definitions(-DDEV_COST_FUNC="ZERO-OVERLAP")
 
 #Run in testing mode : details about models, decisions and time spend in operations.
 #add_definitions(-DTEST)

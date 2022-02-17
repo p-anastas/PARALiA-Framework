@@ -86,6 +86,9 @@ tunableParams_p CoCoPeLiaModelMultidevOptimizeSplit(short used_devs, short* used
 /// A naive prediction of the full-overlap (~unreachable) performance of a modeled routine
 double CoCopeLiaPredictFullOverlap(CoCoModel_p model);
 
+/// A naive prediction of the zero-overlap (~worst case) performance of a modeled routine
+double CoCopeLiaPredictZeroOverlap(CoCoModel_p model);
+
 ///  Mode-Generalized prediction wrapper
 double CoCoPeLiaModelPredict(CoCoModel_p model, size_t T, ModelType mode);
 

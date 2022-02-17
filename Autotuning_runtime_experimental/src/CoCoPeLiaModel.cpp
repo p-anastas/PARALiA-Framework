@@ -29,7 +29,12 @@ short* CoCoPeLiaDeviceSelectBest(short used_devs, short avail_devs, short* avail
 			double best_score = 0;
 			int best_idx = -1;
 			for(int idx = 0; idx < avail_devs; idx++){
-				double temp_score = CoCopeLiaPredictFullOverlap(avail_dev_model_list[idx]);
+				double temp_score;
+				if (!strcmp(DEV_COST_FUNC, "FULL-OVERLAP"))
+					temp_score = CoCopeLiaPredictFullOverlap(avail_dev_model_list[idx]);
+				else if (!strcmp(DEV_COST_FUNC, "ZERO-OVERLAP"))
+					temp_score = CoCopeLiaPredictZeroOverlap(avail_dev_model_list[idx]);
+				else error("CoCoPeLiaDeviceSelectBest: Unknown DEV_COST_FUNC = %s\n", DEV_COST_FUNC);
 				if (temp_score != 0) temp_score = 1/temp_score;
 				if(!checked[idx] && temp_score > best_score){
 					best_score = temp_score;
@@ -51,6 +56,13 @@ short* CoCoPeLiaDeviceSelectBest(short used_devs, short avail_devs, short* avail
 	lprintf(0, "]\n");
 #endif
 	return used_dev_ids;
+}
+
+void CoCoPeLiaNormalizeSplit(double* score_list, int list_len){
+	for (int i = 0; i < list_len; i++)
+		for (int j = i + 1; j < list_len; j++)
+			if(abs(score_list[i] - score_list[j])/score_list[i] < 0.05)
+				score_list[j] = score_list[i] = (score_list[i] + score_list[j])/2;
 }
 
 tunableParams_p CoCoPeLiaModelMultidevOptimizeTileAndSplit(short used_devs, short* used_dev_ids,
@@ -149,7 +161,7 @@ tunableParams_p CoCoPeLiaModelMultidevOptimizeTileAndSplit(short used_devs, shor
 	}
 	outparams->T = min_T;
 	outparams->pred_t = min_overlap_t;
-
+	CoCoPeLiaNormalizeSplit(outparams->rel_dev_score, used_devs);
 #ifdef PDEBUG
 	lprintf(lvl, "====================================\n");
 	lprintf(lvl, "Best %d percentages : [ ", used_devs);
@@ -196,7 +208,8 @@ tunableParams_p CoCoPeLiaModelMultidevOptimizeSplit(short used_devs, short* used
 
 	outparams->rel_dev_score = (double*) malloc(sizeof(double)*used_devs);
 	for(int idx = 0; idx < used_devs; idx++){
-		outparams->rel_dev_score[idx] = CoCopeLiaPredictFullOverlap(dev_model_list[idx]);
+		int dev_idx = idxize(used_dev_ids[idx]);
+		outparams->rel_dev_score[idx] = CoCopeLiaPredictFullOverlap(dev_model_list[dev_idx]);
 		if (outparams->rel_dev_score[idx] != 0) outparams->rel_dev_score[idx] = 1/outparams->rel_dev_score[idx];
 		else warning("CoCoPeLiaModelMultidevOptimizeSplit: rel_dev_score[%d] == 0\n", idx);
 		temp_score+= outparams->rel_dev_score[idx];
@@ -210,7 +223,7 @@ tunableParams_p CoCoPeLiaModelMultidevOptimizeSplit(short used_devs, short* used
 	}
 	double temp_overlap_t = 0;
 	for(int idx = 0; idx < used_devs; idx++){
-		short cur_dev_id = used_dev_ids[idx], cur_dev_idx = (cur_dev_id == -1)? LOC_NUM - 1 : cur_dev_id;
+		short cur_dev_id = used_dev_ids[idx], cur_dev_idx = idxize(cur_dev_id);
 		model = dev_model_list[cur_dev_idx];
 		temp_t = CoCoPeLiaModelPredictHetero(model, used_devs, used_dev_ids, outparams->rel_dev_score, T, COCOPELIA_HETERO_REUSE);
 		if(temp_t > 0) temp_overlap_t = fmax(temp_overlap_t, temp_t);
@@ -221,7 +234,7 @@ tunableParams_p CoCoPeLiaModelMultidevOptimizeSplit(short used_devs, short* used
 			model, cur_dev_id, cur_dev_idx, T, temp_overlap_t, temp_t);
 #endif
 	}
-
+	CoCoPeLiaNormalizeSplit(outparams->rel_dev_score, used_devs);
 	outparams->T = T;
 	outparams->pred_t = temp_overlap_t;
 
@@ -345,7 +358,7 @@ double CoCopeLiaPredictFullOverlap(CoCoModel_p model)
 	t_exec_full = (model->D1*1.0/Tbig * model->D2*1.0/Tbig * model->D3*1.0/Tbig)*
 		GPUexec3Model_predict((GPUexec3Model_p)model->GPUexec_model_ptr, Tbig, model->flags->TransA, model->flags->TransB);
 	if ( t_exec_full < 0){
-		warning("CoCopeLiaPredictReuse: GPUexec3Model_predict submodel returned negative value, abort prediction");
+		warning("CoCopeLiaPredictFullOverlap: GPUexec3Model_predict submodel returned negative value, abort prediction");
 		return -1.0;
 	}
 	long long recv_sz = 0, send_sz = 0;
@@ -357,7 +370,7 @@ double CoCopeLiaPredictFullOverlap(CoCoModel_p model)
 		double t_send_tmp =  model->V->out[i]*t_com_predict(model->revlink[idxize(model->V->out_loc[i])],
 			(*model->V->Dim1[i])*(*model->V->Dim2[i])*model->V->dtype_sz);
 		if(t_recv_tmp < 0 || t_send_tmp < 0 ){
-				warning("CoCopeLiaPredictReuse: t_com_predict submodel idx = %d\
+				warning("CoCopeLiaPredictFullOverlap: t_com_predict submodel idx = %d\
 					returned negative value, abort prediction", idxize(model->V->loc[i]));
 				return -1.0;
 		}
@@ -368,6 +381,54 @@ double CoCopeLiaPredictFullOverlap(CoCoModel_p model)
 	t_total = fmax(t_exec_full, fmax(t_recv_full, t_send_full));
 #ifdef DPDEBUG
 	fprintf(stderr, "CoCopelia FullOverlap :\n"
+	"\tt_recv_full: %lf ms ( %lf Gb/s)\n"
+	"\tt_exec_full: %lf ms (%lf GFlops/s)\n"
+	"\tt_send_full: %lf ms ( %lf Gb/s)\n"
+	"\tt_total: %lf ms (%lf GFlops/s)\n\n",
+	t_recv_full*1000, Gval_per_s(recv_sz,t_recv_full),
+	t_exec_full*1000, Gval_per_s(dgemm_flops(model->D1,model->D2,model->D3), t_exec_full),
+	t_send_full*1000, Gval_per_s(send_sz,t_send_full),
+	t_total*1000, Gval_per_s(dgemm_flops(model->D1,model->D2,model->D3), t_total));
+#endif
+
+	return t_total;
+}
+
+double CoCopeLiaPredictZeroOverlap(CoCoModel_p model)
+{
+	short lvl = 4;
+	double t_recv_full = 0, t_send_full = 0, t_exec_full = 0, t_total = 0;
+	size_t maxT = GPUexec3MaxT((GPUexec3Model_p)model->GPUexec_model_ptr);
+	size_t Tbig = GPUexec3NearestT((GPUexec3Model_p)model->GPUexec_model_ptr,
+		fmin(maxT, fmin(fmin(model->D1,model->D2), model->D3)));
+	//fprintf(stderr, "Tbig = %zu\n", Tbig);
+	t_exec_full = (model->D1*1.0/Tbig * model->D2*1.0/Tbig * model->D3*1.0/Tbig)*
+		GPUexec3Model_predict((GPUexec3Model_p)model->GPUexec_model_ptr, Tbig, model->flags->TransA, model->flags->TransB);
+	if ( t_exec_full < 0){
+		warning("CoCopeLiaPredictZeroOverlap: GPUexec3Model_predict submodel returned negative value, abort prediction");
+		return -1.0;
+	}
+	long long recv_sz = 0, send_sz = 0;
+	for (int i = 0; i < model->V->numT; i++){
+		recv_sz += model->V->in[i]*(*model->V->Dim1[i])*(*model->V->Dim2[i])*model->V->dtype_sz;
+		send_sz += model->V->out[i]*(*model->V->Dim1[i])*(*model->V->Dim2[i])*model->V->dtype_sz;
+		double t_recv_tmp = model->V->in[i]*t_com_predict(model->revlink[idxize(model->V->loc[i])],
+			(*model->V->Dim1[i])*(*model->V->Dim2[i])*model->V->dtype_sz);
+		double t_send_tmp =  model->V->out[i]*t_com_predict(model->revlink[idxize(model->V->out_loc[i])],
+			(*model->V->Dim1[i])*(*model->V->Dim2[i])*model->V->dtype_sz);
+		if(t_recv_tmp < 0 || t_send_tmp < 0 ){
+				warning("CoCopeLiaPredictZeroOverlap: t_com_predict submodel idx = %d\
+					returned negative value, abort prediction", idxize(model->V->loc[i]));
+				return -1.0;
+		}
+		t_recv_full+= t_recv_tmp;
+		t_send_full+= t_send_tmp;
+	}
+
+	t_total = t_exec_full + t_recv_full + t_send_full;
+
+#ifdef DPDEBUG
+	fprintf(stderr, "CoCopelia ZeroOverlap :\n"
 	"\tt_recv_full: %lf ms ( %lf Gb/s)\n"
 	"\tt_exec_full: %lf ms (%lf GFlops/s)\n"
 	"\tt_send_full: %lf ms ( %lf Gb/s)\n"

@@ -138,7 +138,7 @@ void ParseInputLvl3(const int argc, const char *argv[], CoControl_p* predef_cont
 			temp_p->dev_num = dev_num;
 			int ctr = 0, itter = 0;
 			do {
-				if (dev_ids_token%10 == 1) temp_p->dev_ids[ctr++] = itter;
+				if (dev_ids_token%10 == 1) temp_p->dev_ids[ctr++] = deidxize(itter);
 				itter++;
 				dev_ids_token/=10;
 			} while ( dev_ids_token > 0);

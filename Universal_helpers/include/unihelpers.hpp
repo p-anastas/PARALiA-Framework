@@ -164,6 +164,9 @@ typedef class Event_timer
 #endif /* __GNUC__ */
 #endif /* PRINTFLIKE */
 
+template<typename VALUETYPE>
+extern const char *printlist(VALUETYPE *list, int length);
+
 void lprintf(short lvl, const char *fmt, ...)PRINTFLIKE(2,3);
 void massert(bool condi, const char *fmt, ...)PRINTFLIKE(2,3);
 void error(const char *fmt, ...)PRINTFLIKE(1,2);

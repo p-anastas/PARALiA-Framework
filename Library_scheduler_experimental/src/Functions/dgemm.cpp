@@ -417,27 +417,66 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 	CoCoModel_p model = NULL;
 	short *dev_ids[autotuned_vals->dev_num] = {NULL}, best_dev_num = 0;
 	tunableParams_p pred_p[autotuned_vals->dev_num] = {NULL}, best_pred_p = NULL;
-	if(predef_vals_gemm && predef_vals_gemm->T > 0){
+	if(predef_vals_gemm && predef_vals_gemm->T > 0 && !autotune_eval_devices){
 		autotuned_vals->T = predef_vals_gemm->T;
-#ifdef PDEBUG
-		lprintf(lvl, "====================================\n");
-		lprintf(lvl, "Using predefined T=%zu\n", autotuned_vals->T);
-		lprintf(lvl, "====================================\n");
-#endif
 		best_pred_p = CoCoPeLiaModelMultidevOptimizeSplit(autotuned_vals->dev_num,
 			autotuned_vals->dev_ids, glob_model_gemm, autotuned_vals->T);
+//#ifdef PDEBUG
+if(!reuse_model_flag){
+		lprintf(0, "====================================\n");
+		lprintf(0, "Using predefined T=%zu and dev_num=%d, autotuned split = %s -> %s : t_pred = %lf\n",
+			autotuned_vals->T, autotuned_vals->dev_num, printlist<short>(autotuned_vals->dev_ids, autotuned_vals->dev_num),
+			printlist<double>(best_pred_p->rel_dev_score, autotuned_vals->dev_num), best_pred_p->pred_t*1000);
+		lprintf(0, "====================================\n");
+}
+//#endif
 	}
-	else if (predef_vals_gemm && predef_vals_gemm->dev_num > 0){
+	else if(predef_vals_gemm && predef_vals_gemm->T > 0 && autotune_eval_devices){
+		autotuned_vals->T = predef_vals_gemm->T;
+		for (int used_devs = 0; used_devs < autotuned_vals->dev_num; used_devs++){
+			dev_ids[used_devs] = CoCoPeLiaDeviceSelectBest(used_devs + 1, autotuned_vals->dev_num,
+				autotuned_vals->dev_ids, glob_model_gemm);
+			pred_p[used_devs] = CoCoPeLiaModelMultidevOptimizeSplit(used_devs + 1,
+				dev_ids[used_devs], glob_model_gemm, autotuned_vals->T);
+
+			if (best_pred_p == NULL){
+				best_pred_p = pred_p[used_devs];
+				best_dev_num = used_devs + 1;
+			}
+			else if(best_pred_p->pred_t >= pred_p[used_devs]->pred_t){
+				best_pred_p = pred_p[used_devs];
+				best_dev_num = used_devs + 1;
+			}
+		}
+		autotuned_vals->T = best_pred_p->T;
+		autotuned_vals->dev_num = best_dev_num;
+		for (int idx = 0; idx < autotuned_vals->dev_num; idx++)
+			autotuned_vals->dev_ids[idx] = dev_ids[autotuned_vals->dev_num - 1][idx];
+//#ifdef PDEBUG
+if(!reuse_model_flag){
+		lprintf(0, "====================================\n");
+		lprintf(0, "Using predefined T=%zu, autotuned dev_num=%d and split = %s -> %s : t_pred = %lf\n",
+			autotuned_vals->T, autotuned_vals->dev_num, printlist<short>(autotuned_vals->dev_ids, autotuned_vals->dev_num),
+			printlist<double>(best_pred_p->rel_dev_score, autotuned_vals->dev_num), best_pred_p->pred_t*1000);
+		lprintf(0, "====================================\n");
+}
+//#endif
+	}
+	else if (predef_vals_gemm && predef_vals_gemm->T <= 0 && !autotune_eval_devices){
 		best_pred_p = CoCoPeLiaModelMultidevOptimizeTileAndSplit(autotuned_vals->dev_num,
 			autotuned_vals->dev_ids, glob_model_gemm);
 		autotuned_vals->T = best_pred_p->T;
-#ifdef PDEBUG
-		lprintf(lvl, "====================================\n");
-		lprintf(lvl, "Using predicted T=%zu : t_pred = %lf\n", autotuned_vals->T, best_pred_p->pred_t);
-		lprintf(lvl, "====================================\n");
-#endif
+//#ifdef PDEBUG
+if(!reuse_model_flag){
+		lprintf(0, "====================================\n");
+		lprintf(0, "Using predefined dev_num = %d, autotuned T = %zu and split = %s -> %s : t_pred = %lf\n",
+			autotuned_vals->dev_num, autotuned_vals->T, printlist<short>(autotuned_vals->dev_ids, autotuned_vals->dev_num),
+			printlist<double>(best_pred_p->rel_dev_score, autotuned_vals->dev_num), best_pred_p->pred_t*1000);
+		lprintf(0, "====================================\n");
+}
+//#endif
 	}
-	else{
+	else if ((predef_vals_gemm && predef_vals_gemm->T <= 0 && autotune_eval_devices) || !predef_vals_gemm){
 		for (int used_devs = 0; used_devs < autotuned_vals->dev_num; used_devs++){
 			dev_ids[used_devs] = CoCoPeLiaDeviceSelectBest(used_devs + 1, autotuned_vals->dev_num,
 				autotuned_vals->dev_ids, glob_model_gemm);
@@ -457,7 +496,17 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 		autotuned_vals->dev_num = best_dev_num;
 		for (int idx = 0; idx < autotuned_vals->dev_num; idx++)
 			autotuned_vals->dev_ids[idx] = dev_ids[autotuned_vals->dev_num - 1][idx];
+//#ifdef PDEBUG
+if(!reuse_model_flag){
+		lprintf(0, "====================================\n");
+		lprintf(0, "Using autotuned dev_num = %d, T = %zu and split = %s -> %s : t_pred = %lf\n",
+			autotuned_vals->dev_num, autotuned_vals->T, printlist<short>(autotuned_vals->dev_ids, autotuned_vals->dev_num),
+			printlist<double>(best_pred_p->rel_dev_score, autotuned_vals->dev_num), best_pred_p->pred_t*1000);
+		lprintf(0, "====================================\n");
+}
+//#endif
 	}
+	else error("Unknown predefined parameter combination\n");
 	if (predef_vals_gemm && predef_vals_gemm->cache_limit > 0)
 		autotuned_vals->cache_limit = predef_vals_gemm->cache_limit;
 	else autotuned_vals->cache_limit = 0;
@@ -498,7 +547,7 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 		autotuned_vals->Subkernel_dev_id_list[devidx] = (int*) malloc(Subkernel_num*sizeof(int));
 	if (!strcmp(DISTRIBUTION, "ROUND-ROBIN"))
 		CoCoDistributeSubkernelsRoundRobin(autotuned_vals, best_pred_p, MGridSz, NGridSz, KGridSz);
-	else if (!strcmp(DISTRIBUTION, "SPLITD1-NAIVE"))
+	else if (!strcmp(DISTRIBUTION, "SPLIT-NAIVE"))
 		CoCoDistributeSubkernelsNaive(autotuned_vals, best_pred_p, MGridSz, NGridSz, KGridSz);
 	else error("CoCopeLiaDgemm: Unknown Subkernel Distribution %s\n", DISTRIBUTION);
 
@@ -521,9 +570,11 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 			}
 		}
 
-	#ifdef DEBUG
-		lprintf(lvl, "used_devices=%d out of selected autotuned_vals->dev_num=%d\n", used_devices, autotuned_vals->dev_num);
-	#endif
+//#ifdef DEBUG
+if(!reuse_model_flag){
+		lprintf(0, "used_devices=%d out of selected autotuned_vals->dev_num=%d\n", used_devices, autotuned_vals->dev_num);
+}
+//#endif
 	autotuned_vals->dev_num = used_devices;
 
 	pthread_t thread_id[autotuned_vals->dev_num];
