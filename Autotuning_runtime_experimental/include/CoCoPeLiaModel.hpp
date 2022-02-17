@@ -124,8 +124,14 @@ void CoCoDistributeSubkernelsNaive(CoControl_p autotune_vals, tunableParams_p be
 void CoCoDistributeSubkernelsRoundRobin(CoControl_p autotune_vals, tunableParams_p best_pred_p,
 	int Subkernel_num);
 
-/// A round-robin distribution of chunk_size subkernels each time (if possible)()
+/// A round-robin distribution of chunk_size subkernels each time (if possible)
 void CoCoDistributeSubkernelsRoundRobinChunk(CoControl_p autotune_vals, tunableParams_p best_pred_p,
 	int Subkernel_num, int Chunk_size);
+
+/// A round-robin distribution of chunk_size subkernels each time (if possible).
+/// Reverse subkernel order per device after distribution.
+void CoCoDistributeSubkernelsRoundRobinChunkReverse(CoControl_p autotune_vals, tunableParams_p best_pred_p,
+	int Subkernel_num, int Chunk_size);
+
 
 #endif

@@ -408,9 +408,10 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 
 	for (int i =0; i < autotuned_vals->dev_num; i++){
 		short dev_id_idx = idxize(autotuned_vals->dev_ids[i]);
-		if(!reuse_model_flag || glob_model_gemm[dev_id_idx] == NULL)
+		if(!reuse_model_flag || glob_model_gemm[dev_id_idx] == NULL){
 			if(glob_model_gemm[dev_id_idx] != NULL) free(glob_model_gemm[dev_id_idx]);
 			glob_model_gemm[dev_id_idx] = CoCoPeLiaTileModelInit(autotuned_vals->dev_ids[i], "Dgemm", initial_gemm);
+		}
 	}
 
 	double slowest_problem_t = 0;
@@ -551,7 +552,15 @@ if(!reuse_model_flag){
 		CoCoDistributeSubkernelsNaive(autotuned_vals, best_pred_p, Subkernel_num);
 	else if (!strcmp(DISTRIBUTION, "SPLIT-CHUNKS-ROBIN"))
 		CoCoDistributeSubkernelsRoundRobinChunk(autotuned_vals, best_pred_p, Subkernel_num, KGridSz);
+	else if (!strcmp(DISTRIBUTION, "SPLIT-CHUNKS-ROBIN-REVERSE"))
+		CoCoDistributeSubkernelsRoundRobinChunkReverse(autotuned_vals, best_pred_p, Subkernel_num, KGridSz);
 	else error("CoCopeLiaDgemm: Unknown Subkernel Distribution %s\n", DISTRIBUTION);
+
+#ifdef TEST
+	cpu_timer = csecond() - cpu_timer;
+	lprintf(lvl, "Subkernel Distribute -> t_subkernel_dist = %lf ms\n", cpu_timer*1000);
+	cpu_timer = csecond();
+#endif
 
 	pthread_attr_t attr;
 	int s = pthread_attr_init(&attr);
