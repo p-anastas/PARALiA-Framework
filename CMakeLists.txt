@@ -35,14 +35,15 @@ add_definitions(-DENABLE_CPU_WORKLOAD)
 
 ## Define which subkernel distribution to use
 #add_definitions(-DDISTRIBUTION="ROUND-ROBIN")
-add_definitions(-DDISTRIBUTION="SPLIT-NAIVE")
+#add_definitions(-DDISTRIBUTION="SPLIT-NAIVE")
+add_definitions(-DDISTRIBUTION="SPLIT-DIM1-ROBIN")
 
 ## Define which cost function to use for device selection
 #add_definitions(-DDEV_COST_FUNC="FULL-OVERLAP")
 add_definitions(-DDEV_COST_FUNC="ZERO-OVERLAP")
 
 ## Define at which percentage to normalize near splitting
-## See Autotuning_runtime->CoCoPeLiaModel->CoCoPeLiaNormalizeSplit 
+## See Autotuning_runtime->CoCoPeLiaModel->CoCoPeLiaNormalizeSplit
 add_definitions(-DNORMALIZE_NEAR_SPLIT_LIMIT=0.05)
 
 #Run in testing mode : details about models, decisions and time spend in operations.

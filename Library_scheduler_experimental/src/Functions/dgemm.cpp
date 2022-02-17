@@ -549,6 +549,8 @@ if(!reuse_model_flag){
 		CoCoDistributeSubkernelsRoundRobin(autotuned_vals, best_pred_p, MGridSz, NGridSz, KGridSz);
 	else if (!strcmp(DISTRIBUTION, "SPLIT-NAIVE"))
 		CoCoDistributeSubkernelsNaive(autotuned_vals, best_pred_p, MGridSz, NGridSz, KGridSz);
+	else if (!strcmp(DISTRIBUTION, "SPLIT-DIM1-ROBIN"))
+		CoCoDistributeSubkernelsDim1RoundRobin(autotuned_vals, best_pred_p, MGridSz, NGridSz, KGridSz);
 	else error("CoCopeLiaDgemm: Unknown Subkernel Distribution %s\n", DISTRIBUTION);
 
 	pthread_attr_t attr;
@@ -573,6 +575,7 @@ if(!reuse_model_flag){
 //#ifdef DEBUG
 if(!reuse_model_flag){
 		lprintf(0, "used_devices=%d out of selected autotuned_vals->dev_num=%d\n", used_devices, autotuned_vals->dev_num);
+		lprintf(0, "====================================\n");
 }
 //#endif
 	autotuned_vals->dev_num = used_devices;
