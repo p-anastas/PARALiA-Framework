@@ -41,6 +41,10 @@ add_definitions(-DDISTRIBUTION="SPLIT-NAIVE")
 #add_definitions(-DDEV_COST_FUNC="FULL-OVERLAP")
 add_definitions(-DDEV_COST_FUNC="ZERO-OVERLAP")
 
+## Define at which percentage to normalize near splitting
+## See Autotuning_runtime->CoCoPeLiaModel->CoCoPeLiaNormalizeSplit 
+add_definitions(-DNORMALIZE_NEAR_SPLIT_LIMIT=0.05)
+
 #Run in testing mode : details about models, decisions and time spend in operations.
 #add_definitions(-DTEST)
 

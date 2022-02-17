@@ -61,7 +61,7 @@ short* CoCoPeLiaDeviceSelectBest(short used_devs, short avail_devs, short* avail
 void CoCoPeLiaNormalizeSplit(double* score_list, int list_len){
 	for (int i = 0; i < list_len; i++)
 		for (int j = i + 1; j < list_len; j++)
-			if(abs(score_list[i] - score_list[j])/score_list[i] < 0.05)
+			if(abs(score_list[i] - score_list[j])/score_list[i] < NORMALIZE_NEAR_SPLIT_LIMIT)
 				score_list[j] = score_list[i] = (score_list[i] + score_list[j])/2;
 }
 
