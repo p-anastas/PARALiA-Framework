@@ -8,9 +8,8 @@
 #include "CoCoPeLiaModel.hpp"
 
 void CoCoDistributeSubkernelsRoundRobin(CoControl_p autotune_vals,
-  tunableParams_p pred_p, int Dim1GridSz, int Dim2GridSz, int Dim3GridSz){
+  tunableParams_p pred_p, int Subkernel_num){
   int lvl = 6;
-  int Subkernel_num = Dim1GridSz*Dim2GridSz*Dim3GridSz;
   if (Subkernel_num <= autotune_vals->dev_num){
     autotune_vals->dev_num = Subkernel_num;
     for (int d = 0 ; d < autotune_vals->dev_num; d++){
@@ -72,9 +71,8 @@ void CoCoDistributeSubkernelsRoundRobin(CoControl_p autotune_vals,
 }
 
 void CoCoDistributeSubkernelsNaive(CoControl_p autotune_vals,
-  tunableParams_p pred_p, int Dim1GridSz, int Dim2GridSz, int Dim3GridSz){
+  tunableParams_p pred_p, int Subkernel_num){
   int lvl = 6;
-  int Subkernel_num = Dim1GridSz*Dim2GridSz*Dim3GridSz;
   if (Subkernel_num <= autotune_vals->dev_num){
     autotune_vals->dev_num = Subkernel_num;
     for (int d = 0 ; d < autotune_vals->dev_num; d++){
@@ -137,10 +135,9 @@ void CoCoDistributeSubkernelsNaive(CoControl_p autotune_vals,
 #endif
 }
 
-void CoCoDistributeSubkernelsDim1RoundRobin(CoControl_p autotune_vals,
-  tunableParams_p pred_p, int Dim1GridSz, int Dim2GridSz, int Dim3GridSz){
+void CoCoDistributeSubkernelsRoundRobinChunk(CoControl_p autotune_vals,
+  tunableParams_p pred_p, int Subkernel_num, int Chunk_size){
   int lvl = 6;
-  int Subkernel_num = Dim1GridSz*Dim2GridSz*Dim3GridSz;
   if (Subkernel_num <= autotune_vals->dev_num){
     autotune_vals->dev_num = Subkernel_num;
     for (int d = 0 ; d < autotune_vals->dev_num; d++){
@@ -179,7 +176,7 @@ void CoCoDistributeSubkernelsDim1RoundRobin(CoControl_p autotune_vals,
         dev_sk_ctr_list[devidx]++;
         total_sk_ctr++;
       }
-      while(total_sk_ctr%Dim1GridSz!=0){
+      while(total_sk_ctr%Chunk_size!=0){
         if(total_sk_ctr == Subkernel_num) break;
         else if(dev_sk_ctr_list[devidx] == autotune_vals->Subkernels_per_dev[devidx]) break;
         else{

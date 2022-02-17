@@ -546,11 +546,11 @@ if(!reuse_model_flag){
 	for (int devidx = 0; devidx < autotuned_vals->dev_num; devidx++)
 		autotuned_vals->Subkernel_dev_id_list[devidx] = (int*) malloc(Subkernel_num*sizeof(int));
 	if (!strcmp(DISTRIBUTION, "ROUND-ROBIN"))
-		CoCoDistributeSubkernelsRoundRobin(autotuned_vals, best_pred_p, MGridSz, NGridSz, KGridSz);
+		CoCoDistributeSubkernelsRoundRobin(autotuned_vals, best_pred_p, Subkernel_num);
 	else if (!strcmp(DISTRIBUTION, "SPLIT-NAIVE"))
-		CoCoDistributeSubkernelsNaive(autotuned_vals, best_pred_p, MGridSz, NGridSz, KGridSz);
-	else if (!strcmp(DISTRIBUTION, "SPLIT-DIM1-ROBIN"))
-		CoCoDistributeSubkernelsDim1RoundRobin(autotuned_vals, best_pred_p, MGridSz, NGridSz, KGridSz);
+		CoCoDistributeSubkernelsNaive(autotuned_vals, best_pred_p, Subkernel_num);
+	else if (!strcmp(DISTRIBUTION, "SPLIT-CHUNKS-ROBIN"))
+		CoCoDistributeSubkernelsRoundRobinChunk(autotuned_vals, best_pred_p, Subkernel_num, KGridSz);
 	else error("CoCopeLiaDgemm: Unknown Subkernel Distribution %s\n", DISTRIBUTION);
 
 	pthread_attr_t attr;

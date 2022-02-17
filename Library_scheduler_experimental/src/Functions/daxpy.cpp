@@ -368,9 +368,11 @@ CoControl_p CoCopeLiaDaxpy(size_t N, VALUE_TYPE alpha, VALUE_TYPE* x, size_t inc
 		used_vals_daxpy->Subkernel_dev_id_list[devidx] = (int*) malloc(Subkernel_num*sizeof(int));
 	tunableParams_p dummy;
 	if (!strcmp(DISTRIBUTION, "ROUND-ROBIN"))
-		CoCoDistributeSubkernelsRoundRobin(used_vals_daxpy, dummy, NGridSz_daxpy, -1, -1);
+		CoCoDistributeSubkernelsRoundRobin(used_vals_daxpy, dummy, Subkernel_num);
 	else if (!strcmp(DISTRIBUTION, "SPLITD1-NAIVE"))
-		CoCoDistributeSubkernelsNaive(used_vals_daxpy, dummy, NGridSz_daxpy, -1, -1);
+		CoCoDistributeSubkernelsNaive(used_vals_daxpy, dummy, Subkernel_num);
+	else if (!strcmp(DISTRIBUTION, "SPLIT-CHUNKS-ROBIN"))
+		CoCoDistributeSubkernelsRoundRobinChunk(used_vals_daxpy, dummy, Subkernel_num, 1);
 	else error("CoCopeLiaDaxpy: Unknown Subkernel Distribution %s\n", DISTRIBUTION);
 
 	pthread_attr_t attr;

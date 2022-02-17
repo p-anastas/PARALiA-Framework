@@ -118,14 +118,14 @@ const char* printTunableParams(tunableParams_p params);
 
 /// Each device gets 1/num_devices Subkernels without acounting for their size or location
 void CoCoDistributeSubkernelsNaive(CoControl_p autotune_vals, tunableParams_p best_pred_p,
-	int Dim1GridSz, int Dim2GridSz, int Dim3GridSz);
+	int Subkernel_num);
 
 /// A classic round-robin distribution without acounting for their size or location
 void CoCoDistributeSubkernelsRoundRobin(CoControl_p autotune_vals, tunableParams_p best_pred_p,
-	int Dim1GridSz, int Dim2GridSz, int Dim3GridSz);
+	int Subkernel_num);
 
-/// A round-robin distribution per - Dim1GridSz
-void CoCoDistributeSubkernelsDim1RoundRobin(CoControl_p autotune_vals, tunableParams_p best_pred_p,
-	int Dim1GridSz, int Dim2GridSz, int Dim3GridSz);
+/// A round-robin distribution of chunk_size subkernels each time (if possible)()
+void CoCoDistributeSubkernelsRoundRobinChunk(CoControl_p autotune_vals, tunableParams_p best_pred_p,
+	int Subkernel_num, int Chunk_size);
 
 #endif
