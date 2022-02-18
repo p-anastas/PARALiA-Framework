@@ -30,6 +30,11 @@ add_definitions(-DMAX_BUFFERING_L=4)
 ## Enable Locking with mutexes instead of busy-waiting
 #add_definitions(-DENABLE_MUTEX_LOCKING)
 
+## Enable Running multiple backend operations in parallel for each queue
+add_definitions(-DENABLE_PARALLEL_BACKEND)
+## The maximum allowed parallel backend operations per queue
+add_definitions(-DMAX_BACKEND_L=4)
+
 ## Enable using the CPU as an extra device for part of the total workload, if applicable
 add_definitions(-DENABLE_CPU_WORKLOAD)
 

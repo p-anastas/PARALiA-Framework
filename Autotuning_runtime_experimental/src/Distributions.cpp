@@ -238,10 +238,12 @@ void CoCoDistributeSubkernelsRoundRobinChunkReverse(CoControl_p autotune_vals,
 #else
       error("CoCoDistributeSubkernelsRoundRobinChunkReverse: not implemented for undefined MULTIDEVICE_REDUCTION_ENABLE\n");
 #endif
-  int total_sk_ctr = 0;
-  short dev_sk_ctr_list[autotune_vals->dev_num] = {0};
+  int total_sk_ctr = 0, total_sk_prev = 0;
+  int dev_sk_ctr_list[autotune_vals->dev_num] = {0};
   while(total_sk_ctr<Subkernel_num){
+
     for(int devidx = 0; devidx < autotune_vals->dev_num; devidx++){
+      total_sk_prev = total_sk_ctr;
       if(total_sk_ctr == Subkernel_num) break;
       else if(dev_sk_ctr_list[devidx] == autotune_vals->Subkernels_per_dev[devidx]) continue;
       else{
@@ -258,10 +260,23 @@ void CoCoDistributeSubkernelsRoundRobinChunkReverse(CoControl_p autotune_vals,
           total_sk_ctr++;
         }
       }
+      if (devidx%2 == 0){
+        for(int local_ctr = dev_sk_ctr_list[devidx] - total_sk_ctr + total_sk_prev; local_ctr < dev_sk_ctr_list[devidx]; local_ctr++){
+          if (local_ctr < dev_sk_ctr_list[devidx] - local_ctr - 1){
+            int temp_sk_id = autotune_vals->Subkernel_dev_id_list[devidx][local_ctr];
+            autotune_vals->Subkernel_dev_id_list[devidx][local_ctr] =
+              autotune_vals->Subkernel_dev_id_list[devidx]
+                [dev_sk_ctr_list[devidx] - local_ctr - 1];
+            autotune_vals->Subkernel_dev_id_list[devidx]
+              [dev_sk_ctr_list[devidx] - local_ctr - 1] = temp_sk_id;
+          }
+          else break;
+        }
+      }
       if(total_sk_ctr == Subkernel_num) break;
     }
   }
-  for(int devidx = 0; devidx < autotune_vals->dev_num; devidx++){
+/*  for(int devidx = 0; devidx < autotune_vals->dev_num; devidx++){
     for(int local_ctr = 0; local_ctr < autotune_vals->Subkernels_per_dev[devidx]; local_ctr++){
       if (local_ctr < autotune_vals->Subkernels_per_dev[devidx] - local_ctr - 1){
         int temp_sk_id = autotune_vals->Subkernel_dev_id_list[devidx][local_ctr];
@@ -274,6 +289,7 @@ void CoCoDistributeSubkernelsRoundRobinChunkReverse(CoControl_p autotune_vals,
       else break;
     }
   }
+  */
 #ifdef PDEBUG
     lprintf(lvl, "CoCoDistributeSubkernelsRoundRobinChunkReverse:\nDistributing %d Subkernels to %d devices\n",
       Subkernel_num, autotune_vals->dev_num);

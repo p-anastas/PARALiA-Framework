@@ -29,6 +29,8 @@ char* CoCoImplementationPrint(){
 #else
 	sprintf(string_out, "ML");
 #endif
+#elif ENABLE_PARALLEL_BACKEND
+	sprintf(string_out, "PB-L%d", MAX_BACKEND_L);
 #elif MULTIDEVICE_REDUCTION_ENABLE
 	sprintf(string_out, "MR-BL%d", MAX_BUFFERING_L);
 #elif UNIHELPER_LOCKFREE_ENABLE
