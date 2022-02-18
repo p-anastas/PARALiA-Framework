@@ -269,18 +269,13 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 		if (gemm_subkernel_data->SubkernelListDev[keri]->WR_last)
 			gemm_subkernel_data->SubkernelListDev[keri]->writeback_data();
 	}
-	//for (int keri = 0; keri < gemm_subkernel_data->SubkernelNumDev; keri++){
-	//	if (gemm_subkernel_data->SubkernelListDev[keri]->WR_last)
-	//		gemm_subkernel_data->SubkernelListDev[keri]->writeback_reduce_data();
-	//}
+
 	CoCoSyncCheckErr();
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer;
 	lprintf(lvl, "Subkernels complete(%d): t_comp = %lf ms\n" , dev_id, cpu_timer*1000);
 #endif
-	/// Do this after pthread join to enable other devices
-	/// to still read cached data after a device's part is over
-	//CoCoPeLiaDevCacheInvalidate(gemm_subkernel_data);
+
 #ifdef DEBUG
 	lprintf(lvl-1, "<-----|\n");
 #endif

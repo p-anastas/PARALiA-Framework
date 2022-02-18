@@ -84,7 +84,13 @@ error("cblas_wrap_sgemm: never let empty unimplimented wrapped functions, moron\
 void cublas_wrap_daxpy(void* backend_data, void* queue_wrap_p){
   axpy_backend_in_p ptr_ker_translate = (axpy_backend_in_p) backend_data;
   CoCoPeLiaSelectDevice(ptr_ker_translate->dev_id);
-  massert(CUBLAS_STATUS_SUCCESS == cublasDaxpy(*((cublasHandle_t*)((CQueue_p)queue_wrap_p)->cqueue_backend_data),
+#ifdef ENABLE_PARALLEL_BACKEND
+  cublasHandle_t temp_handle = *((cublasHandle_t*)((CQueue_p)queue_wrap_p)->cqueue_backend_data
+    [((CQueue_p)queue_wrap_p)->backend_ctr]);
+#else
+  cublasHandle_t temp_handle = *((cublasHandle_t*)((CQueue_p)queue_wrap_p)->cqueue_backend_data);
+#endif
+  massert(CUBLAS_STATUS_SUCCESS == cublasDaxpy(temp_handle,
     ptr_ker_translate->N, (double*) &ptr_ker_translate->alpha, (double*) *ptr_ker_translate->x,
     ptr_ker_translate->incx, (double*) *ptr_ker_translate->y, ptr_ker_translate->incy),
     "cublas_wrap_daxpy failed\n");
@@ -109,7 +115,13 @@ void cublas_wrap_dgemm(void* backend_data, void* queue_wrap_p){
     (VALUE_TYPE*) *ptr_ker_translate->B, ptr_ker_translate->ldB,
     ptr_ker_translate->beta, (VALUE_TYPE*) *ptr_ker_translate->C, ptr_ker_translate->ldC);
 #endif
-  massert(CUBLAS_STATUS_SUCCESS == cublasDgemm(*((cublasHandle_t*)((CQueue_p)queue_wrap_p)->cqueue_backend_data),
+#ifdef ENABLE_PARALLEL_BACKEND
+  cublasHandle_t temp_handle = *((cublasHandle_t*)((CQueue_p)queue_wrap_p)->cqueue_backend_data
+    [((CQueue_p)queue_wrap_p)->backend_ctr]);
+#else
+  cublasHandle_t temp_handle = *((cublasHandle_t*)((CQueue_p)queue_wrap_p)->cqueue_backend_data);
+#endif
+  massert(CUBLAS_STATUS_SUCCESS == cublasDgemm(temp_handle,
     OpCharToCublas(ptr_ker_translate->TransA), OpCharToCublas(ptr_ker_translate->TransB),
     ptr_ker_translate->M, ptr_ker_translate->N, ptr_ker_translate->K, &ptr_ker_translate->alpha,
     (VALUE_TYPE*) *ptr_ker_translate->A, ptr_ker_translate->ldA,

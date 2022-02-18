@@ -165,7 +165,11 @@ void CoCoMemcpy(void* dest, void* src, long long bytes, short loc_dest, short lo
 
 void CoCoMemcpyAsync(void* dest, void* src, long long bytes, short loc_dest, short loc_src, CQueue_p transfer_queue)
 {
+#ifdef ENABLE_PARALLEL_BACKEND
+	cudaStream_t stream = *((cudaStream_t*)transfer_queue->cqueue_backend_ptr[transfer_queue->backend_ctr]);
+#else
 	cudaStream_t stream = *((cudaStream_t*)transfer_queue->cqueue_backend_ptr);
+#endif
 	int count = 42;
 	massert(CUBLAS_STATUS_SUCCESS == cudaGetDeviceCount(&count), "CoCoMemcpyAsync: cudaGetDeviceCount failed\n");
 	massert(-2 < loc_dest && loc_dest < count, "CoCoMemcpyAsync: Invalid destination device: %d\n", loc_dest);
@@ -207,7 +211,11 @@ void CoCoMemcpy2DAsync(void* dest, size_t ldest, void* src, size_t lsrc, size_t 
 	lprintf(lvl, "CoCoMemcpy2DAsync(dest=%p, ldest =%zu, src=%p, lsrc = %zu, rows = %zu, cols = %zu, elemsize = %d, loc_dest = %d, loc_src = %d)\n",
 		dest, ldest, src, lsrc, rows, cols, elemSize, loc_dest, loc_src);
 #endif
+#ifdef ENABLE_PARALLEL_BACKEND
+	cudaStream_t stream = *((cudaStream_t*)transfer_queue->cqueue_backend_ptr[transfer_queue->backend_ctr]);
+#else
 	cudaStream_t stream = *((cudaStream_t*)transfer_queue->cqueue_backend_ptr);
+#endif
 	int count = 42;
 	massert(CUBLAS_STATUS_SUCCESS == cudaGetDeviceCount(&count), "CoCoMemcpy2DAsync: cudaGetDeviceCount failed\n");
 	massert(-2 < loc_dest && loc_dest < count, "CoCoMemcpyAsync2D: Invalid destination device: %d\n", loc_dest);

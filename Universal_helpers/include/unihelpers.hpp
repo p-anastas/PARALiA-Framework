@@ -29,8 +29,14 @@ typedef class CommandQueue
 {
 	private:
 	public:
+#ifdef ENABLE_PARALLEL_BACKEND
+		void* cqueue_backend_ptr[MAX_BACKEND_L];
+		void* cqueue_backend_data[MAX_BACKEND_L];
+		int backend_ctr = 0; 
+#else
 		void* cqueue_backend_ptr;
 		void* cqueue_backend_data;
+#endif
 		int dev_id;
 
 		//Constructor
@@ -41,6 +47,9 @@ typedef class CommandQueue
 		void sync_barrier();
 		void add_host_func(void* func, void* data);
 		void wait_for_event(Event_p Wevent);
+#ifdef ENABLE_PARALLEL_BACKEND
+		void request_parallel_backend();
+#endif
 		std::string name;
 		void print() { std::cout << "Command Queue : " << name; }
 

@@ -56,6 +56,21 @@ CommandQueue::CommandQueue(int dev_id_in)
 	int prev_dev_id = CoCoPeLiaGetDevice();
 	dev_id = dev_id_in;
 	CoCoPeLiaSelectDevice(dev_id);
+#ifdef ENABLE_PARALLEL_BACKEND
+	backend_ctr = 0;
+	for (int par_idx = 0; par_idx < MAX_BACKEND_L; par_idx++ ){
+		cqueue_backend_ptr[par_idx] = malloc(sizeof(cudaStream_t));
+		cudaError_t err = cudaStreamCreate((cudaStream_t*) cqueue_backend_ptr[par_idx]);
+		massert(cudaSuccess == err, "CommandQueue::CommandQueue(%d) - %s\n", dev_id, cudaGetErrorString(err));
+		cudaStream_t stream = *((cudaStream_t*) cqueue_backend_ptr[par_idx]);
+
+		cqueue_backend_data[par_idx] = malloc(sizeof(cublasHandle_t));
+		massert(CUBLAS_STATUS_SUCCESS == cublasCreate((cublasHandle_t*) cqueue_backend_data[par_idx]),
+			"CommandQueue::CommandQueue(%d): cublasCreate failed\n", dev_id);
+		massert(CUBLAS_STATUS_SUCCESS == cublasSetStream(*((cublasHandle_t*) cqueue_backend_data[par_idx]), stream),
+			"CommandQueue::CommandQueue(%d): cublasSetStream failed\n", dev_id);
+	}
+#else
 	cqueue_backend_ptr = malloc(sizeof(cudaStream_t));
 	cudaError_t err = cudaStreamCreate((cudaStream_t*) cqueue_backend_ptr);
 	massert(cudaSuccess == err, "CommandQueue::CommandQueue(%d) - %s\n", dev_id, cudaGetErrorString(err));
@@ -66,11 +81,25 @@ CommandQueue::CommandQueue(int dev_id_in)
 		"CommandQueue::CommandQueue(%d): cublasCreate failed\n", dev_id);
 	massert(CUBLAS_STATUS_SUCCESS == cublasSetStream(*((cublasHandle_t*) cqueue_backend_data), stream),
 		"CommandQueue::CommandQueue(%d): cublasSetStream failed\n", dev_id);
+#endif
 	CoCoPeLiaSelectDevice(prev_dev_id);
 }
 
 CommandQueue::~CommandQueue()
 {
+#ifdef ENABLE_PARALLEL_BACKEND
+	for (int par_idx = 0; par_idx < MAX_BACKEND_L; par_idx++ ){
+		cudaStream_t stream = *((cudaStream_t*) cqueue_backend_ptr[par_idx]);
+		cudaError_t err = cudaStreamSynchronize(stream);
+		massert(cudaSuccess == err, "CommandQueue::CommandQueue - cudaStreamSynchronize: %s\n", cudaGetErrorString(err));
+		err = cudaStreamDestroy(stream);
+		massert(cudaSuccess == err, "CommandQueue::CommandQueue - cudaStreamDestroy: %s\n", cudaGetErrorString(err));
+		free(cqueue_backend_ptr[par_idx]);
+		cublasHandle_t handle = *((cublasHandle_t*) cqueue_backend_data[par_idx]);
+		massert(CUBLAS_STATUS_SUCCESS == cublasDestroy(handle),
+			"CommandQueue::CommandQueue - cublasDestroy(handle) failed\n");
+	}
+#else
 	cudaStream_t stream = *((cudaStream_t*) cqueue_backend_ptr);
 	cudaError_t err = cudaStreamSynchronize(stream);
 	massert(cudaSuccess == err, "CommandQueue::CommandQueue - cudaStreamSynchronize: %s\n", cudaGetErrorString(err));
@@ -80,21 +109,36 @@ CommandQueue::~CommandQueue()
 	cublasHandle_t handle = *((cublasHandle_t*) cqueue_backend_data);
 	massert(CUBLAS_STATUS_SUCCESS == cublasDestroy(handle),
 		"CommandQueue::CommandQueue - cublasDestroy(handle) failed\n");
+#endif
 	return;
 }
 
 void CommandQueue::sync_barrier()
 {
+#ifdef ENABLE_PARALLEL_BACKEND
+	for (int par_idx = 0; par_idx < MAX_BACKEND_L; par_idx++ ){
+		cudaStream_t stream = *((cudaStream_t*) cqueue_backend_ptr[par_idx]);
+		cudaError_t err = cudaStreamSynchronize(stream);
+		massert(cudaSuccess == err, "CommandQueue::sync_barrier - %s\n", cudaGetErrorString(err));
+	}
+#else
 	cudaStream_t stream = *((cudaStream_t*) cqueue_backend_ptr);
 	cudaError_t err = cudaStreamSynchronize(stream);
 	massert(cudaSuccess == err, "CommandQueue::sync_barrier - %s\n", cudaGetErrorString(err));
+#endif
 }
 
 void CommandQueue::add_host_func(void* func, void* data){
 	get_lock();
+#ifdef ENABLE_PARALLEL_BACKEND
+	cudaStream_t stream = *((cudaStream_t*) cqueue_backend_ptr[backend_ctr]);
+	cudaError_t err = cudaLaunchHostFunc(stream, (cudaHostFn_t) func, data);
+	massert(cudaSuccess == err, "CommandQueue::add_host_func - %s\n", cudaGetErrorString(err));
+#else
 	cudaStream_t stream = *((cudaStream_t*) cqueue_backend_ptr);
 	cudaError_t err = cudaLaunchHostFunc(stream, (cudaHostFn_t) func, data);
 	massert(cudaSuccess == err, "CommandQueue::add_host_func - %s\n", cudaGetErrorString(err));
+#endif
 	release_lock();
 }
 
@@ -102,12 +146,29 @@ void CommandQueue::wait_for_event(Event_p Wevent)
 {
 	if (Wevent->query_status() == CHECKED) return;
 	get_lock();
+#ifdef ENABLE_PARALLEL_BACKEND
+	cudaStream_t stream = *((cudaStream_t*) cqueue_backend_ptr[backend_ctr]);
+	cudaEvent_t cuda_event= *(cudaEvent_t*) Wevent->event_backend_ptr;
+	cudaError_t err = cudaStreamWaitEvent(stream, cuda_event, 0); // 0-only parameter = future NVIDIA masterplan?
+	massert(cudaSuccess == err, "CommandQueue::wait_for_event - %s\n", cudaGetErrorString(err));
+#else
 	cudaStream_t stream = *((cudaStream_t*) cqueue_backend_ptr);
 	cudaEvent_t cuda_event= *(cudaEvent_t*) Wevent->event_backend_ptr;
 	cudaError_t err = cudaStreamWaitEvent(stream, cuda_event, 0); // 0-only parameter = future NVIDIA masterplan?
 	massert(cudaSuccess == err, "CommandQueue::wait_for_event - %s\n", cudaGetErrorString(err));
+#endif
 	release_lock();
 }
+
+#ifdef ENABLE_PARALLEL_BACKEND
+void CommandQueue::request_parallel_backend()
+{
+	get_lock();
+	if (backend_ctr == MAX_BACKEND_L - 1) backend_ctr = 0;
+	else backend_ctr++;
+	release_lock();
+}
+#endif
 
 /*****************************************************/
 /// Event class functions. TODO: Do status = .. commands need lock?
@@ -158,9 +219,15 @@ void Event::record_to_queue(CQueue_p Rr){
 		if (status != UNRECORDED){
 			warning("Event(%d,dev_id = %d)::record_to_queue(%d): Recording %s event\n", id, dev_id, Rr->dev_id, print_event_status(status));
 		}
+#ifdef ENABLE_PARALLEL_BACKEND
+		cudaEvent_t cuda_event= *(cudaEvent_t*) event_backend_ptr;
+		cudaStream_t stream = *((cudaStream_t*) Rr->cqueue_backend_ptr[Rr->backend_ctr]);
+		cudaError_t err = cudaEventRecord(cuda_event, stream);
+#else
 		cudaEvent_t cuda_event= *(cudaEvent_t*) event_backend_ptr;
 		cudaStream_t stream = *((cudaStream_t*) Rr->cqueue_backend_ptr);
 		cudaError_t err = cudaEventRecord(cuda_event, stream);
+#endif
 		status = RECORDED;
 		massert(cudaSuccess == err, "Event(%d,dev_id = %d)::record_to_queue(%d) - %s\n",  id, dev_id, Rr->dev_id, cudaGetErrorString(err));
 	}
@@ -224,26 +291,16 @@ Event_timer::Event_timer(int dev_id) {
 void Event_timer::start_point(CQueue_p start_queue)
 {
 	Event_start->record_to_queue(start_queue);
-	//cudaStream_t stream = *((cudaStream_t*) start_queue->cqueue_backend_ptr);
-	//cudaEvent_t cuda_event = *(cudaEvent_t*) Event_start->event_backend_ptr;
-	//cudaEventRecord(cuda_event, stream);
 }
 
 void Event_timer::stop_point(CQueue_p stop_queue)
 {
 	Event_stop->record_to_queue(stop_queue);
-	//cudaStream_t stream = *((cudaStream_t*) stop_queue->cqueue_backend_ptr);
-	//cudaEvent_t cuda_event = *(cudaEvent_t*) Event_stop->event_backend_ptr;
-	//cudaEventRecord(cuda_event, stream);
 }
 
 double Event_timer::sync_get_time()
 {
 	float temp_t;
-	//cudaEvent_t cuda_event_start = *(cudaEvent_t*) Event_start->event_backend_ptr;
-	//cudaEvent_t cuda_event_stop = *(cudaEvent_t*) Event_stop->event_backend_ptr;
-	//cudaEventSynchronize(cuda_event_start);
-	//cudaEventSynchronize(cuda_event_stop);
 	Event_start->sync_barrier();
 	Event_stop->sync_barrier();
 	cudaEvent_t cuda_event_start = *(cudaEvent_t*) Event_start->event_backend_ptr;

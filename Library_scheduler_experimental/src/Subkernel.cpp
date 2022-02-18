@@ -271,6 +271,9 @@ void Subkernel::run_operation(){
 	lprintf(lvl-1, "|-----> Subkernel(dev=%d,id=%d)::run_operation()\n", run_dev_id, id);
 #endif
 	short run_dev_id_idx = (run_dev_id == -1)?  LOC_NUM - 1 : run_dev_id;
+#ifdef ENABLE_PARALLEL_BACKEND
+	if(WR_first) exec_queue[run_dev_id_idx]->request_parallel_backend();
+#endif
 	for (int j = 0; j < TileNum; j++){
 		if (TileDimlist[j] == 1){
 				Tile1D<VALUE_TYPE>* tmp = (Tile1D<VALUE_TYPE>*) TileList[j];
