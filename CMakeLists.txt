@@ -31,9 +31,9 @@ add_definitions(-DMAX_BUFFERING_L=4)
 #add_definitions(-DENABLE_MUTEX_LOCKING)
 
 ## Enable Running multiple backend operations in parallel for each queue
-add_definitions(-DENABLE_PARALLEL_BACKEND)
+#add_definitions(-DENABLE_PARALLEL_BACKEND)
 ## The maximum allowed parallel backend operations per queue
-add_definitions(-DMAX_BACKEND_L=4)
+#add_definitions(-DMAX_BACKEND_L=4)
 
 ## Enable using the CPU as an extra device for part of the total workload, if applicable
 add_definitions(-DENABLE_CPU_WORKLOAD)
@@ -43,14 +43,6 @@ add_definitions(-DENABLE_CPU_WORKLOAD)
 #add_definitions(-DDISTRIBUTION="SPLIT-NAIVE")
 #add_definitions(-DDISTRIBUTION="SPLIT-CHUNKS-ROBIN")
 add_definitions(-DDISTRIBUTION="SPLIT-CHUNKS-ROBIN-REVERSE")
-
-## Define which cost function to use for device selection
-add_definitions(-DDEV_COST_FUNC="FULL-OVERLAP")
-#add_definitions(-DDEV_COST_FUNC="ZERO-OVERLAP")
-
-## Define at which percentage to normalize near splitting
-## See Autotuning_runtime->CoCoPeLiaModel->CoCoPeLiaNormalizeSplit
-add_definitions(-DNORMALIZE_NEAR_SPLIT_LIMIT=0.05)
 
 #Run in testing mode : details about models, decisions and time spend in operations.
 #add_definitions(-DTEST)

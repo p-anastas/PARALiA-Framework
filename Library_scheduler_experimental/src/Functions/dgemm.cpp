@@ -338,178 +338,35 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 	initial_gemm->ldC = ldC;
 	initial_gemm->dev_id = -1;
 
-	if(!reuse_model_flag && autotuned_vals){
-#ifdef DEBUG
-	lprintf(lvl, "Freeing autotuned_vals because reuse_model_flag = %d\n", reuse_model_flag);
-#endif
-		for(int idx=0; idx < autotuned_vals->dev_num; idx++) free(autotuned_vals->Subkernel_dev_id_list[idx]);
-		free(autotuned_vals->Subkernel_dev_id_list);
-		free(autotuned_vals);
-		autotuned_vals = NULL;
-	}
-
 	Asset2D<VALUE_TYPE>* A_asset, *B_asset, *C_asset;
 	/// Prepare Assets in parallel( e.g. initialize asset classes, pin memory with pthreads)
 	/// return: A_asset, B_asset, C_asset initialized and pinned
-	{
-		A_asset = new Asset2D<VALUE_TYPE>( A, M, K, ldA, TransA);
-		B_asset = new Asset2D<VALUE_TYPE>( B, K, N, ldB, TransB);
-		C_asset = new Asset2D<VALUE_TYPE>( C, M, N, ldC, 'N');
+	A_asset = new Asset2D<VALUE_TYPE>( A, M, K, ldA, TransA);
+	B_asset = new Asset2D<VALUE_TYPE>( B, K, N, ldB, TransB);
+	C_asset = new Asset2D<VALUE_TYPE>( C, M, N, ldC, 'N');
 
-		pthread_attr_t attr;
-		int s = pthread_attr_init(&attr);
-		if (s != 0) error("CoCopeLiaDgemm: pthread_attr_init failed s=%d\n", s);
+	pthread_attr_t attr;
+	int s = pthread_attr_init(&attr);
+	if (s != 0) error("CoCopeLiaDgemm: pthread_attr_init failed s=%d\n", s);
 
-		pthread_t asset_thread_id[3];
-		A_asset->prepareAsync(&asset_thread_id[0], attr);
-		B_asset->prepareAsync(&asset_thread_id[1], attr);
-		C_asset->prepareAsync(&asset_thread_id[2], attr);
+	pthread_t asset_thread_id[3];
+	A_asset->prepareAsync(&asset_thread_id[0], attr);
+	B_asset->prepareAsync(&asset_thread_id[1], attr);
+	C_asset->prepareAsync(&asset_thread_id[2], attr);
 
-		void* res;
-		for(int i=0; i<3;i++){
-			s = pthread_join(asset_thread_id[i], &res);
-			if (s != 0) error("CoCopeLiaDgemm: pthread_join failed with exit value %d", s);
-			//free(res);      /* Free memory allocated by thread */
-		}
+	tunableParams_p best_pred_p = CoCoAutotuneParameters("Dgemm", initial_gemm,
+	  &autotuned_vals, glob_model_gemm, predef_vals_gemm, reuse_model_flag);
 
-#ifdef TEST
-		cpu_timer = csecond() - cpu_timer;
-		lprintf(lvl, "Preparing assets (parallel with pthreads) -> t_prep = %lf ms\n", cpu_timer*1000);
-		cpu_timer = csecond();
-#endif
+	void* res;
+	for(int i=0; i<3;i++){
+		s = pthread_join(asset_thread_id[i], &res);
+		if (s != 0) error("CoCopeLiaDgemm: pthread_join failed with exit value %d", s);
+		//free(res);      /* Free memory allocated by thread */
 	}
-
-	if(autotuned_vals == NULL) autotuned_vals = (CoControl_p) malloc(sizeof(struct CoControl));
-	int autotune_eval_devices = 0;
-	if (predef_vals_gemm && predef_vals_gemm->dev_num > 0){
-		autotuned_vals->dev_num = predef_vals_gemm->dev_num;
-		for (int i =0; i < autotuned_vals->dev_num; i++) autotuned_vals->dev_ids[i] = predef_vals_gemm->dev_ids[i];
-#ifdef DEBUG
-		lprintf(lvl, "Running on %d devices with dev_ids=[ ", autotuned_vals->dev_num);
-		for (int i =0; i < autotuned_vals->dev_num; i++) fprintf(stderr, "%d ", autotuned_vals->dev_ids[i]);
-		fprintf(stderr, "]\n");
-#endif
-	}
-	else{
-#ifdef ENABLE_CPU_WORKLOAD
-		autotuned_vals->dev_num = LOC_NUM;
-#else
-		autotuned_vals->dev_num = DEV_NUM;
-#endif
-		autotune_eval_devices = 1;
-		for (int i =0; i < autotuned_vals->dev_num; i++)
-			autotuned_vals->dev_ids[i] = deidxize(i);
-	}
-
-	for (int i =0; i < autotuned_vals->dev_num; i++){
-		short dev_id_idx = idxize(autotuned_vals->dev_ids[i]);
-		if(!reuse_model_flag || glob_model_gemm[dev_id_idx] == NULL){
-			if(glob_model_gemm[dev_id_idx] != NULL) free(glob_model_gemm[dev_id_idx]);
-			glob_model_gemm[dev_id_idx] = CoCoPeLiaTileModelInit(autotuned_vals->dev_ids[i], "Dgemm", initial_gemm);
-		}
-	}
-
-	double slowest_problem_t = 0;
-	CoCoModel_p model = NULL;
-	short *dev_ids[autotuned_vals->dev_num] = {NULL}, best_dev_num = 0;
-	tunableParams_p pred_p[autotuned_vals->dev_num] = {NULL}, best_pred_p = NULL;
-	if(predef_vals_gemm && predef_vals_gemm->T > 0 && !autotune_eval_devices){
-		autotuned_vals->T = predef_vals_gemm->T;
-		best_pred_p = CoCoPeLiaModelMultidevOptimizeSplit(autotuned_vals->dev_num,
-			autotuned_vals->dev_ids, glob_model_gemm, autotuned_vals->T);
-//#ifdef PDEBUG
-if(!reuse_model_flag){
-		lprintf(0, "====================================\n");
-		lprintf(0, "Using predefined T=%zu and dev_num=%d, autotuned split = %s -> %s : t_pred = %lf\n",
-			autotuned_vals->T, autotuned_vals->dev_num, printlist<short>(autotuned_vals->dev_ids, autotuned_vals->dev_num),
-			printlist<double>(best_pred_p->rel_dev_score, autotuned_vals->dev_num), best_pred_p->pred_t*1000);
-		lprintf(0, "====================================\n");
-}
-//#endif
-	}
-	else if(predef_vals_gemm && predef_vals_gemm->T > 0 && autotune_eval_devices){
-		autotuned_vals->T = predef_vals_gemm->T;
-		for (int used_devs = 0; used_devs < autotuned_vals->dev_num; used_devs++){
-			dev_ids[used_devs] = CoCoPeLiaDeviceSelectBest(used_devs + 1, autotuned_vals->dev_num,
-				autotuned_vals->dev_ids, glob_model_gemm);
-			pred_p[used_devs] = CoCoPeLiaModelMultidevOptimizeSplit(used_devs + 1,
-				dev_ids[used_devs], glob_model_gemm, autotuned_vals->T);
-
-			if (best_pred_p == NULL){
-				best_pred_p = pred_p[used_devs];
-				best_dev_num = used_devs + 1;
-			}
-			else if(best_pred_p->pred_t >= pred_p[used_devs]->pred_t){
-				best_pred_p = pred_p[used_devs];
-				best_dev_num = used_devs + 1;
-			}
-		}
-		autotuned_vals->T = best_pred_p->T;
-		autotuned_vals->dev_num = best_dev_num;
-		for (int idx = 0; idx < autotuned_vals->dev_num; idx++)
-			autotuned_vals->dev_ids[idx] = dev_ids[autotuned_vals->dev_num - 1][idx];
-//#ifdef PDEBUG
-if(!reuse_model_flag){
-		lprintf(0, "====================================\n");
-		lprintf(0, "Using predefined T=%zu, autotuned dev_num=%d and split = %s -> %s : t_pred = %lf\n",
-			autotuned_vals->T, autotuned_vals->dev_num, printlist<short>(autotuned_vals->dev_ids, autotuned_vals->dev_num),
-			printlist<double>(best_pred_p->rel_dev_score, autotuned_vals->dev_num), best_pred_p->pred_t*1000);
-		lprintf(0, "====================================\n");
-}
-//#endif
-	}
-	else if (predef_vals_gemm && predef_vals_gemm->T <= 0 && !autotune_eval_devices){
-		best_pred_p = CoCoPeLiaModelMultidevOptimizeTileAndSplit(autotuned_vals->dev_num,
-			autotuned_vals->dev_ids, glob_model_gemm);
-		autotuned_vals->T = best_pred_p->T;
-//#ifdef PDEBUG
-if(!reuse_model_flag){
-		lprintf(0, "====================================\n");
-		lprintf(0, "Using predefined dev_num = %d, autotuned T = %zu and split = %s -> %s : t_pred = %lf\n",
-			autotuned_vals->dev_num, autotuned_vals->T, printlist<short>(autotuned_vals->dev_ids, autotuned_vals->dev_num),
-			printlist<double>(best_pred_p->rel_dev_score, autotuned_vals->dev_num), best_pred_p->pred_t*1000);
-		lprintf(0, "====================================\n");
-}
-//#endif
-	}
-	else if ((predef_vals_gemm && predef_vals_gemm->T <= 0 && autotune_eval_devices) || !predef_vals_gemm){
-		for (int used_devs = 0; used_devs < autotuned_vals->dev_num; used_devs++){
-			dev_ids[used_devs] = CoCoPeLiaDeviceSelectBest(used_devs + 1, autotuned_vals->dev_num,
-				autotuned_vals->dev_ids, glob_model_gemm);
-			pred_p[used_devs] = CoCoPeLiaModelMultidevOptimizeTileAndSplit(used_devs + 1,
-				dev_ids[used_devs], glob_model_gemm);
-
-			if (best_pred_p == NULL){
-				best_pred_p = pred_p[used_devs];
-				best_dev_num = used_devs + 1;
-			}
-			else if(best_pred_p->pred_t >= pred_p[used_devs]->pred_t){
-				best_pred_p = pred_p[used_devs];
-				best_dev_num = used_devs + 1;
-			}
-		}
-		autotuned_vals->T = best_pred_p->T;
-		autotuned_vals->dev_num = best_dev_num;
-		for (int idx = 0; idx < autotuned_vals->dev_num; idx++)
-			autotuned_vals->dev_ids[idx] = dev_ids[autotuned_vals->dev_num - 1][idx];
-//#ifdef PDEBUG
-if(!reuse_model_flag){
-		lprintf(0, "====================================\n");
-		lprintf(0, "Using autotuned dev_num = %d, T = %zu and split = %s -> %s : t_pred = %lf\n",
-			autotuned_vals->dev_num, autotuned_vals->T, printlist<short>(autotuned_vals->dev_ids, autotuned_vals->dev_num),
-			printlist<double>(best_pred_p->rel_dev_score, autotuned_vals->dev_num), best_pred_p->pred_t*1000);
-		lprintf(0, "====================================\n");
-}
-//#endif
-	}
-	else error("Unknown predefined parameter combination\n");
-	if (predef_vals_gemm && predef_vals_gemm->cache_limit > 0)
-		autotuned_vals->cache_limit = predef_vals_gemm->cache_limit;
-	else autotuned_vals->cache_limit = 0;
 
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer;
-	lprintf(lvl, "Device/T selection -> t_configure = %lf ms\n", cpu_timer*1000);
+	lprintf(lvl, "Preparing assets (parallel with pthreads) -> t_prep = %lf ms\n", cpu_timer*1000);
 	cpu_timer = csecond();
 #endif
 
@@ -557,10 +414,8 @@ if(!reuse_model_flag){
 	cpu_timer = csecond();
 #endif
 
-	pthread_attr_t attr;
-	int s = pthread_attr_init(&attr);
+	s = pthread_attr_init(&attr);
 	if (s != 0) error("CoCopeLiaDgemm: pthread_attr_init failed s=%d\n", s);
-	void* res;
 	int used_devices = 0;
 	for (int d = 0 ; d < autotuned_vals->dev_num; d++)
 		if(autotuned_vals->Subkernels_per_dev[d] > 0 ) used_devices++;
@@ -630,11 +485,8 @@ if(!reuse_model_flag){
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer;
 	lprintf(lvl, "Fire and gather pthreads for all devices -> t_exec_full = %lf ms\n", cpu_timer*1000);
-	if(predef_vals_gemm && predef_vals_gemm->T <= 0){
-		lprintf(lvl, "t_predicted for T=%zu was %.2lf ms : %lf \% error\n",
-		T, slowest_problem_t*1000,
-		(slowest_problem_t==0)? 0: (slowest_problem_t - cpu_timer )/slowest_problem_t*100);
-	}
+	lprintf(lvl, "t_predicted for T=%zu was %.2lf ms : %lf \% error\n", T, best_pred_p->pred_t*1000,
+	(best_pred_p->pred_t==0)? 0: (best_pred_p->pred_t - cpu_timer )/best_pred_p->pred_t*100);
 	cpu_timer = csecond();
 #endif
 

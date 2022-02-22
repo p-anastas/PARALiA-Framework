@@ -64,7 +64,7 @@ typedef struct flagParams{
 typedef struct CoCo_model{
 	Vdata_p V;
 	CoModel_p link[LOC_NUM], revlink[LOC_NUM];
-	char* func;
+	const char* func;
 	//double Ker_pot;
 	size_t D1, D2, D3;
 	flagParams_p flags;
@@ -73,6 +73,9 @@ typedef struct CoCo_model{
 	int dev_id;
 
 }* CoCoModel_p;
+
+tunableParams_p CoCoAutotuneParameters(const char* routine_name, void* initial_problem_wrap,
+  CoControl_p* autotuned_vals_p, CoCoModel_p* glob_model, CoControl_p predef_vals, short reuse_model_flag);
 
 short* CoCoPeLiaDeviceSelectBest(short used_devs, short avail_devs, short* avail_dev_ids,
 	CoCoModel_p* avail_dev_model_list);
@@ -103,12 +106,12 @@ double CoCopeLiaPredictBidirectional(CoCoModel_p model, size_t T);
 double CoCopeLiaPredictReuse(CoCoModel_p model, size_t T);
 double CoCopeLiaPipelineEmulate(CoCoModel_p model, size_t T);
 
-CoCoModel_p CoCoPeLiaTileModelInit(short dev_id, char* func_name, void* func_data);
+CoCoModel_p CoCoPeLiaTileModelInit(short dev_id, const char* func_name, void* func_data);
 ///  Predicts Best tile size for 3-way overlaped execution time for BLAS3 2-dim blocking.
 tunableParams_p CoCoPeLiaModelOptimizeTile(CoCoModel_p model, ModelType mode);
 
-CoCoModel_p CoCoModel_gemm_init(CoCoModel_p base_model, short dev_id, char* func, gemm_backend_in_p func_data);
-CoCoModel_p CoCoModel_axpy_init(size_t N, short x_loc, short y_loc, short dev_id, char* func);
+CoCoModel_p CoCoModel_gemm_init(CoCoModel_p base_model, short dev_id, const char* func, gemm_backend_in_p func_data);
+CoCoModel_p CoCoModel_axpy_init(size_t N, short x_loc, short y_loc, short dev_id, const char* func);
 
 const char* printModel(ModelType mode);
 
