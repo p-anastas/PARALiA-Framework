@@ -74,7 +74,8 @@ project (CoCopeLia-Framework VERSION ${PROJECT_VERSION} DESCRIPTION "The complet
 
 ## Define a name for the testbed, to be used for the whole framework setup
 #set(TESTBED_NAME "dungani")
-set(TESTBED_NAME "silver1")
+#set(TESTBED_NAME "silver1")
+set(TESTBED_NAME "vulcanGPUs")
 message("CoCopeLia-Framework - TESTBED_NAME: " ${TESTBED_NAME})
 add_definitions(-DTESTBED="${TESTBED_NAME}")
 
@@ -95,7 +96,8 @@ add_definitions(-DPROBLEM_GPU_PERCENTAGE=${PROBLEM_GPU_PERCENTAGE})
 #	a) auto
 
 #	b) compile flags
-set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -fopenmp -lm -Wuninitialized") # -std=gnu89 TODO:needed?
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -fopenmp -lm -Wuninitialized -std=c++11")
+
 message("CoCopeLia-Framework - CMAKE_CXX_FLAGS: " ${CMAKE_CXX_FLAGS})
 
 #	c) auto
@@ -103,10 +105,11 @@ message("CoCopeLia-Framework - CMAKE_CXX_FLAGS: " ${CMAKE_CXX_FLAGS})
 #	d) auto
 
 ## 2) CUCUBLAS TODO: Other backends?
-set (CUDA_PREFIX "/usr/local/cuda-11.0")
+#set (CUDA_PREFIX "/usr/local/cuda-11.0")
 add_definitions(-DCUDA_VER=1100)
 #set (CUDA_PREFIX "/usr/local/cuda-9.2")
 #add_definitions(-DCUDA_VER=920)
+set (CUDA_PREFIX " /opt/system/cuda/10.0.130")
 if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
   set(CMAKE_CUDA_ARCHITECTURES 70) #35 for Tesla K40, 70 for V100, 61 for GTX 1060/70
 endif()
@@ -115,14 +118,17 @@ endif()
 set (CMAKE_CUDA_COMPILER ${CUDA_PREFIX}/bin/nvcc)
 
 # 	b) Compile flags
-set (CMAKE_CUDA_FLAGS "-w -O3")
+set (CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -w -O3")
 message("CoCopeLia-Framework - CMAKE_CUDA_FLAGS: " ${CMAKE_CUDA_FLAGS})
+#add_compile_options(-std=c++11)
+set(CMAKE_C_FLAGS ${CMAKE_CXX_FLAGS})
+
 
 # 	c) Includes
 set (CUDA_INCLUDE_DIRS ${CUDA_PREFIX}/include ${CUDA_PREFIX}/samples/common/inc)
 include_directories(${CUDA_INCLUDE_DIRS})
 message("CoCopeLia-Framework - CUDA_INCLUDE_DIRS: " ${CUDA_INCLUDE_DIRS})
-set(OPENBLAS_PREFIX "/home/users/panastas/Lib_install/OpenBLAS")
+set(OPENBLAS_PREFIX "/zhome/academic/HLRS/xex/xexpanas/OpenBLAS")
 set (OPENBLAS_INCLUDE_DIRS ${OPENBLAS_PREFIX}/include)
 include_directories(${OPENBLAS_INCLUDE_DIRS})
 message("CoCopeLia-Framework - OPENBLAS_INCLUDE_DIRS: " ${OPENBLAS_INCLUDE_DIRS})
