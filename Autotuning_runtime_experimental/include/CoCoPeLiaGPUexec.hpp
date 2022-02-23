@@ -20,9 +20,9 @@ double GPUexec2Model_predict(GPUexec2Model_p model, size_t D1,  size_t D2);
 */
 
 typedef struct  BLAS3_data{
-	short dev_id; 
-	char* func;
-	
+	short dev_id;
+	const char* func;
+
 	// TODO: add more complicated selection taking error margins into account.
 	short mode;
 	size_t* T_lookup_buf;
@@ -40,7 +40,7 @@ size_t GPUexec3MaxT(GPUexec3Model_p model);
 size_t GPUexec3NearestT(GPUexec3Model_p model, size_t Tin);
 
 /// Load parameters from file and return  BLAS 3 execution time model
-GPUexec3Model_p GPUexec3Model_init(short dev,  char* func);
+GPUexec3Model_p GPUexec3Model_init(short dev, const char* func);
 
 double GPUexec3Model_predict(GPUexec3Model_p model, size_t T, char TransA, char TransB);
 

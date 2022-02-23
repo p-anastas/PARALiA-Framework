@@ -13,6 +13,170 @@
 #include "unihelpers.hpp"
 #include "Werkhoven.hpp"
 
+tunableParams_p CoCoAutotuneParameters(const char* routine_name, void* initial_problem_wrap,
+  CoControl_p* autotuned_vals_p, CoCoModel_p* glob_model, CoControl_p predef_vals, short reuse_model_flag){
+	short lvl = 3;
+#ifdef DEBUG
+	lprintf(lvl, "CoCoAutotuneParameters(%s, &%p, %p, %p, %p, %d)", routine_name, initial_problem_wrap,
+	  *autotuned_vals_p, glob_model, predef_vals, reuse_model_flag);
+#endif
+#ifdef TEST
+	double cpu_timer = csecond();
+#endif
+	if(!reuse_model_flag && *autotuned_vals_p){
+#ifdef DEBUG
+	lprintf(lvl, "Freeing autotuned_vals because reuse_model_flag = %d\n", reuse_model_flag);
+#endif
+		for(int idx=0; idx < (*autotuned_vals_p)->dev_num; idx++) free((*autotuned_vals_p)->Subkernel_dev_id_list[idx]);
+		free((*autotuned_vals_p)->Subkernel_dev_id_list);
+		free((*autotuned_vals_p));
+		*autotuned_vals_p = NULL;
+#ifdef DDEBUG
+	lprintf(lvl, "Allocating new autotuned_vals\n");
+#endif
+	}
+
+	if(*autotuned_vals_p == NULL){
+		*autotuned_vals_p = (CoControl_p) malloc(sizeof(struct CoControl));
+	}
+	CoControl_p autotuned_vals = *autotuned_vals_p;
+	int autotune_eval_devices = 0;
+	if (predef_vals && predef_vals->dev_num > 0){
+		autotuned_vals->dev_num = predef_vals->dev_num;
+		for (int i =0; i < autotuned_vals->dev_num; i++) autotuned_vals->dev_ids[i] = predef_vals->dev_ids[i];
+#ifdef DEBUG
+		lprintf(lvl, "Running on %d devices with dev_ids=[ ", autotuned_vals->dev_num);
+		for (int i =0; i < autotuned_vals->dev_num; i++) fprintf(stderr, "%d ", autotuned_vals->dev_ids[i]);
+		fprintf(stderr, "]\n");
+#endif
+	}
+	else{
+#ifdef ENABLE_CPU_WORKLOAD
+		autotuned_vals->dev_num = LOC_NUM;
+#else
+		autotuned_vals->dev_num = DEV_NUM;
+#endif
+		autotune_eval_devices = 1;
+		for (int i =0; i < autotuned_vals->dev_num; i++)
+			autotuned_vals->dev_ids[i] = deidxize(i);
+	}
+
+	for (int i =0; i < autotuned_vals->dev_num; i++){
+		short dev_id_idx = idxize(autotuned_vals->dev_ids[i]);
+		if(!reuse_model_flag){
+			free(glob_model[dev_id_idx]);
+			glob_model[dev_id_idx] = NULL;
+		}
+		if(glob_model[dev_id_idx] == NULL){
+			glob_model[dev_id_idx] = CoCoPeLiaTileModelInit(autotuned_vals->dev_ids[i], routine_name, initial_problem_wrap);
+		}
+	}
+
+	short *dev_ids[autotuned_vals->dev_num] = {NULL}, best_dev_num = 0;
+	tunableParams_p pred_p[autotuned_vals->dev_num] = {NULL}, best_pred_p = NULL;
+	if(predef_vals && predef_vals->T > 0 && !autotune_eval_devices){
+		autotuned_vals->T = predef_vals->T;
+		best_pred_p = CoCoPeLiaModelMultidevOptimizeSplit(autotuned_vals->dev_num,
+			autotuned_vals->dev_ids, glob_model, autotuned_vals->T);
+//#ifdef PDEBUG
+if(!reuse_model_flag){
+		lprintf(0, "====================================\n");
+		lprintf(0, "Using predefined T=%zu and dev_num=%d, autotuned split = %s -> %s : t_pred = %lf\n",
+			autotuned_vals->T, autotuned_vals->dev_num, printlist<short>(autotuned_vals->dev_ids, autotuned_vals->dev_num),
+			printlist<double>(best_pred_p->rel_dev_score, autotuned_vals->dev_num), best_pred_p->pred_t*1000);
+		lprintf(0, "====================================\n");
+}
+//#endif
+	}
+	else if(predef_vals && predef_vals->T > 0 && autotune_eval_devices){
+		autotuned_vals->T = predef_vals->T;
+		for (int used_devs = 0; used_devs < autotuned_vals->dev_num; used_devs++){
+			dev_ids[used_devs] = CoCoPeLiaDeviceSelectBest(used_devs + 1, autotuned_vals->dev_num,
+				autotuned_vals->dev_ids, glob_model);
+			pred_p[used_devs] = CoCoPeLiaModelMultidevOptimizeSplit(used_devs + 1,
+				dev_ids[used_devs], glob_model, autotuned_vals->T);
+
+			if (best_pred_p == NULL){
+				best_pred_p = pred_p[used_devs];
+				best_dev_num = used_devs + 1;
+			}
+			else if(best_pred_p->pred_t >= pred_p[used_devs]->pred_t){
+				best_pred_p = pred_p[used_devs];
+				best_dev_num = used_devs + 1;
+			}
+		}
+		autotuned_vals->T = best_pred_p->T;
+		autotuned_vals->dev_num = best_dev_num;
+		for (int idx = 0; idx < autotuned_vals->dev_num; idx++)
+			autotuned_vals->dev_ids[idx] = dev_ids[autotuned_vals->dev_num - 1][idx];
+//#ifdef PDEBUG
+if(!reuse_model_flag){
+		lprintf(0, "====================================\n");
+		lprintf(0, "Using predefined T=%zu, autotuned dev_num=%d and split = %s -> %s : t_pred = %lf\n",
+			autotuned_vals->T, autotuned_vals->dev_num, printlist<short>(autotuned_vals->dev_ids, autotuned_vals->dev_num),
+			printlist<double>(best_pred_p->rel_dev_score, autotuned_vals->dev_num), best_pred_p->pred_t*1000);
+		lprintf(0, "====================================\n");
+}
+//#endif
+	}
+	else if (predef_vals && predef_vals->T <= 0 && !autotune_eval_devices){
+		best_pred_p = CoCoPeLiaModelMultidevOptimizeTileAndSplit(autotuned_vals->dev_num,
+			autotuned_vals->dev_ids, glob_model);
+		autotuned_vals->T = best_pred_p->T;
+//#ifdef PDEBUG
+if(!reuse_model_flag){
+		lprintf(0, "====================================\n");
+		lprintf(0, "Using predefined dev_num = %d, autotuned T = %zu and split = %s -> %s : t_pred = %lf\n",
+			autotuned_vals->dev_num, autotuned_vals->T, printlist<short>(autotuned_vals->dev_ids, autotuned_vals->dev_num),
+			printlist<double>(best_pred_p->rel_dev_score, autotuned_vals->dev_num), best_pred_p->pred_t*1000);
+		lprintf(0, "====================================\n");
+}
+//#endif
+	}
+	else if ((predef_vals && predef_vals->T <= 0 && autotune_eval_devices) || !predef_vals){
+		for (int used_devs = 0; used_devs < autotuned_vals->dev_num; used_devs++){
+			dev_ids[used_devs] = CoCoPeLiaDeviceSelectBest(used_devs + 1, autotuned_vals->dev_num,
+				autotuned_vals->dev_ids, glob_model);
+			pred_p[used_devs] = CoCoPeLiaModelMultidevOptimizeTileAndSplit(used_devs + 1,
+				dev_ids[used_devs], glob_model);
+
+			if (best_pred_p == NULL){
+				best_pred_p = pred_p[used_devs];
+				best_dev_num = used_devs + 1;
+			}
+			else if(best_pred_p->pred_t >= pred_p[used_devs]->pred_t){
+				best_pred_p = pred_p[used_devs];
+				best_dev_num = used_devs + 1;
+			}
+		}
+		autotuned_vals->T = best_pred_p->T;
+		autotuned_vals->dev_num = best_dev_num;
+		for (int idx = 0; idx < autotuned_vals->dev_num; idx++)
+			autotuned_vals->dev_ids[idx] = dev_ids[autotuned_vals->dev_num - 1][idx];
+//#ifdef PDEBUG
+if(!reuse_model_flag){
+		lprintf(0, "====================================\n");
+		lprintf(0, "Using autotuned dev_num = %d, T = %zu and split = %s -> %s : t_pred = %lf\n",
+			autotuned_vals->dev_num, autotuned_vals->T, printlist<short>(autotuned_vals->dev_ids, autotuned_vals->dev_num),
+			printlist<double>(best_pred_p->rel_dev_score, autotuned_vals->dev_num), best_pred_p->pred_t*1000);
+		lprintf(0, "====================================\n");
+}
+//#endif
+	}
+	else error("Unknown predefined parameter combination\n");
+	if (predef_vals && predef_vals->cache_limit > 0)
+		autotuned_vals->cache_limit = predef_vals->cache_limit;
+	else autotuned_vals->cache_limit = 0;
+
+#ifdef TEST
+	cpu_timer = csecond() - cpu_timer;
+	lprintf(lvl, "Device/T selection -> t_configure = %lf ms\n", cpu_timer*1000);
+	cpu_timer = csecond();
+#endif
+
+	return best_pred_p;
+}
+
 short* CoCoPeLiaDeviceSelectBest(short used_devs, short avail_devs, short* avail_dev_ids,
 	CoCoModel_p* avail_dev_model_list){
 	short lvl = 3;
@@ -263,7 +427,7 @@ tunableParams_p CoCoPeLiaModelMultidevOptimizeSplit(short used_devs, short* used
 }
 
 ///  Initializes the model for gemm
-CoCoModel_p CoCoPeLiaTileModelInit(short dev_id, char* func, void* func_data){
+CoCoModel_p CoCoPeLiaTileModelInit(short dev_id, const char* func, void* func_data){
 	short lvl = 3;
 #ifdef DEBUG
 	lprintf(lvl-1, "|-----> CoCoPeLiaTileModelInit(dev_id=%d,func=%s)\n", dev_id, func);
@@ -290,11 +454,30 @@ double CoCopeLiaPredictReuseHetero(CoCo_model* model, short used_devs, short* us
 	double* used_dev_relative_scores, size_t T){
 	short lvl = 4;
 	size_t prob_dims = 0, reset_D1 = model->D1, reset_D2 = model->D2, reset_D3 = model->D3;
+	double imb_time_multiplier = 1.0, reduce_time_multiplier = 1.0;
 #define ENABLE_HETERO_RELATIVE_DIMS
 #ifdef ENABLE_HETERO_RELATIVE_DIMS
-	if (reset_D1 != -1) prob_dims++;
-	if (reset_D2 != -1) prob_dims++;
-	if (reset_D3 != -1) prob_dims++;
+	if (reset_D1 != -1){
+#ifdef TILE_IMBALANCE_PENALTY
+		if (reset_D1%T) imb_time_multiplier+=TILE_IMBALANCE_PENALTY;
+#endif
+		prob_dims++;
+	}
+	if (reset_D2 != -1){
+#ifdef TILE_IMBALANCE_PENALTY
+		if (reset_D2%T) imb_time_multiplier+=TILE_IMBALANCE_PENALTY;
+#endif
+		prob_dims++;
+	}
+	if (reset_D3 != -1){
+#ifdef TILE_IMBALANCE_PENALTY
+		if (reset_D3%T) imb_time_multiplier+=TILE_IMBALANCE_PENALTY;
+#endif
+#ifdef REDUCE_PENALTY
+		if ((reset_D1/T + (reset_D1%T)? 1 : 0)*(reset_D2/T + (reset_D2%T)? 1 : 0)*(reset_D3/T + (reset_D3%T)? 1 : 0)%used_devs) reduce_time_multiplier+=REDUCE_PENALTY;
+#endif
+		prob_dims++;
+	}
 	short iloc = -1;
 	for (int idx = 0; idx < used_devs; idx++)
 		if (used_dev_ids[idx] == model->dev_id){ iloc = idx; break; }
@@ -305,18 +488,24 @@ double CoCopeLiaPredictReuseHetero(CoCo_model* model, short used_devs, short* us
 	lprintf(lvl, "CoCopeLiaPredictReuseHetero(dev_id=%d) prob_dims = %zu, problem_percentage = %lf\n",
 		model->dev_id, prob_dims, problem_percentage);
 #endif
-	if (reset_D1 != -1) model->D1 = (size_t) reset_D1* 1.0* std::pow(problem_percentage, 1.0/prob_dims);
-	if (reset_D2 != -1) model->D2 = (size_t) reset_D2* 1.0* std::pow(problem_percentage, 1.0/prob_dims);
-	if (reset_D3 != -1) model->D3 = (size_t) reset_D3* 1.0* std::pow(problem_percentage, 1.0/prob_dims);
+	if (!strcmp(REL_PERF_MODE, "ROOT-PROBLEM")){
+		if (reset_D1 != -1) model->D1 = (size_t) reset_D1* 1.0* std::pow(problem_percentage, 1.0/prob_dims);
+		if (reset_D2 != -1) model->D2 = (size_t) reset_D2* 1.0* std::pow(problem_percentage, 1.0/prob_dims);
+		if (reset_D3 != -1) model->D3 = (size_t) reset_D3* 1.0* std::pow(problem_percentage, 1.0/prob_dims);
+	}
 #ifdef PDEBUG
-	lprintf(lvl, "CoCopeLiaPredictReuseHetero(dev_id=%d) Modified Dims D1 = %zu, D2 = %zu, D3 = %zu\n",
-		model->dev_id, model->D1, model->D2, model->D3);
+	lprintf(lvl, "CoCopeLiaPredictReuseHetero(dev_id=%d) Modified Dims D1 = %zu, D2 = %zu, D3 = %zu, imb_time_multiplier = %lf, reduce_time_multiplier = %lf\n",
+		model->dev_id, model->D1, model->D2, model->D3, imb_time_multiplier, reduce_time_multiplier);
 #endif
 #endif
-	double result = CoCopeLiaPredictReuse(model, T);
-	model->D1 = reset_D1;
-	model->D2 = reset_D2;
-	model->D3 = reset_D3;
+	double result = imb_time_multiplier* reduce_time_multiplier* CoCopeLiaPredictReuse(model, T);
+	if (!strcmp(REL_PERF_MODE, "PERCENTILE")) result*=problem_percentage;
+	else if (!strcmp(REL_PERF_MODE, "ROOT-PROBLEM")){
+		model->D1 = reset_D1;
+		model->D2 = reset_D2;
+		model->D3 = reset_D3;
+	}
+	else error("CoCopeLiaPredictReuseHetero: Unknown REL_PERF_MODE = %s\n", REL_PERF_MODE);
 	return result;
 }
 
@@ -816,7 +1005,7 @@ double CoCopeLiaPipelineEmulate(CoCoModel_p model, size_t T){
 }
 
 ///  Initializes the model for gemm
-CoCoModel_p CoCoModel_gemm_init(CoCoModel_p out_model, short dev_id, char* func, gemm_backend_in_p func_data){
+CoCoModel_p CoCoModel_gemm_init(CoCoModel_p out_model, short dev_id, const char* func, gemm_backend_in_p func_data){
 	char TransA = func_data->TransA, TransB = func_data->TransB;
 	size_t M = func_data->M, N = func_data->N, K = func_data->K;
 	short A_loc, A_out_loc = A_loc = CoCoGetPtrLoc(*func_data->A),

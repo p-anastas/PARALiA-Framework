@@ -35,7 +35,7 @@ size_t GPUexec3NearestT(GPUexec3Model_p model, size_t Tin){
 	return prev;
 }
 
-GPUexec3Model_p GPUexec3Model_init(short dev_id, char* func){
+GPUexec3Model_p GPUexec3Model_init(short dev_id, const char* func){
 	short lvl = 3;
 #ifdef DEBUG
 	lprintf(lvl-1, "|-----> GPUexec3Model_init(func=%s)\n", func);
