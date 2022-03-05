@@ -29,9 +29,10 @@ void* prepareAsync_backend(void* compressed_data){
 #ifdef DEBUG
 	lprintf(lvl, "pin asset= %d\n", prep_data->pin_internally);
 #endif
+	return NULL;
 }
 
-template<typename dtype> void* Asset2D<dtype>::prepareAsync(pthread_t* thread_id, pthread_attr_t attr){
+template<typename dtype> void Asset2D<dtype>::prepareAsync(pthread_t* thread_id, pthread_attr_t attr){
 	pthread_data_in_p prep_data = (pthread_data_in_p) malloc(sizeof(struct pthread_data_in));
 	prep_data->adrs = adrs;
 	// FIXME: is dim2*ldim correct in cases where part of the Asset is used in a mission (rare). Assuming col major anyway?
@@ -46,7 +47,7 @@ template<typename dtype> void* Asset2D<dtype>::prepareAsync(pthread_t* thread_id
 	if (s != 0) error("Asset2D::prepareAsync: pthread_create failed s=%d\n", s);
 }
 
-template void* Asset2D<double>::prepareAsync(pthread_t* thread_id, pthread_attr_t attr);
+template void Asset2D<double>::prepareAsync(pthread_t* thread_id, pthread_attr_t attr);
 
 template<typename dtype> void Asset2D<dtype>::resetProperties(){
 	if (pin_internally) cudaHostUnregister(adrs);
@@ -54,7 +55,7 @@ template<typename dtype> void Asset2D<dtype>::resetProperties(){
 
 template void Asset2D<double>::resetProperties();
 
-template<typename dtype> void* Asset1D<dtype>::prepareAsync(pthread_t* thread_id, pthread_attr_t attr){
+template<typename dtype> void Asset1D<dtype>::prepareAsync(pthread_t* thread_id, pthread_attr_t attr){
 	pthread_data_in_p prep_data = (pthread_data_in_p) malloc(sizeof(struct pthread_data_in));
 	prep_data->pin_bytes = dim*inc*dtypesize();
 	cudaPointerAttributes attributes;
@@ -68,7 +69,7 @@ template<typename dtype> void* Asset1D<dtype>::prepareAsync(pthread_t* thread_id
 	if (s != 0) error("Asset2D::prepareAsync: pthread_create failed s=%d\n", s);
 }
 
-template void* Asset1D<double>::prepareAsync(pthread_t* thread_id, pthread_attr_t attr);
+template void Asset1D<double>::prepareAsync(pthread_t* thread_id, pthread_attr_t attr);
 
 template<typename dtype> void Asset1D<dtype>::resetProperties(){
 	if (pin_internally) cudaHostUnregister(adrs);

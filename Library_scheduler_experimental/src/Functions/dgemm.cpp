@@ -28,7 +28,7 @@ Subkernel** Subkernel_list;
 int Subkernel_num;
 short remove_dev[LOC_NUM] = {0};
 
-int Sk_select_lock = 0; 
+int Sk_select_lock = 0;
 
 void CoCoGemmUpdateDevice(Subkernel* ker, short dev_id){
 	gemm_backend_in_p ptr_ker_translate = (gemm_backend_in_p) ker->operation_params;
@@ -167,7 +167,7 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 #endif
 	Subkernel * curr = NULL, *prev = NULL;
 	while (remaining_Subkernels > 0 && !remove_dev[idxize(dev_id)]){
-		prev = curr; 
+		prev = curr;
 		if(prev) prev->sync_request_data();
 		while(__sync_lock_test_and_set(&Sk_select_lock, 1));
 		curr = SubkernelSelectSimple(dev_id, Subkernel_list, Subkernel_num);
@@ -176,7 +176,7 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 			continue;
 		}
 		remaining_Subkernels--;
-		gemm_subkernel_data->SubkernelListDev[gemm_subkernel_data->SubkernelNumDev] = curr; 
+		gemm_subkernel_data->SubkernelListDev[gemm_subkernel_data->SubkernelNumDev] = curr;
 		gemm_subkernel_data->SubkernelNumDev++;
 		curr->prev = prev;
 		if(prev) prev->next = curr;
@@ -186,8 +186,8 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 		curr->run_operation();
 		if (curr->WR_last) curr->writeback_data();
 		__sync_lock_release(&Sk_select_lock);
-	
-	}	
+
+	}
 
 	CoCoSyncCheckErr();
 #ifdef STEST
@@ -364,9 +364,9 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 
 		thread_dev_data[d] = (kernel_pthread_wrap_p) malloc(sizeof(struct kernel_pthread_wrap));
 		thread_dev_data[d]->dev_id = autotuned_vals->dev_ids[d];
-		thread_dev_data[d]->SubkernelNumDev = 0; 
+		thread_dev_data[d]->SubkernelNumDev = 0;
 		thread_dev_data[d]->SubkernelListDev = (Subkernel**) malloc(Subkernel_num*sizeof(Subkernel*));
-		
+
 		s = pthread_create(&thread_id[d], &attr,
                                   &CoCopeLiaDgemmAgentVoid, thread_dev_data[d]);
 

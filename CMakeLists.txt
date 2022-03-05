@@ -11,21 +11,21 @@ message("CoCopeLia-Framework - PROJECT_VERSION: " ${PROJECT_VERSION})
 add_definitions(-DVERSION="${PROJECT_VERSION}")
 
 ## Enable Asynchronous execution for Subkernels - CoCo overlap
-#add_definitions(-DASYNC_ENABLE)
+add_definitions(-DASYNC_ENABLE)
 
 ## Enable GPU backend resourse reuse (streams, handles)
-#add_definitions(-DBACKEND_RES_REUSE_ENABLE)
+add_definitions(-DBACKEND_RES_REUSE_ENABLE)
 
 ## Enable GPU and CPU allocated buffer reuse between different calls
-#add_definitions(-DBUFFER_REUSE_ENABLE)
+add_definitions(-DBUFFER_REUSE_ENABLE)
 
 ## Enable lock-free versions of event & Queue management in Universal_helpers
-#add_definitions(-DUNIHELPER_LOCKFREE_ENABLE)
+add_definitions(-DUNIHELPER_LOCKFREE_ENABLE)
 
 ## Enable Spiting Internal dims and using reduction between multiple devices.
-#add_definitions(-DMULTIDEVICE_REDUCTION_ENABLE)
+add_definitions(-DMULTIDEVICE_REDUCTION_ENABLE)
 ## The buffering level used for reduction per-device (e.g. double, triple etc)
-#add_definitions(-DMAX_BUFFERING_L=4)
+add_definitions(-DMAX_BUFFERING_L=4)
 
 ## Enable Locking with mutexes instead of busy-waiting
 #add_definitions(-DENABLE_MUTEX_LOCKING)
@@ -36,10 +36,10 @@ add_definitions(-DVERSION="${PROJECT_VERSION}")
 #add_definitions(-DMAX_BACKEND_L=4)
 
 ## Enable overlapping Send & recv Communication
-#add_definitions(-DENABLE_SEND_RECV_OVERLAP)
+add_definitions(-DENABLE_SEND_RECV_OVERLAP)
 
 ## Enable using the CPU as an extra device for part of the total workload, if applicable
-#add_definitions(-DENABLE_CPU_WORKLOAD)
+add_definitions(-DENABLE_CPU_WORKLOAD)
 
 ## Define which subkernel distribution to use
 #add_definitions(-DDISTRIBUTION="ROUND-ROBIN")
@@ -48,25 +48,25 @@ add_definitions(-DDISTRIBUTION="SPLIT-NAIVE")
 #add_definitions(-DDISTRIBUTION="SPLIT-CHUNKS-ROBIN-REVERSE")
 
 #Run in testing mode : details about models, decisions and time spend in operations.
-add_definitions(-DTEST)
+#add_definitions(-DTEST)
 
-#Run in Subkernel testing mode : details about time spend in subkernel operations.
-add_definitions(-DSTEST)
+#Run in Subkernel testing mode : details about time spend in subkernel operations. FIXME: break for small splits (?)
+#add_definitions(-DSTEST)
 
 #Run in debug mode, which includes detailed function calls and info for error-checking
-add_definitions(-DDEBUG)
+#add_definitions(-DDEBUG)
 
 #Run in deep debug mode, for command-to-command debugging
-add_definitions(-DDDEBUG)
+#add_definitions(-DDDEBUG)
 
 #Run Prediction debug mode (autotuning runtime stuff)
-add_definitions(-DPDEBUG)
+#add_definitions(-DPDEBUG)
 
 #Run Prediction deep debug mode (all autotuning runtime stuff)
-add_definitions(-DDPDEBUG)
+#add_definitions(-DDPDEBUG)
 
 #Run in caching debug mode, for cache-related deep debugging
-add_definitions(-DCDEBUG)
+#add_definitions(-DCDEBUG)
 
 ## Define a name for the testbed, to be used for the whole framework setup
 #set(TESTBED_NAME "dungani")

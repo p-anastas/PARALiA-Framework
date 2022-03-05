@@ -115,7 +115,7 @@ class Asset2D
 	void DrawTileMap();
 
 	// Backend Functions
-	void* prepareAsync(pthread_t* thread_id,
+	void prepareAsync(pthread_t* thread_id,
 		pthread_attr_t attr);
 	void resetProperties();
 };
@@ -147,7 +147,7 @@ class Asset1D
 	void drawTileMap();
 
 	// Backend Functions
-	void* prepareAsync(pthread_t* thread_id,
+	void prepareAsync(pthread_t* thread_id,
 		pthread_attr_t attr);
 	void resetProperties();
 };
