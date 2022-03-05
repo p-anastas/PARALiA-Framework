@@ -90,16 +90,14 @@ template<typename VALUETYPE>
 const char *printlist(VALUETYPE *list, int length)
 {
   char* outstring = (char*) malloc(256*sizeof(char));
-  sprintf(outstring, "[ ");
-  if (std::is_same<VALUETYPE, short>::value)
-    for (int i =0; i < length; i++) sprintf(outstring + strlen(outstring), "%d ", list[i]);
-	if (std::is_same<VALUETYPE, int>::value)
-    for (int i =0; i < length; i++) sprintf(outstring + strlen(outstring), "%d ", list[i]);
-  else if (std::is_same<VALUETYPE, float>::value)
-    for (int i =0; i < length; i++) sprintf(outstring + strlen(outstring), "%f ", list[i]);
-  else if (std::is_same<VALUETYPE, double>::value)
-    for (int i =0; i < length; i++) sprintf(outstring + strlen(outstring), "%lf ", list[i]);
-	sprintf(outstring + strlen(outstring), "]");
+  std::string printfCmd(" ");
+  sprintf(outstring, "[");
+  if (std::is_same<VALUETYPE, short>::value) printfCmd += "%hd";
+	if (std::is_same<VALUETYPE, int>::value) printfCmd += "%d";
+  else if (std::is_same<VALUETYPE, float>::value) printfCmd += "%f";
+  else if (std::is_same<VALUETYPE, double>::value) printfCmd += "%lf";
+  for (int i =0; i < length; i++) sprintf(outstring + strlen(outstring), printfCmd.c_str(), list[i]);
+	sprintf(outstring + strlen(outstring), " ]");
   return outstring;
 }
 
