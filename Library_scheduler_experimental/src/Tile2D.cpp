@@ -34,8 +34,8 @@ template<typename dtype>  Tile2D<dtype>::Tile2D(void * in_addr, int in_dim1, int
       available[iloc] = new Event(deidxize(iloc));
   }
   CoCoPeLiaSelectDevice(prev_loc);
-  short init_loc_idx = CoCoGetPtrLoc(in_addr);
-  if (init_loc_idx < 0) init_loc_idx = LOC_NUM -1;
+  short init_loc = CoCoGetPtrLoc(in_addr);
+  short init_loc_idx = idxize(init_loc);
   for (int iloc = 0; iloc < LOC_NUM; iloc++){
     RunTileMap[iloc] = 0;
     if (iloc == init_loc_idx){
@@ -51,13 +51,13 @@ template<typename dtype>  Tile2D<dtype>::Tile2D(void * in_addr, int in_dim1, int
       CacheLocId[iloc] = -42;
     }
   }
-  W_flag = R_flag = 0;
+  W_flag = R_flag = W_total = 0;
 #ifdef ENABLE_MUTEX_LOCKING
-	RW_lock.lock();
+	//RW_lock.lock();
 #else
-  RW_lock = 1;
+  RW_lock = 0;
 #endif
-  RW_master = -42;
+  RW_master = init_loc;
   #ifdef DEBUG
   	lprintf(lvl-1, "<-----|\n");
   #endif
@@ -74,11 +74,20 @@ template<typename dtype>  Tile2D<dtype>::~Tile2D()
 
 template<typename dtype> short Tile2D<dtype>::getWriteBackLoc(){
   short pos = 0;
-  state temp;
   for (pos =0; pos < LOC_NUM; pos++) if (CacheLocId[pos] == -1) break;
   if (pos >= LOC_NUM) error("Tile2D<dtype>::getWriteBackLoc: No initial location found for tile - bug.");
   else if (pos == LOC_NUM - 1) return -1;
   else return pos;
+}
+
+template<typename dtype> short Tile2D<dtype>::isLocked(){
+#ifdef ENABLE_MUTEX_LOCKING
+		error("Not sure how to do this correctly\n");
+    return 0;
+#else
+		if(RW_lock) return 1;
+    else return 0;
+#endif
 }
 
 template<typename dtype> short Tile2D<dtype>::getClosestReadLoc(short dev_id_in){
@@ -98,7 +107,7 @@ template<typename dtype> short Tile2D<dtype>::getClosestReadLoc(short dev_id_in)
       }
     }
     else if (CacheLocId[pos] > -1){
-      state temp = CoCacheUpdateBlockState(pos, CacheLocId[pos]);
+      state temp = CacheGetBlockState(pos, CacheLocId[pos]);
       if (temp == AVAILABLE || temp == R){
         if (link_cost[dev_id_in_idx][pos] < link_cost_min){
           link_cost_min = link_cost[dev_id_in_idx][pos];

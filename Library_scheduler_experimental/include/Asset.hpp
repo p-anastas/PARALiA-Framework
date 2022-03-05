@@ -21,7 +21,7 @@ class Tile1D
 	public:
 		int id, GridId;
 		int dim;
-		int R_flag, W_flag, RW_master;
+		int R_flag, W_flag, W_total, RW_master;
 #ifdef ENABLE_MUTEX_LOCKING
 		std::mutex RW_lock;
 #else
@@ -46,6 +46,7 @@ class Tile1D
 		int size() { return dtypesize()*dim; }
 		short getWriteBackLoc();
 		short getClosestReadLoc(short dev_id_in);
+		short isLocked();
 
 };
 
@@ -57,7 +58,7 @@ class Tile2D
 	public:
 		int id, GridId1, GridId2;
 		int dim1, dim2;
-		int R_flag, W_flag, RW_master;
+		int R_flag, W_flag, W_total, RW_master;
 #ifdef ENABLE_MUTEX_LOCKING
 		std::mutex RW_lock;
 #else
@@ -82,7 +83,7 @@ class Tile2D
 		int size() { return dtypesize()*dim1*dim2; }
 		short getWriteBackLoc();
 		short getClosestReadLoc(short dev_id_in);
-		void Set_RW_lock(void* wrapped_value);
+		short isLocked();
 
 };
 

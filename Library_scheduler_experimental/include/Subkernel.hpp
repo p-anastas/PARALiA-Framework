@@ -17,18 +17,17 @@ class Subkernel
 	public:
 		int id, iloc1, iloc2, iloc3;
 		short run_dev_id;
-		short WR_first, WR_last;
+		short WR_first, *WR_last;
 		short TileNum, *TileDimlist;
 		void** TileList;
 		Subkernel* prev, * next;
 #ifdef STEST
 		Event_timer_p input_timer, output_timer, operation_timer;
-		long long bytes_in, bytes_out, flops; 
+		long long bytes_in, bytes_out, flops;
 #endif
 		Event* operation_complete, *writeback_complete;
 		void* operation_params;
 		const char* op_name;
-		short work_complete;
 
 		/// Constructors
 		Subkernel(short TileNum, const char* name);
@@ -43,7 +42,7 @@ class Subkernel
 		void sync_request_data();
 		void run_operation();
 		void writeback_data();
-		
+
 		short is_dependency_free();
 };
 

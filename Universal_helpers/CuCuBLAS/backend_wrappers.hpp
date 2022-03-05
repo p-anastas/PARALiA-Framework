@@ -73,6 +73,13 @@ void CoCoQueueLock(void* wrapped_lock);
 // Unlock wrapped_lock. This functions is fired in a queue to unlock when it reaches that point.
 void CoCoQueueUnlock(void* wrapped_lock);
 
+// Struct containing an int pointer and an int for Asynchronous set
+typedef struct Ptr_and_int{
+	int* int_ptr;
+	int val;
+}* Ptr_and_int_p;
+void CoCoSetInt(void* wrapped_ptr_and_val);
+
 void CoCoFreeAllocAsync(void* backend_data);
 
 void cublas_wrap_daxpy(void* backend_data, void* queue_wrap_p);

@@ -30,8 +30,8 @@ template<typename dtype>  Tile1D<dtype>::Tile1D(void * in_addr, int in_dim, int 
       available[iloc] = new Event(deidxize(iloc));
   }
   CoCoPeLiaSelectDevice(prev_loc);
-  short init_loc_idx = CoCoGetPtrLoc(in_addr);
-  if (init_loc_idx < 0) init_loc_idx = LOC_NUM -1;
+  short init_loc = CoCoGetPtrLoc(in_addr);
+  short init_loc_idx = idxize(init_loc);
   for (int iloc = 0; iloc < LOC_NUM; iloc++){
     RunTileMap[iloc] = 0;
     if (iloc == init_loc_idx){
@@ -47,13 +47,13 @@ template<typename dtype>  Tile1D<dtype>::Tile1D(void * in_addr, int in_dim, int 
       CacheLocId[iloc] = -42;
     }
   }
-  W_flag = R_flag = 0;
+  W_flag = R_flag = W_total = 0;
 #ifdef ENABLE_MUTEX_LOCKING
-	RW_lock.lock();
+	//RW_lock.lock();
 #else
-  RW_lock = 1;
+  RW_lock = 0;
 #endif
-  RW_master = -42;
+  RW_master = init_loc;
   #ifdef DEBUG
   	lprintf(lvl-1, "<-----|\n");
   #endif
@@ -77,6 +77,16 @@ template<typename dtype> short Tile1D<dtype>::getWriteBackLoc(){
   else return pos;
 }
 
+template<typename dtype> short Tile1D<dtype>::isLocked(){
+#ifdef ENABLE_MUTEX_LOCKING
+		error("Not sure how to do this correctly\n");
+    return 0;
+#else
+		if(RW_lock) return 1;
+    else return 0;
+#endif
+}
+
 // TODO: to make this more sophisticated, we have to add prediction data in it.
 // For now: closest = already in device, then other GPUs, then host (since devices in order etc, host after in CacheLocId)
 template<typename dtype> short Tile1D<dtype>::getClosestReadLoc(short dev_id_in){
@@ -89,7 +99,7 @@ template<typename dtype> short Tile1D<dtype>::getClosestReadLoc(short dev_id_in)
     if (pos == dev_id_in) continue;
     if (CacheLocId[pos] == -1) break;
     else if (CacheLocId[pos] > -1){
-      state temp = CoCacheUpdateBlockState(pos, CacheLocId[pos]);
+      state temp = CacheGetBlockState(pos, CacheLocId[pos]);
       if (temp == AVAILABLE || temp == R) break;
 #ifdef DDEBUG
   lprintf(lvl, "|-----> Tile1D(%d)::getClosestReadLoc(%d): Selecting cached tile in loc =%d \n", id, dev_id_in, pos);

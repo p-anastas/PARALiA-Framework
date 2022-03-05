@@ -48,16 +48,16 @@ add_definitions(-DDISTRIBUTION="SPLIT-NAIVE")
 #add_definitions(-DDISTRIBUTION="SPLIT-CHUNKS-ROBIN-REVERSE")
 
 #Run in testing mode : details about models, decisions and time spend in operations.
-#add_definitions(-DTEST)
+add_definitions(-DTEST)
 
 #Run in Subkernel testing mode : details about time spend in subkernel operations. FIXME: break for small splits (?)
 #add_definitions(-DSTEST)
 
 #Run in debug mode, which includes detailed function calls and info for error-checking
-#add_definitions(-DDEBUG)
+add_definitions(-DDEBUG)
 
 #Run in deep debug mode, for command-to-command debugging
-#add_definitions(-DDDEBUG)
+add_definitions(-DDDEBUG)
 
 #Run Prediction debug mode (autotuning runtime stuff)
 #add_definitions(-DPDEBUG)
@@ -66,7 +66,7 @@ add_definitions(-DDISTRIBUTION="SPLIT-NAIVE")
 #add_definitions(-DDPDEBUG)
 
 #Run in caching debug mode, for cache-related deep debugging
-#add_definitions(-DCDEBUG)
+add_definitions(-DCDEBUG)
 
 ## Define a name for the testbed, to be used for the whole framework setup
 #set(TESTBED_NAME "dungani")
@@ -175,7 +175,7 @@ if (${EXPERIMENTAL_VERSION} EQUAL 0)
 	ADD_SUBDIRECTORY (Library_scheduler)
 elseif(${EXPERIMENTAL_VERSION} EQUAL 1)
   ADD_SUBDIRECTORY (Autotuning_runtime_experimental)
-  ADD_SUBDIRECTORY (Library_scheduler_static)
+  ADD_SUBDIRECTORY (Library_scheduler_experimental)
 else()
 endif()
 

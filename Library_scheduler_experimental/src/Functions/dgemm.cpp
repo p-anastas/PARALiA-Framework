@@ -33,7 +33,7 @@ int Sk_select_lock = 0;
 void CoCoGemmUpdateDevice(Subkernel* ker, short dev_id){
 	gemm_backend_in_p ptr_ker_translate = (gemm_backend_in_p) ker->operation_params;
 	ker->run_dev_id = ptr_ker_translate->dev_id = dev_id;
-	short dev_id_idx = (dev_id == -1) ? LOC_NUM - 1: dev_id;
+	short dev_id_idx = idxize(dev_id);
 	if(!ker->WR_first) ptr_ker_translate->beta = 1.0;
 	ptr_ker_translate->A = &((Tile2D<VALUE_TYPE>*) ker->TileList[0])->adrs[dev_id_idx];
 	ptr_ker_translate->B = &((Tile2D<VALUE_TYPE>*) ker->TileList[1])->adrs[dev_id_idx];
@@ -93,10 +93,11 @@ int current_ctr = 0;
 				kernels[current_ctr]->TileList[0] = A_asset->getTile(mi,ki);
 				kernels[current_ctr]->TileList[1] = B_asset->getTile(ki,ni);
 				kernels[current_ctr]->TileList[2] = C_asset->getTile(mi,ni);
-				((Tile2D<VALUE_TYPE>*)kernels[current_ctr]->TileList[0])->R_flag = 1;
-				((Tile2D<VALUE_TYPE>*)kernels[current_ctr]->TileList[1])->R_flag = 1;
-				((Tile2D<VALUE_TYPE>*)kernels[current_ctr]->TileList[2])->R_flag = 1;
-				((Tile2D<VALUE_TYPE>*)kernels[current_ctr]->TileList[2])->W_flag = 1;
+				((Tile2D<VALUE_TYPE>*)kernels[current_ctr]->TileList[0])->R_flag = NGridSz;
+				((Tile2D<VALUE_TYPE>*)kernels[current_ctr]->TileList[1])->R_flag = MGridSz;
+				((Tile2D<VALUE_TYPE>*)kernels[current_ctr]->TileList[2])->R_flag = KGridSz;
+				((Tile2D<VALUE_TYPE>*)kernels[current_ctr]->TileList[2])->W_flag = KGridSz;
+				((Tile2D<VALUE_TYPE>*)kernels[current_ctr]->TileList[2])->W_total = KGridSz;
 				kernels[current_ctr]->operation_params = (void*) malloc(sizeof(struct gemm_backend_in));
 				gemm_backend_in_p ptr_ker_translate = (gemm_backend_in_p) kernels[current_ctr]->operation_params;
 				ptr_ker_translate->TransA = initial_gemm->TransA;
@@ -111,7 +112,8 @@ int current_ctr = 0;
 				ptr_ker_translate->C = NULL;
 				ptr_ker_translate->alpha = initial_gemm->alpha;
 				ptr_ker_translate->beta = initial_gemm->beta;
-				kernels[current_ctr]->WR_first = kernels[current_ctr]->WR_last = 0;
+				kernels[current_ctr]->WR_first = 0;
+				kernels[current_ctr]->WR_last = (short*) calloc (3, sizeof(short));
 				//if (initial_gemm->beta == 0.0)((Tile2D<VALUE_TYPE>*) kernels[current_ctr]->TileList[2])->R_flag = 0; TODO: Does this break anything? :()
 			}
 		}
@@ -158,7 +160,8 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 	cpu_timer = csecond();
 #endif
 
-  	CoCoPeLiaRequestMaxBuffer(autotuned_vals->cache_limit, autotuned_vals->T*autotuned_vals->T *sizeof(VALUE_TYPE));
+  	CoCoPeLiaRequestMaxBuffer(dev_id, MGridSz* NGridSz + NGridSz*KGridSz + MGridSz*KGridSz,
+			autotuned_vals->T*autotuned_vals->T*sizeof(VALUE_TYPE), autotuned_vals->cache_limit);
 
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer;
@@ -170,12 +173,20 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 		prev = curr;
 		if(prev) prev->sync_request_data();
 		while(__sync_lock_test_and_set(&Sk_select_lock, 1));
+		if(!remaining_Subkernels){
+			__sync_lock_release(&Sk_select_lock);
+			break;
+		}
 		curr = SubkernelSelectSimple(dev_id, Subkernel_list, Subkernel_num);
 		if (!curr){
 			__sync_lock_release(&Sk_select_lock);
+//#ifdef DDEBUG
+		//lprintf(lvl, "CoCopeLiaDgemmAgentVoid(%d): Got curr = NULL, repeating search\n", dev_id);
+//#endif
 			continue;
 		}
 		remaining_Subkernels--;
+		__sync_lock_release(&Sk_select_lock);
 		gemm_subkernel_data->SubkernelListDev[gemm_subkernel_data->SubkernelNumDev] = curr;
 		gemm_subkernel_data->SubkernelNumDev++;
 		curr->prev = prev;
@@ -184,8 +195,7 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 		curr->init_events();
 		curr->request_data();
 		curr->run_operation();
-		if (curr->WR_last) curr->writeback_data();
-		__sync_lock_release(&Sk_select_lock);
+		curr->writeback_data();
 
 	}
 
@@ -323,6 +333,10 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 
 	Subkernel_list = CoCoAsignTilesToSubkernelsGemm(A_asset, B_asset, C_asset, T,
 		&Subkernel_num);
+	kernel_pthread_wrap_p SK_wrap = (kernel_pthread_wrap_p) malloc(sizeof(struct kernel_pthread_wrap));
+	SK_wrap->SubkernelListDev = Subkernel_list;
+	SK_wrap->SubkernelNumDev = Subkernel_num;
+	SK_wrap->SubkernelNumDev = -42;
 #ifdef DEBUG
 	lprintf(lvl, "Subkernel_num = %d {M,N,K}GridSz = {%d, %d, %d}, autotuned_vals->dev_num = %d\n\n",
 		Subkernel_num, MGridSz, NGridSz, KGridSz, autotuned_vals->dev_num);
@@ -334,23 +348,11 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 	cpu_timer = csecond();
 #endif
 
-#ifdef TEST
-	cpu_timer = csecond() - cpu_timer;
-	lprintf(lvl, "Subkernel Distribute -> t_subkernel_dist = %lf ms\n", cpu_timer*1000);
-	cpu_timer = csecond();
-#endif
-
 	s = pthread_attr_init(&attr);
 	if (s != 0) error("CoCopeLiaDgemm: pthread_attr_init failed s=%d\n", s);
 
 	pthread_t thread_id[autotuned_vals->dev_num];
 	kernel_pthread_wrap_p thread_dev_data[autotuned_vals->dev_num];
-
-#ifdef TEST
-	cpu_timer = csecond() - cpu_timer;
-	lprintf(lvl, "Subkernel Split devices -> t_subkernel_split = %lf ms\n", cpu_timer*1000);
-	cpu_timer = csecond();
-#endif
 
 	// create a barrier object with a count of autotuned_vals->dev_num + 1
 	pthread_barrier_init (&RunTileMap_sync_barrier, NULL, autotuned_vals->dev_num + 1);
@@ -385,8 +387,8 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer;
 	lprintf(lvl, "Fire and gather pthreads for all devices -> t_exec_full = %lf ms\n", cpu_timer*1000);
-	lprintf(lvl, "t_predicted for T=%zu was %.2lf ms : %lf \% error\n", T, best_pred_p->pred_t*1000,
-	(best_pred_p->pred_t==0)? 0: (best_pred_p->pred_t - cpu_timer )/best_pred_p->pred_t*100);
+	lprintf(lvl, "t_predicted for T=%zu was %.2lf ms : %lf percentile error\n", T, best_pred_p->pred_t*1000,
+	(best_pred_p->pred_t==0)? 0.0: (best_pred_p->pred_t - cpu_timer )/best_pred_p->pred_t*100);
 	cpu_timer = csecond();
 #endif
 
@@ -410,7 +412,7 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 #ifndef BUFFER_REUSE_ENABLE
 	for(int i=0; i<autotuned_vals->dev_num;i++) CoCopeLiaDevCacheFree(deidxize(i));
 #else
-	for(int i=0; i<autotuned_vals->dev_num;i++) CoCoPeLiaDevCacheInvalidate(thread_dev_data[i]);
+	CoCoPeLiaDevCacheInvalidate(SK_wrap);
 #endif
 
 #ifndef BACKEND_RES_REUSE_ENABLE
