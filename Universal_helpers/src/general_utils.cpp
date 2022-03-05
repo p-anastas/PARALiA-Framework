@@ -234,7 +234,7 @@ double Gval_per_s(long long value, double time){
 }
 
 long long dgemm_flops(size_t M, size_t N, size_t K){
-	return (long long) M * K * (2 * N + 1);
+	return (long long) M * N * (2 * K + 1);
 }
 
 long long dgemm_memory(size_t M, size_t N, size_t K, size_t A_loc, size_t B_loc, size_t C_loc){

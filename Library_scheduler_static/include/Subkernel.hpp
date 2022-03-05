@@ -17,7 +17,7 @@ class Subkernel
 	public:
 		int id, iloc1, iloc2, iloc3;
 		short run_dev_id;
-		short WR_first, WR_last;
+		short WR_first, WR_last, WR_reduce;
 		short TileNum, *TileDimlist;
 		void** TileList;
 		Subkernel* prev, * next;
@@ -38,13 +38,13 @@ class Subkernel
 
 		/// Functions
 		void init_events();
+		void update_RunTileMaps();
 		void request_data();
 		void request_tile(short TileIdx);
 		void sync_request_data();
 		void run_operation();
 		void writeback_data();
-		
-		short is_dependency_free();
+		void writeback_reduce_data();
 };
 
 typedef struct kernel_pthread_wrap{
@@ -59,6 +59,6 @@ typedef struct kernel_pthread_wrap{
 void 	CoCoPeLiaInitResources(short dev_id);
 void 	CoCoPeLiaFreeResources(short dev_id);
 
-Subkernel* SubkernelSelectSimple(short dev_id, Subkernel** Subkernel_list, long Subkernel_list_len);
+void CoCoPeLiaSubkernelFireAsync(Subkernel* subkernel);
 
 #endif

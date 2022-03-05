@@ -45,8 +45,8 @@ for TransA in N T;
 do
 	for TransB in N T;
 	do
-		echo "$micro_dgemm_gpu_exec $device $TransA $TransB &>> $dgemm_log"
-		$micro_dgemm_gpu_exec $device $TransA $TransB &>> $dgemm_log
+		echo "$micro_dgemm_exec $device $TransA $TransB &>> $dgemm_log"
+		$micro_dgemm_exec $device $TransA $TransB &>> $dgemm_log
 	done
 done
 echo "Done"

@@ -201,7 +201,9 @@ void Event::sync_barrier()
 	get_lock();
 	if (status != CHECKED){
 		if (status == UNRECORDED){
+#ifdef DEBUG
 			warning("Event::sync_barrier: Tried to sync unrecorded event\n");
+#endif
 			return;
 		}
 		cudaEvent_t cuda_event= *(cudaEvent_t*) event_backend_ptr;
@@ -217,7 +219,11 @@ void Event::record_to_queue(CQueue_p Rr){
 	if (Rr == NULL) status = CHECKED;
 	else{
 		if (status != UNRECORDED){
-			warning("Event(%d,dev_id = %d)::record_to_queue(%d): Recording %s event\n", id, dev_id, Rr->dev_id, print_event_status(status));
+			;
+#ifdef DEBUG
+			warning("Event(%d,dev_id = %d)::record_to_queue(%d): Recording %s event\n",
+				id, dev_id, Rr->dev_id, print_event_status(status));
+#endif
 		}
 #ifdef ENABLE_PARALLEL_BACKEND
 		cudaEvent_t cuda_event= *(cudaEvent_t*) event_backend_ptr;

@@ -94,7 +94,7 @@ int main(const int argc, const char *argv[]) {
 	size_t sample_sz, sample_sz_bid;
 	CoCoPeLiaSelectDevice(from);
 	Event_timer_p device_timer = new Event_timer(from);
-	for (size_t dim = minDim; dim < maxDim+1; dim+=step){
+	for (size_t dim = minDim; dim < MAX_DIM_BLAS3; dim+=step){ // maxDim+1
 		if (dim >= step * 16) step*=2;
 		transfer_t_sum = transfer_t_mean = bench_t = error_margin = 0;
 		fprintf(stderr, "Cublas-chunk Link %d->%d (Chunk %dx%d):\n", from, to, dim, dim);

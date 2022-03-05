@@ -48,30 +48,30 @@ add_definitions(-DDISTRIBUTION="SPLIT-NAIVE")
 #add_definitions(-DDISTRIBUTION="SPLIT-CHUNKS-ROBIN-REVERSE")
 
 #Run in testing mode : details about models, decisions and time spend in operations.
-add_definitions(-DTEST)
+#add_definitions(-DTEST)
 
 #Run in Subkernel testing mode : details about time spend in subkernel operations.
-add_definitions(-DSTEST)
+#add_definitions(-DSTEST)
 
 #Run in debug mode, which includes detailed function calls and info for error-checking
-add_definitions(-DDEBUG)
+#add_definitions(-DDEBUG)
 
 #Run in deep debug mode, for command-to-command debugging
-add_definitions(-DDDEBUG)
+#add_definitions(-DDDEBUG)
 
 #Run Prediction debug mode (autotuning runtime stuff)
-add_definitions(-DPDEBUG)
+#add_definitions(-DPDEBUG)
 
 #Run Prediction deep debug mode (all autotuning runtime stuff)
-add_definitions(-DDPDEBUG)
+#add_definitions(-DDPDEBUG)
 
 #Run in caching debug mode, for cache-related deep debugging
-add_definitions(-DCDEBUG)
+#add_definitions(-DCDEBUG)
 
 ## Define a name for the testbed, to be used for the whole framework setup
 #set(TESTBED_NAME "dungani")
-set(TESTBED_NAME "silver1")
-#set(TESTBED_NAME "vulcanGPUs")
+#set(TESTBED_NAME "silver1")
+set(TESTBED_NAME "vulcanGPUs")
 message("CoCopeLia-Framework - TESTBED_NAME: " ${TESTBED_NAME})
 add_definitions(-DTESTBED="${TESTBED_NAME}")
 
@@ -92,7 +92,7 @@ add_definitions(-DPROBLEM_GPU_PERCENTAGE=${PROBLEM_GPU_PERCENTAGE})
 #	a) auto
 
 #	b) compile flags
-set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -fopenmp -lm -Wuninitialized -lpthread")
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -fopenmp -lm -Wuninitialized")
 
 message("CoCopeLia-Framework - CMAKE_CXX_FLAGS: " ${CMAKE_CXX_FLAGS})
 
@@ -130,7 +130,7 @@ message("CoCopeLia-Framework - OPENBLAS_INCLUDE_DIRS: " ${OPENBLAS_INCLUDE_DIRS}
 
 # 	d) Link Libraries
 set (CUDA_LD ${CUDA_PREFIX}/lib64) # or /lib depending on system
-set (CUDA_LINK "-L${CUDA_LD} -lcudart -lcublas -lcurand -lcuda -lpthread") #
+set (CUDA_LINK "-L${CUDA_LD} -lcudart -lcublas -lcurand") #
 message("CoCopeLia-Framework - CUDA_LINK: " ${CUDA_LINK} )
 set (INTERNAL_LINK_LIB "${CUDA_LINK} -lrt -ldl")
 message("CoCopeLia-Framework - INTERNAL_LINK_LIB: " ${INTERNAL_LINK_LIB})

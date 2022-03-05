@@ -106,8 +106,10 @@ double GPUexec3Model_predict(GPUexec3Model_p model, size_t T, char TransA, char 
 #endif
 			return model->av_time_buf[i];
 	}
+#ifdef PDEBUG
 	if (result == -1) warning("GPUexec3Model_predict: Performing Linear regression for prediction of exec_t of T_in=%d based on T=%d\n",
 		T, GPUexec3NearestT(model, T));
+#endif
 	int nearest_T = GPUexec3NearestT(model, T);
 	long double reg_t = 0;
 	for (int i = 0; i < model->lines; i++)

@@ -26,13 +26,13 @@ double XKBLASDgemmWrap(char TransA,  char TransB, size_t M, size_t N, size_t K, 
 	short lvl = 1;
 	double total_t = csecond();
 #ifdef DEBUG
-	lprintf(lvl-1, "|-----> BLASxDgemmWrap(%c,%c,%zu,%zu,%zu,%lf,A(%d),%zu,B(%d),%zu,%lf,C(%d),%zu)\n",
+	lprintf(lvl-1, "|-----> XKBLASDgemmWrap(%c,%c,%zu,%zu,%zu,%lf,A(%d),%zu,B(%d),%zu,%lf,C(%d),%zu)\n",
 		TransA, TransB, M, N, K, alpha, CoCoGetPtrLoc(A), ldA,
 		CoCoGetPtrLoc(B), ldB, beta, CoCoGetPtrLoc(C), ldC);
 #endif
 
 #ifdef TEST
-	lprintf(lvl-1, "|-----> BLASxDgemmWrap\n");
+	lprintf(lvl-1, "|-----> XKBLASDgemmWrap\n");
 	double cpu_timer = csecond();
 #endif
 	CBLAS_TRANSPOSE cpu_op_A = OpCharToCblas(TransA), cpu_op_B = OpCharToCblas(TransB);
@@ -43,7 +43,7 @@ double XKBLASDgemmWrap(char TransA,  char TransB, size_t M, size_t N, size_t K, 
 	CoCoSyncCheckErr();
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer;
-	lprintf(lvl, "BLASx execution time -> t_kernel = %lf ms\n", cpu_timer*1000);
+	lprintf(lvl, "XKBLAS execution time -> t_kernel = %lf ms\n", cpu_timer*1000);
 #endif
 
 	CoCoSyncCheckErr();

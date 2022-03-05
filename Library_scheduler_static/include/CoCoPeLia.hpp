@@ -16,6 +16,8 @@ typedef struct CoControl{
 	int T = 0;
 	short dev_num = -1;
 	short dev_ids[LOC_NUM];
+	int Subkernels_per_dev[LOC_NUM];
+	int **Subkernel_dev_id_list;
 	long long cache_limit = 0;
 }* CoControl_p;
 #endif

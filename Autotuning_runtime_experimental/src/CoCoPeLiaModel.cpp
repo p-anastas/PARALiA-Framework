@@ -13,6 +13,41 @@
 #include "unihelpers.hpp"
 #include "Werkhoven.hpp"
 
+void CoCoPeLiaNormalizeSplit(double* score_list, int list_len){
+	for (int i = 0; i < list_len; i++)
+	if(score_list[i] < NORMALIZE_NEAR_SPLIT_LIMIT){
+		for (int j = 0; j < list_len; j++)
+			if (i != j) score_list[j] = score_list[j]/(1 - score_list[i]);
+		score_list[i] = 0;
+	}
+	else {
+	      int flag_normalize[list_len] = {0}, normalize_num = 1;
+	      double normalize_sum = score_list[i];
+	      flag_normalize[i] = 1;
+	      for (int j = i + 1; j < list_len; j++)
+				if(abs(score_list[i] - score_list[j])/score_list[i]/list_len < NORMALIZE_NEAR_SPLIT_LIMIT){
+		//printf("Normalizing score_list[%d] and score_list[%d] to %lf\n", i, j, (score_list[i] + score_list[j])/2);
+					//score_list[j] = score_list[i] = (score_list[i] + score_list[j])/2;
+		flag_normalize[j] = 1;
+		normalize_sum+=score_list[j];
+		normalize_num++;
+	      }
+	      for (int j = i ; j < list_len; j++) if(flag_normalize[j]) score_list[j] = normalize_sum/normalize_num;
+	}
+}
+
+void CoCoPeLiaRemoveUselessDevices(CoControl_p* autotuned_vals_p, tunableParams_p params){
+	for (int i = 0; i < (*autotuned_vals_p)->dev_num; i++)
+	if(params->rel_dev_score[i] == 0.0 ) {
+		for (int i_move = i; i_move < (*autotuned_vals_p)->dev_num - 1; i_move++){
+			params->rel_dev_score[i_move] = params->rel_dev_score[i_move+1];
+			(*autotuned_vals_p)->dev_ids[i_move] = (*autotuned_vals_p)->dev_ids[i_move+1];
+		}
+		i--;
+		(*autotuned_vals_p)->dev_num--;
+	}
+}
+
 tunableParams_p CoCoAutotuneParameters(const char* routine_name, void* initial_problem_wrap,
   CoControl_p* autotuned_vals_p, CoCoModel_p* glob_model, CoControl_p predef_vals, short reuse_model_flag){
 	short lvl = 3;
@@ -72,21 +107,23 @@ tunableParams_p CoCoAutotuneParameters(const char* routine_name, void* initial_p
 		}
 	}
 
-	short *dev_ids[autotuned_vals->dev_num] = {NULL}, best_dev_num = 0;
-	tunableParams_p pred_p[autotuned_vals->dev_num] = {NULL}, best_pred_p = NULL;
+	short *dev_ids[autotuned_vals->dev_num], best_dev_num = 0;
+	tunableParams_p pred_p[autotuned_vals->dev_num], best_pred_p = NULL;
+  for (int used_devs = 0; used_devs < autotuned_vals->dev_num; used_devs++){
+    dev_ids[autotuned_vals->dev_num] = NULL;
+    pred_p[autotuned_vals->dev_num] = NULL;
+  }
 	if(predef_vals && predef_vals->T > 0 && !autotune_eval_devices){
 		autotuned_vals->T = predef_vals->T;
 		best_pred_p = CoCoPeLiaModelMultidevOptimizeSplit(autotuned_vals->dev_num,
 			autotuned_vals->dev_ids, glob_model, autotuned_vals->T);
-//#ifdef PDEBUG
-if(!reuse_model_flag){
-		lprintf(0, "====================================\n");
-		lprintf(0, "Using predefined T=%zu and dev_num=%d, autotuned split = %s -> %s : t_pred = %lf\n",
+#ifdef PDEBUG
+		lprintf(lvl, "====================================\n");
+		lprintf(lvl, "Using predefined T=%zu and dev_num=%d, autotuned split = %s -> %s : t_pred = %lf\n",
 			autotuned_vals->T, autotuned_vals->dev_num, printlist<short>(autotuned_vals->dev_ids, autotuned_vals->dev_num),
 			printlist<double>(best_pred_p->rel_dev_score, autotuned_vals->dev_num), best_pred_p->pred_t*1000);
-		lprintf(0, "====================================\n");
-}
-//#endif
+		lprintf(lvl, "====================================\n");
+#endif
 	}
 	else if(predef_vals && predef_vals->T > 0 && autotune_eval_devices){
 		autotuned_vals->T = predef_vals->T;
@@ -109,29 +146,25 @@ if(!reuse_model_flag){
 		autotuned_vals->dev_num = best_dev_num;
 		for (int idx = 0; idx < autotuned_vals->dev_num; idx++)
 			autotuned_vals->dev_ids[idx] = dev_ids[autotuned_vals->dev_num - 1][idx];
-//#ifdef PDEBUG
-if(!reuse_model_flag){
-		lprintf(0, "====================================\n");
-		lprintf(0, "Using predefined T=%zu, autotuned dev_num=%d and split = %s -> %s : t_pred = %lf\n",
+#ifdef PDEBUG
+		lprintf(lvl, "====================================\n");
+		lprintf(lvl, "Using predefined T=%zu, autotuned dev_num=%d and split = %s -> %s : t_pred = %lf\n",
 			autotuned_vals->T, autotuned_vals->dev_num, printlist<short>(autotuned_vals->dev_ids, autotuned_vals->dev_num),
 			printlist<double>(best_pred_p->rel_dev_score, autotuned_vals->dev_num), best_pred_p->pred_t*1000);
-		lprintf(0, "====================================\n");
-}
-//#endif
+		lprintf(lvl, "====================================\n");
+#endif
 	}
 	else if (predef_vals && predef_vals->T <= 0 && !autotune_eval_devices){
 		best_pred_p = CoCoPeLiaModelMultidevOptimizeTileAndSplit(autotuned_vals->dev_num,
 			autotuned_vals->dev_ids, glob_model);
 		autotuned_vals->T = best_pred_p->T;
-//#ifdef PDEBUG
-if(!reuse_model_flag){
-		lprintf(0, "====================================\n");
-		lprintf(0, "Using predefined dev_num = %d, autotuned T = %zu and split = %s -> %s : t_pred = %lf\n",
+#ifdef PDEBUG
+		lprintf(lvl, "====================================\n");
+		lprintf(lvl, "Using predefined dev_num = %d, autotuned T = %zu and split = %s -> %s : t_pred = %lf\n",
 			autotuned_vals->dev_num, autotuned_vals->T, printlist<short>(autotuned_vals->dev_ids, autotuned_vals->dev_num),
 			printlist<double>(best_pred_p->rel_dev_score, autotuned_vals->dev_num), best_pred_p->pred_t*1000);
-		lprintf(0, "====================================\n");
-}
-//#endif
+		lprintf(lvl, "====================================\n");
+#endif
 	}
 	else if ((predef_vals && predef_vals->T <= 0 && autotune_eval_devices) || !predef_vals){
 		for (int used_devs = 0; used_devs < autotuned_vals->dev_num; used_devs++){
@@ -153,15 +186,13 @@ if(!reuse_model_flag){
 		autotuned_vals->dev_num = best_dev_num;
 		for (int idx = 0; idx < autotuned_vals->dev_num; idx++)
 			autotuned_vals->dev_ids[idx] = dev_ids[autotuned_vals->dev_num - 1][idx];
-//#ifdef PDEBUG
-if(!reuse_model_flag){
-		lprintf(0, "====================================\n");
-		lprintf(0, "Using autotuned dev_num = %d, T = %zu and split = %s -> %s : t_pred = %lf\n",
+#ifdef PDEBUG
+		lprintf(lvl, "====================================\n");
+		lprintf(lvl, "Using autotuned dev_num = %d, T = %zu and split = %s -> %s : t_pred = %lf\n",
 			autotuned_vals->dev_num, autotuned_vals->T, printlist<short>(autotuned_vals->dev_ids, autotuned_vals->dev_num),
 			printlist<double>(best_pred_p->rel_dev_score, autotuned_vals->dev_num), best_pred_p->pred_t*1000);
-		lprintf(0, "====================================\n");
-}
-//#endif
+		lprintf(lvl, "====================================\n");
+#endif
 	}
 	else error("Unknown predefined parameter combination\n");
 	if (predef_vals && predef_vals->cache_limit > 0)
@@ -173,6 +204,16 @@ if(!reuse_model_flag){
 	lprintf(lvl, "Device/T selection -> t_configure = %lf ms\n", cpu_timer*1000);
 	cpu_timer = csecond();
 #endif
+
+	CoCoPeLiaRemoveUselessDevices(autotuned_vals_p, best_pred_p);
+
+if(!reuse_model_flag){
+		lprintf(0, "====================================\n");
+		lprintf(0, "CoCoAutotuneParameters: T=%zu,  dev_num=%d, split = %s -> %s : t_pred = %lf\n",
+			autotuned_vals->T, autotuned_vals->dev_num, printlist<short>(autotuned_vals->dev_ids, autotuned_vals->dev_num),
+			printlist<double>(best_pred_p->rel_dev_score, autotuned_vals->dev_num), best_pred_p->pred_t*1000);
+		lprintf(0, "====================================\n");
+}
 
 	return best_pred_p;
 }
@@ -188,7 +229,8 @@ short* CoCoPeLiaDeviceSelectBest(short used_devs, short avail_devs, short* avail
 	short* used_dev_ids = (short*) malloc(sizeof(short)* used_devs), dev_ctr = 0;
 	if(used_devs == avail_devs) for(int idx = 0; idx < used_devs; idx++) used_dev_ids[idx] = avail_dev_ids[idx];
 	else{
-		short checked[avail_devs] = {0};
+		short checked[avail_devs];
+    for(int idx = 0; idx < avail_devs; idx++) checked[idx] = 0;
 		while(dev_ctr < used_devs){
 			double best_score = 0;
 			int best_idx = -1;
@@ -220,18 +262,6 @@ short* CoCoPeLiaDeviceSelectBest(short used_devs, short avail_devs, short* avail
 	lprintf(0, "]\n");
 #endif
 	return used_dev_ids;
-}
-
-void CoCoPeLiaNormalizeSplit(double* score_list, int list_len){
-	for (int i = 0; i < list_len; i++)
-		if(score_list[i] < NORMALIZE_NEAR_SPLIT_LIMIT){
-			for (int j = 0; j < list_len; j++)
-				if (i != j) score_list[j] = score_list[j]/(1 - score_list[i]);
-			score_list[i] = 0;
-		}
-		else for (int j = i + 1; j < list_len; j++)
-			if(abs(score_list[i] - score_list[j])/score_list[i] < NORMALIZE_NEAR_SPLIT_LIMIT)
-				score_list[j] = score_list[i] = (score_list[i] + score_list[j])/2;
 }
 
 tunableParams_p CoCoPeLiaModelMultidevOptimizeTileAndSplit(short used_devs, short* used_dev_ids,
@@ -410,7 +440,7 @@ tunableParams_p CoCoPeLiaModelMultidevOptimizeSplit(short used_devs, short* used
 #ifdef PDEBUG
 	lprintf(lvl, "====================================\n");
 	lprintf(lvl, "Best %d percentages : [ ", used_devs);
-	for (int i =0; i < used_devs; i++) fprintf(stderr, "%.3lf ", outparams->rel_dev_score[i]);
+	for (int i =0; i < used_devs; i++) fprintf(stderr, "%.5lf ", outparams->rel_dev_score[i]);
 	lprintf(0, "]\n");
 	lprintf(lvl, "Predict T=%zu : t_pred = %lf\n", outparams->T, outparams->pred_t);
 #endif
@@ -489,9 +519,9 @@ double CoCopeLiaPredictReuseHetero(CoCo_model* model, short used_devs, short* us
 		model->dev_id, prob_dims, problem_percentage);
 #endif
 	if (!strcmp(REL_PERF_MODE, "ROOT-PROBLEM")){
-		if (reset_D1 != -1) model->D1 = (size_t) reset_D1* 1.0* std::pow(problem_percentage, 1.0/prob_dims);
-		if (reset_D2 != -1) model->D2 = (size_t) reset_D2* 1.0* std::pow(problem_percentage, 1.0/prob_dims);
-		if (reset_D3 != -1) model->D3 = (size_t) reset_D3* 1.0* std::pow(problem_percentage, 1.0/prob_dims);
+		if (reset_D1 != -1) model->D1 = (size_t) reset_D1* 1.0* pow(problem_percentage, 1.0/prob_dims);
+		if (reset_D2 != -1) model->D2 = (size_t) reset_D2* 1.0* pow(problem_percentage, 1.0/prob_dims);
+		if (reset_D3 != -1) model->D3 = (size_t) reset_D3* 1.0* pow(problem_percentage, 1.0/prob_dims);
 	}
 #ifdef PDEBUG
 	lprintf(lvl, "CoCopeLiaPredictReuseHetero(dev_id=%d) Modified Dims D1 = %zu, D2 = %zu, D3 = %zu, imb_time_multiplier = %lf, reduce_time_multiplier = %lf\n",
