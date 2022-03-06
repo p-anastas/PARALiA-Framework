@@ -99,7 +99,7 @@ template<typename dtype> short Tile1D<dtype>::getClosestReadLoc(short dev_id_in)
     if (pos == dev_id_in) continue;
     if (CacheLocId[pos] == -1) break;
     else if (CacheLocId[pos] > -1){
-      state temp = CacheGetBlockState(pos, CacheLocId[pos]);
+      state temp = CacheGetBlockStateNoLock(pos, CacheLocId[pos]);
       if (temp == AVAILABLE || temp == R) break;
 #ifdef DDEBUG
   lprintf(lvl, "|-----> Tile1D(%d)::getClosestReadLoc(%d): Selecting cached tile in loc =%d \n", id, dev_id_in, pos);

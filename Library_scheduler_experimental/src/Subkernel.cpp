@@ -62,8 +62,10 @@ Subkernel::~Subkernel(){
 #endif
 #endif
 #ifdef STEST
-	delete input_timer;
-	delete output_timer;
+	for (int idx = 0; idx < TileNum; idx++){
+		delete input_timer[idx];
+		delete output_timer[idx];
+	}
 	delete operation_timer;
 #endif
 }
@@ -72,8 +74,10 @@ void Subkernel::init_events(){
 	operation_complete = new Event(run_dev_id);
 	writeback_complete = new Event(run_dev_id);
 #ifdef STEST
-	input_timer = new Event_timer(run_dev_id);
-	output_timer = new Event_timer(run_dev_id);
+	for (int idx = 0; idx < TileNum; idx++){
+		input_timer[idx] = new Event_timer(run_dev_id);
+		output_timer[idx] = new Event_timer(run_dev_id);
+	}
 	operation_timer = new Event_timer(run_dev_id);
 #endif
 }
@@ -94,6 +98,9 @@ void Subkernel::sync_request_data(){
 				if (tmp->R_flag && tmp->CacheLocId[run_dev_id_idx] != -1) tmp->available[run_dev_id_idx]->sync_barrier();
 		}
 	}
+#ifdef DEBUG
+	lprintf(lvl-1, "<-----|\n");
+#endif
 }
 
 void Subkernel::request_tile(short TileIdx){
@@ -106,6 +113,7 @@ void Subkernel::request_tile(short TileIdx){
 			run_dev_id, id, tmp->id, tmp->GridId);
 #endif
 		short FetchFromId = - 42;
+		CacheGetLock(NULL);
 		if(!tmp->W_flag) FetchFromId = tmp->getClosestReadLoc(run_dev_id);
 		else {
 			FetchFromId = tmp->RW_master;
@@ -130,18 +138,30 @@ void Subkernel::request_tile(short TileIdx){
 			wrap_read = (CacheWrap_p) malloc(sizeof(struct Cache_info_wrap));
 			wrap_read->dev_id = FetchFromId;
 			wrap_read->BlockIdx = tmp->CacheLocId[FetchFromId_idx];
-			CacheStartRead(wrap_read);
+			wrap_read->lock_flag = 0;
+			if(tmp->W_flag) CacheInvalidate(wrap_read);
+			else CacheStartRead(wrap_read);
 		}
 		if (tmp->CacheLocId[run_dev_id_idx] != -1){
 			wrap_fetch = (CacheWrap_p) malloc(sizeof(struct Cache_info_wrap));
 			wrap_fetch->dev_id = run_dev_id;
 			wrap_fetch->BlockIdx = tmp->CacheLocId[run_dev_id_idx];
+			wrap_fetch->lock_flag = 0;
 			CacheStartFetch(wrap_fetch);
 		}
+		CacheReleaseLock(NULL);
+		if(wrap_read) wrap_read->lock_flag = 1;
+		if(wrap_fetch) wrap_fetch->lock_flag = 1;
+#ifdef STEST
+		input_timer[TileIdx]->start_point(h2d_queue[run_dev_id_idx]);
+#endif
 		CoCoMemcpyAsync(tmp->adrs[run_dev_id_idx], tmp->adrs[FetchFromId_idx],
 											((long long) tmp->inc[run_dev_id_idx]) * tmp->dim * tmp->dtypesize(),
 											run_dev_id, FetchFromId, h2d_queue[run_dev_id_idx]);
-		tmp->available[run_dev_id_idx]->record_to_queue(h2d_queue[run_dev_id_idx]);
+#ifdef STEST
+		input_timer[TileIdx]->stop_point(h2d_queue[run_dev_id_idx]);
+		bytes_in+= tmp->size();
+#endif
 		if(tmp->W_flag){
 			if (tmp->CacheLocId[run_dev_id_idx] != -1)
 				h2d_queue[run_dev_id_idx]->add_host_func((void*)&CacheEndFetchStartWrite, (void*) wrap_fetch);
@@ -150,8 +170,6 @@ void Subkernel::request_tile(short TileIdx){
 			wrapped_op->val = run_dev_id;
 			h2d_queue[run_dev_id_idx]->add_host_func((void*)&CoCoSetInt, (void*) wrapped_op);
 			if (tmp->CacheLocId[FetchFromId_idx] != -1){
-				h2d_queue[run_dev_id_idx]->add_host_func((void*)&CacheEndRead, (void*) wrap_read);
-				//FIXME: Invalidate cache here?
 				Ptr_and_int_p wrapped_op1 = (Ptr_and_int_p) malloc(sizeof(struct Ptr_and_int));
 				wrapped_op1->int_ptr = &tmp->CacheLocId[FetchFromId_idx];
 				wrapped_op1->val = -42;
@@ -164,6 +182,7 @@ void Subkernel::request_tile(short TileIdx){
 			if (tmp->CacheLocId[FetchFromId_idx] != -1)
 				h2d_queue[run_dev_id_idx]->add_host_func((void*)&CacheEndRead, (void*) wrap_read);
 		}
+		tmp->available[run_dev_id_idx]->record_to_queue(h2d_queue[run_dev_id_idx]);
 	}
 	else if (TileDimlist[TileIdx] == 2){
 			Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) TileList[TileIdx];
@@ -172,6 +191,7 @@ void Subkernel::request_tile(short TileIdx){
 			run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2);
 #endif
 		short FetchFromId = -42;
+		CacheGetLock(NULL);
 		if(!tmp->W_flag) FetchFromId = tmp->getClosestReadLoc(run_dev_id);
 		else {
 			FetchFromId = tmp->RW_master;
@@ -195,19 +215,31 @@ void Subkernel::request_tile(short TileIdx){
 			wrap_read = (CacheWrap_p) malloc(sizeof(struct Cache_info_wrap));
 			wrap_read->dev_id = FetchFromId;
 			wrap_read->BlockIdx = tmp->CacheLocId[FetchFromId_idx];
-			CacheStartRead(wrap_read);
+			wrap_read->lock_flag = 0;
+			if(tmp->W_flag) CacheInvalidate(wrap_read);
+			else CacheStartRead(wrap_read);
 		}
 		if (tmp->CacheLocId[run_dev_id_idx] != -1){
 			wrap_fetch = (CacheWrap_p) malloc(sizeof(struct Cache_info_wrap));
 			wrap_fetch->dev_id = run_dev_id;
 			wrap_fetch->BlockIdx = tmp->CacheLocId[run_dev_id_idx];
+			wrap_fetch->lock_flag = 0;
 			CacheStartFetch(wrap_fetch);
 		}
+		CacheReleaseLock(NULL);
+		if(wrap_read) wrap_read->lock_flag = 1;
+		if(wrap_fetch) wrap_fetch->lock_flag = 1;
+#ifdef STEST
+		input_timer[TileIdx]->start_point(h2d_queue[run_dev_id_idx]);
+#endif
 		CoCoMemcpy2DAsync(tmp->adrs[run_dev_id_idx], tmp->ldim[run_dev_id_idx],
-											tmp->adrs[FetchFromId_idx], tmp->ldim[FetchFromId_idx],
-											tmp->dim1, tmp->dim2, tmp->dtypesize(),
-											run_dev_id, FetchFromId, h2d_queue[run_dev_id_idx]);
-		tmp->available[run_dev_id_idx]->record_to_queue(h2d_queue[run_dev_id_idx]);
+									tmp->adrs[FetchFromId_idx], tmp->ldim[FetchFromId_idx],
+									tmp->dim1, tmp->dim2, tmp->dtypesize(),
+									run_dev_id, FetchFromId, h2d_queue[run_dev_id_idx]);
+#ifdef STEST
+		input_timer[TileIdx]->stop_point(h2d_queue[run_dev_id_idx]);
+		bytes_in+= tmp->size();
+#endif
 		if(tmp->W_flag){
 			if (tmp->CacheLocId[run_dev_id_idx] != -1)
 				h2d_queue[run_dev_id_idx]->add_host_func((void*)&CacheEndFetchStartWrite, (void*) wrap_fetch);
@@ -216,8 +248,6 @@ void Subkernel::request_tile(short TileIdx){
 			wrapped_op->val = run_dev_id;
 			h2d_queue[run_dev_id_idx]->add_host_func((void*)&CoCoSetInt, (void*) wrapped_op);
 			if (tmp->CacheLocId[FetchFromId_idx] != -1){
-				h2d_queue[run_dev_id_idx]->add_host_func((void*)&CacheEndRead, (void*) wrap_read);
-				//FIXME: Invalidate cache here?
 				Ptr_and_int_p wrapped_op1 = (Ptr_and_int_p) malloc(sizeof(struct Ptr_and_int));
 				wrapped_op1->int_ptr = &tmp->CacheLocId[FetchFromId_idx];
 				wrapped_op1->val = -42;
@@ -230,6 +260,7 @@ void Subkernel::request_tile(short TileIdx){
 			if (tmp->CacheLocId[FetchFromId_idx] != -1)
 				h2d_queue[run_dev_id_idx]->add_host_func((void*)&CacheEndRead, (void*) wrap_read);
 		}
+		tmp->available[run_dev_id_idx]->record_to_queue(h2d_queue[run_dev_id_idx]);
 	}
 }
 
@@ -241,10 +272,6 @@ void Subkernel::request_data(){
 	lprintf(lvl-1, "|-----> Subkernel(dev=%d,id=%d)::request_data()\n", run_dev_id, id);
 #endif
 	short run_dev_id_idx = idxize(run_dev_id);
-#ifdef STEST
-		input_timer->start_point(h2d_queue[run_dev_id_idx]);
-#endif
-	CacheWrap_p wrap_read, wrap_write;
 	for (int j = 0; j < TileNum; j++){
 		if (TileDimlist[j] == 1){
 			Tile1D<VALUE_TYPE>* tmp = (Tile1D<VALUE_TYPE>*) TileList[j];
@@ -255,19 +282,17 @@ void Subkernel::request_data(){
 		lprintf(lvl, "Subkernel(dev=%d,id=%d)-Tile(%d.[%d]): Asigned buffer Block in GPU(%d)= %d\n",
 					run_dev_id, id, tmp->id, tmp->GridId, run_dev_id, tmp->CacheLocId[run_dev_id_idx]);
 #endif
-				if (tmp->R_flag){
-					request_tile(j);
-#ifdef STEST
-					bytes_in+= tmp->size();
-#endif
-				}
+				if (tmp->R_flag)request_tile(j);
+			}
+			else if(tmp->CacheLocId[run_dev_id_idx] == -1 && tmp->W_flag && tmp->RW_master != run_dev_id){
+				if (tmp->R_flag) request_tile(j);
 			}
 			else{
 				CacheWrap_p wrap_reuse = (CacheWrap_p) malloc(sizeof(struct Cache_info_wrap));
 				wrap_reuse->dev_id = run_dev_id;
 				wrap_reuse->BlockIdx = tmp->CacheLocId[run_dev_id_idx];
-				if (tmp->W_flag) h2d_queue[run_dev_id_idx]->add_host_func((void*)&CacheStartWrite, (void*) wrap_reuse);
-				else h2d_queue[run_dev_id_idx]->add_host_func((void*)&CacheStartRead, (void*) wrap_reuse);
+				wrap_reuse->lock_flag = 1;
+				if (!tmp->W_flag) CacheStartRead((void*) wrap_reuse);
 			}
 		}
 		else if (TileDimlist[j] == 2){
@@ -279,19 +304,17 @@ void Subkernel::request_data(){
 			lprintf(lvl, "Subkernel(dev=%d,id=%d)-Tile(%d.[%d, %d]): Asigned buffer Block in GPU(%d)= %d\n",
 						run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2, run_dev_id, tmp->CacheLocId[run_dev_id_idx]);
 	#endif
-					if (tmp->R_flag){
-						request_tile(j);
-	#ifdef STEST
-						bytes_in+= tmp->size();
-	#endif
-					}
+					if (tmp->R_flag) request_tile(j);
+				}
+				else if(tmp->CacheLocId[run_dev_id_idx] == -1 && tmp->W_flag && tmp->RW_master != run_dev_id){
+					if (tmp->R_flag) request_tile(j);
 				}
 				else{
 					CacheWrap_p wrap_reuse = (CacheWrap_p) malloc(sizeof(struct Cache_info_wrap));
 					wrap_reuse->dev_id = run_dev_id;
 					wrap_reuse->BlockIdx = tmp->CacheLocId[run_dev_id_idx];
-					if (tmp->W_flag) h2d_queue[run_dev_id_idx]->add_host_func((void*)&CacheStartWrite, (void*) wrap_reuse);
-					else h2d_queue[run_dev_id_idx]->add_host_func((void*)&CacheStartRead, (void*) wrap_reuse);
+					wrap_reuse->lock_flag = 1;
+					if (!tmp->W_flag) CacheStartRead((void*) wrap_reuse);
 				}
 			}
 		else error("Subkernel(dev=%d,id=%d)::request_data: Not implemented for TileDim=%d\n",
@@ -302,9 +325,6 @@ void Subkernel::request_data(){
 #endif
 #ifdef DEBUG
 	lprintf(lvl-1, "<-----|\n");
-#endif
-#ifdef STEST
-		input_timer->stop_point(h2d_queue[run_dev_id_idx]);
 #endif
 }
 
@@ -343,23 +363,25 @@ void Subkernel::run_operation(){
 		}
 #endif
 	backend_run_operation(operation_params, op_name, exec_queue[run_dev_id_idx]);
-	operation_complete->record_to_queue(exec_queue[run_dev_id_idx]);
+#ifdef STEST
+	operation_timer->stop_point(exec_queue[run_dev_id_idx]);
+#endif
 	for (int j = 0; j < TileNum; j++){
 		if (TileDimlist[j] == 1){
 			Tile1D<VALUE_TYPE>* tmp = (Tile1D<VALUE_TYPE>*) TileList[j];
-			if (tmp->CacheLocId[run_dev_id_idx] == -1) continue;
+			if (tmp->CacheLocId[run_dev_id_idx] == -1 && !tmp->W_flag) continue;
 			else if (tmp->CacheLocId[run_dev_id_idx] < -1)
 				error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d])::run_operation: Tile(j=%d) has loc = %d\n",
 					run_dev_id, id, tmp->id, tmp->GridId, j, tmp->CacheLocId[run_dev_id_idx]);
 			else{
-				CacheWrap_p wrap_oper = (CacheWrap_p) malloc(sizeof(struct Cache_info_wrap));
-				wrap_oper->dev_id = run_dev_id;
-				wrap_oper->BlockIdx = tmp->CacheLocId[run_dev_id_idx];
-				if(tmp->W_flag){
-					exec_queue[run_dev_id_idx]->add_host_func((void*)&CacheEndWrite, (void*) wrap_oper);
-					exec_queue[run_dev_id_idx]->add_host_func((void*)&CoCoQueueUnlock, (void*) &tmp->RW_lock);
+				if(tmp->W_flag)	exec_queue[run_dev_id_idx]->add_host_func((void*)&CoCoQueueUnlock, (void*) &tmp->RW_lock);
+				else{
+					CacheWrap_p wrap_oper = (CacheWrap_p) malloc(sizeof(struct Cache_info_wrap));
+					wrap_oper->dev_id = run_dev_id;
+					wrap_oper->BlockIdx = tmp->CacheLocId[run_dev_id_idx];
+					wrap_oper->lock_flag = 1;
+					exec_queue[run_dev_id_idx]->add_host_func((void*)&CacheEndRead, (void*) wrap_oper);
 				}
-				else exec_queue[run_dev_id_idx]->add_host_func((void*)&CacheEndRead, (void*) wrap_oper);
 			}
 			if(tmp->R_flag) tmp->R_flag--;
 			if(tmp->W_flag){
@@ -369,19 +391,20 @@ void Subkernel::run_operation(){
 		}
 		else if (TileDimlist[j] == 2){
 			Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) TileList[j];
-			if (tmp->CacheLocId[run_dev_id_idx] == -1) continue;
+			if (tmp->CacheLocId[run_dev_id_idx] == -1 && !tmp->W_flag) continue;
 			else if (tmp->CacheLocId[run_dev_id_idx] < -1)
 				error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::run_operation: Tile(j=%d) has loc = %d\n",
 					run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2, j, tmp->CacheLocId[run_dev_id_idx]);
 			else{
-				CacheWrap_p wrap_oper = (CacheWrap_p) malloc(sizeof(struct Cache_info_wrap));
-				wrap_oper->dev_id = run_dev_id;
-				wrap_oper->BlockIdx = tmp->CacheLocId[run_dev_id_idx];
-				if(tmp->W_flag){
-					exec_queue[run_dev_id_idx]->add_host_func((void*)&CacheEndWrite, (void*) wrap_oper);
-					exec_queue[run_dev_id_idx]->add_host_func((void*)&CoCoQueueUnlock, (void*) &tmp->RW_lock);
+
+				if(tmp->W_flag) exec_queue[run_dev_id_idx]->add_host_func((void*)&CoCoQueueUnlock, (void*) &tmp->RW_lock);
+				else{
+					CacheWrap_p wrap_oper = (CacheWrap_p) malloc(sizeof(struct Cache_info_wrap));
+					wrap_oper->dev_id = run_dev_id;
+					wrap_oper->BlockIdx = tmp->CacheLocId[run_dev_id_idx];
+					wrap_oper->lock_flag = 1;
+					exec_queue[run_dev_id_idx]->add_host_func((void*)&CacheEndRead, (void*) wrap_oper);
 				}
-				else exec_queue[run_dev_id_idx]->add_host_func((void*)&CacheEndRead, (void*) wrap_oper);
 			}
 			if(tmp->R_flag) tmp->R_flag--;
 			if(tmp->W_flag){
@@ -390,14 +413,12 @@ void Subkernel::run_operation(){
 			}
 		}
 	}
+	operation_complete->record_to_queue(exec_queue[run_dev_id_idx]);
 #ifndef ASYNC_ENABLE
 	CoCoSyncCheckErr();
 #endif
 #ifdef DEBUG
 	lprintf(lvl-1, "<-----|\n");
-#endif
-#ifdef STEST
-		operation_timer->stop_point(exec_queue[run_dev_id_idx]);
 #endif
 }
 
@@ -407,9 +428,6 @@ void Subkernel::writeback_data(){
 	lprintf(lvl-1, "|-----> Subkernel(dev=%d,id=%d)::writeback_data()\n", run_dev_id, id);
 #endif
 	short run_dev_id_idx = idxize(run_dev_id);
-#ifdef STEST
-		operation_timer->start_point(d2h_queue[run_dev_id_idx]);
-#endif
 	for (int j = 0; j < TileNum; j++) if (WR_last[j]){
 		if (TileDimlist[j] == 1){
 			Tile1D<VALUE_TYPE>* tmp = (Tile1D<VALUE_TYPE>*) TileList[j];
@@ -428,12 +446,27 @@ void Subkernel::writeback_data(){
 #endif
 				}
 				else{
+					if (tmp->CacheLocId[run_dev_id_idx] != -1){
+						CacheWrap_p wrap_inval = (CacheWrap_p) malloc(sizeof(struct Cache_info_wrap));
+							wrap_inval->dev_id = run_dev_id;
+							wrap_inval->BlockIdx = tmp->CacheLocId[run_dev_id_idx];
+							wrap_inval->lock_flag = 1;
+							d2h_queue[run_dev_id_idx]->add_host_func((void*)&CacheInvalidate, (void*) wrap_inval);
+					}
+#ifdef STEST
+					output_timer[j]->start_point(d2h_queue[run_dev_id_idx]);
+#endif
 					CoCoMemcpyAsync(tmp->adrs[WritebackIdCAdr], tmp->adrs[run_dev_id_idx],
 						((long long) tmp->inc[run_dev_id_idx]) * tmp->dim * tmp->dtypesize(),
 						WritebackId, run_dev_id, d2h_queue[run_dev_id_idx]);
-					#ifdef STEST
+#ifdef STEST
+					output_timer[j]->stop_point(d2h_queue[run_dev_id_idx]);
 					bytes_out+= tmp->size();
-					#endif
+#endif
+					Ptr_and_int_p wrapped_op = (Ptr_and_int_p) malloc(sizeof(struct Ptr_and_int));
+					wrapped_op->int_ptr = &tmp->RW_master;
+					wrapped_op->val = WritebackId;
+					d2h_queue[run_dev_id_idx]->add_host_func((void*)&CoCoSetInt, (void*) wrapped_op);
 				}
 			}
 		}
@@ -454,13 +487,28 @@ void Subkernel::writeback_data(){
 #endif
 				}
 				else{
+					if (tmp->CacheLocId[run_dev_id_idx] != -1){
+						CacheWrap_p wrap_inval = (CacheWrap_p) malloc(sizeof(struct Cache_info_wrap));
+							wrap_inval->dev_id = run_dev_id;
+							wrap_inval->BlockIdx = tmp->CacheLocId[run_dev_id_idx];
+							wrap_inval->lock_flag = 1;
+							d2h_queue[run_dev_id_idx]->add_host_func((void*)&CacheInvalidate, (void*) wrap_inval);
+					}
+#ifdef STEST
+					output_timer[j]->start_point(d2h_queue[run_dev_id_idx]);
+#endif
 					CoCoMemcpy2DAsync(tmp->adrs[WritebackIdCAdr], tmp->ldim[WritebackIdCAdr],
 						tmp->adrs[run_dev_id_idx], tmp->ldim[run_dev_id_idx],
 						tmp->dim1, tmp->dim2, tmp->dtypesize(),
 						WritebackId, run_dev_id, d2h_queue[run_dev_id_idx]);
-					#ifdef STEST
+#ifdef STEST
+					output_timer[j]->stop_point(d2h_queue[run_dev_id_idx]);
 					bytes_out+= tmp->size();
-					#endif
+#endif
+					Ptr_and_int_p wrapped_op = (Ptr_and_int_p) malloc(sizeof(struct Ptr_and_int));
+					wrapped_op->int_ptr = &tmp->RW_master;
+					wrapped_op->val = WritebackId;
+					d2h_queue[run_dev_id_idx]->add_host_func((void*)&CoCoSetInt, (void*) wrapped_op);
 				}
 			}
 		}
@@ -472,9 +520,6 @@ void Subkernel::writeback_data(){
 #endif
 #ifdef DEBUG
 	lprintf(lvl-1, "<-----|\n");
-#endif
-#ifdef STEST
-		operation_timer->stop_point(d2h_queue[run_dev_id_idx]);
 #endif
 }
 
@@ -501,6 +546,25 @@ void CoCoPeLiaFreeResources(short dev_id){
 	}
 }
 
+void Subkernel::prepare_launch(){
+	for (int j = 0; j < TileNum; j++){
+		if (TileDimlist[j] == 1){
+			Tile1D<VALUE_TYPE>* tmp = (Tile1D<VALUE_TYPE>*) TileList[j];
+			if(tmp->W_flag) {
+				if (tmp->W_total == tmp->W_flag) WR_first = 1;
+				CoCoQueueLock((void*) &tmp->RW_lock);
+			}
+		}
+		else if (TileDimlist[j] == 2){
+			Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) TileList[j];
+			if(tmp->W_flag) {
+				if (tmp->W_total == tmp->W_flag) WR_first = 1;
+				CoCoQueueLock((void*) &tmp->RW_lock);
+			}
+		}
+	}
+}
+
 short Subkernel::is_dependency_free(){
 	if (run_dev_id!= -42) return 0;
 	for (int j = 0; j < TileNum; j++){
@@ -517,6 +581,35 @@ short Subkernel::is_dependency_free(){
 	return 1;
 }
 
+short Subkernel::is_RW_master(short dev_id){
+	for (int j = 0; j < TileNum; j++){
+		if (TileDimlist[j] == 1){
+			Tile1D<VALUE_TYPE>* tmp = (Tile1D<VALUE_TYPE>*) TileList[j];
+			if(tmp->W_flag && tmp->W_total != tmp->W_flag && tmp->RW_master!=dev_id) return 0;
+		}
+		else if (TileDimlist[j] == 2){
+			Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) TileList[j];
+			if(tmp->W_flag && tmp->W_total != tmp->W_flag && tmp->RW_master!=dev_id) return 0;
+		}
+	}
+	return 1;
+}
+
+double Subkernel::opt_fetch_cost(short dev_id){
+	double fetch_cost = 0;
+	for (int j = 0; j < TileNum; j++){
+		if (TileDimlist[j] == 1){
+			Tile1D<VALUE_TYPE>* tmp = (Tile1D<VALUE_TYPE>*) TileList[j];
+			error("not implemented\n");
+		}
+		else if (TileDimlist[j] == 2){
+			Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) TileList[j];
+			fetch_cost+= tmp->getMinLinkCost(dev_id);
+		}
+	}
+	return fetch_cost;
+}
+
 Subkernel* SubkernelSelectSimple(short dev_id, Subkernel** Subkernel_list, long Subkernel_list_len){
 	Subkernel* curr_sk = NULL;
 	long sk_idx;
@@ -526,23 +619,59 @@ Subkernel* SubkernelSelectSimple(short dev_id, Subkernel** Subkernel_list, long 
 
 	}
 	if(sk_idx==Subkernel_list_len) return NULL;
-	else{
-		for (int j = 0; j < curr_sk->TileNum; j++){
-			if (curr_sk->TileDimlist[j] == 1){
-				Tile1D<VALUE_TYPE>* tmp = (Tile1D<VALUE_TYPE>*) curr_sk->TileList[j];
-				if(tmp->W_flag) {
-					if (tmp->W_total == tmp->W_flag) curr_sk->WR_first = 1;
-					CoCoQueueLock((void*) &tmp->RW_lock);
-				}
-			}
-			else if (curr_sk->TileDimlist[j] == 2){
-				Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) curr_sk->TileList[j];
-				if(tmp->W_flag) {
-					if (tmp->W_total == tmp->W_flag) curr_sk->WR_first = 1;
-					CoCoQueueLock((void*) &tmp->RW_lock);
-				}
+	curr_sk->prepare_launch();
+	return curr_sk;
+}
+
+Subkernel* SubkernelSelectNoWriteShare(short dev_id, Subkernel** Subkernel_list, long Subkernel_list_len){
+	Subkernel* curr_sk = NULL;
+	long sk_idx;
+	for (sk_idx = 0; sk_idx < Subkernel_list_len; sk_idx++){
+		curr_sk = Subkernel_list[sk_idx];
+		if (curr_sk->is_dependency_free() && curr_sk->is_RW_master(dev_id)) break;
+	}
+	if(sk_idx==Subkernel_list_len) return NULL;
+	curr_sk->prepare_launch();
+	return curr_sk;
+}
+
+Subkernel* SubkernelSelectMinimizeFetch(short dev_id, Subkernel** Subkernel_list, long Subkernel_list_len){
+	Subkernel* curr_sk = NULL;
+	long sk_idx;
+	double min_fetch_cost = 100000000;
+	Subkernel* min_fetch_cost_sk = NULL;
+	for (sk_idx = 0; sk_idx < Subkernel_list_len; sk_idx++){
+		curr_sk = Subkernel_list[sk_idx];
+		if (curr_sk->is_dependency_free()){
+			double fetch_cost = curr_sk->opt_fetch_cost(dev_id);
+			if(fetch_cost < min_fetch_cost){
+				min_fetch_cost = fetch_cost;
+				min_fetch_cost_sk = curr_sk;
 			}
 		}
-		return curr_sk;
 	}
+	if(!min_fetch_cost_sk) return NULL;
+	min_fetch_cost_sk->prepare_launch();
+	return min_fetch_cost_sk;
+}
+
+Subkernel* SubkernelSelectMinimizeFetchWritePenalty(short dev_id, Subkernel** Subkernel_list, long Subkernel_list_len){
+	Subkernel* curr_sk = NULL;
+	long sk_idx;
+	double min_fetch_cost = 100000000;
+	Subkernel* min_fetch_cost_sk = NULL;
+	for (sk_idx = 0; sk_idx < Subkernel_list_len; sk_idx++){
+		curr_sk = Subkernel_list[sk_idx];
+		if (curr_sk->is_dependency_free()){
+			double fetch_cost = curr_sk->opt_fetch_cost(dev_id);
+			if(!curr_sk->is_RW_master(dev_id)) fetch_cost+=WRITE_COST_PEPENALTY*fetch_cost;
+			if(fetch_cost < min_fetch_cost){
+				min_fetch_cost = fetch_cost;
+				min_fetch_cost_sk = curr_sk;
+			}
+		}
+	}
+	if(!min_fetch_cost_sk) return NULL;
+	min_fetch_cost_sk->prepare_launch();
+	return min_fetch_cost_sk;
 }

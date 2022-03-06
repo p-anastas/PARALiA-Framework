@@ -22,7 +22,7 @@ class Subkernel
 		void** TileList;
 		Subkernel* prev, * next;
 #ifdef STEST
-		Event_timer_p input_timer, output_timer, operation_timer;
+		Event_timer_p input_timer[3], output_timer[3], operation_timer;
 		long long bytes_in, bytes_out, flops;
 #endif
 		Event* operation_complete, *writeback_complete;
@@ -36,6 +36,7 @@ class Subkernel
 		~Subkernel();
 
 		/// Functions
+		void prepare_launch();
 		void init_events();
 		void request_data();
 		void request_tile(short TileIdx);
@@ -44,6 +45,8 @@ class Subkernel
 		void writeback_data();
 
 		short is_dependency_free();
+		short is_RW_master(short dev_id);
+		double opt_fetch_cost(short dev_id);
 };
 
 typedef struct kernel_pthread_wrap{
@@ -59,5 +62,7 @@ void 	CoCoPeLiaInitResources(short dev_id);
 void 	CoCoPeLiaFreeResources(short dev_id);
 
 Subkernel* SubkernelSelectSimple(short dev_id, Subkernel** Subkernel_list, long Subkernel_list_len);
-
+Subkernel* SubkernelSelectNoWriteShare(short dev_id, Subkernel** Subkernel_list, long Subkernel_list_len);
+Subkernel* SubkernelSelectMinimizeFetch(short dev_id, Subkernel** Subkernel_list, long Subkernel_list_len);
+Subkernel* SubkernelSelectMinimizeFetchWritePenalty(short dev_id, Subkernel** Subkernel_list, long Subkernel_list_len);
 #endif

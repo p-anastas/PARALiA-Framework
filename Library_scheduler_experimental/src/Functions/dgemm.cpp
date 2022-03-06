@@ -177,7 +177,15 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 			__sync_lock_release(&Sk_select_lock);
 			break;
 		}
-		curr = SubkernelSelectSimple(dev_id, Subkernel_list, Subkernel_num);
+		if (!strcmp(DISTRIBUTION, "NAIVE"))
+			curr = SubkernelSelectSimple(dev_id, Subkernel_list, Subkernel_num);
+		else if (!strcmp(DISTRIBUTION, "NAIVE-NO-WRITE-SHARE"))
+			curr = SubkernelSelectNoWriteShare(dev_id, Subkernel_list, Subkernel_num);
+		else if (!strcmp(DISTRIBUTION, "MINIMIZE-FETCH"))
+			curr = SubkernelSelectMinimizeFetch(dev_id, Subkernel_list, Subkernel_num);
+		else if (!strcmp(DISTRIBUTION, "MINIMIZE-FETCH-WRITE-PENALTY"))
+			curr = SubkernelSelectMinimizeFetchWritePenalty(dev_id, Subkernel_list, Subkernel_num);
+		else error("CoCopeLiaDgemm: Unknown Subkernel Distribution %s\n", DISTRIBUTION);
 		if (!curr){
 			__sync_lock_release(&Sk_select_lock);
 //#ifdef DDEBUG
@@ -202,9 +210,12 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 	CoCoSyncCheckErr();
 #ifdef STEST
 	for (int keri = 0; keri < gemm_subkernel_data->SubkernelNumDev; keri++){
-		double request_t_ms = gemm_subkernel_data->SubkernelListDev[keri]->input_timer->sync_get_time(),
-			exec_t_ms = gemm_subkernel_data->SubkernelListDev[keri]->operation_timer->sync_get_time(),
-			writeback_t_ms = gemm_subkernel_data->SubkernelListDev[keri]->output_timer->sync_get_time();
+		double request_t_ms = 0, writeback_t_ms = 0, exec_t_ms = 0;
+		for(int idx = 0; idx < gemm_subkernel_data->SubkernelListDev[keri]->TileNum; idx++)
+			request_t_ms+= gemm_subkernel_data->SubkernelListDev[keri]->input_timer[idx]->sync_get_time();
+		exec_t_ms = gemm_subkernel_data->SubkernelListDev[keri]->operation_timer->sync_get_time();
+		for(int idx = 0; idx < gemm_subkernel_data->SubkernelListDev[keri]->TileNum; idx++)
+			writeback_t_ms = gemm_subkernel_data->SubkernelListDev[keri]->output_timer[idx]->sync_get_time();
 		lprintf(lvl, "Subkernel(dev=%d,id=%d): Request_t = %lf ms (%3.3lf Gb\s), exec_t = %lf ms  (%3.3lf Gflops\s), writeback_t = %lf ms (%3.3lf Gb\s)\n",
 			gemm_subkernel_data->SubkernelListDev[keri]->run_dev_id, gemm_subkernel_data->SubkernelListDev[keri]->id,
 			request_t_ms, Gval_per_s(gemm_subkernel_data->SubkernelListDev[keri]->bytes_in, request_t_ms/1000),
@@ -336,7 +347,7 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 	kernel_pthread_wrap_p SK_wrap = (kernel_pthread_wrap_p) malloc(sizeof(struct kernel_pthread_wrap));
 	SK_wrap->SubkernelListDev = Subkernel_list;
 	SK_wrap->SubkernelNumDev = Subkernel_num;
-	SK_wrap->SubkernelNumDev = -42;
+	SK_wrap->dev_id = -42;
 #ifdef DEBUG
 	lprintf(lvl, "Subkernel_num = %d {M,N,K}GridSz = {%d, %d, %d}, autotuned_vals->dev_num = %d\n\n",
 		Subkernel_num, MGridSz, NGridSz, KGridSz, autotuned_vals->dev_num);
@@ -406,17 +417,21 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
   A_asset->DrawTileMap();
   B_asset->DrawTileMap();
 	C_asset->DrawTileMap();
+	for(int i=0; i<autotuned_vals->dev_num;i++) CachePrint(autotuned_vals->dev_ids[i]);
 #endif
 
 
 #ifndef BUFFER_REUSE_ENABLE
-	for(int i=0; i<autotuned_vals->dev_num;i++) CoCopeLiaDevCacheFree(deidxize(i));
+	for(int i=0; i<autotuned_vals->dev_num;i++) CoCopeLiaDevCacheFree(autotuned_vals->dev_ids[i]);
 #else
 	CoCoPeLiaDevCacheInvalidate(SK_wrap);
+#ifdef DDEBUG
+	for(int i=0; i<autotuned_vals->dev_num;i++) CachePrint(autotuned_vals->dev_ids[i]);
+#endif
 #endif
 
 #ifndef BACKEND_RES_REUSE_ENABLE
-	for(int i=0; i<autotuned_vals->dev_num;i++) CoCoPeLiaFreeResources(deidxize(i));
+	for(int i=0; i<autotuned_vals->dev_num;i++) CoCoPeLiaFreeResources(autotuned_vals->dev_ids[i]);
 #endif
 
 #ifdef TEST

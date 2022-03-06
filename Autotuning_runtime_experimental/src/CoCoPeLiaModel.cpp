@@ -62,8 +62,6 @@ tunableParams_p CoCoAutotuneParameters(const char* routine_name, void* initial_p
 #ifdef DEBUG
 	lprintf(lvl, "Freeing autotuned_vals because reuse_model_flag = %d\n", reuse_model_flag);
 #endif
-		for(int idx=0; idx < (*autotuned_vals_p)->dev_num; idx++) free((*autotuned_vals_p)->Subkernel_dev_id_list[idx]);
-		free((*autotuned_vals_p)->Subkernel_dev_id_list);
 		free((*autotuned_vals_p));
 		*autotuned_vals_p = NULL;
 #ifdef DDEBUG

@@ -42,31 +42,37 @@ add_definitions(-DENABLE_SEND_RECV_OVERLAP)
 add_definitions(-DENABLE_CPU_WORKLOAD)
 
 ## Define which subkernel distribution to use
+#add_definitions(-DDISTRIBUTION="NAIVE")
+#add_definitions(-DDISTRIBUTION="NAIVE-NO-WRITE-SHARE")
+#add_definitions(-DDISTRIBUTION="MINIMIZE-FETCH")
+add_definitions(-DDISTRIBUTION="MINIMIZE-FETCH-WRITE-PENALTY")
+add_definitions(-DWRITE_COST_PEPENALTY=0.1)
+
+#Old model-based distributions
 #add_definitions(-DDISTRIBUTION="ROUND-ROBIN")
-add_definitions(-DDISTRIBUTION="SPLIT-NAIVE")
 #add_definitions(-DDISTRIBUTION="SPLIT-CHUNKS-ROBIN")
 #add_definitions(-DDISTRIBUTION="SPLIT-CHUNKS-ROBIN-REVERSE")
 
 #Run in testing mode : details about models, decisions and time spend in operations.
-add_definitions(-DTEST)
+#add_definitions(-DTEST)
 
 #Run in Subkernel testing mode : details about time spend in subkernel operations. FIXME: break for small splits (?)
-#add_definitions(-DSTEST)
+add_definitions(-DSTEST)
 
 #Run in debug mode, which includes detailed function calls and info for error-checking
-add_definitions(-DDEBUG)
+#add_definitions(-DDEBUG)
 
 #Run in deep debug mode, for command-to-command debugging
-add_definitions(-DDDEBUG)
+#add_definitions(-DDDEBUG)
+
+#Run in caching debug mode, for cache-related deep debugging
+#add_definitions(-DCDEBUG)
 
 #Run Prediction debug mode (autotuning runtime stuff)
 #add_definitions(-DPDEBUG)
 
 #Run Prediction deep debug mode (all autotuning runtime stuff)
 #add_definitions(-DDPDEBUG)
-
-#Run in caching debug mode, for cache-related deep debugging
-add_definitions(-DCDEBUG)
 
 ## Define a name for the testbed, to be used for the whole framework setup
 #set(TESTBED_NAME "dungani")

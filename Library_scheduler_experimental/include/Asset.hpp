@@ -46,6 +46,7 @@ class Tile1D
 		int size() { return dtypesize()*dim; }
 		short getWriteBackLoc();
 		short getClosestReadLoc(short dev_id_in);
+		double getMinLinkCost(short dev_id_in);
 		short isLocked();
 
 };
@@ -83,6 +84,7 @@ class Tile2D
 		int size() { return dtypesize()*dim1*dim2; }
 		short getWriteBackLoc();
 		short getClosestReadLoc(short dev_id_in);
+		double getMinLinkCost(short dev_id_in);
 		short isLocked();
 
 };

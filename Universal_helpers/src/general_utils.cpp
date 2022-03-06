@@ -89,13 +89,13 @@ const char *print_mem(mem_layout mem) {
 template<typename VALUETYPE>
 const char *printlist(VALUETYPE *list, int length)
 {
-  char* outstring = (char*) malloc(256*sizeof(char));
+  char* outstring = (char*) malloc(length*10*sizeof(char));
   std::string printfCmd(" ");
   sprintf(outstring, "[");
   if (std::is_same<VALUETYPE, short>::value) printfCmd += "%hd";
 	if (std::is_same<VALUETYPE, int>::value) printfCmd += "%d";
-  else if (std::is_same<VALUETYPE, float>::value) printfCmd += "%f";
-  else if (std::is_same<VALUETYPE, double>::value) printfCmd += "%lf";
+  else if (std::is_same<VALUETYPE, float>::value) printfCmd += "%3.3f";
+  else if (std::is_same<VALUETYPE, double>::value) printfCmd += "%3.3lf";
   for (int i =0; i < length; i++) sprintf(outstring + strlen(outstring), printfCmd.c_str(), list[i]);
 	sprintf(outstring + strlen(outstring), " ]");
   return outstring;

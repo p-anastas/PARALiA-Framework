@@ -66,7 +66,6 @@ void cblas_wrap_dgemm(void* backend_data){
   if (ptr_ker_translate->dev_id != -1)
     warning("cblas_wrap_dgemm: Suspicious device %d instead of -1\n", ptr_ker_translate->dev_id);
 #endif
-  CoCoPeLiaSelectDevice(ptr_ker_translate->dev_id);
 #ifdef DDEBUG
   lprintf(lvl, "cblas_wrap_dgemm: cblas_dgemm(dev_id = %d, TransA = %c, TransB = %c,\
     M = %d, N = %d, K = %d, alpha = %lf, A = %p, lda = %d, \n\
