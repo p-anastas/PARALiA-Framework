@@ -185,6 +185,8 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 			curr = SubkernelSelectMinimizeFetch(dev_id, Subkernel_list, Subkernel_num);
 		else if (!strcmp(DISTRIBUTION, "MINIMIZE-FETCH-WRITE-PENALTY"))
 			curr = SubkernelSelectMinimizeFetchWritePenalty(dev_id, Subkernel_list, Subkernel_num);
+		else if (!strcmp(DISTRIBUTION, "MINIMIZE-FETCH-WRITE-PENALTY-MULTIFETCH-PENALTY"))
+			curr = SubkernelSelectMinimizeFetchWritePenaltyMultiFetchPenalty(dev_id, Subkernel_list, Subkernel_num);
 		else error("CoCopeLiaDgemm: Unknown Subkernel Distribution %s\n", DISTRIBUTION);
 		if (!curr){
 			__sync_lock_release(&Sk_select_lock);
@@ -194,7 +196,6 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 			continue;
 		}
 		remaining_Subkernels--;
-		__sync_lock_release(&Sk_select_lock);
 		gemm_subkernel_data->SubkernelListDev[gemm_subkernel_data->SubkernelNumDev] = curr;
 		gemm_subkernel_data->SubkernelNumDev++;
 		curr->prev = prev;
@@ -202,6 +203,7 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 		CoCoGemmUpdateDevice(curr, dev_id);
 		curr->init_events();
 		curr->request_data();
+		__sync_lock_release(&Sk_select_lock);
 		curr->run_operation();
 		curr->writeback_data();
 
@@ -215,13 +217,15 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 			request_t_ms+= gemm_subkernel_data->SubkernelListDev[keri]->input_timer[idx]->sync_get_time();
 		exec_t_ms = gemm_subkernel_data->SubkernelListDev[keri]->operation_timer->sync_get_time();
 		for(int idx = 0; idx < gemm_subkernel_data->SubkernelListDev[keri]->TileNum; idx++)
-			writeback_t_ms = gemm_subkernel_data->SubkernelListDev[keri]->output_timer[idx]->sync_get_time();
+			writeback_t_ms+= gemm_subkernel_data->SubkernelListDev[keri]->output_timer[idx]->sync_get_time();
 		lprintf(lvl, "Subkernel(dev=%d,id=%d): Request_t = %lf ms (%3.3lf Gb\s), exec_t = %lf ms  (%3.3lf Gflops\s), writeback_t = %lf ms (%3.3lf Gb\s)\n",
 			gemm_subkernel_data->SubkernelListDev[keri]->run_dev_id, gemm_subkernel_data->SubkernelListDev[keri]->id,
 			request_t_ms, Gval_per_s(gemm_subkernel_data->SubkernelListDev[keri]->bytes_in, request_t_ms/1000),
 			exec_t_ms, Gval_per_s(gemm_subkernel_data->SubkernelListDev[keri]->flops, exec_t_ms/1000),
 			writeback_t_ms, Gval_per_s(gemm_subkernel_data->SubkernelListDev[keri]->bytes_out, writeback_t_ms/1000));
 	}
+	double total_cache_timer = CacheGetTimer(dev_id);
+	lprintf(lvl, "Cache requests total timer (%d): t_cache = %lf ms\n" , dev_id, total_cache_timer*1000);
 #endif
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer;

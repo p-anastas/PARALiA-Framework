@@ -146,6 +146,29 @@ template<typename dtype> double Tile2D<dtype>::getMinLinkCost(short dev_id_in){
   return link_cost_min;
 }
 
+template<typename dtype> double Tile2D<dtype>::getMinLinkCostPenaltizeFetch(short dev_id_in){
+  short lvl = 5;
+#ifdef DEBUG
+  lprintf(lvl-1, "|-----> Tile2D(%d)::getMinLinkCost(%d)\n", id, dev_id_in);
+#endif
+  int dev_id_in_idx = idxize(dev_id_in);
+  double link_cost_min = 10000000;
+  for (int pos =0; pos < LOC_NUM; pos++){
+    if (CacheLocId[pos] == -1){
+      if (link_cost[dev_id_in_idx][pos] < link_cost_min)
+        link_cost_min = link_cost[dev_id_in_idx][pos];
+    }
+    else if (CacheLocId[pos] > -1){
+      state temp = CacheGetBlockStateNoLock(deidxize(pos), CacheLocId[pos]);
+      if (temp == AVAILABLE || temp == R || temp == EXCLUSIVE){
+        if (link_cost[dev_id_in_idx][pos] < link_cost_min)
+          link_cost_min = link_cost[dev_id_in_idx][pos];
+      }
+    }
+  }
+  return link_cost_min;
+}
+
 void CoCoUpdateLinkSpeed2D(CoControl_p autotuned_vals, CoCoModel_p* glob_model){
   for (int i = 0; i < autotuned_vals->dev_num; i++){
 		short dev_id_idi = idxize(autotuned_vals->dev_ids[i]);

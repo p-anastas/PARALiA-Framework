@@ -47,6 +47,7 @@ class Subkernel
 		short is_dependency_free();
 		short is_RW_master(short dev_id);
 		double opt_fetch_cost(short dev_id);
+		double opt_fetch_cost_pen_multifetch(short dev_id);
 };
 
 typedef struct kernel_pthread_wrap{
@@ -65,4 +66,6 @@ Subkernel* SubkernelSelectSimple(short dev_id, Subkernel** Subkernel_list, long 
 Subkernel* SubkernelSelectNoWriteShare(short dev_id, Subkernel** Subkernel_list, long Subkernel_list_len);
 Subkernel* SubkernelSelectMinimizeFetch(short dev_id, Subkernel** Subkernel_list, long Subkernel_list_len);
 Subkernel* SubkernelSelectMinimizeFetchWritePenalty(short dev_id, Subkernel** Subkernel_list, long Subkernel_list_len);
+Subkernel* SubkernelSelectMinimizeFetchWritePenaltyMultiFetchPenalty(short dev_id, Subkernel** Subkernel_list, long Subkernel_list_len);
+
 #endif

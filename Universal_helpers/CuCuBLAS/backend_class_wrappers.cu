@@ -201,9 +201,9 @@ void Event::sync_barrier()
 	get_lock();
 	if (status != CHECKED){
 		if (status == UNRECORDED){
-#ifdef DEBUG
-			warning("Event::sync_barrier: Tried to sync unrecorded event\n");
-#endif
+//#ifdef DEBUG
+//			warning("Event::sync_barrier: Tried to sync unrecorded event\n");
+//#endif
 			return;
 		}
 		cudaEvent_t cuda_event= *(cudaEvent_t*) event_backend_ptr;
@@ -307,11 +307,16 @@ void Event_timer::stop_point(CQueue_p stop_queue)
 double Event_timer::sync_get_time()
 {
 	float temp_t;
-	Event_start->sync_barrier();
-	Event_stop->sync_barrier();
-	cudaEvent_t cuda_event_start = *(cudaEvent_t*) Event_start->event_backend_ptr;
-	cudaEvent_t cuda_event_stop = *(cudaEvent_t*) Event_stop->event_backend_ptr;
-	cudaEventElapsedTime(&temp_t, cuda_event_start, cuda_event_stop);
+	if(Event_start->query_status() != UNRECORDED){
+		Event_start->sync_barrier();
+		if(Event_stop->query_status() != UNRECORDED) Event_stop->sync_barrier();
+		else error("Event_timer::sync_get_time: Event_start is %s but Event_stop still UNRECORDED\n",
+			print_event_status(Event_start->query_status()));
+		cudaEvent_t cuda_event_start = *(cudaEvent_t*) Event_start->event_backend_ptr;
+		cudaEvent_t cuda_event_stop = *(cudaEvent_t*) Event_stop->event_backend_ptr;
+		cudaEventElapsedTime(&temp_t, cuda_event_start, cuda_event_stop);
+	}
+	else temp_t = 0; 
 	time_ms = (double) temp_t;
 	return time_ms;
 }

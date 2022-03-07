@@ -47,6 +47,7 @@ class Tile1D
 		short getWriteBackLoc();
 		short getClosestReadLoc(short dev_id_in);
 		double getMinLinkCost(short dev_id_in);
+		double getMinLinkCostPenaltizeFetch(short dev_id_in);
 		short isLocked();
 
 };
@@ -85,6 +86,7 @@ class Tile2D
 		short getWriteBackLoc();
 		short getClosestReadLoc(short dev_id_in);
 		double getMinLinkCost(short dev_id_in);
+		double getMinLinkCostPenaltizeFetch(short dev_id_in);
 		short isLocked();
 
 };

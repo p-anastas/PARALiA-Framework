@@ -595,6 +595,28 @@ short Subkernel::is_RW_master(short dev_id){
 	return 1;
 }
 
+double Subkernel::opt_fetch_cost_pen_multifetch(short dev_id){
+	double fetch_cost = 0;
+	for (int j = 0; j < TileNum; j++){
+		if (TileDimlist[j] == 1){
+			Tile1D<VALUE_TYPE>* tmp = (Tile1D<VALUE_TYPE>*) TileList[j];
+			error("not implemented\n");
+		}
+		else if (TileDimlist[j] == 2){
+			Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) TileList[j];
+			double temp_fetch_cost = tmp->getMinLinkCost(dev_id);
+			for(int loc_idx = 0; loc_idx < LOC_NUM; loc_idx++){
+				if(tmp->CacheLocId[loc_idx] > -1 && CacheGetBlockStateNoLock(deidxize(loc_idx), tmp->CacheLocId[loc_idx]) == FETCHING){
+					fetch_cost+=temp_fetch_cost*MULTIFETCH_PENALTY;
+					if (deidxize(loc_idx) == dev_id) warning("opt_fetch_cost_pen_multifetch(dev_id=%d, TiledIdx=%d): Already fetching in dev_id (?)\n");
+				}
+			}
+			fetch_cost+= temp_fetch_cost;
+		}
+	}
+	return fetch_cost;
+}
+
 double Subkernel::opt_fetch_cost(short dev_id){
 	double fetch_cost = 0;
 	for (int j = 0; j < TileNum; j++){
@@ -664,6 +686,27 @@ Subkernel* SubkernelSelectMinimizeFetchWritePenalty(short dev_id, Subkernel** Su
 		curr_sk = Subkernel_list[sk_idx];
 		if (curr_sk->is_dependency_free()){
 			double fetch_cost = curr_sk->opt_fetch_cost(dev_id);
+			if(!curr_sk->is_RW_master(dev_id)) fetch_cost+=WRITE_COST_PEPENALTY*fetch_cost;
+			if(fetch_cost < min_fetch_cost){
+				min_fetch_cost = fetch_cost;
+				min_fetch_cost_sk = curr_sk;
+			}
+		}
+	}
+	if(!min_fetch_cost_sk) return NULL;
+	min_fetch_cost_sk->prepare_launch();
+	return min_fetch_cost_sk;
+}
+
+Subkernel* SubkernelSelectMinimizeFetchWritePenaltyMultiFetchPenalty(short dev_id, Subkernel** Subkernel_list, long Subkernel_list_len){
+	Subkernel* curr_sk = NULL;
+	long sk_idx;
+	double min_fetch_cost = 100000000;
+	Subkernel* min_fetch_cost_sk = NULL;
+	for (sk_idx = 0; sk_idx < Subkernel_list_len; sk_idx++){
+		curr_sk = Subkernel_list[sk_idx];
+		if (curr_sk->is_dependency_free()){
+			double fetch_cost = curr_sk->opt_fetch_cost_pen_multifetch(dev_id);
 			if(!curr_sk->is_RW_master(dev_id)) fetch_cost+=WRITE_COST_PEPENALTY*fetch_cost;
 			if(fetch_cost < min_fetch_cost){
 				min_fetch_cost = fetch_cost;

@@ -159,6 +159,8 @@ void CoCoMemcpy(void* dest, void* src, long long bytes, short loc_dest, short lo
 	else if (loc_src < 0) kind = cudaMemcpyHostToDevice;
 	else kind = cudaMemcpyDeviceToDevice;
 
+	if (loc_src == loc_dest) warning("CoCoMemcpy(dest=%p, src=%p, bytes=%lld, loc_dest=%d, loc_src=%d): Source location matches destination\n",
+	dest, src, bytes, loc_dest, loc_src);
 	massert(CUBLAS_STATUS_SUCCESS == cudaMemcpy(dest, src, bytes, kind), "CoCoMemcpy: cudaMemcpy from device src=%d to dest=%d failed\n", loc_src, loc_dest);
 	cudaCheckErrors();
 }
@@ -181,6 +183,8 @@ void CoCoMemcpyAsync(void* dest, void* src, long long bytes, short loc_dest, sho
 	else if (loc_src < 0) kind = cudaMemcpyHostToDevice;
 	else kind = cudaMemcpyDeviceToDevice;
 
+	if (loc_src == loc_dest) warning("CoCoMemcpyAsync(dest=%p, src=%p, bytes=%lld, loc_dest=%d, loc_src=%d): Source location matches destination\n",
+	dest, src, bytes, loc_dest, loc_src);
 	massert(cudaSuccess == cudaMemcpyAsync(dest, src, bytes, kind, stream),
 	"CoCoMemcpy2D: cudaMemcpyAsync failed\n");
 	//cudaCheckErrors();
@@ -198,6 +202,8 @@ void CoCoMemcpy2D(void* dest, size_t ldest, void* src, size_t lsrc, size_t rows,
 	else if (loc_src < 0) kind = cudaMemcpyHostToDevice;
 	else kind = cudaMemcpyDeviceToDevice;
 
+	if (loc_src == loc_dest) warning("CoCoMemcpy2D(dest=%p, ldest =%zu, src=%p, lsrc = %zu, rows=%zu, cols=%zu, elemSize =%d, loc_dest=%d, loc_src=%d): Source location matches destination\n",
+	dest, ldest, src, lsrc, rows, cols, elemSize, loc_dest, loc_src);
 	massert(cudaSuccess == cudaMemcpy2D(dest, ldest*elemSize, src, lsrc*elemSize, rows*elemSize, cols, kind),
 	"CoCoMemcpy2D: cudaMemcpy2D failed\n");
 	//if (loc_src == -1 && loc_dest >=0) massert(CUBLAS_STATUS_SUCCESS == cublasSetMatrix(rows, cols, elemSize, src, lsrc, dest, ldest), "CoCoMemcpy2DAsync: cublasSetMatrix failed\n");
@@ -227,6 +233,8 @@ void CoCoMemcpy2DAsync(void* dest, size_t ldest, void* src, size_t lsrc, size_t 
 	else if (loc_src < 0) kind = cudaMemcpyHostToDevice;
 	else kind = cudaMemcpyDeviceToDevice;
 
+	if (loc_src == loc_dest) warning("CoCoMemcpy2DAsync(dest=%p, ldest =%zu, src=%p, lsrc = %zu, rows=%zu, cols=%zu, elemSize =%d, loc_dest=%d, loc_src=%d): Source location matches destination\n",
+	dest, ldest, src, lsrc, rows, cols, elemSize, loc_dest, loc_src);
 	massert(cudaSuccess == cudaMemcpy2DAsync(dest, ldest*elemSize, src, lsrc*elemSize,
 		rows*elemSize, cols, kind, stream),  "CoCoMemcpy2DAsync(dest=%p, ldest =%zu, src=%p, lsrc = %zu,\
 			\nrows = %zu, cols = %zu, elemsize = %d, loc_dest = %d, loc_src = %d): cudaMemcpy2DAsync failed\n",
