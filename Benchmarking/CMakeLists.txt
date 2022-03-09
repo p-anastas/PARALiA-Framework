@@ -80,11 +80,13 @@ add_executable (cuBLASXtDgemmRunner ${BENCH_DIR_SRC}/cuBLASXtDgemmRunner.cpp )
 add_executable (BLASxDgemmRunner ${BENCH_DIR_SRC}/BLASxDgemmRunner.cpp ${BENCH_DIR_SRC}/BLASXWrappers.cpp)
 add_executable (BLASxExDgemmRunner ${BENCH_DIR_SRC}/BLASxExDgemmRunner.cpp ${BENCH_DIR_SRC}/BLASXWrappers.cpp)
 add_executable (XKBLASDgemmRunner ${BENCH_DIR_SRC}/XKBLASDgemmRunner.cpp)
+add_executable (CoCoPeLiaTestTools ${BENCH_DIR_SRC}/CoCoPeLiaTestTools.cpp)
 
 target_link_libraries(cuBLASXtDgemmRunner ${INTERNAL_LINK_LIB} benchcocopelia unihelpers)
 target_link_libraries(BLASxDgemmRunner ${INTERNAL_LINK_LIB} benchcocopelia unihelpers ${BLASX_LINK})
 target_link_libraries(BLASxExDgemmRunner ${INTERNAL_LINK_LIB} benchcocopelia unihelpers ${BLASX_LINK})
 target_link_libraries(XKBLASDgemmRunner ${INTERNAL_LINK_LIB} benchcocopelia unihelpers ${XKBLAS_LINK} )
+target_link_libraries(CoCoPeLiaTestTools ${INTERNAL_LINK_LIB} benchcocopelia unihelpers )
 
 if (${EXPERIMENTAL_VERSION} EQUAL 0)
 	add_executable (CoCoPeLiaDgemmTesterOld ${BENCH_DIR_SRC}/CoCoPeLiaDgemmTester.cpp )

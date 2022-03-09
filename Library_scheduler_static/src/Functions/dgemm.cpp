@@ -380,7 +380,7 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 		if (s != 0) error("CoCopeLiaDgemm: pthread_join failed with exit value %d", s);
 		//free(res);      /* Free memory allocated by thread */
 	}
-	
+
 	tunableParams_p best_pred_p = CoCoAutotuneParameters("Dgemm", initial_gemm,
 	  &autotuned_vals, glob_model_gemm, predef_vals_gemm, reuse_model_flag);
 
@@ -433,6 +433,8 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 		CoCoDistributeSubkernelsRoundRobinChunk(autotuned_vals, best_pred_p, Subkernel_num, KGridSz);
 	else if (!strcmp(DISTRIBUTION, "SPLIT-CHUNKS-ROBIN-REVERSE"))
 		CoCoDistributeSubkernelsRoundRobinChunkReverse(autotuned_vals, best_pred_p, Subkernel_num, KGridSz);
+	else if (!strcmp(DISTRIBUTION, "2D-BLOCK-CYCLIC"))
+		CoCoDistributeSubkernels2DBlockCyclic(autotuned_vals, best_pred_p, MGridSz, NGridSz, KGridSz);
 	else error("CoCopeLiaDgemm: Unknown Subkernel Distribution %s\n", DISTRIBUTION);
 
 #ifdef TEST

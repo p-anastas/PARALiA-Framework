@@ -62,6 +62,7 @@ ${AUTOTUNE_DIR_SRC}/CoCoPeLiaCoModel.cpp
 ${AUTOTUNE_DIR_SRC}/CoCoPeLiaGPUexec.cpp
 ${AUTOTUNE_DIR_SRC}/CoCoPeLiaModel.cpp
 ${AUTOTUNE_DIR_SRC}/WerkhovenModel.cpp
+${AUTOTUNE_DIR_SRC}/Distributions.cpp
 )
 target_link_libraries(autotuning_runtime ${INTERNAL_LINK_LIB} unihelpers)
 configure_file(${AUTOTUNE_DIR_INC}/CoCoPeLiaCoModel.hpp ${AUTOTUNE_INSTALL_INC}/CoCoPeLiaCoModel.hpp COPYONLY)

@@ -41,6 +41,7 @@ class Subkernel
 		void request_data();
 		void request_tile(short TileIdx);
 		void sync_request_data();
+		void sync_request_data_paired();
 		void run_operation();
 		void writeback_data();
 
@@ -67,5 +68,7 @@ Subkernel* SubkernelSelectNoWriteShare(short dev_id, Subkernel** Subkernel_list,
 Subkernel* SubkernelSelectMinimizeFetch(short dev_id, Subkernel** Subkernel_list, long Subkernel_list_len);
 Subkernel* SubkernelSelectMinimizeFetchWritePenalty(short dev_id, Subkernel** Subkernel_list, long Subkernel_list_len);
 Subkernel* SubkernelSelectMinimizeFetchWritePenaltyMultiFetchPenalty(short dev_id, Subkernel** Subkernel_list, long Subkernel_list_len);
+
+void sync_request_paired(short dev_id);
 
 #endif

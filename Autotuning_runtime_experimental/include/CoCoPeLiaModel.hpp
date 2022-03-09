@@ -43,6 +43,8 @@ typedef struct CoControl{
 	int T = 0;
 	short dev_num = -1;
 	short dev_ids[LOC_NUM];
+	int Subkernels_per_dev[LOC_NUM];
+	int** Subkernel_dev_id_list;
 	long long cache_limit = 0;
 }* CoControl_p;
 #endif
@@ -134,5 +136,6 @@ void CoCoDistributeSubkernelsRoundRobinChunk(CoControl_p autotune_vals, tunableP
 void CoCoDistributeSubkernelsRoundRobinChunkReverse(CoControl_p autotune_vals, tunableParams_p best_pred_p,
 	int Subkernel_num, int Chunk_size);
 
-
+void CoCoDistributeSubkernels2DBlockCyclic(CoControl_p autotune_vals,
+	  tunableParams_p pred_p, int D1GridSz, int D2GridSz, int D3GridSz);
 #endif

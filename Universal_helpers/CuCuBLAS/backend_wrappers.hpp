@@ -80,6 +80,13 @@ typedef struct Ptr_and_int{
 }* Ptr_and_int_p;
 void CoCoSetInt(void* wrapped_ptr_and_val);
 
+// Struct containing a void pointer and a void for Asynchronous set
+typedef struct Ptr_and_parent{
+	void** ptr_parent;
+	void* ptr_val;
+}* Ptr_and_parent_p;
+void CoCoSetPtr(void* wrapped_ptr_and_parent);
+
 void CoCoFreeAllocAsync(void* backend_data);
 
 void cublas_wrap_daxpy(void* backend_data, void* queue_wrap_p);

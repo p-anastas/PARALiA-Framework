@@ -312,3 +312,86 @@ void CoCoDistributeSubkernelsRoundRobinChunkReverse(CoControl_p autotune_vals,
 #endif
   }
 }
+
+void CoCoDistributeSubkernels2DBlockCyclic(CoControl_p autotune_vals,
+  tunableParams_p pred_p, int D1GridSz, int D2GridSz, int D3GridSz){
+  int lvl = 6;
+  long Subkernel_num = D1GridSz* D2GridSz* D3GridSz;
+  if (Subkernel_num <= autotune_vals->dev_num){
+    autotune_vals->dev_num = Subkernel_num;
+    for (int d = 0 ; d < autotune_vals->dev_num; d++){
+      autotune_vals->Subkernels_per_dev[d] = 1;
+      autotune_vals->Subkernel_dev_id_list[d][0] = d;
+    }
+  }
+  else{
+#ifdef MULTIDEVICE_REDUCTION_ENABLE
+
+  int rem_dev = Subkernel_num;
+  for (int d = 0 ; d < autotune_vals->dev_num; d++){
+     autotune_vals->Subkernels_per_dev[d] =
+      (int) (1.0* pred_p->rel_dev_score[d]* Subkernel_num);
+     rem_dev-= autotune_vals->Subkernels_per_dev[d];
+  }
+  while(rem_dev!= 0){
+    for (int d = 0 ; d < autotune_vals->dev_num; d++){
+       if(rem_dev!= 0){
+         autotune_vals->Subkernels_per_dev[d] += 1;
+         rem_dev--;
+       }
+       else break;
+    }
+  }
+#else
+      error("CoCoDistributeSubkernels2DBlockCyclic: not implemented for undefined MULTIDEVICE_REDUCTION_ENABLE\n");
+#endif
+
+/* 2D Bloc cyclic */
+  int D1_parts = sqrt(autotune_vals->dev_num);
+  int D2_parts = D1_parts;
+  if (D1_parts ==0) { D2_parts = autotune_vals->dev_num; D1_parts = 1; }
+  else {
+    /* find the most square decomposition of autotune_vals->dev_num in D1_parts x D2_parts */
+    int g;
+    for (g = D1_parts+1; g>0; --g)
+       if (autotune_vals->dev_num % g == 0) break;
+    if (g==0) { D1_parts = autotune_vals->dev_num; D2_parts = 1; }
+    //if (g==0) { D1_parts = 1; D2_parts = autotune_vals->dev_num; }
+    else { D1_parts = g; D2_parts = autotune_vals->dev_num/g; }
+  }
+#ifdef PDEBUG
+lprintf(lvl, "CoCoDistributeSubkernels2DBlockCyclic:\nDevices = %d, D1_parts = %d, D2_parts = %d\n",
+  autotune_vals->dev_num, D1_parts, D2_parts);
+#endif
+  int sk_ctr, devidx, dev_sk_ctr_list[autotune_vals->dev_num] = {0};
+  for (int D1 = 0; D1 < D1GridSz; D1++)
+    for (int D2 = 0; D2 < D2GridSz; D2++)
+        for (int D3 = 0; D3 < D3GridSz; D3++){
+          sk_ctr = D1*D2GridSz*D3GridSz + D2*D3GridSz+D3;
+          devidx = D1/(D1GridSz/D1_parts)*D2_parts + D2/(D2GridSz/D2_parts);
+#ifdef PDEBUG
+          lprintf(lvl, "CoCoDistributeSubkernels2DBlockCyclic:\nsk_ctr[%d,%d,%d] = %d, devidx = %d\n",
+            D1,D2,D3, sk_ctr, devidx);
+#endif
+          autotune_vals->Subkernel_dev_id_list[devidx][dev_sk_ctr_list[devidx]] = sk_ctr;
+          dev_sk_ctr_list[devidx]++;
+        }
+#ifdef PDEBUG
+    lprintf(lvl, "CoCoDistributeSubkernels2DBlockCyclic:\nDistributing %d Subkernels to %d devices\n",
+      Subkernel_num, autotune_vals->dev_num);
+    lprintf(lvl, "Device Ids : [ ");
+    for (int i =0; i < autotune_vals->dev_num; i++) fprintf(stderr, "%d ", autotune_vals->dev_ids[i]);
+    lprintf(0, "]\n");
+    lprintf(lvl, "Subker Num : [ ");
+    for (int i =0; i < autotune_vals->dev_num; i++) fprintf(stderr, "%d ",
+      autotune_vals->Subkernels_per_dev[i]);
+    lprintf(0, "]\n");
+    for (int i =0; i < autotune_vals->dev_num; i++){
+      lprintf(lvl, "Subker Id list for dev_id = %d: [ ", autotune_vals->dev_ids[i]);
+      for (int j =0; j < autotune_vals->Subkernels_per_dev[i]; j++) fprintf(stderr, "%d ",
+        autotune_vals->Subkernel_dev_id_list[i][j]);
+      lprintf(0, "]\n");
+    }
+#endif
+  }
+}

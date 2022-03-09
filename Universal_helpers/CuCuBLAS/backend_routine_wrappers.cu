@@ -41,6 +41,15 @@ void CoCoSetInt(void* wrapped_ptr_and_val){
 #endif
 }
 
+void CoCoSetPtr(void* wrapped_ptr_and_parent){
+  Ptr_and_parent_p unwrapped = (Ptr_and_parent_p) wrapped_ptr_and_parent;
+  void* prev_ptr = *(unwrapped->ptr_parent);
+  *(unwrapped->ptr_parent) = unwrapped->ptr_val;
+#ifdef DEBUG
+  lprintf(6, "CoCoSetPtr(prev=%p, %p) ran succesfully.\n", prev_ptr, unwrapped->ptr_val);
+#endif
+}
+
 void CoCoFreeAllocAsync(void* backend_data){
   free(backend_data);
 }
