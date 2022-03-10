@@ -48,7 +48,8 @@ typedef class CommandQueue
 		void add_host_func(void* func, void* data);
 		void wait_for_event(Event_p Wevent);
 #ifdef ENABLE_PARALLEL_BACKEND
-		void request_parallel_backend();
+		int request_parallel_backend();
+		void set_parallel_backend(int backend_ctr);
 #endif
 		std::string name;
 		void print() { std::cout << "Command Queue : " << name; }

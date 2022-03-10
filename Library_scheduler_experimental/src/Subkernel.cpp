@@ -10,7 +10,7 @@
 #include "DataCaching.hpp"
 #include "backend_wrappers.hpp"
 
-int transfer_link_sharing[LOC_NUM][LOC_NUM][2] = {{{-42}}};
+int transfer_link_sharing[LOC_NUM][LOC_NUM][2];
 CQueue_p transfer_queues[LOC_NUM][LOC_NUM] = {{NULL}}, exec_queue[LOC_NUM] = {NULL};
 int Subkernel_ctr = 0, backend_init_flag[LOC_NUM] = {0};
 
@@ -360,7 +360,7 @@ void Subkernel::run_operation(){
 #endif
 	short run_dev_id_idx = idxize(run_dev_id);
 #ifdef ENABLE_PARALLEL_BACKEND
-	if(WR_first) exec_queue[run_dev_id_idx]->request_parallel_backend();
+	short RW_parallel_backend_ctr = exec_queue[run_dev_id_idx]->request_parallel_backend();
 #endif
 	for (int j = 0; j < TileNum; j++){
 		if (TileDimlist[j] == 1){
@@ -554,7 +554,11 @@ int queue_d_allock = 0;
 
 void CoCoPeLiaInitResources(short dev_id){
 
-	while(__sync_lock_test_and_set (&queue_d_allock, 1));
+	//while(__sync_lock_test_and_set (&queue_d_allock, 1));
+
+	for(int i = 0; i < LOC_NUM; i++)
+	for(int j = 0; j < LOC_NUM; j++)
+	for(int k = 0; k < 2; k++) transfer_link_sharing[i][j][k] = -42;
 
 	// FIXME: Handmade distribution, for testing purposes
 	transfer_link_sharing[0][LOC_NUM - 1][0] = 1;
@@ -572,33 +576,72 @@ void CoCoPeLiaInitResources(short dev_id){
 	transfer_link_sharing[5][LOC_NUM - 1][0] = 4;
 	transfer_link_sharing[5][LOC_NUM - 1][1] = LOC_NUM - 1;
 
+
 	transfer_link_sharing[6][LOC_NUM - 1][0] = 7;
 	transfer_link_sharing[6][LOC_NUM - 1][1] = LOC_NUM - 1;
 	transfer_link_sharing[7][LOC_NUM - 1][0] = 6;
 	transfer_link_sharing[7][LOC_NUM - 1][1] = LOC_NUM - 1;
 
+/*
+	transfer_link_sharing[LOC_NUM - 1][0][0] = LOC_NUM - 1;
+	transfer_link_sharing[LOC_NUM - 1][0][1] = 1;
+	transfer_link_sharing[LOC_NUM - 1][1][0] = LOC_NUM - 1;
+	transfer_link_sharing[LOC_NUM - 1][1][1] = 0;
+
+	transfer_link_sharing[LOC_NUM - 1][2][0] = LOC_NUM - 1;
+	transfer_link_sharing[LOC_NUM - 1][2][1] = 3;
+	transfer_link_sharing[LOC_NUM - 1][3][0] = LOC_NUM - 1;
+	transfer_link_sharing[LOC_NUM - 1][3][1] = 2;
+
+	transfer_link_sharing[LOC_NUM - 1][4][0] = LOC_NUM - 1;
+	transfer_link_sharing[LOC_NUM - 1][4][1] = 5;
+	transfer_link_sharing[LOC_NUM - 1][5][0] = LOC_NUM - 1;
+	transfer_link_sharing[LOC_NUM - 1][5][1] = 4;
+
+	transfer_link_sharing[LOC_NUM - 1][6][0] = LOC_NUM - 1;
+	transfer_link_sharing[LOC_NUM - 1][6][1] = 7;
+	transfer_link_sharing[LOC_NUM - 1][7][0] = LOC_NUM - 1;
+	transfer_link_sharing[LOC_NUM - 1][7][1] = 6;
+*/
+
 	short dev_id_idx = idxize(dev_id);
-	for(short dev_id_idy = 0 ; dev_id_idy < LOC_NUM; dev_id_idy++){
+	for(short dev_id_idy = 0 ; dev_id_idy < LOC_NUM; dev_id_idy++)
+	if(dev_id_idy!=dev_id_idx){
 		if (!transfer_queues[dev_id_idx][dev_id_idy]){
-			if(transfer_link_sharing[dev_id_idx][dev_id_idy][0] != - 42 &&
-				transfer_queues[transfer_link_sharing[dev_id_idx][dev_id_idy][0]]
-				[transfer_link_sharing[dev_id_idx][dev_id_idy][1]] != NULL)
-				transfer_queues[dev_id_idx][dev_id_idy] =
-					transfer_queues[transfer_link_sharing[dev_id_idx][dev_id_idy][0]]
-				[transfer_link_sharing[dev_id_idx][dev_id_idy][1]];
-			else transfer_queues[dev_id_idx][dev_id_idy] = new CommandQueue(dev_id);
+			short shared_iloc0 = transfer_link_sharing[dev_id_idx][dev_id_idy][0],
+				shared_iloc1 = transfer_link_sharing[dev_id_idx][dev_id_idy][1];
+			if( shared_iloc0 != - 42){ // The smallest index shared link allocates the queue
+				if (dev_id_idx*LOC_NUM + dev_id_idy < shared_iloc0*LOC_NUM + shared_iloc1){
+					transfer_queues[dev_id_idx][dev_id_idy] = new CommandQueue(dev_id);
+					transfer_queues[shared_iloc0][shared_iloc1] = transfer_queues[dev_id_idx][dev_id_idy];
+				}
 			}
-		if (!transfer_queues[dev_id_idy][dev_id_idx]) transfer_queues[dev_id_idy][dev_id_idx]
-			= new CommandQueue(deidxize(dev_id_idy));
+			else transfer_queues[dev_id_idx][dev_id_idy] = new CommandQueue(dev_id);
+		}
+		if (!transfer_queues[dev_id_idy][dev_id_idx]){
+			short shared_iloc0 = transfer_link_sharing[dev_id_idy][dev_id_idx][0],
+				shared_iloc1 = transfer_link_sharing[dev_id_idy][dev_id_idx][1];
+			if( shared_iloc0 != - 42){ // The smallest index shared link allocates the queue
+				if (dev_id_idy*LOC_NUM + dev_id_idx < shared_iloc0*LOC_NUM + shared_iloc1){
+					short writeback_queue_id = (dev_id_idy == LOC_NUM - 1)? dev_id : deidxize(dev_id_idy);
+					transfer_queues[dev_id_idy][dev_id_idx] = new CommandQueue(writeback_queue_id);
+					transfer_queues[shared_iloc0][shared_iloc1] = transfer_queues[dev_id_idy][dev_id_idx];
+				}
+			}
+			else{
+				short writeback_queue_id = (dev_id_idy == LOC_NUM - 1)? dev_id : deidxize(dev_id_idy);
+				transfer_queues[dev_id_idy][dev_id_idx] = new CommandQueue(writeback_queue_id);
+			}
+		}
 	}
   if (!exec_queue[dev_id_idx])  exec_queue[dev_id_idx] = new CommandQueue(dev_id);
 
-	__sync_lock_release(&queue_d_allock);
+	//__sync_lock_release(&queue_d_allock);
 }
 
 void CoCoPeLiaFreeResources(short dev_id){
 
-	while(__sync_lock_test_and_set (&queue_d_allock, 1));
+	//while(__sync_lock_test_and_set (&queue_d_allock, 1));
 
 	short dev_id_idx = (dev_id == -1)?  LOC_NUM - 1 : dev_id;
 	for(short dev_id_idy = 0 ; dev_id_idy < LOC_NUM; dev_id_idy++){
@@ -618,7 +661,7 @@ void CoCoPeLiaFreeResources(short dev_id){
 		exec_queue[dev_id_idx] = NULL;
 	}
 
-	__sync_lock_release(&queue_d_allock);
+	//__sync_lock_release(&queue_d_allock);
 }
 
 void Subkernel::prepare_launch(){
@@ -670,6 +713,7 @@ short Subkernel::is_RW_master(short dev_id){
 	return 1;
 }
 
+#ifdef RUNTIME_SCHEDULER_VERSION
 double Subkernel::opt_fetch_cost_pen_multifetch(short dev_id){
 	double fetch_cost = 0;
 	for (int j = 0; j < TileNum; j++){
@@ -793,3 +837,4 @@ Subkernel* SubkernelSelectMinimizeFetchWritePenaltyMultiFetchPenalty(short dev_i
 	min_fetch_cost_sk->prepare_launch();
 	return min_fetch_cost_sk;
 }
+#endif

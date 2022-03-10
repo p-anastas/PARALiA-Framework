@@ -31,9 +31,9 @@ add_definitions(-DMAX_BUFFERING_L=4)
 #add_definitions(-DENABLE_MUTEX_LOCKING)
 
 ## Enable Running multiple backend operations in parallel for each queue
-#add_definitions(-DENABLE_PARALLEL_BACKEND)
+add_definitions(-DENABLE_PARALLEL_BACKEND)
 ## The maximum allowed parallel backend operations per queue
-#add_definitions(-DMAX_BACKEND_L=2)
+add_definitions(-DMAX_BACKEND_L=4)
 
 ## Enable overlapping Send & recv Communication
 add_definitions(-DENABLE_SEND_RECV_OVERLAP)
@@ -41,16 +41,29 @@ add_definitions(-DENABLE_SEND_RECV_OVERLAP)
 ## Enable using the CPU as an extra device for part of the total workload, if applicable
 add_definitions(-DENABLE_CPU_WORKLOAD)
 
-## Define which subkernel distribution to use
-#add_definitions(-DDISTRIBUTION="NAIVE")
-#add_definitions(-DDISTRIBUTION="NAIVE-NO-WRITE-SHARE")
-#add_definitions(-DDISTRIBUTION="MINIMIZE-FETCH")
-#add_definitions(-DDISTRIBUTION="MINIMIZE-FETCH-WRITE-PENALTY")
-add_definitions(-DDISTRIBUTION="MINIMIZE-FETCH-WRITE-PENALTY-MULTIFETCH-PENALTY")
-add_definitions(-DWRITE_COST_PEPENALTY=0.5)
-add_definitions(-DMULTIFETCH_PENALTY=1)
+set(SCHEDULE_TYPE 0) # 0 = static, 1 = runtime selection
+if (${SCHEDULE_TYPE} EQUAL 0)
+  ## Define which subkernel distribution to use
+  #add_definitions(-DDISTRIBUTION="ROUND-ROBIN")
+  #add_definitions(-DDISTRIBUTION="SPLIT-NAIVE")
+  #add_definitions(-DDISTRIBUTION="SPLIT-CHUNKS-ROBIN")
+  #add_definitions(-DDISTRIBUTION="SPLIT-CHUNKS-ROBIN-REVERSE")
+  add_definitions(-DDISTRIBUTION="2D-BLOCK-CYCLIC")
+elseif(${SCHEDULE_TYPE} EQUAL 1)
+  ## Enable using the CPU as an extra device for part of the total workload, if applicable
+  add_definitions(-DRUNTIME_SCHEDULER_VERSION)
+  ## Define which subkernel distribution to use
+  #add_definitions(-DDISTRIBUTION="NAIVE")
+  #add_definitions(-DDISTRIBUTION="NAIVE-NO-WRITE-SHARE")
+  #add_definitions(-DDISTRIBUTION="MINIMIZE-FETCH")
+  #add_definitions(-DDISTRIBUTION="MINIMIZE-FETCH-WRITE-PENALTY")
+  add_definitions(-DDISTRIBUTION="MINIMIZE-FETCH-WRITE-PENALTY-MULTIFETCH-PENALTY")
 
-#add_definitions(-DDISTRIBUTION="2D-BLOCK-CYCLIC")
+  # Extra distribution-related values
+  add_definitions(-DWRITE_COST_PEPENALTY=1)
+  add_definitions(-DMULTIFETCH_PENALTY=1)
+else()
+endif()
 
 #Run in testing mode : details about models, decisions and time spend in operations.
 add_definitions(-DTEST)
@@ -59,13 +72,13 @@ add_definitions(-DTEST)
 add_definitions(-DSTEST)
 
 #Run in debug mode, which includes detailed function calls and info for error-checking
-#add_definitions(-DDEBUG)
+add_definitions(-DDEBUG)
 
 #Run in deep debug mode, for command-to-command debugging
-#add_definitions(-DDDEBUG)
+add_definitions(-DDDEBUG)
 
 #Run Prediction debug mode (autotuning runtime stuff)
-#add_definitions(-DPDEBUG)
+add_definitions(-DPDEBUG)
 
 #Run Prediction deep debug mode (all autotuning runtime stuff)
 #add_definitions(-DDPDEBUG)

@@ -165,12 +165,14 @@ void CommandQueue::wait_for_event(Event_p Wevent)
 }
 
 #ifdef ENABLE_PARALLEL_BACKEND
-void CommandQueue::request_parallel_backend()
+int CommandQueue::request_parallel_backend()
 {
 	get_lock();
 	if (backend_ctr == MAX_BACKEND_L - 1) backend_ctr = 0;
 	else backend_ctr++;
+	int tmp_backend_ctr = backend_ctr;
 	release_lock();
+	return tmp_backend_ctr;
 }
 #endif
 

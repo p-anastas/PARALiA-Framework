@@ -168,7 +168,9 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 	lprintf(lvl, "Memory management(%d): t_mem = %lf ms\n", dev_id, cpu_timer*1000);
 	cpu_timer = csecond();
 #endif
+
 	Subkernel * curr = NULL, *prev = NULL;
+#ifdef RUNTIME_SCHEDULER_VERSION
 	while (remaining_Subkernels > 0 && !remove_dev[idxize(dev_id)]){
 		prev = curr;
 		if(prev) prev->sync_request_data();
@@ -205,9 +207,40 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 		curr->request_data();
 		__sync_lock_release(&Sk_select_lock);
 		curr->run_operation();
+#ifdef ENABLE_SEND_RECV_OVERLAP
 		curr->writeback_data();
-
+#endif
 	}
+#else
+	int scheduled[gemm_subkernel_data->SubkernelNumDev] = {0};
+	int remaining_Subkernels_dev = gemm_subkernel_data->SubkernelNumDev;
+	while(remaining_Subkernels_dev){
+		for (int keri = 0; keri < gemm_subkernel_data->SubkernelNumDev; keri++) if (!scheduled[keri]){
+			prev = curr;
+			//if(prev) prev->sync_request_data();
+			Subkernel * temp = gemm_subkernel_data->SubkernelListDev[keri];
+			if (!temp->is_dependency_free()) continue;
+			curr = temp;
+			scheduled[keri] = 1;
+			remaining_Subkernels_dev--;
+			curr->prev = prev;
+			if(prev) prev->next = curr;
+			curr->prepare_launch();
+			CoCoGemmUpdateDevice(curr, dev_id);
+			curr->init_events();
+			curr->request_data();
+			curr->run_operation();
+#ifdef ENABLE_SEND_RECV_OVERLAP
+			curr->writeback_data();
+#endif
+		}
+	}
+#endif
+
+#ifndef ENABLE_SEND_RECV_OVERLAP
+	for (int keri = 0; keri < gemm_subkernel_data->SubkernelNumDev; keri++)
+		gemm_subkernel_data->SubkernelListDev[keri]->writeback_data();
+#endif
 
 	CoCoSyncCheckErr();
 #ifdef STEST
@@ -356,15 +389,71 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 	lprintf(lvl, "Subkernel_num = %d {M,N,K}GridSz = {%d, %d, %d}, autotuned_vals->dev_num = %d\n\n",
 		Subkernel_num, MGridSz, NGridSz, KGridSz, autotuned_vals->dev_num);
 #endif
-	remaining_Subkernels = Subkernel_num;
+
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer;
 	lprintf(lvl, "Subkernel init -> t_subkernel_init = %lf ms\n", cpu_timer*1000);
 	cpu_timer = csecond();
 #endif
 
+#ifndef RUNTIME_SCHEDULER_VERSION
+	autotuned_vals->Subkernel_dev_id_list = (int**) malloc(autotuned_vals->dev_num*sizeof(int*));
+	for (int devidx = 0; devidx < autotuned_vals->dev_num; devidx++)
+		autotuned_vals->Subkernel_dev_id_list[devidx] = (int*) malloc(Subkernel_num*sizeof(int));
+	if (!strcmp(DISTRIBUTION, "ROUND-ROBIN"))
+		CoCoDistributeSubkernelsRoundRobin(autotuned_vals, best_pred_p, Subkernel_num);
+	else if (!strcmp(DISTRIBUTION, "SPLIT-NAIVE"))
+		CoCoDistributeSubkernelsNaive(autotuned_vals, best_pred_p, Subkernel_num);
+	else if (!strcmp(DISTRIBUTION, "SPLIT-CHUNKS-ROBIN"))
+		CoCoDistributeSubkernelsRoundRobinChunk(autotuned_vals, best_pred_p, Subkernel_num, KGridSz);
+	else if (!strcmp(DISTRIBUTION, "SPLIT-CHUNKS-ROBIN-REVERSE"))
+		CoCoDistributeSubkernelsRoundRobinChunkReverse(autotuned_vals, best_pred_p, Subkernel_num, KGridSz);
+	else if (!strcmp(DISTRIBUTION, "2D-BLOCK-CYCLIC"))
+		CoCoDistributeSubkernels2DBlockCyclic(autotuned_vals, best_pred_p, MGridSz, NGridSz, KGridSz);
+	else error("CoCopeLiaDgemm: Unknown Subkernel Distribution %s\n", DISTRIBUTION);
+
+#ifdef TEST
+	cpu_timer = csecond() - cpu_timer;
+	lprintf(lvl, "Subkernel Distribute -> t_subkernel_dist = %lf ms\n", cpu_timer*1000);
+	cpu_timer = csecond();
+#endif
+
+	int used_devices = 0;
+	for (int d = 0 ; d < autotuned_vals->dev_num; d++)
+		if(autotuned_vals->Subkernels_per_dev[d] > 0 ) used_devices++;
+		else if(autotuned_vals->Subkernels_per_dev[d] < 0 )
+			error("CoCoPeLiaDgemm: autotuned_vals->Subkernels_per_dev[%d] = %d\n",
+				d, autotuned_vals->Subkernels_per_dev[d]);
+		else{
+			free(autotuned_vals->Subkernel_dev_id_list[d]);
+			for (int d_move = d; d_move < autotuned_vals->dev_num - 1; d_move++){
+				autotuned_vals->Subkernels_per_dev[d_move] = autotuned_vals->Subkernels_per_dev[d_move+1];
+				autotuned_vals->Subkernel_dev_id_list[d_move] = autotuned_vals->Subkernel_dev_id_list[d_move+1];
+				autotuned_vals->dev_ids[d_move] = autotuned_vals->dev_ids[d_move+1];
+			}
+		}
+//#ifdef DEBUG
+if(!reuse_model_flag){
+		lprintf(0, "used_devices=%d out of selected autotuned_vals->dev_num=%d\n", used_devices, autotuned_vals->dev_num);
+		lprintf(0, "====================================\n");
+}
+//#endif
+	autotuned_vals->dev_num = used_devices;
+
+#ifdef TEST
+	cpu_timer = csecond() - cpu_timer;
+	lprintf(lvl, "Subkernel Correct Split devices -> t_subkernel_split = %lf ms\n", cpu_timer*1000);
+	cpu_timer = csecond();
+#endif
+
+#else
+	remaining_Subkernels = Subkernel_num;
+#endif
+
 	s = pthread_attr_init(&attr);
 	if (s != 0) error("CoCopeLiaDgemm: pthread_attr_init failed s=%d\n", s);
+
+
 
 	pthread_t thread_id[autotuned_vals->dev_num];
 	kernel_pthread_wrap_p thread_dev_data[autotuned_vals->dev_num];
@@ -381,8 +470,17 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 
 		thread_dev_data[d] = (kernel_pthread_wrap_p) malloc(sizeof(struct kernel_pthread_wrap));
 		thread_dev_data[d]->dev_id = autotuned_vals->dev_ids[d];
+
+#ifdef RUNTIME_SCHEDULER_VERSION
 		thread_dev_data[d]->SubkernelNumDev = 0;
 		thread_dev_data[d]->SubkernelListDev = (Subkernel**) malloc(Subkernel_num*sizeof(Subkernel*));
+#else
+		thread_dev_data[d]->SubkernelListDev = (Subkernel**) malloc(autotuned_vals->Subkernels_per_dev[d]* sizeof(Subkernel*));
+		for(int skitt = 0; skitt < autotuned_vals->Subkernels_per_dev[d]; skitt++)
+			thread_dev_data[d]->SubkernelListDev[skitt] = Subkernel_list[autotuned_vals->Subkernel_dev_id_list[d][skitt]];
+
+		thread_dev_data[d]->SubkernelNumDev = autotuned_vals->Subkernels_per_dev[d];
+#endif
 
 		s = pthread_create(&thread_id[d], &attr,
                                   &CoCopeLiaDgemmAgentVoid, thread_dev_data[d]);
