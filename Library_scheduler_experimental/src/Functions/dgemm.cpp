@@ -215,13 +215,12 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 	int scheduled[gemm_subkernel_data->SubkernelNumDev] = {0};
 	int remaining_Subkernels_dev = gemm_subkernel_data->SubkernelNumDev;
 	while(remaining_Subkernels_dev){
-		for (int keri = 0; keri < gemm_subkernel_data->SubkernelNumDev; keri++) if (!scheduled[keri]){
+		for (int keri = 0; keri < gemm_subkernel_data->SubkernelNumDev; keri++){
 			prev = curr;
-			//if(prev) prev->sync_request_data();
+			if(prev) prev->sync_request_data();
 			Subkernel * temp = gemm_subkernel_data->SubkernelListDev[keri];
 			if (!temp->is_dependency_free()) continue;
 			curr = temp;
-			scheduled[keri] = 1;
 			remaining_Subkernels_dev--;
 			curr->prev = prev;
 			if(prev) prev->next = curr;

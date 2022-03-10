@@ -41,6 +41,9 @@ add_definitions(-DENABLE_SEND_RECV_OVERLAP)
 ## Enable using the CPU as an extra device for part of the total workload, if applicable
 add_definitions(-DENABLE_CPU_WORKLOAD)
 
+## Enable using the CPU as an extra device for part of the total workload, if applicable
+#add_definitions(-DENABLE_PTHREAD_TILE_REQUEST)
+
 set(SCHEDULE_TYPE 0) # 0 = static, 1 = runtime selection
 if (${SCHEDULE_TYPE} EQUAL 0)
   ## Define which subkernel distribution to use
@@ -72,13 +75,13 @@ add_definitions(-DTEST)
 add_definitions(-DSTEST)
 
 #Run in debug mode, which includes detailed function calls and info for error-checking
-add_definitions(-DDEBUG)
+#add_definitions(-DDEBUG)
 
 #Run in deep debug mode, for command-to-command debugging
-add_definitions(-DDDEBUG)
+#add_definitions(-DDDEBUG)
 
 #Run Prediction debug mode (autotuning runtime stuff)
-add_definitions(-DPDEBUG)
+#add_definitions(-DPDEBUG)
 
 #Run Prediction deep debug mode (all autotuning runtime stuff)
 #add_definitions(-DDPDEBUG)

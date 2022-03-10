@@ -157,7 +157,7 @@ int main(const int argc, const char *argv[]) {
  	CoCoMemcpy(C, C_buf,  M * N *sizeof(double), C_loc, -2);
 	free(C_out);
 	free(C_out1);
-	free(C_buf);
+	//free(C_buf);
 #endif
 
 

@@ -124,6 +124,16 @@ void Subkernel::sync_request_data(){
 #endif
 }
 
+typedef struct tile_req{
+	Subkernel* sk;
+	int TileIdx;
+}* tile_req_p;
+
+void* request_tile_pthread_wrap(void* wrapped_tile_req){
+	tile_req_p unwrap = (tile_req_p) wrapped_tile_req;
+	unwrap->sk->request_tile(unwrap->TileIdx);
+}
+
 void Subkernel::request_tile(short TileIdx){
 	short lvl = 5;
 	short run_dev_id_idx = idxize(run_dev_id);
@@ -135,7 +145,11 @@ void Subkernel::request_tile(short TileIdx){
 #endif
 		short FetchFromId = - 42;
 		CacheGetLock(NULL);
-		if(!tmp->W_flag) FetchFromId = tmp->getClosestReadLoc(run_dev_id);
+		if(!tmp->W_flag){
+			FetchFromId = tmp->getClosestReadLoc(run_dev_id);
+			//transfer_queues[run_dev_id_idx][idxize(FetchFromId)]->sync_barrier();
+			//FetchFromId = tmp->getClosestReadLoc(run_dev_id);
+		}
 		else {
 			FetchFromId = tmp->RW_master;
 			if (FetchFromId == run_dev_id) error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d])::request_tile W_flag = %d, \
@@ -296,6 +310,14 @@ void Subkernel::request_data(){
 #ifdef DEBUG
 	lprintf(lvl-1, "|-----> Subkernel(dev=%d,id=%d)::request_data()\n", run_dev_id, id);
 #endif
+#ifdef ENABLE_PTHREAD_TILE_REQUEST
+	pthread_t thread_id[TileNum];
+	short requested_tiles = 0;
+	pthread_attr_t attr;
+	int s = pthread_attr_init(&attr);
+	if (s != 0) error("Subkernel(dev=%d,id=%d)::request_data() - pthread_attr_init failed s=%d\n",
+	run_dev_id, id, s);
+#endif
 	short run_dev_id_idx = idxize(run_dev_id);
 	for (int j = 0; j < TileNum; j++){
 		if (TileDimlist[j] == 1){
@@ -307,12 +329,35 @@ void Subkernel::request_data(){
 		lprintf(lvl, "Subkernel(dev=%d,id=%d)-Tile(%d.[%d]): Asigned buffer Block in GPU(%d)= %d\n",
 					run_dev_id, id, tmp->id, tmp->GridId, run_dev_id, tmp->CacheLocId[run_dev_id_idx]);
 #endif
-				if (tmp->R_flag)request_tile(j);
+#ifdef ENABLE_PTHREAD_TILE_REQUEST
+					if (tmp->R_flag) {
+						tile_req_p wrap_request = (tile_req_p) malloc(sizeof(struct tile_req));
+						wrap_request->sk = this;
+						wrap_request->TileIdx = j;
+						s = pthread_create(&thread_id[requested_tiles], &attr, &request_tile_pthread_wrap,
+							wrap_request);
+						requested_tiles++;
+					}
+#else
+					if (tmp->R_flag) request_tile(j);
+#endif
 			}
 			else if(tmp->CacheLocId[run_dev_id_idx] == -1 && tmp->W_flag && tmp->RW_master != run_dev_id){
-				if (tmp->R_flag) request_tile(j);
+#ifdef ENABLE_PTHREAD_TILE_REQUEST
+					if (tmp->R_flag) {
+						tile_req_p wrap_request = (tile_req_p) malloc(sizeof(struct tile_req));
+						wrap_request->sk = this;
+						wrap_request->TileIdx = j;
+						s = pthread_create(&thread_id[requested_tiles], &attr, &request_tile_pthread_wrap,
+							wrap_request);
+						requested_tiles++;
+					}
+#else
+					if (tmp->R_flag) request_tile(j);
+#endif
 			}
 			else{
+				tmp->available[run_dev_id_idx]->sync_barrier();
 				CacheWrap_p wrap_reuse = (CacheWrap_p) malloc(sizeof(struct Cache_info_wrap));
 				wrap_reuse->dev_id = run_dev_id;
 				wrap_reuse->BlockIdx = tmp->CacheLocId[run_dev_id_idx];
@@ -329,12 +374,35 @@ void Subkernel::request_data(){
 			lprintf(lvl, "Subkernel(dev=%d,id=%d)-Tile(%d.[%d, %d]): Asigned buffer Block in GPU(%d)= %d\n",
 						run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2, run_dev_id, tmp->CacheLocId[run_dev_id_idx]);
 	#endif
+#ifdef ENABLE_PTHREAD_TILE_REQUEST
+					if (tmp->R_flag) {
+						tile_req_p wrap_request = (tile_req_p) malloc(sizeof(struct tile_req));
+						wrap_request->sk = this;
+						wrap_request->TileIdx = j;
+						s = pthread_create(&thread_id[requested_tiles], &attr, &request_tile_pthread_wrap,
+							wrap_request);
+						requested_tiles++;
+					}
+#else
 					if (tmp->R_flag) request_tile(j);
+#endif
 				}
 				else if(tmp->CacheLocId[run_dev_id_idx] == -1 && tmp->W_flag && tmp->RW_master != run_dev_id){
+#ifdef ENABLE_PTHREAD_TILE_REQUEST
+					if (tmp->R_flag) {
+						tile_req_p wrap_request = (tile_req_p) malloc(sizeof(struct tile_req));
+						wrap_request->sk = this;
+						wrap_request->TileIdx = j;
+						s = pthread_create(&thread_id[requested_tiles], &attr, &request_tile_pthread_wrap,
+							wrap_request);
+						requested_tiles++;
+					}
+#else
 					if (tmp->R_flag) request_tile(j);
+#endif
 				}
 				else{
+					tmp->available[run_dev_id_idx]->sync_barrier();
 					CacheWrap_p wrap_reuse = (CacheWrap_p) malloc(sizeof(struct Cache_info_wrap));
 					wrap_reuse->dev_id = run_dev_id;
 					wrap_reuse->BlockIdx = tmp->CacheLocId[run_dev_id_idx];
@@ -347,6 +415,15 @@ void Subkernel::request_data(){
 	}
 #ifndef ASYNC_ENABLE
 	CoCoSyncCheckErr();
+#endif
+#ifdef ENABLE_PTHREAD_TILE_REQUEST
+void* res;
+for(int i=0; i<requested_tiles;i++){
+	s = pthread_join(thread_id[i], &res);
+	if (s != 0) error("Subkernel(dev=%d,id=%d)::request_data() - pthread_join failed with exit value %d\n",
+	run_dev_id, id, s);
+	//free(res);      /* Free memory allocated by thread */
+}
 #endif
 #ifdef DEBUG
 	lprintf(lvl-1, "<-----|\n");
