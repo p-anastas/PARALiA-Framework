@@ -23,7 +23,7 @@ int main(const int argc, const char *argv[]) {
 
 	int ctr = 1, samples, dev_id, dev_count;
 
-  short loc_src, loc_dest;
+  short loc_src = -2, loc_dest = -2;
   size_t TileDim = 2048;
 
   switch (argc) {
@@ -63,17 +63,18 @@ int main(const int argc, const char *argv[]) {
   else if(loc_dest >= 0) cudaSetDevice(loc_dest);
 
   size_t ldsrc, ldest = ldsrc = TileDim + 1;
+	short elemSize = sizeof(double);
 
-  src = CoCoMalloc(TileDim*(TileDim+1)*sizeof(double), loc_src);
-  dest =  CoCoMalloc(TileDim*(TileDim+1)*sizeof(double), loc_dest);
-  rev_src = CoCoMalloc(TileDim*(TileDim+1)*sizeof(double), loc_dest);
-  rev_dest = CoCoMalloc(TileDim*(TileDim+1)*sizeof(double), loc_src);
+  src = CoCoMalloc(TileDim*(TileDim+1)*elemSize, loc_src);
+  dest =  CoCoMalloc(TileDim*(TileDim+1)*elemSize, loc_dest);
+  rev_src = CoCoMalloc(TileDim*(TileDim+1)*elemSize, loc_dest);
+  rev_dest = CoCoMalloc(TileDim*(TileDim+1)*elemSize, loc_src);
 
 	void* host_buf_in, *host_buf_out, *host_buf_in_rev, *conspiquous_ptr = src;
 
-	host_buf_in = CoCoMalloc(TileDim*(TileDim+1)*sizeof(double), -1);
-	host_buf_out = CoCoMalloc(TileDim*(TileDim+1)*sizeof(double), -1);
-	host_buf_in_rev = CoCoMalloc(TileDim*(TileDim+1)*sizeof(double), -1);
+	host_buf_in = CoCoMalloc(TileDim*(TileDim+1)*elemSize, -1);
+	host_buf_out = CoCoMalloc(TileDim*(TileDim+1)*elemSize, -1);
+	host_buf_in_rev = CoCoMalloc(TileDim*(TileDim+1)*elemSize, -1);
 
 	fprintf(stderr, "Pointers: src=%p, dest=%p, rev_src=%p, rev_dest=%p\n\n",
 		src, dest, rev_src, rev_dest);
@@ -87,46 +88,17 @@ int main(const int argc, const char *argv[]) {
 
 	double transfer_timer;
 
-	cudaMemcpy2D(host_buf_in, ldsrc*elemSize, src, ldsrc*elemSize, rows*elemSize, cols, kind);
-	cudaMemcpy2D(host_buf_in_rev, ldsrc*elemSize, rev_src, ldsrc*elemSize, rows*elemSize, cols, kind);
 	CoCoSyncCheckErr();
-	for (int iter = 0; iter < 10; iter++)
-	massert(cudaSuccess == cudaMemcpy2DAsync(dest, ldest*elemSize, rev_dest, ldsrc*elemSize,
-		rows*elemSize, cols, kind, stream), "CoCoMemcpy2DAsync(dest=%p, ldest =%zu, src=%p, ldsrc = %zu,\
-			\nrows = %zu, cols = %zu, elemsize = %d, loc_dest = %d, loc_src = %d): cudaMemcpy2DAsync failed\n",
-			dest, ldest, src, ldsrc, rows, cols, elemSize, loc_dest, loc_src);
-	fprintf(stderr, "CoCoMemcpy2DAsync(dest=%p, ldest =%zu, src=%p, ldsrc = %zu,\
-		\nrows = %zu, cols = %zu, elemsize = %d, loc_dest = %d, loc_src = %d)\n\n",
-		dest, ldest, rev_dest, ldsrc, rows, cols, elemSize, loc_dest, loc_src);
-
-	Ptr_and_parent_p wrapped_op = (Ptr_and_parent_p) malloc(sizeof(struct Ptr_and_parent));
-	wrapped_op->ptr_parent = &(cudaMemcpy3DParms_p->srcPtr.ptr);
-	wrapped_op->ptr_val = rev_src;
-	transfer_link->add_host_func((void*)&CoCoSetPtr, (void*) wrapped_op);
 
 	device_timer->start_point(transfer_link);
-	massert(cudaSuccess == cudaMemcpy3DAsync ( cudaMemcpy3DParms_p, stream) , "cudaMemcpy3DAsync failed\n",
-			dest, ldest, src, ldsrc, rows, cols, elemSize, loc_dest, loc_src);
-
-	fprintf(stderr, "CoCoMemcpy2DAsync(dest=%p, ldest =%zu, src=%p, ldsrc = %zu,\
-		\nrows = %zu, cols = %zu, elemsize = %d, loc_dest = %d, loc_src = %d)\n\n",
-		dest, ldest, *wrapped_op->ptr_parent, ldsrc, rows, cols, elemSize, loc_dest, loc_src);
-
 	device_timer->stop_point(transfer_link);
 	CoCoSyncCheckErr();
+
 	transfer_timer = device_timer->sync_get_time()/1000;
 	fprintf(stderr, "Microbenchmark (dim1 = dim2 = %zu) complete:\t transfer_timer=%lf ms  ( %lf Gb/s)\n\n",
 	 	TileDim, transfer_timer  * 1000, Gval_per_s(TileDim*TileDim*elemSize, transfer_timer));
 
-	cudaMemcpy2D(host_buf_out, ldest*elemSize, dest, ldest*elemSize, rows*elemSize, cols, kind);
 
-	fprintf(stderr, "Comparing initial send buffer %p with actual transfered %p\n\n",
-	src, cudaMemcpy3DParms_p->srcPtr.ptr);
-	Dtest_equality((double*)host_buf_in, (double*)host_buf_out, rows * cols);
-
-	fprintf(stderr, "Comparing changed send buffer %p with actual transfered %p\n\n",
-	rev_src, cudaMemcpy3DParms_p->srcPtr.ptr);
-	Dtest_equality((double*)host_buf_in_rev, (double*)host_buf_out, rows * cols);
 	CoCoSyncCheckErr();
   CoCoFree(src, loc_src);
  	CoCoFree(dest, loc_dest);

@@ -40,8 +40,8 @@ class Subkernel
 		void init_events();
 		void request_data();
 		void request_tile(short TileIdx);
+		void sync_request_data_RONLY();
 		void sync_request_data();
-		void sync_request_data_paired();
 		void run_operation();
 		void writeback_data();
 

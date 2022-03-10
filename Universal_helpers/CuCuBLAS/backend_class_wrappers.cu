@@ -87,6 +87,7 @@ CommandQueue::CommandQueue(int dev_id_in)
 
 CommandQueue::~CommandQueue()
 {
+		CoCoPeLiaSelectDevice(dev_id);
 #ifdef ENABLE_PARALLEL_BACKEND
 	for (int par_idx = 0; par_idx < MAX_BACKEND_L; par_idx++ ){
 		cudaStream_t stream = *((cudaStream_t*) cqueue_backend_ptr[par_idx]);
@@ -145,6 +146,9 @@ void CommandQueue::add_host_func(void* func, void* data){
 void CommandQueue::wait_for_event(Event_p Wevent)
 {
 	if (Wevent->query_status() == CHECKED) return;
+
+	// TODO: New addition (?)
+	if (Wevent->query_status() == UNRECORDED) error("CommandQueue::wait_for_event:: UNRECORDED event\n");
 	get_lock();
 #ifdef ENABLE_PARALLEL_BACKEND
 	cudaStream_t stream = *((cudaStream_t*) cqueue_backend_ptr[backend_ctr]);
@@ -176,12 +180,16 @@ Event::Event(int dev_id_in)
 {
 	get_lock();
 	event_backend_ptr = malloc(sizeof(cudaEvent_t));
+	Event_num_device[idxize(dev_id_in)]++;
+	id = Event_num_device[idxize(dev_id_in)];
+#ifndef ENABLE_LAZY_EVENTS
 	dev_id = dev_id_in;
-	Event_num_device[idxize(dev_id)]++;
-	id = Event_num_device[idxize(dev_id)];
 	cudaError_t err = cudaEventCreate(( cudaEvent_t*) event_backend_ptr);
-	status = UNRECORDED;
 	massert(cudaSuccess == err, "Event::Event - %s\n", cudaGetErrorString(err));
+#else
+	dev_id = dev_id_in - 42;
+#endif
+	status = UNRECORDED;
 	release_lock();
 }
 
@@ -189,10 +197,19 @@ Event::~Event()
 {
 	sync_barrier();
 	get_lock();
+#ifndef ENABLE_LAZY_EVENTS
 	Event_num_device[idxize(dev_id)]--;
 	cudaError_t err = cudaEventDestroy(*(( cudaEvent_t*) event_backend_ptr));
-	free(event_backend_ptr);
 	massert(cudaSuccess == err, "Event::~Event - %s\n", cudaGetErrorString(err));
+#else
+	if (status == UNRECORDED) 	Event_num_device[idxize(dev_id+42)]--;
+	else{
+			Event_num_device[idxize(dev_id)]--;
+			cudaError_t err = cudaEventDestroy(*(( cudaEvent_t*) event_backend_ptr));
+			massert(cudaSuccess == err, "Event::~Event - %s\n", cudaGetErrorString(err));
+	}
+#endif
+	free(event_backend_ptr);
 	release_lock();
 }
 
@@ -201,9 +218,9 @@ void Event::sync_barrier()
 	get_lock();
 	if (status != CHECKED){
 		if (status == UNRECORDED){
-//#ifdef DEBUG
-//			warning("Event::sync_barrier: Tried to sync unrecorded event\n");
-//#endif
+#ifdef DDEBUG
+			warning("Event::sync_barrier: Tried to sync unrecorded event\n");
+#endif
 			return;
 		}
 		cudaEvent_t cuda_event= *(cudaEvent_t*) event_backend_ptr;
@@ -218,24 +235,51 @@ void Event::record_to_queue(CQueue_p Rr){
 	get_lock();
 	if (Rr == NULL) status = CHECKED;
 	else{
+		int prev_dev_id;
+		cudaGetDevice(&prev_dev_id);
+		if (Rr->dev_id != prev_dev_id){
+			CoCoPeLiaSelectDevice(Rr->dev_id);
+#ifdef DEBUG
+			warning("Event(%d,dev_id = %d)::record_to_queue(%d): caller prev_dev_id=%d, changing to %d\n",
+			id, dev_id, Rr->dev_id, prev_dev_id, Rr->dev_id);
+#endif
+		}
 		if (status != UNRECORDED){
 			;
 #ifdef DEBUG
 			warning("Event(%d,dev_id = %d)::record_to_queue(%d): Recording %s event\n",
 				id, dev_id, Rr->dev_id, print_event_status(status));
 #endif
+#ifdef ENABLE_LAZY_EVENTS
+			if(Rr->dev_id != dev_id)
+				error("(Lazy)Event(%d,dev_id = %d)::record_to_queue(%d): Recording %s event in iligal dev\n",
+					id, dev_id, Rr->dev_id, print_event_status(status));
+#endif
 		}
-#ifdef ENABLE_PARALLEL_BACKEND
+#ifdef ENABLE_LAZY_EVENTS
+		else if (status == UNRECORDED){
+			if(dev_id > -1)
+				error("(Lazy)Event(%d,dev_id = %d)::record_to_queue(%d) - UNRECORDED event suspicious dev_id\n",
+					id, dev_id, Rr->dev_id);
+			dev_id = Rr->dev_id;
+			cudaError_t err = cudaEventCreate(( cudaEvent_t*) event_backend_ptr);
+			massert(cudaSuccess == err, "(Lazy)Event(%d,dev_id = %d)::record_to_queue(%d): - %s\n",
+				id, dev_id, Rr->dev_id, cudaGetErrorString(err));
+		}
+#endif
 		cudaEvent_t cuda_event= *(cudaEvent_t*) event_backend_ptr;
+#ifdef ENABLE_PARALLEL_BACKEND
 		cudaStream_t stream = *((cudaStream_t*) Rr->cqueue_backend_ptr[Rr->backend_ctr]);
 		cudaError_t err = cudaEventRecord(cuda_event, stream);
 #else
-		cudaEvent_t cuda_event= *(cudaEvent_t*) event_backend_ptr;
 		cudaStream_t stream = *((cudaStream_t*) Rr->cqueue_backend_ptr);
 		cudaError_t err = cudaEventRecord(cuda_event, stream);
 #endif
 		status = RECORDED;
 		massert(cudaSuccess == err, "Event(%d,dev_id = %d)::record_to_queue(%d) - %s\n",  id, dev_id, Rr->dev_id, cudaGetErrorString(err));
+		if (Rr->dev_id != prev_dev_id){
+			cudaSetDevice(prev_dev_id);
+		}
 	}
 	release_lock();
 }
@@ -244,6 +288,9 @@ event_status Event::query_status(){
 	get_lock();
 	enum event_status local_status = status;
 	if (local_status != CHECKED){
+#ifdef ENABLE_LAZY_EVENTS
+		if (local_status == UNRECORDED) return UNRECORDED;
+#endif
 		cudaEvent_t cuda_event= *(cudaEvent_t*) event_backend_ptr;
 		cudaError_t err = cudaEventQuery(cuda_event);
 
@@ -281,7 +328,15 @@ void Event::checked(){
 
 void Event::reset(){
 	get_lock();
+	event_status prev_status = status;
 	status = UNRECORDED;
+#ifdef ENABLE_LAZY_EVENTS
+	if(prev_status!=UNRECORDED){
+		dev_id = dev_id - 42;
+		cudaError_t err = cudaEventDestroy(*(( cudaEvent_t*) event_backend_ptr));
+		massert(cudaSuccess == err, "(Lazy)Event::reset - %s\n", cudaGetErrorString(err));
+	}
+#endif
 	release_lock();
 }
 
@@ -316,7 +371,7 @@ double Event_timer::sync_get_time()
 		cudaEvent_t cuda_event_stop = *(cudaEvent_t*) Event_stop->event_backend_ptr;
 		cudaEventElapsedTime(&temp_t, cuda_event_start, cuda_event_stop);
 	}
-	else temp_t = 0; 
+	else temp_t = 0;
 	time_ms = (double) temp_t;
 	return time_ms;
 }

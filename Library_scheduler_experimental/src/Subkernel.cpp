@@ -10,14 +10,14 @@
 #include "DataCaching.hpp"
 #include "backend_wrappers.hpp"
 
-/// TODO: Works for systems with up to 128 devices, not 'completely' future-proof
-CQueue_p h2d_queue[128] = {NULL}, d2h_queue[128] = {NULL}, exec_queue[128] = {NULL};
-int Subkernel_ctr = 0, backend_init_flag[128] = {0};
+int transfer_link_sharing[LOC_NUM][LOC_NUM][2] = {{{-42}}};
+CQueue_p transfer_queues[LOC_NUM][LOC_NUM] = {{NULL}}, exec_queue[LOC_NUM] = {NULL};
+int Subkernel_ctr = 0, backend_init_flag[LOC_NUM] = {0};
 
 #ifdef MULTIDEVICE_REDUCTION_ENABLE
-void* reduce_buf[128*MAX_BUFFERING_L] = {NULL};
-short reduce_buf_it[128] = {0};
-long long reduce_buf_sz[128*MAX_BUFFERING_L] = {0};
+void* reduce_buf[LOC_NUM*MAX_BUFFERING_L] = {NULL};
+short reduce_buf_it[LOC_NUM] = {0};
+long long reduce_buf_sz[LOC_NUM*MAX_BUFFERING_L] = {0};
 #endif
 
 Subkernel::Subkernel(short TileNum_in, const char* name){
@@ -45,7 +45,7 @@ Subkernel::~Subkernel(){
 	free(TileList);
 	free(operation_params);
 	delete operation_complete;
-	delete writeback_complete;
+	//delete writeback_complete;
 #ifdef MULTIDEVICE_REDUCTION_ENABLE
 #ifndef BUFFER_REUSE_ENABLE
 		reduce_buf_it[run_dev_id_idx] = 0;
@@ -72,13 +72,34 @@ Subkernel::~Subkernel(){
 
 void Subkernel::init_events(){
 	operation_complete = new Event(run_dev_id);
-	writeback_complete = new Event(run_dev_id);
+	//writeback_complete = new Event(run_dev_id);
 #ifdef STEST
 	for (int idx = 0; idx < TileNum; idx++){
 		input_timer[idx] = new Event_timer(run_dev_id);
 		output_timer[idx] = new Event_timer(run_dev_id);
 	}
 	operation_timer = new Event_timer(run_dev_id);
+#endif
+}
+
+void Subkernel::sync_request_data_RONLY(){
+	short lvl = 4;
+#ifdef DEBUG
+	lprintf(lvl-1, "|-----> Subkernel(dev=%d,id=%d)::sync_request_data()\n", run_dev_id, id);
+#endif
+	short run_dev_id_idx = idxize(run_dev_id);
+	for (int j = 0; j < TileNum; j++){
+		if (TileDimlist[j] == 1){
+				Tile1D<VALUE_TYPE>* tmp = (Tile1D<VALUE_TYPE>*) TileList[j];
+				if (!tmp->W_flag && tmp->R_flag && tmp->CacheLocId[run_dev_id_idx] != -1) tmp->available[run_dev_id_idx]->sync_barrier();
+		}
+		else if (TileDimlist[j] == 2){
+				Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) TileList[j];
+				if (!tmp->W_flag && tmp->R_flag && tmp->CacheLocId[run_dev_id_idx] != -1) tmp->available[run_dev_id_idx]->sync_barrier();
+		}
+	}
+#ifdef DEBUG
+	lprintf(lvl-1, "<-----|\n");
 #endif
 }
 
@@ -139,7 +160,10 @@ void Subkernel::request_tile(short TileIdx){
 			wrap_read->dev_id = FetchFromId;
 			wrap_read->BlockIdx = tmp->CacheLocId[FetchFromId_idx];
 			wrap_read->lock_flag = 0;
-			if(tmp->W_flag) CacheInvalidate(wrap_read);
+			if(tmp->W_flag){
+				tmp->available[FetchFromId_idx]->reset();
+				CacheInvalidate(wrap_read);
+			}
 			else CacheStartRead(wrap_read);
 		}
 		if (tmp->CacheLocId[run_dev_id_idx] != -1){
@@ -153,36 +177,36 @@ void Subkernel::request_tile(short TileIdx){
 		if(wrap_read) wrap_read->lock_flag = 1;
 		if(wrap_fetch) wrap_fetch->lock_flag = 1;
 #ifdef STEST
-		input_timer[TileIdx]->start_point(h2d_queue[run_dev_id_idx]);
+		input_timer[TileIdx]->start_point(transfer_queues[run_dev_id_idx][FetchFromId_idx]);
 #endif
 		CoCoMemcpyAsync(tmp->adrs[run_dev_id_idx], tmp->adrs[FetchFromId_idx],
 											((long long) tmp->inc[run_dev_id_idx]) * tmp->dim * tmp->dtypesize(),
-											run_dev_id, FetchFromId, h2d_queue[run_dev_id_idx]);
+											run_dev_id, FetchFromId, transfer_queues[run_dev_id_idx][FetchFromId_idx]);
 #ifdef STEST
-		input_timer[TileIdx]->stop_point(h2d_queue[run_dev_id_idx]);
+		input_timer[TileIdx]->stop_point(transfer_queues[run_dev_id_idx][FetchFromId_idx]);
 		bytes_in+= tmp->size();
 #endif
 		if(tmp->W_flag){
 			if (tmp->CacheLocId[run_dev_id_idx] != -1)
-				h2d_queue[run_dev_id_idx]->add_host_func((void*)&CacheEndFetchStartWrite, (void*) wrap_fetch);
+				transfer_queues[run_dev_id_idx][FetchFromId_idx]->add_host_func((void*)&CacheEndFetchStartWrite, (void*) wrap_fetch);
 			Ptr_and_int_p wrapped_op = (Ptr_and_int_p) malloc(sizeof(struct Ptr_and_int));
 			wrapped_op->int_ptr = &tmp->RW_master;
 			wrapped_op->val = run_dev_id;
-			h2d_queue[run_dev_id_idx]->add_host_func((void*)&CoCoSetInt, (void*) wrapped_op);
+			transfer_queues[run_dev_id_idx][FetchFromId_idx]->add_host_func((void*)&CoCoSetInt, (void*) wrapped_op);
 			if (tmp->CacheLocId[FetchFromId_idx] != -1){
 				Ptr_and_int_p wrapped_op1 = (Ptr_and_int_p) malloc(sizeof(struct Ptr_and_int));
 				wrapped_op1->int_ptr = &tmp->CacheLocId[FetchFromId_idx];
 				wrapped_op1->val = -42;
-				h2d_queue[run_dev_id_idx]->add_host_func((void*)&CoCoSetInt, (void*) wrapped_op1);
+				transfer_queues[run_dev_id_idx][FetchFromId_idx]->add_host_func((void*)&CoCoSetInt, (void*) wrapped_op1);
 			}
 		}
 		else{
 			if (tmp->CacheLocId[run_dev_id_idx] != -1)
-				h2d_queue[run_dev_id_idx]->add_host_func((void*)&CacheEndFetchStartRead, (void*) wrap_fetch);
+				transfer_queues[run_dev_id_idx][FetchFromId_idx]->add_host_func((void*)&CacheEndFetchStartRead, (void*) wrap_fetch);
 			if (tmp->CacheLocId[FetchFromId_idx] != -1)
-				h2d_queue[run_dev_id_idx]->add_host_func((void*)&CacheEndRead, (void*) wrap_read);
+				transfer_queues[run_dev_id_idx][FetchFromId_idx]->add_host_func((void*)&CacheEndRead, (void*) wrap_read);
 		}
-		tmp->available[run_dev_id_idx]->record_to_queue(h2d_queue[run_dev_id_idx]);
+		tmp->available[run_dev_id_idx]->record_to_queue(transfer_queues[run_dev_id_idx][FetchFromId_idx]);
 	}
 	else if (TileDimlist[TileIdx] == 2){
 			Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) TileList[TileIdx];
@@ -216,7 +240,10 @@ void Subkernel::request_tile(short TileIdx){
 			wrap_read->dev_id = FetchFromId;
 			wrap_read->BlockIdx = tmp->CacheLocId[FetchFromId_idx];
 			wrap_read->lock_flag = 0;
-			if(tmp->W_flag) CacheInvalidate(wrap_read);
+			if(tmp->W_flag){
+				tmp->available[FetchFromId_idx]->reset();
+				CacheInvalidate(wrap_read);
+			}
 			else CacheStartRead(wrap_read);
 		}
 		if (tmp->CacheLocId[run_dev_id_idx] != -1){
@@ -230,41 +257,39 @@ void Subkernel::request_tile(short TileIdx){
 		if(wrap_read) wrap_read->lock_flag = 1;
 		if(wrap_fetch) wrap_fetch->lock_flag = 1;
 #ifdef STEST
-		input_timer[TileIdx]->start_point(h2d_queue[run_dev_id_idx]);
+		input_timer[TileIdx]->start_point(transfer_queues[run_dev_id_idx][FetchFromId_idx]);
 #endif
 		CoCoMemcpy2DAsync(tmp->adrs[run_dev_id_idx], tmp->ldim[run_dev_id_idx],
 									tmp->adrs[FetchFromId_idx], tmp->ldim[FetchFromId_idx],
 									tmp->dim1, tmp->dim2, tmp->dtypesize(),
-									run_dev_id, FetchFromId, h2d_queue[run_dev_id_idx]);
+									run_dev_id, FetchFromId, transfer_queues[run_dev_id_idx][FetchFromId_idx]);
 #ifdef STEST
-		input_timer[TileIdx]->stop_point(h2d_queue[run_dev_id_idx]);
+		input_timer[TileIdx]->stop_point(transfer_queues[run_dev_id_idx][FetchFromId_idx]);
 		bytes_in+= tmp->size();
 #endif
 		if(tmp->W_flag){
 			if (tmp->CacheLocId[run_dev_id_idx] != -1)
-				h2d_queue[run_dev_id_idx]->add_host_func((void*)&CacheEndFetchStartWrite, (void*) wrap_fetch);
+				transfer_queues[run_dev_id_idx][FetchFromId_idx]->add_host_func((void*)&CacheEndFetchStartWrite, (void*) wrap_fetch);
 			Ptr_and_int_p wrapped_op = (Ptr_and_int_p) malloc(sizeof(struct Ptr_and_int));
 			wrapped_op->int_ptr = &tmp->RW_master;
 			wrapped_op->val = run_dev_id;
-			h2d_queue[run_dev_id_idx]->add_host_func((void*)&CoCoSetInt, (void*) wrapped_op);
+			transfer_queues[run_dev_id_idx][FetchFromId_idx]->add_host_func((void*)&CoCoSetInt, (void*) wrapped_op);
 			if (tmp->CacheLocId[FetchFromId_idx] != -1){
 				Ptr_and_int_p wrapped_op1 = (Ptr_and_int_p) malloc(sizeof(struct Ptr_and_int));
 				wrapped_op1->int_ptr = &tmp->CacheLocId[FetchFromId_idx];
 				wrapped_op1->val = -42;
-				h2d_queue[run_dev_id_idx]->add_host_func((void*)&CoCoSetInt, (void*) wrapped_op1);
+				transfer_queues[run_dev_id_idx][FetchFromId_idx]->add_host_func((void*)&CoCoSetInt, (void*) wrapped_op1);
 			}
 		}
 		else{
 			if (tmp->CacheLocId[run_dev_id_idx] != -1)
-				h2d_queue[run_dev_id_idx]->add_host_func((void*)&CacheEndFetchStartRead, (void*) wrap_fetch);
+				transfer_queues[run_dev_id_idx][FetchFromId_idx]->add_host_func((void*)&CacheEndFetchStartRead, (void*) wrap_fetch);
 			if (tmp->CacheLocId[FetchFromId_idx] != -1)
-				h2d_queue[run_dev_id_idx]->add_host_func((void*)&CacheEndRead, (void*) wrap_read);
+				transfer_queues[run_dev_id_idx][FetchFromId_idx]->add_host_func((void*)&CacheEndRead, (void*) wrap_read);
 		}
-		tmp->available[run_dev_id_idx]->record_to_queue(h2d_queue[run_dev_id_idx]);
+		tmp->available[run_dev_id_idx]->record_to_queue(transfer_queues[run_dev_id_idx][FetchFromId_idx]);
 	}
 }
-
-int WR_check_lock = 0;
 
 void Subkernel::request_data(){
 	short lvl = 4;
@@ -428,6 +453,7 @@ void Subkernel::writeback_data(){
 	lprintf(lvl-1, "|-----> Subkernel(dev=%d,id=%d)::writeback_data()\n", run_dev_id, id);
 #endif
 	short run_dev_id_idx = idxize(run_dev_id);
+	short Writeback_id_idx, Writeback_id;
 	for (int j = 0; j < TileNum; j++) if (WR_last[j]){
 		if (TileDimlist[j] == 1){
 			Tile1D<VALUE_TYPE>* tmp = (Tile1D<VALUE_TYPE>*) TileList[j];
@@ -435,13 +461,13 @@ void Subkernel::writeback_data(){
 				error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d])::writeback_data: invoked with tile with loc = %d\n",
 					run_dev_id, id, tmp->id, tmp->GridId, tmp->CacheLocId[run_dev_id_idx]);
 			else{
-				d2h_queue[run_dev_id_idx]->wait_for_event(operation_complete);
-				short WritebackIdCAdr, WritebackId = tmp->getWriteBackLoc(); //to MASTER
-				WritebackIdCAdr = idxize(WritebackId);
-				if (run_dev_id == WritebackId){
+				Writeback_id = tmp->getWriteBackLoc(); //to MASTER
+				Writeback_id_idx = idxize(Writeback_id);
+				transfer_queues[Writeback_id_idx][run_dev_id_idx]->wait_for_event(operation_complete);
+				if (run_dev_id == Writeback_id){
 					;
 #ifdef DEBUG
-			lprintf(lvl, "Subkernel(dev=%d,id=%d)-Tile(%d.[%d])::writeback_data: run_dev_id == WritebackId == %d\n",
+			lprintf(lvl, "Subkernel(dev=%d,id=%d)-Tile(%d.[%d])::writeback_data: run_dev_id == Writeback_id == %d\n",
 				run_dev_id, id, tmp->id, tmp->GridId, run_dev_id);
 #endif
 				}
@@ -451,22 +477,22 @@ void Subkernel::writeback_data(){
 							wrap_inval->dev_id = run_dev_id;
 							wrap_inval->BlockIdx = tmp->CacheLocId[run_dev_id_idx];
 							wrap_inval->lock_flag = 1;
-							d2h_queue[run_dev_id_idx]->add_host_func((void*)&CacheInvalidate, (void*) wrap_inval);
+							transfer_queues[Writeback_id_idx][run_dev_id_idx]->add_host_func((void*)&CacheInvalidate, (void*) wrap_inval);
 					}
 #ifdef STEST
-					output_timer[j]->start_point(d2h_queue[run_dev_id_idx]);
+					output_timer[j]->start_point(transfer_queues[Writeback_id_idx][run_dev_id_idx]);
 #endif
-					CoCoMemcpyAsync(tmp->adrs[WritebackIdCAdr], tmp->adrs[run_dev_id_idx],
+					CoCoMemcpyAsync(tmp->adrs[Writeback_id_idx], tmp->adrs[run_dev_id_idx],
 						((long long) tmp->inc[run_dev_id_idx]) * tmp->dim * tmp->dtypesize(),
-						WritebackId, run_dev_id, d2h_queue[run_dev_id_idx]);
+						Writeback_id, run_dev_id, transfer_queues[Writeback_id_idx][run_dev_id_idx]);
 #ifdef STEST
-					output_timer[j]->stop_point(d2h_queue[run_dev_id_idx]);
+					output_timer[j]->stop_point(transfer_queues[Writeback_id_idx][run_dev_id_idx]);
 					bytes_out+= tmp->size();
 #endif
 					Ptr_and_int_p wrapped_op = (Ptr_and_int_p) malloc(sizeof(struct Ptr_and_int));
 					wrapped_op->int_ptr = &tmp->RW_master;
-					wrapped_op->val = WritebackId;
-					d2h_queue[run_dev_id_idx]->add_host_func((void*)&CoCoSetInt, (void*) wrapped_op);
+					wrapped_op->val = Writeback_id;
+					transfer_queues[Writeback_id_idx][run_dev_id_idx]->add_host_func((void*)&CoCoSetInt, (void*) wrapped_op);
 				}
 			}
 		}
@@ -476,13 +502,13 @@ void Subkernel::writeback_data(){
 				error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::writeback_data: invoked with tile with loc = %d\n",
 					run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2, tmp->CacheLocId[run_dev_id_idx]);
 			else{
-				d2h_queue[run_dev_id_idx]->wait_for_event(operation_complete);
-				short WritebackIdCAdr, WritebackId = tmp->getWriteBackLoc(); //to MASTER
-				WritebackIdCAdr = idxize(WritebackId);
-				if (run_dev_id == WritebackId){
+				Writeback_id = tmp->getWriteBackLoc(); //to MASTER
+				Writeback_id_idx = idxize(Writeback_id);
+				transfer_queues[Writeback_id_idx][run_dev_id_idx]->wait_for_event(operation_complete);
+				if (run_dev_id == Writeback_id){
 					;
 #ifdef DEBUG
-			lprintf(lvl, "Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::writeback_data: run_dev_id == WritebackId == %d\n",
+			lprintf(lvl, "Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::writeback_data: run_dev_id == Writeback_id == %d\n",
 				run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2, run_dev_id);
 #endif
 				}
@@ -492,29 +518,29 @@ void Subkernel::writeback_data(){
 							wrap_inval->dev_id = run_dev_id;
 							wrap_inval->BlockIdx = tmp->CacheLocId[run_dev_id_idx];
 							wrap_inval->lock_flag = 1;
-							d2h_queue[run_dev_id_idx]->add_host_func((void*)&CacheInvalidate, (void*) wrap_inval);
+							transfer_queues[Writeback_id_idx][run_dev_id_idx]->add_host_func((void*)&CacheInvalidate, (void*) wrap_inval);
 					}
 #ifdef STEST
-					output_timer[j]->start_point(d2h_queue[run_dev_id_idx]);
+					output_timer[j]->start_point(transfer_queues[Writeback_id_idx][run_dev_id_idx]);
 #endif
-					CoCoMemcpy2DAsync(tmp->adrs[WritebackIdCAdr], tmp->ldim[WritebackIdCAdr],
+					CoCoMemcpy2DAsync(tmp->adrs[Writeback_id_idx], tmp->ldim[Writeback_id_idx],
 						tmp->adrs[run_dev_id_idx], tmp->ldim[run_dev_id_idx],
 						tmp->dim1, tmp->dim2, tmp->dtypesize(),
-						WritebackId, run_dev_id, d2h_queue[run_dev_id_idx]);
+						Writeback_id, run_dev_id, transfer_queues[Writeback_id_idx][run_dev_id_idx]);
 #ifdef STEST
-					output_timer[j]->stop_point(d2h_queue[run_dev_id_idx]);
+					output_timer[j]->stop_point(transfer_queues[Writeback_id_idx][run_dev_id_idx]);
 					bytes_out+= tmp->size();
 #endif
 					Ptr_and_int_p wrapped_op = (Ptr_and_int_p) malloc(sizeof(struct Ptr_and_int));
 					wrapped_op->int_ptr = &tmp->RW_master;
-					wrapped_op->val = WritebackId;
-					d2h_queue[run_dev_id_idx]->add_host_func((void*)&CoCoSetInt, (void*) wrapped_op);
+					wrapped_op->val = Writeback_id;
+					transfer_queues[Writeback_id_idx][run_dev_id_idx]->add_host_func((void*)&CoCoSetInt, (void*) wrapped_op);
 				}
 			}
 		}
 		else error("Subkernel(dev=%d,id=%d)::writeback_data: Not implemented for TileDim=%d\n", run_dev_id, id, TileDimlist[j]);
 	}
-	writeback_complete->record_to_queue(d2h_queue[run_dev_id_idx]);
+	//writeback_complete->record_to_queue(transfer_queues[Writeback_id_idx][run_dev_id_idx]);
 #ifndef ASYNC_ENABLE
 	CoCoSyncCheckErr();
 #endif
@@ -523,27 +549,76 @@ void Subkernel::writeback_data(){
 #endif
 }
 
+
+int queue_d_allock = 0;
+
 void CoCoPeLiaInitResources(short dev_id){
-	short dev_id_idx = (dev_id == -1)?  LOC_NUM - 1 : dev_id;
-  if (!h2d_queue[dev_id_idx]) h2d_queue[dev_id_idx] = new CommandQueue(dev_id);
-  if (!d2h_queue[dev_id_idx])  d2h_queue[dev_id_idx] = new CommandQueue(dev_id);
+
+	while(__sync_lock_test_and_set (&queue_d_allock, 1));
+
+	// FIXME: Handmade distribution, for testing purposes
+	transfer_link_sharing[0][LOC_NUM - 1][0] = 1;
+	transfer_link_sharing[0][LOC_NUM - 1][1] = LOC_NUM - 1;
+	transfer_link_sharing[1][LOC_NUM - 1][0] = 0;
+	transfer_link_sharing[1][LOC_NUM - 1][1] = LOC_NUM - 1;
+
+	transfer_link_sharing[2][LOC_NUM - 1][0] = 3;
+	transfer_link_sharing[2][LOC_NUM - 1][1] = LOC_NUM - 1;
+	transfer_link_sharing[3][LOC_NUM - 1][0] = 2;
+	transfer_link_sharing[3][LOC_NUM - 1][1] = LOC_NUM - 1;
+
+	transfer_link_sharing[4][LOC_NUM - 1][0] = 5;
+	transfer_link_sharing[4][LOC_NUM - 1][1] = LOC_NUM - 1;
+	transfer_link_sharing[5][LOC_NUM - 1][0] = 4;
+	transfer_link_sharing[5][LOC_NUM - 1][1] = LOC_NUM - 1;
+
+	transfer_link_sharing[6][LOC_NUM - 1][0] = 7;
+	transfer_link_sharing[6][LOC_NUM - 1][1] = LOC_NUM - 1;
+	transfer_link_sharing[7][LOC_NUM - 1][0] = 6;
+	transfer_link_sharing[7][LOC_NUM - 1][1] = LOC_NUM - 1;
+
+	short dev_id_idx = idxize(dev_id);
+	for(short dev_id_idy = 0 ; dev_id_idy < LOC_NUM; dev_id_idy++){
+		if (!transfer_queues[dev_id_idx][dev_id_idy]){
+			if(transfer_link_sharing[dev_id_idx][dev_id_idy][0] != - 42 &&
+				transfer_queues[transfer_link_sharing[dev_id_idx][dev_id_idy][0]]
+				[transfer_link_sharing[dev_id_idx][dev_id_idy][1]] != NULL)
+				transfer_queues[dev_id_idx][dev_id_idy] =
+					transfer_queues[transfer_link_sharing[dev_id_idx][dev_id_idy][0]]
+				[transfer_link_sharing[dev_id_idx][dev_id_idy][1]];
+			else transfer_queues[dev_id_idx][dev_id_idy] = new CommandQueue(dev_id);
+			}
+		if (!transfer_queues[dev_id_idy][dev_id_idx]) transfer_queues[dev_id_idy][dev_id_idx]
+			= new CommandQueue(deidxize(dev_id_idy));
+	}
   if (!exec_queue[dev_id_idx])  exec_queue[dev_id_idx] = new CommandQueue(dev_id);
+
+	__sync_lock_release(&queue_d_allock);
 }
 
 void CoCoPeLiaFreeResources(short dev_id){
+
+	while(__sync_lock_test_and_set (&queue_d_allock, 1));
+
 	short dev_id_idx = (dev_id == -1)?  LOC_NUM - 1 : dev_id;
-  if (h2d_queue[dev_id_idx]){
-		delete h2d_queue[dev_id_idx];
-		h2d_queue[dev_id_idx] = NULL;
+	for(short dev_id_idy = 0 ; dev_id_idy < LOC_NUM; dev_id_idy++){
+		if (transfer_queues[dev_id_idx][dev_id_idy]) {
+			CQueue_p temp = transfer_queues[dev_id_idx][dev_id_idy];
+			transfer_queues[dev_id_idx][dev_id_idy] = NULL;
+			delete temp;
+		}
+		if (transfer_queues[dev_id_idy][dev_id_idx]) {
+			CQueue_p temp = transfer_queues[dev_id_idy][dev_id_idx];
+			transfer_queues[dev_id_idy][dev_id_idx] = NULL;
+			delete temp;
+		}
 	}
-  if (d2h_queue[dev_id_idx]){
-		delete d2h_queue[dev_id_idx];
-		d2h_queue[dev_id_idx] = NULL;
-	}
-  if (exec_queue[dev_id_idx]){
+	if (exec_queue[dev_id_idx]){
 		delete exec_queue[dev_id_idx];
 		exec_queue[dev_id_idx] = NULL;
 	}
+
+	__sync_lock_release(&queue_d_allock);
 }
 
 void Subkernel::prepare_launch(){

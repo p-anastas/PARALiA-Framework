@@ -30,6 +30,9 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${UNIHELP_INSTALL_LIB})
 set (UNIHELP_INSTALL_INC ${UNIHELP_INSTALL}/include)
 file(MAKE_DIRECTORY ${UNIHELP_INSTALL_INC})
 
+## Enable using lazy events; e.g. event backends are created on first record on the corresponding device
+add_definitions(-DENABLE_LAZY_EVENTS)
+
 add_library(unihelpers SHARED
 ${UNIHELP_DIR_SRC}/general_utils.cpp
 #${UNIHELP_DIR_SRC}/data_management.cpp

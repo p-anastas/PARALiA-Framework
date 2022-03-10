@@ -59,19 +59,19 @@ add_definitions(-DTEST)
 add_definitions(-DSTEST)
 
 #Run in debug mode, which includes detailed function calls and info for error-checking
-add_definitions(-DDEBUG)
+#add_definitions(-DDEBUG)
 
 #Run in deep debug mode, for command-to-command debugging
-add_definitions(-DDDEBUG)
+#add_definitions(-DDDEBUG)
 
 #Run Prediction debug mode (autotuning runtime stuff)
-add_definitions(-DPDEBUG)
+#add_definitions(-DPDEBUG)
 
 #Run Prediction deep debug mode (all autotuning runtime stuff)
-add_definitions(-DDPDEBUG)
+#add_definitions(-DDPDEBUG)
 
 #Run in caching debug mode, for cache-related deep debugging
-add_definitions(-DCDEBUG)
+#add_definitions(-DCDEBUG)
 
 ## Define a name for the testbed, to be used for the whole framework setup
 #set(TESTBED_NAME "dungani")

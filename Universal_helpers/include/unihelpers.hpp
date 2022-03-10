@@ -32,7 +32,7 @@ typedef class CommandQueue
 #ifdef ENABLE_PARALLEL_BACKEND
 		void* cqueue_backend_ptr[MAX_BACKEND_L];
 		void* cqueue_backend_data[MAX_BACKEND_L];
-		int backend_ctr = 0; 
+		int backend_ctr = 0;
 #else
 		void* cqueue_backend_ptr;
 		void* cqueue_backend_data;

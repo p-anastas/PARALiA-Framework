@@ -66,9 +66,6 @@ template<typename dtype>  Tile2D<dtype>::Tile2D(void * in_addr, int in_dim1, int
 template<typename dtype>  Tile2D<dtype>::~Tile2D()
 {
   short lvl = 3;
-#ifdef DEBUG
-  lprintf(lvl-1, "|-----> Tile2D(%d)::~Tile2D()\n", Tile2D_num);
-#endif
   Tile2D_num--;
 }
 
@@ -125,9 +122,6 @@ template<typename dtype> short Tile2D<dtype>::getClosestReadLoc(short dev_id_in)
 
 template<typename dtype> double Tile2D<dtype>::getMinLinkCost(short dev_id_in){
   short lvl = 5;
-#ifdef DEBUG
-  lprintf(lvl-1, "|-----> Tile2D(%d)::getMinLinkCost(%d)\n", id, dev_id_in);
-#endif
   int dev_id_in_idx = idxize(dev_id_in);
   double link_cost_min = 10000000;
   for (int pos =0; pos < LOC_NUM; pos++){
@@ -148,9 +142,6 @@ template<typename dtype> double Tile2D<dtype>::getMinLinkCost(short dev_id_in){
 
 template<typename dtype> double Tile2D<dtype>::getMinLinkCostPenaltizeFetch(short dev_id_in){
   short lvl = 5;
-#ifdef DEBUG
-  lprintf(lvl-1, "|-----> Tile2D(%d)::getMinLinkCost(%d)\n", id, dev_id_in);
-#endif
   int dev_id_in_idx = idxize(dev_id_in);
   double link_cost_min = 10000000;
   for (int pos =0; pos < LOC_NUM; pos++){
