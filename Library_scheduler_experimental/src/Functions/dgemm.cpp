@@ -22,6 +22,10 @@ CoControl_p predef_vals_gemm = NULL;
 CoControl_p autotuned_vals = NULL;
 int MGridSz = 0, NGridSz = 0, KGridSz = 0;
 
+#ifdef STEST
+double gemm_entry_ts;
+#endif
+
 #include <atomic>
 std::atomic<long long> remaining_Subkernels;
 Subkernel** Subkernel_list;
@@ -179,17 +183,17 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 			__sync_lock_release(&Sk_select_lock);
 			break;
 		}
-		if (!strcmp(DISTRIBUTION, "NAIVE"))
+		if (!strcmp(SELECT_HEURISTIC, "NAIVE"))
 			curr = SubkernelSelectSimple(dev_id, Subkernel_list, Subkernel_num);
-		else if (!strcmp(DISTRIBUTION, "NAIVE-NO-WRITE-SHARE"))
+		else if (!strcmp(SELECT_HEURISTIC, "NAIVE-NO-WRITE-SHARE"))
 			curr = SubkernelSelectNoWriteShare(dev_id, Subkernel_list, Subkernel_num);
-		else if (!strcmp(DISTRIBUTION, "MINIMIZE-FETCH"))
+		else if (!strcmp(SELECT_HEURISTIC, "MINIMIZE-FETCH"))
 			curr = SubkernelSelectMinimizeFetch(dev_id, Subkernel_list, Subkernel_num);
-		else if (!strcmp(DISTRIBUTION, "MINIMIZE-FETCH-WRITE-PENALTY"))
+		else if (!strcmp(SELECT_HEURISTIC, "MINIMIZE-FETCH-WRITE-PENALTY"))
 			curr = SubkernelSelectMinimizeFetchWritePenalty(dev_id, Subkernel_list, Subkernel_num);
-		else if (!strcmp(DISTRIBUTION, "MINIMIZE-FETCH-WRITE-PENALTY-MULTIFETCH-PENALTY"))
+		else if (!strcmp(SELECT_HEURISTIC, "MINIMIZE-FETCH-WRITE-PENALTY-MULTIFETCH-PENALTY"))
 			curr = SubkernelSelectMinimizeFetchWritePenaltyMultiFetchPenalty(dev_id, Subkernel_list, Subkernel_num);
-		else error("CoCopeLiaDgemm: Unknown Subkernel Distribution %s\n", DISTRIBUTION);
+		else error("CoCopeLiaDgemm: Unknown Subkernel Heuristic %s\n", SELECT_HEURISTIC);
 		if (!curr){
 			__sync_lock_release(&Sk_select_lock);
 //#ifdef DDEBUG
@@ -215,25 +219,37 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 	int scheduled[gemm_subkernel_data->SubkernelNumDev] = {0};
 	int remaining_Subkernels_dev = gemm_subkernel_data->SubkernelNumDev;
 	while(remaining_Subkernels_dev){
-		for (int keri = 0; keri < gemm_subkernel_data->SubkernelNumDev; keri++) if (!scheduled[keri]){
-			prev = curr;
-			//if(prev) prev->sync_request_data();
-			Subkernel * temp = gemm_subkernel_data->SubkernelListDev[keri];
-			if (!temp->is_dependency_free()) continue;
-			curr = temp;
-			scheduled[keri] = 1;
-			remaining_Subkernels_dev--;
-			curr->prev = prev;
-			if(prev) prev->next = curr;
-			curr->prepare_launch();
-			CoCoGemmUpdateDevice(curr, dev_id);
-			curr->init_events();
-			curr->request_data();
-			curr->run_operation();
+		prev = curr;
+		if(prev) prev->sync_request_data();
+		if (!strcmp(SELECT_HEURISTIC, "NAIVE"))
+			curr = SubkernelSelectSimple(dev_id, gemm_subkernel_data->SubkernelListDev, remaining_Subkernels_dev);
+		else if (!strcmp(SELECT_HEURISTIC, "NAIVE-NO-WRITE-SHARE"))
+			curr = SubkernelSelectNoWriteShare(dev_id, gemm_subkernel_data->SubkernelListDev, remaining_Subkernels_dev);
+		else if (!strcmp(SELECT_HEURISTIC, "MINIMIZE-FETCH"))
+			curr = SubkernelSelectMinimizeFetch(dev_id, gemm_subkernel_data->SubkernelListDev, remaining_Subkernels_dev);
+		else if (!strcmp(SELECT_HEURISTIC, "MINIMIZE-FETCH-WRITE-PENALTY"))
+			curr = SubkernelSelectMinimizeFetchWritePenalty(dev_id, gemm_subkernel_data->SubkernelListDev, remaining_Subkernels_dev);
+		else if (!strcmp(SELECT_HEURISTIC, "MINIMIZE-FETCH-WRITE-PENALTY-MULTIFETCH-PENALTY"))
+			curr = SubkernelSelectMinimizeFetchWritePenaltyMultiFetchPenalty(dev_id, gemm_subkernel_data->SubkernelListDev, remaining_Subkernels_dev);
+		else error("CoCopeLiaDgemm: Unknown Subkernel Heuristic %s\n", SELECT_HEURISTIC);
+		if (!curr) continue;
+		for (int keri = 0; keri < gemm_subkernel_data->SubkernelNumDev; keri++)
+			if (curr == gemm_subkernel_data->SubkernelListDev[keri]){
+				gemm_subkernel_data->SubkernelListDev[keri] = gemm_subkernel_data->SubkernelListDev[remaining_Subkernels_dev-1];
+				gemm_subkernel_data->SubkernelListDev[remaining_Subkernels_dev-1] = curr;
+				break;
+			}
+		remaining_Subkernels_dev--;
+		curr->prev = prev;
+		if(prev) prev->next = curr;
+		CoCoGemmUpdateDevice(curr, dev_id);
+		curr->init_events();
+		curr->request_data();
+		curr->run_operation();
 #ifdef ENABLE_SEND_RECV_OVERLAP
-			curr->writeback_data();
+		curr->writeback_data();
 #endif
-		}
+
 	}
 #endif
 
@@ -245,17 +261,46 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 	CoCoSyncCheckErr();
 #ifdef STEST
 	for (int keri = 0; keri < gemm_subkernel_data->SubkernelNumDev; keri++){
-		double request_t_ms = 0, writeback_t_ms = 0, exec_t_ms = 0;
-		for(int idx = 0; idx < gemm_subkernel_data->SubkernelListDev[keri]->TileNum; idx++)
-			request_t_ms+= gemm_subkernel_data->SubkernelListDev[keri]->input_timer[idx]->sync_get_time();
+		double request_t_ms = 0, writeback_t_ms = 0, exec_t_ms = 0, request_tile_ms[3] = {0};
+		long long request_bytes_in = 0, request_bytes_out = 0;
+		for(int idx = 0; idx < gemm_subkernel_data->SubkernelListDev[keri]->TileNum; idx++){
+			request_bytes_in+= gemm_subkernel_data->SubkernelListDev[keri]->bytes_in[idx];
+			request_tile_ms[idx] = gemm_subkernel_data->SubkernelListDev[keri]->input_timer[idx]->sync_get_time();
+			request_t_ms+= request_tile_ms[idx];
+		}
 		exec_t_ms = gemm_subkernel_data->SubkernelListDev[keri]->operation_timer->sync_get_time();
-		for(int idx = 0; idx < gemm_subkernel_data->SubkernelListDev[keri]->TileNum; idx++)
+		for(int idx = 0; idx < gemm_subkernel_data->SubkernelListDev[keri]->TileNum; idx++){
+			request_bytes_out+= gemm_subkernel_data->SubkernelListDev[keri]->bytes_out[idx];
 			writeback_t_ms+= gemm_subkernel_data->SubkernelListDev[keri]->output_timer[idx]->sync_get_time();
-		lprintf(lvl, "Subkernel(dev=%d,id=%d): Request_t = %lf ms (%3.3lf Gb\s), exec_t = %lf ms  (%3.3lf Gflops\s), writeback_t = %lf ms (%3.3lf Gb\s)\n",
+		}
+		lprintf(lvl, "Subkernel(dev=%d,id=%d):\nRequest_t(%.2lf->%.2lf) total = %lf ms (%3.3lf Gb\s):\
+			\nrequest_tile[%d](%.2lf->%.2lf) = %lf ms (%3.3lf Gb\s)\
+			\nrequest_tile[%d](%.2lf->%.2lf) = %lf ms (%3.3lf Gb\s)\
+			\nrequest_tile[%d](%.2lf->%.2lf) = %lf ms (%3.3lf Gb\s)\
+			\nexec_t(%.2lf->%.2lf) = %lf ms  (%3.3lf Gflops\s)\
+			\nwriteback_t(%.2lf->%.2lf) = %lf ms (%3.3lf Gb\s)\n\n",
 			gemm_subkernel_data->SubkernelListDev[keri]->run_dev_id, gemm_subkernel_data->SubkernelListDev[keri]->id,
-			request_t_ms, Gval_per_s(gemm_subkernel_data->SubkernelListDev[keri]->bytes_in, request_t_ms/1000),
+			(gemm_subkernel_data->SubkernelListDev[keri]->request_data_in_ts-gemm_entry_ts)*1000,
+			(gemm_subkernel_data->SubkernelListDev[keri]->request_data_out_ts-gemm_entry_ts)*1000,
+			request_t_ms, Gval_per_s(request_bytes_in, request_t_ms/1000),
+			0, (request_tile_ms[0])? (gemm_subkernel_data->SubkernelListDev[keri]->request_tile_in_ts[0]-gemm_entry_ts)*1000 : 0,
+			(request_tile_ms[0])? (gemm_subkernel_data->SubkernelListDev[keri]->request_tile_out_ts[0]-gemm_entry_ts)*1000 : 0,
+			request_tile_ms[0],
+			Gval_per_s(gemm_subkernel_data->SubkernelListDev[keri]->bytes_in[0], request_tile_ms[0]/1000),
+			1, (request_tile_ms[1])? (gemm_subkernel_data->SubkernelListDev[keri]->request_tile_in_ts[1]-gemm_entry_ts)*1000 : 0,
+			(request_tile_ms[1])? (gemm_subkernel_data->SubkernelListDev[keri]->request_tile_out_ts[1]-gemm_entry_ts)*1000 : 0,
+			request_tile_ms[1],
+			Gval_per_s(gemm_subkernel_data->SubkernelListDev[keri]->bytes_in[1], request_tile_ms[1]/1000),
+			2, (request_tile_ms[2])? (gemm_subkernel_data->SubkernelListDev[keri]->request_tile_in_ts[2]-gemm_entry_ts)*1000 : 0,
+			(request_tile_ms[2])? (gemm_subkernel_data->SubkernelListDev[keri]->request_tile_out_ts[2]-gemm_entry_ts)*1000 : 0,
+			request_tile_ms[2],
+			Gval_per_s(gemm_subkernel_data->SubkernelListDev[keri]->bytes_in[2], request_tile_ms[2]/1000),
+			(gemm_subkernel_data->SubkernelListDev[keri]->run_operation_in_ts-gemm_entry_ts)*1000,
+			(gemm_subkernel_data->SubkernelListDev[keri]->run_operation_out_ts-gemm_entry_ts)*1000,
 			exec_t_ms, Gval_per_s(gemm_subkernel_data->SubkernelListDev[keri]->flops, exec_t_ms/1000),
-			writeback_t_ms, Gval_per_s(gemm_subkernel_data->SubkernelListDev[keri]->bytes_out, writeback_t_ms/1000));
+			(gemm_subkernel_data->SubkernelListDev[keri]->writeback_data_in_ts-gemm_entry_ts)*1000,
+			(gemm_subkernel_data->SubkernelListDev[keri]->writeback_data_out_ts-gemm_entry_ts)*1000,
+			writeback_t_ms, Gval_per_s(request_bytes_out, writeback_t_ms/1000));
 	}
 	double total_cache_timer = CacheGetTimer(dev_id);
 	lprintf(lvl, "Cache requests total timer (%d): t_cache = %lf ms\n" , dev_id, total_cache_timer*1000);
@@ -280,7 +325,9 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 		TransA, TransB, M, N, K, alpha, A, CoCoGetPtrLoc(A), ldA,
 		B, CoCoGetPtrLoc(B), ldB, beta, C, CoCoGetPtrLoc(C), ldC);
 #endif
-
+#ifdef STEST
+	gemm_entry_ts = csecond();
+#endif
 #ifdef TEST
 	lprintf(lvl-1, "|-----> CoCopeLiaDgemm\n");
 	double cpu_timer = csecond();

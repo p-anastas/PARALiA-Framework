@@ -23,7 +23,9 @@ class Subkernel
 		Subkernel* prev, * next;
 #ifdef STEST
 		Event_timer_p input_timer[3], output_timer[3], operation_timer;
-		long long bytes_in, bytes_out, flops;
+		double request_data_in_ts, request_tile_in_ts[3], run_operation_in_ts, writeback_data_in_ts;
+		double request_data_out_ts, request_tile_out_ts[3], run_operation_out_ts, writeback_data_out_ts;
+		long long bytes_in[3] = {0}, bytes_out[3] = {0}, flops = 0;
 #endif
 		Event* operation_complete, *writeback_complete;
 		void* operation_params;
@@ -45,7 +47,7 @@ class Subkernel
 		void run_operation();
 		void writeback_data();
 
-		short is_dependency_free();
+		short no_locked_tiles();
 		short is_RW_master(short dev_id);
 		double opt_fetch_cost(short dev_id);
 		double opt_fetch_cost_pen_multifetch(short dev_id);

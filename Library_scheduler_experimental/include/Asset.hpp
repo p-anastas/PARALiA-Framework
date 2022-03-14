@@ -22,6 +22,9 @@ class Tile1D
 		int id, GridId;
 		int dim;
 		int R_flag, W_flag, W_total, RW_master;
+#ifdef ENABLE_PARALLEL_BACKEND
+		int RW_Master_backend_ctr;
+#endif
 #ifdef ENABLE_MUTEX_LOCKING
 		std::mutex RW_lock;
 #else

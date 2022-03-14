@@ -53,12 +53,11 @@ set (BLASX_LINK  "-L${BLASX_LD} -lblasx" )
 message( "Benchmarking - Linking BLASx: " ${BLASX_LINK} )
 
 #XKBLAS libs and includes
-set (XKBLAS_PREFIX "/zhome/academic/HLRS/xex/xexpanas/xkblas-silver1/install_vulcan") #  (testbed-II-TeslaV100 build)
+set (XKBLAS_PREFIX "/zhome/academic/HLRS/xex/xexpanas/xkblas-basic/install_vulcan") #  (testbed-II-TeslaV100 build)
 set (XKBLAS_INCLUDE_DIRS ${XKBLAS_PREFIX}/include)
 include_directories(${XKBLAS_INCLUDE_DIRS} )
 message( "Benchmarking - Included XKBLAS: " ${XKBLAS_INCLUDE_DIRS} )
 set (XKBLAS_LD ${XKBLAS_PREFIX}/lib)
-#set (XKBLAS_LINK  "-Wl,-rpath,/home/users/panastas/PhD_stuff/Other-libs/xkblas-silver1/install/lib /home/users/panastas/PhD_stuff/Other-libs/xkblas-silver1/install/lib/libkaapi.so /home/users/panastas/PhD_stuff/Other-libs/xkblas-silver1/install/lib/libxkblas.so /home/users/panastas/PhD_stuff/Other-libs/xkblas-silver1/install/lib/libxkblas_blaswrapper.so -lm" )
 set (XKBLAS_LINK  "-L${XKBLAS_LD}  -lm -lpthread -lkaapi -lxkblas /opt/system/nvidia/tesla.v100.440.95.01/libcuda.so.440.95.01" )
 message( "Benchmarking - Linking XKBLAS: " ${XKBLAS_LINK} )
 
