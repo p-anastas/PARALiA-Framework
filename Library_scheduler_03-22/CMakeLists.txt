@@ -40,7 +40,7 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${LIBSC_INSTALL_LIB})
 
 # TODO: this is the lesser evil for spliting the software-caching part from the Library scheduler.
 configure_file(${LIBSC_DIR_INC}/Subkernel.hpp ${LIBSC_INSTALL_INC}/Subkernel.hpp COPYONLY)
-ADD_SUBDIRECTORY (Software_caching_new)
+ADD_SUBDIRECTORY (Software_caching)
 include_directories(${CACHING_INSTALL_INC})
 message( "Library Scheduler exp - Included DIR: " ${CACHING_INSTALL_INC} )
 

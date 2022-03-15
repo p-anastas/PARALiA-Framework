@@ -48,14 +48,19 @@ char* CoCoImplementationPrint(){
 }
 
 char* CoCoDistributionPrint(){
+#ifndef RUNTIME_SCHEDULER_VERSION
 	char* string_out = (char*) malloc (256*sizeof(char));
 #ifdef DISTRIBUTION
 	sprintf(string_out, "%s", DISTRIBUTION);
 #else
 #error
 #endif
+#else
+	char* string_out = "";
+#endif
 	return string_out;
 }
+
 
 void ParseInputLvl1(const int argc, const char *argv[], CoControl_p* predef_control_values, double* alpha,
 	size_t* D1, size_t* inc1, size_t* inc2, short* loc1, short* loc2, short* outloc1, short* outloc2){

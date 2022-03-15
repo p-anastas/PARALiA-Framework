@@ -70,8 +70,8 @@ add_definitions(-DDISTRIBUTION="SPLIT-NAIVE")
 
 ## Define a name for the testbed, to be used for the whole framework setup
 #set(TESTBED_NAME "dungani")
-#set(TESTBED_NAME "silver1")
-set(TESTBED_NAME "vulcanGPUs")
+set(TESTBED_NAME "silver1")
+#set(TESTBED_NAME "vulcanGPUs")
 message("CoCopeLia-Framework - TESTBED_NAME: " ${TESTBED_NAME})
 add_definitions(-DTESTBED="${TESTBED_NAME}")
 

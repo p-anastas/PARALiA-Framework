@@ -43,8 +43,8 @@ file(MAKE_DIRECTORY ${BENCH_INSTALL}/testLogs)
 add_definitions(-DTESTLIBDIR="${BENCH_INSTALL}/testLogs")
 
 #BLASX libs and includes
-set (BLASX_PREFIX "/zhome/academic/HLRS/xex/xexpanas/BLASX-pinned") #  (testbed-II-TeslaV100 build)
-#set (BLASX_PREFIX "/home/users/panastas/PhD_stuff/BLASX-dungani") (testbed-I-TeslaK40)
+#set (BLASX_PREFIX "/zhome/academic/HLRS/xex/xexpanas/BLASX-pinned") #  vulcan
+set (BLASX_PREFIX "/home/users/panastas/PhD_stuff/Other-libs/BLASX-pinned") # silver1
 set (BLASX_INCLUDE_DIRS ${BLASX_PREFIX}/include)
 include_directories(${BLASX_INCLUDE_DIRS} )
 message( "Benchmarking - Included BLASx: " ${BLASX_INCLUDE_DIRS} )
@@ -53,12 +53,13 @@ set (BLASX_LINK  "-L${BLASX_LD} -lblasx" )
 message( "Benchmarking - Linking BLASx: " ${BLASX_LINK} )
 
 #XKBLAS libs and includes
-set (XKBLAS_PREFIX "/zhome/academic/HLRS/xex/xexpanas/xkblas-basic/install_vulcan") #  (testbed-II-TeslaV100 build)
+#set (XKBLAS_PREFIX "/zhome/academic/HLRS/xex/xexpanas/xkblas-basic/install_vulcan") #  (testbed-II-TeslaV100 build vulcan
+set (XKBLAS_PREFIX "/home/users/panastas/PhD_stuff/Other-libs/xkblas-silver1/install") # silver1
 set (XKBLAS_INCLUDE_DIRS ${XKBLAS_PREFIX}/include)
 include_directories(${XKBLAS_INCLUDE_DIRS} )
 message( "Benchmarking - Included XKBLAS: " ${XKBLAS_INCLUDE_DIRS} )
 set (XKBLAS_LD ${XKBLAS_PREFIX}/lib)
-set (XKBLAS_LINK  "-L${XKBLAS_LD}  -lm -lpthread -lkaapi -lxkblas /opt/system/nvidia/tesla.v100.440.95.01/libcuda.so.440.95.01" )
+set (XKBLAS_LINK  "-L${XKBLAS_LD}  -lm -lpthread -lkaapi -lxkblas -lcuda" )
 message( "Benchmarking - Linking XKBLAS: " ${XKBLAS_LINK} )
 
 add_library(benchcocopelia SHARED
