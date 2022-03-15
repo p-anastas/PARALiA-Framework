@@ -666,6 +666,7 @@ short lvl = 2;
 	for(int j = 0; j < LOC_NUM; j++)
 	for(int k = 0; k < 2; k++) transfer_link_sharing[i][j][k] = -42;
 
+/*
 	// FIXME: Handmade distribution, for testing purposes
 	transfer_link_sharing[0][LOC_NUM - 1][0] = 1;
 	transfer_link_sharing[0][LOC_NUM - 1][1] = LOC_NUM - 1;
@@ -688,7 +689,6 @@ short lvl = 2;
 	transfer_link_sharing[7][LOC_NUM - 1][0] = 6;
 	transfer_link_sharing[7][LOC_NUM - 1][1] = LOC_NUM - 1;
 
-/*
 	transfer_link_sharing[LOC_NUM - 1][0][0] = LOC_NUM - 1;
 	transfer_link_sharing[LOC_NUM - 1][0][1] = 1;
 	transfer_link_sharing[LOC_NUM - 1][1][0] = LOC_NUM - 1;
@@ -846,7 +846,7 @@ void Subkernel::prepare_launch(){
 			Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) TileList[j];
 			if(tmp->W_flag) {
 				if (tmp->W_total == tmp->W_flag) WR_first = 1;
-				//if(!tmp->isLocked()) 
+				//if(!tmp->isLocked())
 					CoCoQueueLock((void*) &tmp->RW_lock);
 			}
 		}

@@ -39,7 +39,7 @@ add_definitions(-DMAX_BUFFERING_L=4)
 add_definitions(-DENABLE_SEND_RECV_OVERLAP)
 
 ## Enable using the CPU as an extra device for part of the total workload, if applicable
-add_definitions(-DENABLE_CPU_WORKLOAD)
+#add_definitions(-DENABLE_CPU_WORKLOAD)
 
 ## Enable using the CPU as an extra device for part of the total workload, if applicable
 #add_definitions(-DENABLE_PTHREAD_TILE_REQUEST)
@@ -59,11 +59,11 @@ else()
 endif()
 
 ## Define which subkernel selection heuristic to use
-#add_definitions(-DSELECT_HEURISTIC="NAIVE")
+add_definitions(-DSELECT_HEURISTIC="NAIVE")
 #add_definitions(-DSELECT_HEURISTIC="NAIVE-NO-WRITE-SHARE")
 #add_definitions(-DSELECT_HEURISTIC="MINIMIZE-FETCH")
 #add_definitions(-DSELECT_HEURISTIC="MINIMIZE-FETCH-WRITE-PENALTY")
-add_definitions(-DSELECT_HEURISTIC="MINIMIZE-FETCH-WRITE-PENALTY-MULTIFETCH-PENALTY")
+#add_definitions(-DSELECT_HEURISTIC="MINIMIZE-FETCH-WRITE-PENALTY-MULTIFETCH-PENALTY")
 
 # Extra distribution-related values
 add_definitions(-DWRITE_COST_PEPENALTY=1)
@@ -76,10 +76,10 @@ add_definitions(-DMULTIFETCH_PENALTY=1)
 #add_definitions(-DSTEST)
 
 #Run in debug mode, which includes detailed function calls and info for error-checking
-add_definitions(-DDEBUG)
+#add_definitions(-DDEBUG)
 
 #Run in deep debug mode, for command-to-command debugging
-add_definitions(-DDDEBUG)
+#add_definitions(-DDDEBUG)
 
 #Run Prediction debug mode (autotuning runtime stuff)
 #add_definitions(-DPDEBUG)
@@ -88,7 +88,7 @@ add_definitions(-DDDEBUG)
 #add_definitions(-DDPDEBUG)
 
 #Run in caching debug mode, for cache-related deep debugging
-add_definitions(-DCDEBUG)
+#add_definitions(-DCDEBUG)
 
 ## Define a name for the testbed, to be used for the whole framework setup
 #set(TESTBED_NAME "dungani")
@@ -99,7 +99,7 @@ add_definitions(-DTESTBED="${TESTBED_NAME}")
 
 
 ## Define the (max) number of devices for utilization (0-num_devices)
-set(NUM_DEVICES 3)
+set(NUM_DEVICES 2)
 message("CoCopeLia-Framework - NUM_DEVICES: " ${NUM_DEVICES})
 add_definitions(-DDEV_NUM=${NUM_DEVICES})
 

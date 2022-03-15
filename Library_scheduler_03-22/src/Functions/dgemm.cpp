@@ -145,11 +145,6 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 	CoCoPeLiaSelectDevice(dev_id);
 	CoCoPeLiaInitResources(dev_id);
 
-	/// TODO: writeback event logic needs change!
-
-	/// TODO: Update RunTileMaps
-	/// gemm_subkernel_data->SubkernelListDev[keri]->update_RunTileMaps();
-
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer;
 	lprintf(lvl, "Stream/Lib Handle Initialization(%d): t_resource = %lf ms\n", dev_id, cpu_timer*1000);
