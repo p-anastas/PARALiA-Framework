@@ -31,6 +31,7 @@ template<typename dtype>  Tile1D<dtype>::Tile1D(void * in_addr, int in_dim,
   for (int iloc = 0; iloc < LOC_NUM; iloc++){
     RunTileMap[iloc] = 0;
     if (iloc == init_loc_idx){
+      WriteBackBlock = init_loc_block_p;
       StoreBlock[iloc] = init_loc_block_p;
       StoreBlock[iloc]->Adrs = in_addr;
       StoreBlock[iloc]->set_owner((void**)&StoreBlock[iloc]);
@@ -100,5 +101,5 @@ template<typename dtype> short Tile1D<dtype>::getClosestReadLoc(short dev_id_in)
     }
   }
   if (pos >= LOC_NUM) error("Tile1D(%d)::getClosestReadLoc(%d): No location found for tile - bug.", id, dev_id_in);
-  return idxize(pos);
+  return deidxize(pos);
 }

@@ -18,6 +18,7 @@ pthread_barrier_t  RunTileMap_sync_barrier;
 gemm_backend_in_p initial_gemm = NULL;
 
 CoCoModel_p glob_model_gemm[128] = {NULL};
+Cache_p Global_Cache[LOC_NUM] = {NULL};
 CoControl_p predef_vals_gemm = NULL;
 CoControl_p autotuned_vals = NULL;
 int MGridSz = 0, NGridSz = 0, KGridSz = 0;
@@ -159,8 +160,7 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 	cpu_timer = csecond();
 #endif
 
-  	CoCoPeLiaRequestMaxBuffer(dev_id, MGridSz* NGridSz + NGridSz*KGridSz + MGridSz*KGridSz,
-			autotuned_vals->T*autotuned_vals->T*sizeof(VALUE_TYPE), autotuned_vals->cache_limit);
+	Global_Cache[idxize(dev_id)]->allocate();
 
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer;
@@ -388,6 +388,10 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 	tunableParams_p best_pred_p = CoCoAutotuneParameters("Dgemm", initial_gemm,
 	  &autotuned_vals, glob_model_gemm, predef_vals_gemm, reuse_model_flag);
 
+	for(int cache_loc = 0; cache_loc < LOC_NUM; cache_loc++)
+		Global_Cache[cache_loc] = new Cache(deidxize(cache_loc), MGridSz* NGridSz + NGridSz*KGridSz + MGridSz*KGridSz,
+			autotuned_vals->T*autotuned_vals->T*sizeof(VALUE_TYPE));
+
 	void* res;
 	for(int i=0; i<3;i++){
 		s = pthread_join(asset_thread_id[i], &res);
@@ -411,9 +415,9 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 
 	size_t T = autotuned_vals->T;
 	/// TODO: Split each asset to Tiles
-	A_asset->InitTileMap(T, T);
-	B_asset->InitTileMap(T, T);
-	C_asset->InitTileMap(T, T);
+	A_asset->InitTileMap(T, T, Global_Cache);
+	B_asset->InitTileMap(T, T, Global_Cache);
+	C_asset->InitTileMap(T, T, Global_Cache);
 
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer;

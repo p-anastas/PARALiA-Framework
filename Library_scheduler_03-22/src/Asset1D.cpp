@@ -21,7 +21,7 @@ template<typename dtype> Asset1D<dtype>::Asset1D(void* in_adr, int in_dim, int i
   inc = in_inc;
 }
 
-template<typename dtype> void Asset1D<dtype>::InitTileMap(int T, Cache_p init_loc_cache_p){
+template<typename dtype> void Asset1D<dtype>::InitTileMap(int T, Cache_p* init_loc_cache_p){
   short lvl = 2;
 
   #ifdef DEBUG
@@ -44,14 +44,14 @@ template<typename dtype> void Asset1D<dtype>::InitTileMap(int T, Cache_p init_lo
     else  Ttmp = T;
     current_ctr = itt;
     tile_addr = adrs + itt*T*inc;
-    Tile_map[current_ctr] = new Tile1D<dtype>(tile_addr, Ttmp, inc, itt, init_loc_cache_p->assign_Cblock());
+    Tile_map[current_ctr] = new Tile1D<dtype>(tile_addr, Ttmp, inc, itt, init_loc_cache_p[CoCoGetPtrLoc(adrs)]->assign_Cblock());
   }
   #ifdef DEBUG
   	lprintf(lvl-1, "<-----|\n");
   #endif
 }
 
-template void Asset1D<double>::InitTileMap(int T, Cache_p init_loc_cache_p);
+template void Asset1D<double>::InitTileMap(int T, Cache_p* init_loc_cache_p);
 
 template<typename dtype> void Asset1D<dtype>::DestroyTileMap(){
   int current_ctr;

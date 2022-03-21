@@ -35,6 +35,7 @@ template<typename dtype>  Tile2D<dtype>::Tile2D(void * in_addr, int in_dim1, int
   for (int iloc = 0; iloc < LOC_NUM; iloc++){
     RunTileMap[iloc] = 0;
     if (iloc == init_loc_idx){
+      WriteBackBlock = init_loc_block_p;
       StoreBlock[iloc] = init_loc_block_p;
       StoreBlock[iloc]->Adrs = in_addr;
       StoreBlock[iloc]->set_owner((void**)&StoreBlock[iloc]);
@@ -104,7 +105,7 @@ template<typename dtype> short Tile2D<dtype>::getClosestReadLoc(short dev_id_in)
   lprintf(lvl, "|-----> Tile2D(%d)::getClosestReadLoc(%d): Selecting cached tile in loc =%d \n", id, dev_id_in, pos_min);
 #endif
   if (pos_min >= LOC_NUM) error("Tile2D(%d)::getClosestReadLoc(%d): No location found for tile - bug.", id, dev_id_in);
-  else return deidxize(pos_min);
+  return deidxize(pos_min);
 }
 
 template<typename dtype> double Tile2D<dtype>::getMinLinkCost(short dev_id_in){

@@ -24,7 +24,7 @@ template<typename dtype> Asset2D<dtype>::Asset2D( void* in_adr, int in_dim1, int
   transpose = in_transpose;
 }
 
-template<typename dtype> void Asset2D<dtype>::InitTileMap(int T1, int T2, Cache_p init_loc_cache_p){
+template<typename dtype> void Asset2D<dtype>::InitTileMap(int T1, int T2, Cache_p* init_loc_cache_p){
   short lvl = 2;
 
   #ifdef DEBUG
@@ -59,11 +59,13 @@ template<typename dtype> void Asset2D<dtype>::InitTileMap(int T1, int T2, Cache_
       /// For column major format assumed with T1tmp = rows and T2tmp = cols
       if (transpose == 'N'){
          tile_addr = adrs + itt1*T1 + itt2*T2*ldim;
-         Tile_map[current_ctr] = new Tile2D<dtype>(tile_addr, T1tmp, T2tmp, ldim, itt1, itt2, init_loc_cache_p->assign_Cblock());
+         Tile_map[current_ctr] = new Tile2D<dtype>(tile_addr, T1tmp, T2tmp, ldim, itt1, itt2,
+           init_loc_cache_p[CoCoGetPtrLoc(adrs)]->assign_Cblock());
        }
       else if (transpose == 'T'){
         tile_addr = adrs + itt1*T1*ldim + itt2*T2;
-        Tile_map[current_ctr] = new Tile2D<dtype>(tile_addr, T2tmp, T1tmp, ldim, itt2, itt1, init_loc_cache_p->assign_Cblock());
+        Tile_map[current_ctr] = new Tile2D<dtype>(tile_addr, T2tmp, T1tmp, ldim, itt2, itt1,
+           init_loc_cache_p[CoCoGetPtrLoc(adrs)]->assign_Cblock());
       }
       else error("Asset2D<dtype>::InitTileMap: Unknown transpose type\n");
 
@@ -74,7 +76,7 @@ template<typename dtype> void Asset2D<dtype>::InitTileMap(int T1, int T2, Cache_
    #endif
 }
 
-template void Asset2D<double>::InitTileMap(int T1, int T2, Cache_p init_loc_cache_p);
+template void Asset2D<double>::InitTileMap(int T1, int T2, Cache_p* init_loc_cache_p);
 
 template<typename dtype> void Asset2D<dtype>::DestroyTileMap(){
   int current_ctr;

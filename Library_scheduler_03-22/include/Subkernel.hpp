@@ -27,7 +27,7 @@ class Subkernel
 		double request_data_out_ts, request_tile_out_ts[3], run_operation_out_ts, writeback_data_out_ts;
 		long long bytes_in[3] = {0}, bytes_out[3] = {0}, flops = 0;
 #endif
-		Event* operation_complete, *writeback_complete;
+		Event* operation_complete;
 		void* operation_params;
 		const char* op_name;
 
