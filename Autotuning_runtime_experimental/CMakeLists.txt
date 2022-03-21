@@ -10,10 +10,6 @@ message( "Autotuning Runtime exp - PROJECT_SOURCE_DIR: " ${PROJECT_SOURCE_DIR} )
 add_definitions(-DDEV_COST_FUNC="FULL-OVERLAP")
 #add_definitions(-DDEV_COST_FUNC="ZERO-OVERLAP")
 
-## Define at which percentage to normalize near splitting
-## See Autotuning_runtime->CoCoPeLiaModel->CoCoPeLiaNormalizeSplit
-add_definitions(-DNORMALIZE_NEAR_SPLIT_LIMIT=0.05)
-
 ## Define an extra percentile overhead for Tile sizes which lead to padding and possible imbalance
 ## See Autotuning_runtime->CoCoPeLiaModel->CoCopeLiaPredictReuseHetero
 add_definitions(-DTILE_IMBALANCE_PENALTY=0.05)

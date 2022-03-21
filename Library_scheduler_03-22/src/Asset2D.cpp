@@ -24,7 +24,7 @@ template<typename dtype> Asset2D<dtype>::Asset2D( void* in_adr, int in_dim1, int
   transpose = in_transpose;
 }
 
-template<typename dtype> void Asset2D<dtype>::InitTileMap(int T1, int T2){
+template<typename dtype> void Asset2D<dtype>::InitTileMap(int T1, int T2, Cache_p init_loc_cache_p){
   short lvl = 2;
 
   #ifdef DEBUG
@@ -59,11 +59,11 @@ template<typename dtype> void Asset2D<dtype>::InitTileMap(int T1, int T2){
       /// For column major format assumed with T1tmp = rows and T2tmp = cols
       if (transpose == 'N'){
          tile_addr = adrs + itt1*T1 + itt2*T2*ldim;
-         Tile_map[current_ctr] = new Tile2D<dtype>(tile_addr, T1tmp, T2tmp, ldim, itt1, itt2);
+         Tile_map[current_ctr] = new Tile2D<dtype>(tile_addr, T1tmp, T2tmp, ldim, itt1, itt2, init_loc_cache_p->assign_Cblock());
        }
       else if (transpose == 'T'){
         tile_addr = adrs + itt1*T1*ldim + itt2*T2;
-        Tile_map[current_ctr] = new Tile2D<dtype>(tile_addr, T2tmp, T1tmp, ldim, itt2, itt1);
+        Tile_map[current_ctr] = new Tile2D<dtype>(tile_addr, T2tmp, T1tmp, ldim, itt2, itt1, init_loc_cache_p->assign_Cblock());
       }
       else error("Asset2D<dtype>::InitTileMap: Unknown transpose type\n");
 
@@ -74,7 +74,7 @@ template<typename dtype> void Asset2D<dtype>::InitTileMap(int T1, int T2){
    #endif
 }
 
-template void Asset2D<double>::InitTileMap(int T1, int T2);
+template void Asset2D<double>::InitTileMap(int T1, int T2, Cache_p init_loc_cache_p);
 
 template<typename dtype> void Asset2D<dtype>::DestroyTileMap(){
   int current_ctr;
@@ -137,7 +137,7 @@ template<typename dtype> void Asset2D<dtype>::DrawTileMap(){
       for (int itt2 = 0 ; itt2 < GridSz2; itt2++)
         fprintf(stderr, "| loc: %2d | %3d | %3d  |",
                      (loctr == LOC_NUM - 1) ? -1 : loctr,
-                     Tile_map[itt1*GridSz2 + itt2]->CacheLocId[loctr],
+                     Tile_map[itt1*GridSz2 + itt2]->StoreBlock[loctr]->id,
                      Tile_map[itt1*GridSz2 + itt2]->RunTileMap[loctr]);
       fprintf(stderr, "\n");
     }

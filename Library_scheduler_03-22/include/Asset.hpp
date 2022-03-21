@@ -18,6 +18,7 @@ class Tile1D
 {
 		// Variables
 	private:
+		int WriteBackLoc;
 	public:
 		int id, GridId;
 		int dim;
@@ -31,15 +32,14 @@ class Tile1D
 		int RW_lock;
 #endif
 
-		Event* available[LOC_NUM];
-		void *adrs[LOC_NUM];
+		CBlock_p StoreBlock[LOC_NUM];
+
 		int inc[LOC_NUM];
-		int CacheLocId[LOC_NUM];
 		int RunTileMap[LOC_NUM];
 
 		// Constructor
 		Tile1D<dtype>(void* tile_addr, int T1tmp,
-			int inc, int inGrid1);
+			int inc, int inGrid1, CBlock_p init_loc_block_p);
 
 		//Destructor
 		~Tile1D();
@@ -60,6 +60,7 @@ class Tile2D
 {
 		// Variables
 	private:
+		int WriteBackLoc;
 	public:
 		int id, GridId1, GridId2;
 		int dim1, dim2;
@@ -70,15 +71,14 @@ class Tile2D
 		int RW_lock;
 #endif
 
-		Event* available[LOC_NUM];
-		void *adrs[LOC_NUM];
+		CBlock_p StoreBlock[LOC_NUM];
+
 		int ldim[LOC_NUM];
-		int CacheLocId[LOC_NUM];
 		int RunTileMap[LOC_NUM];
 
 		// Constructor
 		Tile2D<dtype>(void* tile_addr, int T1tmp, int T2tmp,
-			int ldim, int inGrid1, int inGrid2);
+			int ldim, int inGrid1, int inGrid2, CBlock_p init_loc_block_p);
 
 		//Destructor
 		~Tile2D();
@@ -115,7 +115,7 @@ class Asset2D
 		int in_dim2, int in_ldim, char transpose);
 
 	// General Functions
-	void InitTileMap(int T1, int T2);
+	void InitTileMap(int T1, int T2, Cache_p init_loc_cache_p);
 	void DestroyTileMap();
 	Tile2D<dtype>* getTile(int iloc1, int iloc2);
 	int dtypesize() { return sizeof(dtype); }
@@ -147,7 +147,7 @@ class Asset1D
 	Asset1D<dtype>(void* adrr, int in_dim, int in_inc);
 
 	// General Functions
-	void InitTileMap(int T);
+	void InitTileMap(int T, Cache_p init_loc_cache_p);
 	void DestroyTileMap();
 	Tile1D<dtype>* getTile(int iloc);
 	int dtypesize() { return sizeof(dtype); }

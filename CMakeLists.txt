@@ -69,6 +69,10 @@ add_definitions(-DSELECT_HEURISTIC="NAIVE")
 add_definitions(-DWRITE_COST_PEPENALTY=1)
 add_definitions(-DMULTIFETCH_PENALTY=1)
 
+## Define at which percentage to normalize float values for similar data (e.g. costs, splits etc) to avoid empirical errors leaking into decisions
+## For example see Autotuning_runtime->CoCoPeLiaModel->CoCoPeLiaNormalizeSplit
+add_definitions(-DNORMALIZE_NEAR_SPLIT_LIMIT=0.05)
+
 #Run in testing mode : details about models, decisions and time spend in operations.
 #add_definitions(-DTEST)
 
