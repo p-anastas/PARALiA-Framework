@@ -40,9 +40,9 @@ void CoCoGemmUpdateDevice(Subkernel* ker, short dev_id){
 	ker->run_dev_id = ptr_ker_translate->dev_id = dev_id;
 	short dev_id_idx = idxize(dev_id);
 	if(!ker->WR_first) ptr_ker_translate->beta = 1.0;
-	ptr_ker_translate->A = &((Tile2D<VALUE_TYPE>*) ker->TileList[0])->adrs[dev_id_idx];
-	ptr_ker_translate->B = &((Tile2D<VALUE_TYPE>*) ker->TileList[1])->adrs[dev_id_idx];
-	ptr_ker_translate->C = &((Tile2D<VALUE_TYPE>*) ker->TileList[2])->adrs[dev_id_idx];
+	ptr_ker_translate->A = &((Tile2D<VALUE_TYPE>*) ker->TileList[0])->StoreBlock[dev_id_idx]->Adrs;
+	ptr_ker_translate->B = &((Tile2D<VALUE_TYPE>*) ker->TileList[1])->StoreBlock[dev_id_idx]->Adrs;
+	ptr_ker_translate->C = &((Tile2D<VALUE_TYPE>*) ker->TileList[2])->StoreBlock[dev_id_idx]->Adrs;
 	ptr_ker_translate->ldA = ((Tile2D<VALUE_TYPE>*) ker->TileList[0])->ldim[dev_id_idx];
 	ptr_ker_translate->ldB = ((Tile2D<VALUE_TYPE>*) ker->TileList[1])->ldim[dev_id_idx];
 	ptr_ker_translate->ldC = ((Tile2D<VALUE_TYPE>*) ker->TileList[2])->ldim[dev_id_idx];
@@ -160,7 +160,7 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 	cpu_timer = csecond();
 #endif
 
-	Global_Cache[idxize(dev_id)]->allocate();
+	Global_Cache[idxize(dev_id)]->allocate(true);
 
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer;
@@ -570,9 +570,12 @@ if(!reuse_model_flag){
 
 
 #ifndef BUFFER_REUSE_ENABLE
-	for(int i=0; i<autotuned_vals->dev_num;i++) CoCopeLiaDevCacheFree(autotuned_vals->dev_ids[i]);
+	for(int i=0; i<autotuned_vals->dev_num;i++){
+		delete Global_Cache[i];
+		Global_Cache[i] = NULL;
+	}
 #else
-	CoCoPeLiaDevCacheInvalidate(SK_wrap);
+	for(int i=0; i<autotuned_vals->dev_num;i++) Global_Cache[i]->reset(true);
 #ifdef DDEBUG
 	for(int i=0; i<autotuned_vals->dev_num;i++) CachePrint(autotuned_vals->dev_ids[i]);
 #endif

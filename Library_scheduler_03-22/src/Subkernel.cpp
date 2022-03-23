@@ -143,7 +143,7 @@ void Subkernel::request_tile(short TileIdx){
 			error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d])::request_tile: Fetching from tile in GPU(%d) with INVALID state\n",
 				run_dev_id, id, tmp->id,  tmp->GridId, FetchFromId);
 
-		if(tmp->W_flag) tmp->StoreBlock[FetchFromId_idx]->reset();
+		if(tmp->W_flag) tmp->StoreBlock[FetchFromId_idx]->reset(false);
 		else tmp->StoreBlock[FetchFromId_idx]->add_reader();
 
 		if(tmp->W_flag) tmp->StoreBlock[run_dev_id_idx]->add_writer();
@@ -193,7 +193,7 @@ void Subkernel::request_tile(short TileIdx){
 			error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::request_tile: Fetching from tile in GPU(%d) with INVALID state\n",
 				run_dev_id, id, tmp->id,  tmp->GridId1, tmp->GridId2, FetchFromId);
 
-		if(tmp->W_flag) tmp->StoreBlock[FetchFromId_idx]->reset();
+		if(tmp->W_flag) tmp->StoreBlock[FetchFromId_idx]->reset(false);
 		else tmp->StoreBlock[FetchFromId_idx]->add_reader();
 
 		if(tmp->W_flag) tmp->StoreBlock[run_dev_id_idx]->add_writer();
@@ -410,6 +410,7 @@ void Subkernel::run_operation(){
 #endif
 }
 
+/*
 void Subkernel::writeback_data(){
 	short lvl = 4;
 #ifdef DEBUG
@@ -517,7 +518,7 @@ void Subkernel::writeback_data(){
 	lprintf(lvl-1, "<-----|\n");
 #endif
 }
-
+*/
 
 int queue_d_allock = 0;
 
@@ -695,6 +696,7 @@ void CoCoPeLiaFreeResources(short dev_id){
 	//__sync_lock_release(&queue_d_allock);
 }
 
+/*
 void Subkernel::prepare_launch(){
 	for (int j = 0; j < TileNum; j++){
 		if (TileDimlist[j] == 1){
@@ -869,3 +871,4 @@ Subkernel* SubkernelSelectMinimizeFetchWritePenaltyMultiFetchPenalty(short dev_i
 	min_fetch_cost_sk->prepare_launch();
 	return min_fetch_cost_sk;
 }
+*/

@@ -87,7 +87,7 @@ add_definitions(-DNORMALIZE_NEAR_SPLIT_LIMIT=0.05)
 #add_definitions(-DDPDEBUG)
 
 #Run in caching debug mode, for cache-related deep debugging
-#add_definitions(-DCDEBUG)
+add_definitions(-DCDEBUG)
 
 ## Define a name for the testbed, to be used for the whole framework setup
 #set(TESTBED_NAME "dungani")
