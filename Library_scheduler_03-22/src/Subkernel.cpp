@@ -163,7 +163,7 @@ void Subkernel::request_tile(short TileIdx){
 		else{
 			wrap_read = (CBlock_wrap_p) malloc (sizeof(struct CBlock_wrap));
 			wrap_read->CBlock = tmp->StoreBlock[FetchFromId_idx];
-			wrap_read->lock_flag = 0;
+			wrap_read->lockfree = true;
 			transfer_queues[run_dev_id_idx][FetchFromId_idx]->add_host_func((void*)&CBlock_RR_wrap, (void*) wrap_read);
 		}
 		tmp->StoreBlock[run_dev_id_idx]->Available->record_to_queue(transfer_queues[run_dev_id_idx][FetchFromId_idx]);
@@ -214,7 +214,7 @@ void Subkernel::request_tile(short TileIdx){
 		else{
 			wrap_read = (CBlock_wrap_p) malloc (sizeof(struct CBlock_wrap));
 			wrap_read->CBlock = tmp->StoreBlock[FetchFromId_idx];
-			wrap_read->lock_flag = 0;
+			wrap_read->lockfree = true;
 			transfer_queues[run_dev_id_idx][FetchFromId_idx]->add_host_func((void*)&CBlock_RR_wrap, (void*) wrap_read);
 		}
 		tmp->StoreBlock[run_dev_id_idx]->Available->record_to_queue(transfer_queues[run_dev_id_idx][FetchFromId_idx]);
@@ -369,7 +369,7 @@ void Subkernel::run_operation(){
 			CBlock_wrap_p wrap_oper = NULL;
 			wrap_oper = (CBlock_wrap_p) malloc (sizeof(struct CBlock_wrap));
 			wrap_oper->CBlock = tmp->StoreBlock[run_dev_id_idx];
-			wrap_oper->lock_flag = 0;
+			wrap_oper->lockfree = true;
 			if(tmp->W_flag)	exec_queue[run_dev_id_idx]->add_host_func((void*)&CBlock_RW_wrap, (void*) wrap_oper);
 			else exec_queue[run_dev_id_idx]->add_host_func((void*)&CBlock_RR_wrap, (void*) wrap_oper);
 
@@ -387,7 +387,7 @@ void Subkernel::run_operation(){
 			CBlock_wrap_p wrap_oper = NULL;
 			wrap_oper = (CBlock_wrap_p) malloc (sizeof(struct CBlock_wrap));
 			wrap_oper->CBlock = tmp->StoreBlock[run_dev_id_idx];
-			wrap_oper->lock_flag = 0;
+			wrap_oper->lockfree = true;
 			if(tmp->W_flag)	exec_queue[run_dev_id_idx]->add_host_func((void*)&CBlock_RW_wrap, (void*) wrap_oper);
 			else exec_queue[run_dev_id_idx]->add_host_func((void*)&CBlock_RR_wrap, (void*) wrap_oper);
 
@@ -410,8 +410,9 @@ void Subkernel::run_operation(){
 #endif
 }
 
-/*
+
 void Subkernel::writeback_data(){
+	//TODO: Should I use WriteBackBlock, or its possible without?
 	short lvl = 4;
 #ifdef DEBUG
 	lprintf(lvl-1, "|-----> Subkernel(dev=%d,id=%d)::writeback_data()\n", run_dev_id, id);
@@ -424,85 +425,95 @@ void Subkernel::writeback_data(){
 	for (int j = 0; j < TileNum; j++) if (WR_last[j]){
 		if (TileDimlist[j] == 1){
 			Tile1D<VALUE_TYPE>* tmp = (Tile1D<VALUE_TYPE>*) TileList[j];
-			if (tmp->CacheLocId[run_dev_id_idx] < -1)
-				error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d])::writeback_data: invoked with tile with loc = %d\n",
-					run_dev_id, id, tmp->id, tmp->GridId, tmp->CacheLocId[run_dev_id_idx]);
-			else{
-				Writeback_id = tmp->getWriteBackLoc(); //to MASTER
-				Writeback_id_idx = idxize(Writeback_id);
-				transfer_queues[Writeback_id_idx][run_dev_id_idx]->wait_for_event(operation_complete);
-				if (run_dev_id == Writeback_id){
-					;
+			if (tmp->StoreBlock[run_dev_id_idx] == NULL)
+				error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d])::writeback_data: Tile(j=%d) Storeblock is NULL\n",
+					run_dev_id, id, tmp->id, tmp->GridId, j);
+			Writeback_id = tmp->getWriteBackLoc(); //to MASTER
+			Writeback_id_idx = idxize(Writeback_id);
+			if (tmp->StoreBlock[Writeback_id_idx] == NULL)
+				error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d])::writeback_data: Tile(j=%d) Storeblock[Writeback_id_idx=%d] is NULL\n",
+					run_dev_id, id, tmp->id, tmp->GridId, j, Writeback_id_idx);
+			transfer_queues[Writeback_id_idx][run_dev_id_idx]->wait_for_event(operation_complete);
+			if (run_dev_id == Writeback_id){
+				;
 #ifdef DEBUG
-			lprintf(lvl, "Subkernel(dev=%d,id=%d)-Tile(%d.[%d])::writeback_data: run_dev_id == Writeback_id == %d (not wrong but check)\n",
-				run_dev_id, id, tmp->id, tmp->GridId, run_dev_id);
+		lprintf(lvl, "Subkernel(dev=%d,id=%d)-Tile(%d.[%d])::writeback_data: run_dev_id == Writeback_id == %d (not wrong but check)\n",
+			run_dev_id, id, tmp->id, tmp->GridId, run_dev_id);
 #endif
-				}
-				else{
-					if (tmp->CacheLocId[run_dev_id_idx] != -1){
-						CacheWrap_p wrap_inval = (CacheWrap_p) malloc(sizeof(struct Cache_info_wrap));
-							wrap_inval->dev_id = run_dev_id;
-							wrap_inval->BlockIdx = tmp->CacheLocId[run_dev_id_idx];
-							wrap_inval->lock_flag = 1;
-							transfer_queues[Writeback_id_idx][run_dev_id_idx]->add_host_func((void*)&CacheInvalidate, (void*) wrap_inval);
-					}
+			}
+			else{
+				state prev_state = tmp->StoreBlock[Writeback_id_idx]->set_state(EXCLUSIVE, false);
+				if (prev_state != INVALID)
+					error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d])::writeback_data: Tile(j=%d) Storeblock[Writeback_id_idx=%d] was %s instead of INVALID\n",
+						run_dev_id, id, tmp->id, tmp->GridId, j, Writeback_id_idx, print_state(prev_state));
 #ifdef STEST
-					output_timer[j]->start_point(transfer_queues[Writeback_id_idx][run_dev_id_idx]);
+				output_timer[j]->start_point(transfer_queues[Writeback_id_idx][run_dev_id_idx]);
 #endif
-					CoCoMemcpyAsync(tmp->adrs[Writeback_id_idx], tmp->adrs[run_dev_id_idx],
-						((long long) tmp->inc[run_dev_id_idx]) * tmp->dim * tmp->dtypesize(),
-						Writeback_id, run_dev_id, transfer_queues[Writeback_id_idx][run_dev_id_idx]);
+				CoCoMemcpyAsync(tmp->StoreBlock[Writeback_id_idx]->Adrs, tmp->StoreBlock[run_dev_id_idx]->Adrs,
+					((long long) tmp->inc[run_dev_id_idx]) * tmp->dim * tmp->dtypesize(),
+					Writeback_id, run_dev_id, transfer_queues[Writeback_id_idx][run_dev_id_idx]);
 #ifdef STEST
-					output_timer[j]->stop_point(transfer_queues[Writeback_id_idx][run_dev_id_idx]);
-					bytes_out[j]= tmp->size();
+				output_timer[j]->stop_point(transfer_queues[Writeback_id_idx][run_dev_id_idx]);
+				bytes_out[j]= tmp->size();
 #endif
-					Ptr_and_int_p wrapped_op = (Ptr_and_int_p) malloc(sizeof(struct Ptr_and_int));
-					wrapped_op->int_ptr = &tmp->RW_master;
-					wrapped_op->val = Writeback_id;
-					transfer_queues[Writeback_id_idx][run_dev_id_idx]->add_host_func((void*)&CoCoSetInt, (void*) wrapped_op);
-				}
+
+				tmp->StoreBlock[Writeback_id_idx]->Available->record_to_queue(transfer_queues[Writeback_id_idx][run_dev_id_idx]);
+				Ptr_and_int_p wrapped_op = (Ptr_and_int_p) malloc(sizeof(struct Ptr_and_int));
+				wrapped_op->int_ptr = &tmp->RW_master;
+				wrapped_op->val = Writeback_id;
+				transfer_queues[Writeback_id_idx][run_dev_id_idx]->add_host_func((void*)&CoCoSetInt, (void*) wrapped_op);
+				CBlock_wrap_p wrap_inval = NULL;
+				wrap_inval = (CBlock_wrap_p) malloc (sizeof(struct CBlock_wrap));
+				wrap_inval->CBlock = tmp->StoreBlock[run_dev_id_idx];
+				wrap_inval->lockfree = true;
+				transfer_queues[Writeback_id_idx][run_dev_id_idx]->add_host_func((void*)&CBlock_RESET_wrap, (void*) wrap_inval);
 			}
 		}
 		else if (TileDimlist[j] == 2){
 			Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) TileList[j];
-			if (tmp->CacheLocId[run_dev_id_idx] < -1)
-				error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::writeback_data: invoked with tile with loc = %d\n",
-					run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2, tmp->CacheLocId[run_dev_id_idx]);
-			else{
-				Writeback_id = tmp->getWriteBackLoc(); //to MASTER
-				Writeback_id_idx = idxize(Writeback_id);
-				transfer_queues[Writeback_id_idx][run_dev_id_idx]->wait_for_event(operation_complete);
-				if (run_dev_id == Writeback_id){
-					;
+			if (tmp->StoreBlock[run_dev_id_idx] == NULL)
+				error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::writeback_data: Tile(j=%d) Storeblock is NULL\n",
+					run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2, j);
+			Writeback_id = tmp->getWriteBackLoc(); //to MASTER
+			Writeback_id_idx = idxize(Writeback_id);
+			if (tmp->StoreBlock[Writeback_id_idx] == NULL)
+				error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::writeback_data: Tile(j=%d) Storeblock[Writeback_id_idx=%d] is NULL\n",
+					run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2, j, Writeback_id_idx);
+			transfer_queues[Writeback_id_idx][run_dev_id_idx]->wait_for_event(operation_complete);
+			if (run_dev_id == Writeback_id){
+				;
 #ifdef DEBUG
-			lprintf(lvl, "Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::writeback_data: run_dev_id == Writeback_id == %d\n",
-				run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2, run_dev_id);
+		lprintf(lvl, "Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::writeback_data: run_dev_id == Writeback_id == %d (not wrong but check)\n",
+			run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2, run_dev_id);
 #endif
-				}
-				else{
-					if (tmp->CacheLocId[run_dev_id_idx] != -1){
-						CacheWrap_p wrap_inval = (CacheWrap_p) malloc(sizeof(struct Cache_info_wrap));
-							wrap_inval->dev_id = run_dev_id;
-							wrap_inval->BlockIdx = tmp->CacheLocId[run_dev_id_idx];
-							wrap_inval->lock_flag = 1;
-							transfer_queues[Writeback_id_idx][run_dev_id_idx]->add_host_func((void*)&CacheInvalidate, (void*) wrap_inval);
-					}
+			}
+			else{
+				state prev_state = tmp->StoreBlock[Writeback_id_idx]->set_state(EXCLUSIVE, false);
+				if (prev_state != INVALID)
+					error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::writeback_data: Tile(j=%d) Storeblock[Writeback_id_idx=%d] was %s instead of INVALID\n",
+						run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2, j, Writeback_id_idx, print_state(prev_state));
 #ifdef STEST
-					output_timer[j]->start_point(transfer_queues[Writeback_id_idx][run_dev_id_idx]);
+				output_timer[j]->start_point(transfer_queues[Writeback_id_idx][run_dev_id_idx]);
 #endif
-					CoCoMemcpy2DAsync(tmp->adrs[Writeback_id_idx], tmp->ldim[Writeback_id_idx],
-						tmp->adrs[run_dev_id_idx], tmp->ldim[run_dev_id_idx],
-						tmp->dim1, tmp->dim2, tmp->dtypesize(),
-						Writeback_id, run_dev_id, transfer_queues[Writeback_id_idx][run_dev_id_idx]);
+				CoCoMemcpy2DAsync(tmp->StoreBlock[Writeback_id_idx]->Adrs, tmp->ldim[Writeback_id_idx],
+					tmp->StoreBlock[run_dev_id_idx]->Adrs, tmp->ldim[run_dev_id_idx],
+					tmp->dim1, tmp->dim2, tmp->dtypesize(),
+					Writeback_id, run_dev_id, transfer_queues[Writeback_id_idx][run_dev_id_idx]);
 #ifdef STEST
-					output_timer[j]->stop_point(transfer_queues[Writeback_id_idx][run_dev_id_idx]);
-					bytes_out[j]= tmp->size();
+				output_timer[j]->stop_point(transfer_queues[Writeback_id_idx][run_dev_id_idx]);
+				bytes_out[j]= tmp->size();
 #endif
-					Ptr_and_int_p wrapped_op = (Ptr_and_int_p) malloc(sizeof(struct Ptr_and_int));
-					wrapped_op->int_ptr = &tmp->RW_master;
-					wrapped_op->val = Writeback_id;
-					transfer_queues[Writeback_id_idx][run_dev_id_idx]->add_host_func((void*)&CoCoSetInt, (void*) wrapped_op);
-				}
+				//TODO: Should this be here (at transfer's end) or before when the func is scheduled?
+				tmp->StoreBlock[Writeback_id_idx]->Available->record_to_queue(transfer_queues[Writeback_id_idx][run_dev_id_idx]);
+				Ptr_and_int_p wrapped_op = (Ptr_and_int_p) malloc(sizeof(struct Ptr_and_int));
+				wrapped_op->int_ptr = &tmp->RW_master;
+				wrapped_op->val = Writeback_id;
+				transfer_queues[Writeback_id_idx][run_dev_id_idx]->add_host_func((void*)&CoCoSetInt, (void*) wrapped_op);
+				CBlock_wrap_p wrap_inval = NULL;
+				wrap_inval = (CBlock_wrap_p) malloc (sizeof(struct CBlock_wrap));
+				wrap_inval->CBlock = tmp->StoreBlock[run_dev_id_idx];
+				wrap_inval->lockfree = true;
+				transfer_queues[Writeback_id_idx][run_dev_id_idx]->add_host_func((void*)&CBlock_RESET_wrap, (void*) wrap_inval);
 			}
 		}
 		else error("Subkernel(dev=%d,id=%d)::writeback_data: Not implemented for TileDim=%d\n", run_dev_id, id, TileDimlist[j]);
@@ -518,7 +529,7 @@ void Subkernel::writeback_data(){
 	lprintf(lvl-1, "<-----|\n");
 #endif
 }
-*/
+
 
 int queue_d_allock = 0;
 
@@ -872,3 +883,7 @@ Subkernel* SubkernelSelectMinimizeFetchWritePenaltyMultiFetchPenalty(short dev_i
 	return min_fetch_cost_sk;
 }
 */
+
+void CoCopeLiaDevCacheFree(short dev_id){
+	delete Global_Cache[dev_id];
+}

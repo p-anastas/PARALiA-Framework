@@ -39,6 +39,7 @@ template<typename dtype>  Tile2D<dtype>::Tile2D(void * in_addr, int in_dim1, int
       StoreBlock[iloc] = init_loc_block_p;
       StoreBlock[iloc]->Adrs = in_addr;
       StoreBlock[iloc]->set_owner((void**)&StoreBlock[iloc]);
+      StoreBlock[iloc]->set_state(EXCLUSIVE,false);
       ldim[iloc] = in_ldim;
       StoreBlock[iloc]->Available->record_to_queue(NULL);
     }
