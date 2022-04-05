@@ -707,23 +707,20 @@ void CoCoPeLiaFreeResources(short dev_id){
 	//__sync_lock_release(&queue_d_allock);
 }
 
-/*
 void Subkernel::prepare_launch(){
 	for (int j = 0; j < TileNum; j++){
 		if (TileDimlist[j] == 1){
 			Tile1D<VALUE_TYPE>* tmp = (Tile1D<VALUE_TYPE>*) TileList[j];
 			if(tmp->W_flag) {
 				if (tmp->W_total == tmp->W_flag) WR_first = 1;
-				//if(!tmp->isLocked())
-					CoCoQueueLock((void*) &tmp->RW_lock);
+				tmp->RW_lock = tmp->RW_master;
 			}
 		}
 		else if (TileDimlist[j] == 2){
 			Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) TileList[j];
 			if(tmp->W_flag) {
 				if (tmp->W_total == tmp->W_flag) WR_first = 1;
-				//if(!tmp->isLocked())
-					CoCoQueueLock((void*) &tmp->RW_lock);
+				tmp->RW_lock = tmp->RW_master;
 			}
 		}
 	}
@@ -745,20 +742,33 @@ short Subkernel::no_locked_tiles(){
 	return 1;
 }
 
-short Subkernel::is_RW_master(short dev_id){
+short Subkernel::is_RW_lock_master(short dev_id){
 	for (int j = 0; j < TileNum; j++){
 		if (TileDimlist[j] == 1){
 			Tile1D<VALUE_TYPE>* tmp = (Tile1D<VALUE_TYPE>*) TileList[j];
-			if(tmp->W_flag && tmp->W_total != tmp->W_flag && tmp->RW_master!=dev_id) return 0;
+			if(tmp->W_flag && /*tmp->W_total != tmp->W_flag &&*/ tmp->RW_lock!=dev_id) return 0;
 		}
 		else if (TileDimlist[j] == 2){
 			Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) TileList[j];
-			if(tmp->W_flag && tmp->W_total != tmp->W_flag && tmp->RW_master!=dev_id) return 0;
+			if(tmp->W_flag && /*tmp->W_total != tmp->W_flag &&*/ tmp->RW_lock!=dev_id) return 0;
 		}
 	}
 	return 1;
 }
 
+Subkernel* SubkernelSelectNoWriteShare(short dev_id, Subkernel** Subkernel_list, long Subkernel_list_len){
+	Subkernel* curr_sk = NULL;
+	long sk_idx;
+	for (sk_idx = 0; sk_idx < Subkernel_list_len; sk_idx++){
+		curr_sk = Subkernel_list[sk_idx];
+		if (curr_sk->no_locked_tiles() || curr_sk->is_RW_lock_master(dev_id)) break;
+	}
+	if(sk_idx==Subkernel_list_len) return NULL;
+	curr_sk->prepare_launch();
+	return curr_sk;
+}
+
+/*
 double Subkernel::opt_fetch_cost_pen_multifetch(short dev_id){
 	double fetch_cost = 0;
 	for (int j = 0; j < TileNum; j++){
@@ -803,18 +813,6 @@ Subkernel* SubkernelSelectSimple(short dev_id, Subkernel** Subkernel_list, long 
 		curr_sk = Subkernel_list[sk_idx];
 		if (curr_sk->no_locked_tiles()) break;
 
-	}
-	if(sk_idx==Subkernel_list_len) return NULL;
-	curr_sk->prepare_launch();
-	return curr_sk;
-}
-
-Subkernel* SubkernelSelectNoWriteShare(short dev_id, Subkernel** Subkernel_list, long Subkernel_list_len){
-	Subkernel* curr_sk = NULL;
-	long sk_idx;
-	for (sk_idx = 0; sk_idx < Subkernel_list_len; sk_idx++){
-		curr_sk = Subkernel_list[sk_idx];
-		if (curr_sk->no_locked_tiles() && curr_sk->is_RW_master(dev_id)) break;
 	}
 	if(sk_idx==Subkernel_list_len) return NULL;
 	curr_sk->prepare_launch();

@@ -17,7 +17,7 @@ add_definitions(-DASYNC_ENABLE)
 add_definitions(-DBACKEND_RES_REUSE_ENABLE)
 
 ## Enable GPU and CPU allocated buffer reuse between different calls
-add_definitions(-DBUFFER_REUSE_ENABLE)
+#add_definitions(-DBUFFER_REUSE_ENABLE)
 
 ## Enable lock-free versions of event & Queue management in Universal_helpers
 add_definitions(-DUNIHELPER_LOCKFREE_ENABLE)

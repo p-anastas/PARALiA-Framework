@@ -48,7 +48,7 @@ class Subkernel
 		void writeback_data();
 
 		short no_locked_tiles();
-		short is_RW_master(short dev_id);
+		short is_RW_lock_master(short dev_id);
 		double opt_fetch_cost(short dev_id);
 		double opt_fetch_cost_pen_multifetch(short dev_id);
 };

@@ -568,7 +568,9 @@ if(!reuse_model_flag){
 	for(int i=0; i<autotuned_vals->dev_num;i++) CachePrint(autotuned_vals->dev_ids[i]);
 #endif
 
-
+#ifdef DDEBUG
+	for(int i=0; i<autotuned_vals->dev_num;i++) Global_Cache[i]->draw_cache(true,true,true);
+#endif
 #ifndef BUFFER_REUSE_ENABLE
 	for(int i=0; i<autotuned_vals->dev_num;i++){
 		delete Global_Cache[i];
@@ -576,9 +578,6 @@ if(!reuse_model_flag){
 	}
 #else
 	for(int i=0; i<autotuned_vals->dev_num;i++) Global_Cache[i]->reset(true);
-#ifdef DDEBUG
-	for(int i=0; i<autotuned_vals->dev_num;i++) CachePrint(autotuned_vals->dev_ids[i]);
-#endif
 #endif
 
 #ifndef BACKEND_RES_REUSE_ENABLE
