@@ -40,12 +40,17 @@ void CoCoGemmUpdateDevice(Subkernel* ker, short dev_id){
 	ker->run_dev_id = ptr_ker_translate->dev_id = dev_id;
 	short dev_id_idx = idxize(dev_id);
 	if(!ker->WR_first) ptr_ker_translate->beta = 1.0;
-	ptr_ker_translate->A = &((Tile2D<VALUE_TYPE>*) ker->TileList[0])->StoreBlock[dev_id_idx]->Adrs;
-	ptr_ker_translate->B = &((Tile2D<VALUE_TYPE>*) ker->TileList[1])->StoreBlock[dev_id_idx]->Adrs;
-	ptr_ker_translate->C = &((Tile2D<VALUE_TYPE>*) ker->TileList[2])->StoreBlock[dev_id_idx]->Adrs;
 	ptr_ker_translate->ldA = ((Tile2D<VALUE_TYPE>*) ker->TileList[0])->ldim[dev_id_idx];
 	ptr_ker_translate->ldB = ((Tile2D<VALUE_TYPE>*) ker->TileList[1])->ldim[dev_id_idx];
 	ptr_ker_translate->ldC = ((Tile2D<VALUE_TYPE>*) ker->TileList[2])->ldim[dev_id_idx];
+}
+
+void CoCoGemmUpdatePointers(Subkernel* ker){
+	gemm_backend_in_p ptr_ker_translate = (gemm_backend_in_p) ker->operation_params;
+	short dev_id_idx = idxize(ker->run_dev_id);
+	ptr_ker_translate->A = &((Tile2D<VALUE_TYPE>*) ker->TileList[0])->StoreBlock[dev_id_idx]->Adrs;
+	ptr_ker_translate->B = &((Tile2D<VALUE_TYPE>*) ker->TileList[1])->StoreBlock[dev_id_idx]->Adrs;
+	ptr_ker_translate->C = &((Tile2D<VALUE_TYPE>*) ker->TileList[2])->StoreBlock[dev_id_idx]->Adrs;
 }
 
 Subkernel** CoCoAsignTilesToSubkernelsGemm(Asset2D<VALUE_TYPE>* A_asset, Asset2D<VALUE_TYPE>* B_asset,
@@ -204,6 +209,7 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 		CoCoGemmUpdateDevice(curr, dev_id);
 		curr->init_events();
 		curr->request_data();
+		CoCoGemmUpdatePointers(curr);
 		__sync_lock_release(&Sk_select_lock);
 		curr->run_operation();
 #ifdef ENABLE_SEND_RECV_OVERLAP
@@ -240,6 +246,7 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 		CoCoGemmUpdateDevice(curr, dev_id);
 		curr->init_events();
 		curr->request_data();
+		CoCoGemmUpdatePointers(curr);
 		curr->run_operation();
 #ifdef ENABLE_SEND_RECV_OVERLAP
 		curr->writeback_data();
@@ -386,11 +393,7 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 	C_asset->prepareAsync(&asset_thread_id[2], attr);
 
 	tunableParams_p best_pred_p = CoCoAutotuneParameters("Dgemm", initial_gemm,
-	  &autotuned_vals, glob_model_gemm, predef_vals_gemm, reuse_model_flag);
-
-	for(int cache_loc = 0; cache_loc < LOC_NUM; cache_loc++)
-		Global_Cache[cache_loc] = new Cache(deidxize(cache_loc), MGridSz* NGridSz + NGridSz*KGridSz + MGridSz*KGridSz,
-			autotuned_vals->T*autotuned_vals->T*sizeof(VALUE_TYPE));
+  &autotuned_vals, glob_model_gemm, predef_vals_gemm, reuse_model_flag);
 
 	void* res;
 	for(int i=0; i<3;i++){
@@ -414,6 +417,14 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 #endif
 
 	size_t T = autotuned_vals->T;
+
+	for(int cache_loc = 0; cache_loc < LOC_NUM; cache_loc++)
+		Global_Cache[cache_loc] = new Cache(deidxize(cache_loc),
+			(A_asset->dim1/T + (A_asset->dim1%T)? 1 : 0)* (A_asset->dim2/T + (A_asset->dim2%T)? 1 : 0) +
+			(B_asset->dim1/T + (B_asset->dim1%T)? 1 : 0)* (B_asset->dim2/T + (B_asset->dim2%T)? 1 : 0) +
+			(C_asset->dim1/T + (C_asset->dim1%T)? 1 : 0)* (C_asset->dim2/T + (C_asset->dim2%T)? 1 : 0),
+			T*T*sizeof(VALUE_TYPE));
+
 	/// TODO: Split each asset to Tiles
 	A_asset->InitTileMap(T, T, Global_Cache);
 	B_asset->InitTileMap(T, T, Global_Cache);
@@ -565,12 +576,9 @@ if(!reuse_model_flag){
   A_asset->DrawTileMap();
   B_asset->DrawTileMap();
 	C_asset->DrawTileMap();
-	for(int i=0; i<autotuned_vals->dev_num;i++) CachePrint(autotuned_vals->dev_ids[i]);
-#endif
-
-#ifdef DDEBUG
 	for(int i=0; i<autotuned_vals->dev_num;i++) Global_Cache[i]->draw_cache(true,true,true);
 #endif
+
 #ifndef BUFFER_REUSE_ENABLE
 	for(int i=0; i<autotuned_vals->dev_num;i++){
 		delete Global_Cache[i];

@@ -60,12 +60,12 @@ template<typename dtype> void Asset2D<dtype>::InitTileMap(int T1, int T2, Cache_
       if (transpose == 'N'){
          tile_addr = adrs + itt1*T1 + itt2*T2*ldim;
          Tile_map[current_ctr] = new Tile2D<dtype>(tile_addr, T1tmp, T2tmp, ldim, itt1, itt2,
-           init_loc_cache_p[CoCoGetPtrLoc(adrs)]->assign_Cblock());
+           init_loc_cache_p[idxize(CoCoGetPtrLoc(adrs))]->assign_Cblock());
        }
       else if (transpose == 'T'){
         tile_addr = adrs + itt1*T1*ldim + itt2*T2;
         Tile_map[current_ctr] = new Tile2D<dtype>(tile_addr, T2tmp, T1tmp, ldim, itt2, itt1,
-           init_loc_cache_p[CoCoGetPtrLoc(adrs)]->assign_Cblock());
+           init_loc_cache_p[idxize(CoCoGetPtrLoc(adrs))]->assign_Cblock());
       }
       else error("Asset2D<dtype>::InitTileMap: Unknown transpose type\n");
 
@@ -136,11 +136,16 @@ template<typename dtype> void Asset2D<dtype>::DrawTileMap(){
       for (int itt2 = 0 ; itt2 < GridSz2; itt2++)
         fprintf(stderr, "| - - - - - - - - - - -|");
       fprintf(stderr, "\n");
-      for (int itt2 = 0 ; itt2 < GridSz2; itt2++)
-        fprintf(stderr, "| loc: %2d | %3d | %3d  |",
+      for (int itt2 = 0 ; itt2 < GridSz2; itt2++){
+        if(Tile_map[itt1*GridSz2 + itt2]->StoreBlock[loctr])
+          fprintf(stderr, "| loc: %2d | %3d | %3d  |",
                      (loctr == LOC_NUM - 1) ? -1 : loctr,
                      Tile_map[itt1*GridSz2 + itt2]->StoreBlock[loctr]->id,
                      Tile_map[itt1*GridSz2 + itt2]->RunTileMap[loctr]);
+        else fprintf(stderr, "| loc: %2d | NaN | %3d  |",
+                     (loctr == LOC_NUM - 1) ? -1 : loctr,
+                     Tile_map[itt1*GridSz2 + itt2]->RunTileMap[loctr]);
+      }
       fprintf(stderr, "\n");
     }
     for (int itt2 = 0 ; itt2 < GridSz2; itt2++)

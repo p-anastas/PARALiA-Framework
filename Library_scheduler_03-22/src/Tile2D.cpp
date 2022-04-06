@@ -89,13 +89,14 @@ template<typename dtype> short Tile2D<dtype>::getClosestReadLoc(short dev_id_in)
   int pos_min = LOC_NUM;
   double link_cost_min = 10000000;
   for (int pos =0; pos < LOC_NUM; pos++){
-    if (pos == dev_id_in_idx) {
-      if (StoreBlock[pos]!= NULL)
-        error("Tile2D(%d)::getClosestReadLoc(%d): Should not be called, Tile already available in %d.\n",  id, dev_id_in, dev_id_in);
+    if (pos == dev_id_in_idx || StoreBlock[pos] == NULL) {
+      //if (StoreBlock[pos]!= NULL)
+      //  error("Tile2D(%d)::getClosestReadLoc(%d): Should not be called, Tile already available in %d.\n",  id, dev_id_in, dev_id_in);
       continue;
     }
+    StoreBlock[pos]->update_state(false);
     state temp = StoreBlock[pos]->State;
-    if (temp == AVAILABLE || temp == SHARABLE){
+    if (temp == AVAILABLE || temp == SHARABLE || temp == EXCLUSIVE){
       if (link_cost[dev_id_in_idx][pos] < link_cost_min){
         link_cost_min = link_cost[dev_id_in_idx][pos];
         pos_min = pos;
@@ -114,6 +115,7 @@ template<typename dtype> double Tile2D<dtype>::getMinLinkCost(short dev_id_in){
   int dev_id_in_idx = idxize(dev_id_in);
   double link_cost_min = 10000000;
   for (int pos =0; pos < LOC_NUM; pos++){
+    StoreBlock[pos]->update_state(false);
     state temp = StoreBlock[pos]->State;
     if (temp == AVAILABLE || temp == SHARABLE || temp == EXCLUSIVE){
       if (link_cost[dev_id_in_idx][pos] < link_cost_min)
@@ -124,6 +126,10 @@ template<typename dtype> double Tile2D<dtype>::getMinLinkCost(short dev_id_in){
 }
 
 void CoCoUpdateLinkSpeed2D(CoControl_p autotuned_vals, CoCoModel_p* glob_model){
+  short lvl = 2;
+  #ifdef DDEBUG
+    lprintf(lvl, "|-----> CoCoUpdateLinkSpeed2D(dev_num = %d, LOC_NUM = %d)\n", autotuned_vals->dev_num, LOC_NUM);
+  #endif
   for (int i = 0; i < autotuned_vals->dev_num; i++){
 		short dev_id_idi = idxize(autotuned_vals->dev_ids[i]);
     for(int j = 0; j < LOC_NUM; j++){
@@ -147,4 +153,7 @@ void CoCoUpdateLinkSpeed2D(CoControl_p autotuned_vals, CoCoModel_p* glob_model){
       for (int k = j ; k < LOC_NUM; k++) if(flag_normalize[k]) link_cost[dev_id_idi][idxize(k)] = normalize_sum/normalize_num;
     }
   }
+  #ifdef DEBUG
+    lprintf(lvl-1, "<-----| CoCoUpdateLinkSpeed2D()\n");
+  #endif
 }

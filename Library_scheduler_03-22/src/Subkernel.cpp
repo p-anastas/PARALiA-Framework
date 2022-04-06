@@ -143,7 +143,7 @@ void Subkernel::request_tile(short TileIdx){
 			error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d])::request_tile: Fetching from tile in GPU(%d) with INVALID state\n",
 				run_dev_id, id, tmp->id,  tmp->GridId, FetchFromId);
 
-		if(tmp->W_flag) tmp->StoreBlock[FetchFromId_idx]->reset(false);
+		if(tmp->W_flag);
 		else tmp->StoreBlock[FetchFromId_idx]->add_reader();
 
 		if(tmp->W_flag) tmp->StoreBlock[run_dev_id_idx]->add_writer();
@@ -159,7 +159,12 @@ void Subkernel::request_tile(short TileIdx){
 		input_timer[TileIdx]->stop_point(transfer_queues[run_dev_id_idx][FetchFromId_idx]);
 		bytes_in[TileIdx] = tmp->size();
 #endif
-		if(tmp->W_flag);
+		if(tmp->W_flag){
+			if (tmp->StoreBlock[FetchFromId_idx]!= tmp->WriteBackBlock){
+				tmp->StoreBlock[FetchFromId_idx]->reset(false, true);
+				tmp->StoreBlock[FetchFromId_idx]->set_state(INVALID, false);
+			}
+		}
 		else{
 			wrap_read = (CBlock_wrap_p) malloc (sizeof(struct CBlock_wrap));
 			wrap_read->CBlock = tmp->StoreBlock[FetchFromId_idx];
@@ -193,7 +198,7 @@ void Subkernel::request_tile(short TileIdx){
 			error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::request_tile: Fetching from tile in GPU(%d) with INVALID state\n",
 				run_dev_id, id, tmp->id,  tmp->GridId1, tmp->GridId2, FetchFromId);
 
-		if(tmp->W_flag) tmp->StoreBlock[FetchFromId_idx]->reset(false);
+		if(tmp->W_flag);//
 		else tmp->StoreBlock[FetchFromId_idx]->add_reader();
 
 		if(tmp->W_flag) tmp->StoreBlock[run_dev_id_idx]->add_writer();
@@ -210,7 +215,12 @@ void Subkernel::request_tile(short TileIdx){
 		input_timer[TileIdx]->stop_point(transfer_queues[run_dev_id_idx][FetchFromId_idx]);
 		bytes_in[TileIdx]= tmp->size();
 #endif
-		if(tmp->W_flag);
+		if(tmp->W_flag){
+			if (tmp->StoreBlock[FetchFromId_idx]!= tmp->WriteBackBlock){
+				tmp->StoreBlock[FetchFromId_idx]->reset(false, true);
+				tmp->StoreBlock[FetchFromId_idx]->set_state(INVALID, false);
+			}
+		}
 		else{
 			wrap_read = (CBlock_wrap_p) malloc (sizeof(struct CBlock_wrap));
 			wrap_read->CBlock = tmp->StoreBlock[FetchFromId_idx];
@@ -412,7 +422,6 @@ void Subkernel::run_operation(){
 
 
 void Subkernel::writeback_data(){
-	//TODO: Should I use WriteBackBlock, or its possible without?
 	short lvl = 4;
 #ifdef DEBUG
 	lprintf(lvl-1, "|-----> Subkernel(dev=%d,id=%d)::writeback_data()\n", run_dev_id, id);
@@ -430,9 +439,9 @@ void Subkernel::writeback_data(){
 					run_dev_id, id, tmp->id, tmp->GridId, j);
 			Writeback_id = tmp->getWriteBackLoc(); //to MASTER
 			Writeback_id_idx = idxize(Writeback_id);
-			if (tmp->StoreBlock[Writeback_id_idx] == NULL)
-				error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d])::writeback_data: Tile(j=%d) Storeblock[Writeback_id_idx=%d] is NULL\n",
-					run_dev_id, id, tmp->id, tmp->GridId, j, Writeback_id_idx);
+			if (tmp->WriteBackBlock == NULL)
+				error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d])::writeback_data: Tile(j=%d) WriteBackBlock is NULL\n",
+					run_dev_id, id, tmp->id, tmp->GridId, j);
 			transfer_queues[Writeback_id_idx][run_dev_id_idx]->wait_for_event(operation_complete);
 			if (run_dev_id == Writeback_id){
 				;
@@ -442,31 +451,31 @@ void Subkernel::writeback_data(){
 #endif
 			}
 			else{
-				state prev_state = tmp->StoreBlock[Writeback_id_idx]->set_state(EXCLUSIVE, false);
-				if (prev_state != INVALID)
-					error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d])::writeback_data: Tile(j=%d) Storeblock[Writeback_id_idx=%d] was %s instead of INVALID\n",
-						run_dev_id, id, tmp->id, tmp->GridId, j, Writeback_id_idx, print_state(prev_state));
+				state prev_state = tmp->WriteBackBlock->set_state(EXCLUSIVE, false);
+				if (prev_state != EXCLUSIVE)
+					error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d])::writeback_data: Tile(j=%d) WriteBackBlock was %s instead of EXCLUSIVE\n",
+						run_dev_id, id, tmp->id, tmp->GridId, j, print_state(prev_state));
 #ifdef STEST
 				output_timer[j]->start_point(transfer_queues[Writeback_id_idx][run_dev_id_idx]);
 #endif
-				CoCoMemcpyAsync(tmp->StoreBlock[Writeback_id_idx]->Adrs, tmp->StoreBlock[run_dev_id_idx]->Adrs,
+				CoCoMemcpyAsync(tmp->WriteBackBlock->Adrs, tmp->StoreBlock[run_dev_id_idx]->Adrs,
 					((long long) tmp->inc[run_dev_id_idx]) * tmp->dim * tmp->dtypesize(),
 					Writeback_id, run_dev_id, transfer_queues[Writeback_id_idx][run_dev_id_idx]);
 #ifdef STEST
 				output_timer[j]->stop_point(transfer_queues[Writeback_id_idx][run_dev_id_idx]);
 				bytes_out[j]= tmp->size();
 #endif
-
-				tmp->StoreBlock[Writeback_id_idx]->Available->record_to_queue(transfer_queues[Writeback_id_idx][run_dev_id_idx]);
-				Ptr_and_int_p wrapped_op = (Ptr_and_int_p) malloc(sizeof(struct Ptr_and_int));
-				wrapped_op->int_ptr = &tmp->RW_master;
-				wrapped_op->val = Writeback_id;
-				transfer_queues[Writeback_id_idx][run_dev_id_idx]->add_host_func((void*)&CoCoSetInt, (void*) wrapped_op);
+				// TODO: Should this be here (at transfer's end) or before when the func is scheduled, or nowhere?
+				// tmp->WriteBackBlock->Available->record_to_queue(transfer_queues[Writeback_id_idx][run_dev_id_idx]);
+				//Ptr_and_int_p wrapped_op = (Ptr_and_int_p) malloc(sizeof(struct Ptr_and_int));
+				//wrapped_op->int_ptr = &tmp->RW_master;
+				//wrapped_op->val = Writeback_id;
+				//transfer_queues[Writeback_id_idx][run_dev_id_idx]->add_host_func((void*)&CoCoSetInt, (void*) wrapped_op);
 				CBlock_wrap_p wrap_inval = NULL;
 				wrap_inval = (CBlock_wrap_p) malloc (sizeof(struct CBlock_wrap));
 				wrap_inval->CBlock = tmp->StoreBlock[run_dev_id_idx];
 				wrap_inval->lockfree = true;
-				transfer_queues[Writeback_id_idx][run_dev_id_idx]->add_host_func((void*)&CBlock_RESET_wrap, (void*) wrap_inval);
+				transfer_queues[Writeback_id_idx][run_dev_id_idx]->add_host_func((void*)&CBlock_INV_wrap, (void*) wrap_inval);
 			}
 		}
 		else if (TileDimlist[j] == 2){
@@ -476,9 +485,9 @@ void Subkernel::writeback_data(){
 					run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2, j);
 			Writeback_id = tmp->getWriteBackLoc(); //to MASTER
 			Writeback_id_idx = idxize(Writeback_id);
-			if (tmp->StoreBlock[Writeback_id_idx] == NULL)
-				error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::writeback_data: Tile(j=%d) Storeblock[Writeback_id_idx=%d] is NULL\n",
-					run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2, j, Writeback_id_idx);
+			if (tmp->WriteBackBlock == NULL)
+				error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::writeback_data: Tile(j=%d) WriteBackBlock is NULL\n",
+					run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2, j);
 			transfer_queues[Writeback_id_idx][run_dev_id_idx]->wait_for_event(operation_complete);
 			if (run_dev_id == Writeback_id){
 				;
@@ -488,14 +497,14 @@ void Subkernel::writeback_data(){
 #endif
 			}
 			else{
-				state prev_state = tmp->StoreBlock[Writeback_id_idx]->set_state(EXCLUSIVE, false);
-				if (prev_state != INVALID)
-					error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::writeback_data: Tile(j=%d) Storeblock[Writeback_id_idx=%d] was %s instead of INVALID\n",
-						run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2, j, Writeback_id_idx, print_state(prev_state));
+				state prev_state = tmp->WriteBackBlock->set_state(EXCLUSIVE, false);
+				if (prev_state != EXCLUSIVE)
+					error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::writeback_data: Tile(j=%d) WriteBackBlock was %s instead of EXCLUSIVE\n",
+						run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2, j, print_state(prev_state));
 #ifdef STEST
 				output_timer[j]->start_point(transfer_queues[Writeback_id_idx][run_dev_id_idx]);
 #endif
-				CoCoMemcpy2DAsync(tmp->StoreBlock[Writeback_id_idx]->Adrs, tmp->ldim[Writeback_id_idx],
+				CoCoMemcpy2DAsync(tmp->WriteBackBlock->Adrs, tmp->ldim[Writeback_id_idx],
 					tmp->StoreBlock[run_dev_id_idx]->Adrs, tmp->ldim[run_dev_id_idx],
 					tmp->dim1, tmp->dim2, tmp->dtypesize(),
 					Writeback_id, run_dev_id, transfer_queues[Writeback_id_idx][run_dev_id_idx]);
@@ -503,17 +512,17 @@ void Subkernel::writeback_data(){
 				output_timer[j]->stop_point(transfer_queues[Writeback_id_idx][run_dev_id_idx]);
 				bytes_out[j]= tmp->size();
 #endif
-				//TODO: Should this be here (at transfer's end) or before when the func is scheduled?
-				tmp->StoreBlock[Writeback_id_idx]->Available->record_to_queue(transfer_queues[Writeback_id_idx][run_dev_id_idx]);
-				Ptr_and_int_p wrapped_op = (Ptr_and_int_p) malloc(sizeof(struct Ptr_and_int));
-				wrapped_op->int_ptr = &tmp->RW_master;
-				wrapped_op->val = Writeback_id;
-				transfer_queues[Writeback_id_idx][run_dev_id_idx]->add_host_func((void*)&CoCoSetInt, (void*) wrapped_op);
+				//TODO: Should this be here (at transfer's end) or before when the func is scheduled, or nowhere?
+				//tmp->WriteBackBlock->Available->record_to_queue(transfer_queues[Writeback_id_idx][run_dev_id_idx]);
+				//Ptr_and_int_p wrapped_op = (Ptr_and_int_p) malloc(sizeof(struct Ptr_and_int));
+				//wrapped_op->int_ptr = &tmp->RW_master;
+				//wrapped_op->val = Writeback_id;
+				//transfer_queues[Writeback_id_idx][run_dev_id_idx]->add_host_func((void*)&CoCoSetInt, (void*) wrapped_op);
 				CBlock_wrap_p wrap_inval = NULL;
 				wrap_inval = (CBlock_wrap_p) malloc (sizeof(struct CBlock_wrap));
 				wrap_inval->CBlock = tmp->StoreBlock[run_dev_id_idx];
 				wrap_inval->lockfree = true;
-				transfer_queues[Writeback_id_idx][run_dev_id_idx]->add_host_func((void*)&CBlock_RESET_wrap, (void*) wrap_inval);
+				transfer_queues[Writeback_id_idx][run_dev_id_idx]->add_host_func((void*)&CBlock_INV_wrap, (void*) wrap_inval);
 			}
 		}
 		else error("Subkernel(dev=%d,id=%d)::writeback_data: Not implemented for TileDim=%d\n", run_dev_id, id, TileDimlist[j]);
@@ -534,7 +543,10 @@ void Subkernel::writeback_data(){
 int queue_d_allock = 0;
 
 void CoCoPeLiaInitResources(short dev_id){
-short lvl = 2;
+	short lvl = 2;
+	#ifdef DEBUG
+		lprintf(lvl-1, "|-----> CoCoPeLiaInitResources(dev=%d)\n", dev_id);
+	#endif
 	//while(__sync_lock_test_and_set (&queue_d_allock, 1));
 
 	for(int i = 0; i < LOC_NUM; i++)
@@ -680,6 +692,9 @@ short lvl = 2;
   if (!exec_queue[dev_id_idx])  exec_queue[dev_id_idx] = new CommandQueue(dev_id);
 
 	//__sync_lock_release(&queue_d_allock);
+	#ifdef DEBUG
+		lprintf(lvl-1, "<-----|\n");
+	#endif
 }
 
 void CoCoPeLiaFreeResources(short dev_id){
