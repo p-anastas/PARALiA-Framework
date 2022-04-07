@@ -18,7 +18,6 @@ void CoCoDistributeSubkernelsRoundRobin(CoControl_p autotune_vals,
     }
   }
   else{
-#ifdef MULTIDEVICE_REDUCTION_ENABLE
   int rem_dev = Subkernel_num;
   for (int d = 0 ; d < autotune_vals->dev_num; d++){
      autotune_vals->Subkernels_per_dev[d] =
@@ -34,9 +33,6 @@ void CoCoDistributeSubkernelsRoundRobin(CoControl_p autotune_vals,
        else break;
     }
   }
-#else
-      error("CoCoDistributeSubkernelsRoundRobin: not implemented for undefined MULTIDEVICE_REDUCTION_ENABLE\n");
-#endif
   int total_sk_ctr = 0;
   short dev_sk_ctr_list[autotune_vals->dev_num];
   for(int devidx = 0; devidx < autotune_vals->dev_num; devidx++) dev_sk_ctr_list[devidx] = 0;
@@ -84,7 +80,6 @@ void CoCoDistributeSubkernelsNaive(CoControl_p autotune_vals,
   else{
     int total_sk_ctr = 0;
     int dev_offset;
-#ifdef MULTIDEVICE_REDUCTION_ENABLE
     int rem_dev = Subkernel_num;
     for (int d = 0 ; d < autotune_vals->dev_num; d++){
        autotune_vals->Subkernels_per_dev[d] =
@@ -100,9 +95,6 @@ void CoCoDistributeSubkernelsNaive(CoControl_p autotune_vals,
          else break;
       }
     }
-#else
-    error("CoCoDistributeSubkernelsNaive: dev_offset = 0 undefined without MULTIDEVICE_REDUCTION_ENABLE");
-#endif
 #ifdef DEBUG
     lprintf(lvl, "Subkernel Split offset = %d\n", dev_offset);
 #endif
@@ -147,7 +139,6 @@ void CoCoDistributeSubkernelsRoundRobinChunk(CoControl_p autotune_vals,
     }
   }
   else{
-#ifdef MULTIDEVICE_REDUCTION_ENABLE
   int rem_dev = Subkernel_num;
   for (int d = 0 ; d < autotune_vals->dev_num; d++){
      autotune_vals->Subkernels_per_dev[d] =
@@ -163,9 +154,6 @@ void CoCoDistributeSubkernelsRoundRobinChunk(CoControl_p autotune_vals,
        else break;
     }
   }
-#else
-      error("CoCoDistributeSubkernelsRoundRobinChunk: not implemented for undefined MULTIDEVICE_REDUCTION_ENABLE\n");
-#endif
   int total_sk_ctr = 0, local_dim_ctr = 0;
   short dev_sk_ctr_list[autotune_vals->dev_num];
   for(int devidx = 0; devidx < autotune_vals->dev_num; devidx++) dev_sk_ctr_list[devidx] = 0;
@@ -221,7 +209,6 @@ void CoCoDistributeSubkernelsRoundRobinChunkReverse(CoControl_p autotune_vals,
     }
   }
   else{
-#ifdef MULTIDEVICE_REDUCTION_ENABLE
   int rem_dev = Subkernel_num;
   for (int d = 0 ; d < autotune_vals->dev_num; d++){
      autotune_vals->Subkernels_per_dev[d] =
@@ -237,9 +224,6 @@ void CoCoDistributeSubkernelsRoundRobinChunkReverse(CoControl_p autotune_vals,
        else break;
     }
   }
-#else
-      error("CoCoDistributeSubkernelsRoundRobinChunkReverse: not implemented for undefined MULTIDEVICE_REDUCTION_ENABLE\n");
-#endif
   int total_sk_ctr = 0, total_sk_prev = 0;
   short dev_sk_ctr_list[autotune_vals->dev_num];
   for(int devidx = 0; devidx < autotune_vals->dev_num; devidx++) dev_sk_ctr_list[devidx] = 0;
@@ -325,8 +309,6 @@ void CoCoDistributeSubkernels2DBlockCyclic(CoControl_p autotune_vals,
     }
   }
   else{
-#ifdef MULTIDEVICE_REDUCTION_ENABLE
-
   int rem_dev = Subkernel_num;
   for (int d = 0 ; d < autotune_vals->dev_num; d++){
      autotune_vals->Subkernels_per_dev[d] =
@@ -342,9 +324,6 @@ void CoCoDistributeSubkernels2DBlockCyclic(CoControl_p autotune_vals,
        else break;
     }
   }
-#else
-      error("CoCoDistributeSubkernels2DBlockCyclic: not implemented for undefined MULTIDEVICE_REDUCTION_ENABLE\n");
-#endif
 
 /* 2D Bloc cyclic */
   int D1_parts = sqrt(autotune_vals->dev_num);

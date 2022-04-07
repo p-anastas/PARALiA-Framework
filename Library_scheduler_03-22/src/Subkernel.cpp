@@ -144,8 +144,10 @@ void Subkernel::request_tile(short TileIdx){
 				run_dev_id, id, tmp->id,  tmp->GridId, FetchFromId);
 
 		if(tmp->W_flag);
-		else tmp->StoreBlock[FetchFromId_idx]->add_reader();
-
+		else{
+			tmp->StoreBlock[FetchFromId_idx]->add_reader();
+			Global_Cache[FetchFromId_idx]->unlock();
+		}
 		if(tmp->W_flag) tmp->StoreBlock[run_dev_id_idx]->add_writer();
 		else tmp->StoreBlock[run_dev_id_idx]->add_reader();
 
@@ -161,8 +163,9 @@ void Subkernel::request_tile(short TileIdx){
 #endif
 		if(tmp->W_flag){
 			if (tmp->StoreBlock[FetchFromId_idx]!= tmp->WriteBackBlock){
+				CacheBlock* tmp_ptr = tmp->StoreBlock[FetchFromId_idx];
 				tmp->StoreBlock[FetchFromId_idx]->reset(false, true);
-				tmp->StoreBlock[FetchFromId_idx]->set_state(INVALID, false);
+				tmp_ptr->set_state(INVALID, false);
 			}
 		}
 		else{
@@ -199,8 +202,10 @@ void Subkernel::request_tile(short TileIdx){
 				run_dev_id, id, tmp->id,  tmp->GridId1, tmp->GridId2, FetchFromId);
 
 		if(tmp->W_flag);//
-		else tmp->StoreBlock[FetchFromId_idx]->add_reader();
-
+		else{
+			tmp->StoreBlock[FetchFromId_idx]->add_reader();
+			Global_Cache[FetchFromId_idx]->unlock();
+		}
 		if(tmp->W_flag) tmp->StoreBlock[run_dev_id_idx]->add_writer();
 		else tmp->StoreBlock[run_dev_id_idx]->add_reader();
 
@@ -217,8 +222,9 @@ void Subkernel::request_tile(short TileIdx){
 #endif
 		if(tmp->W_flag){
 			if (tmp->StoreBlock[FetchFromId_idx]!= tmp->WriteBackBlock){
+				CacheBlock* tmp_ptr = tmp->StoreBlock[FetchFromId_idx];
 				tmp->StoreBlock[FetchFromId_idx]->reset(false, true);
-				tmp->StoreBlock[FetchFromId_idx]->set_state(INVALID, false);
+				tmp_ptr->set_state(INVALID, false);
 			}
 		}
 		else{
@@ -255,8 +261,9 @@ void Subkernel::request_data(){
 		if (TileDimlist[j] == 1){
 			Tile1D<VALUE_TYPE>* tmp = (Tile1D<VALUE_TYPE>*) TileList[j];
 			if (tmp->StoreBlock[run_dev_id_idx] == NULL) {
-				tmp->StoreBlock[run_dev_id_idx] = Global_Cache[run_dev_id_idx]->assign_Cblock();
-				tmp->StoreBlock[run_dev_id_idx]->set_owner((void**)&tmp->StoreBlock[run_dev_id_idx]);
+				Global_Cache[run_dev_id_idx]->lock();
+				tmp->StoreBlock[run_dev_id_idx] = Global_Cache[run_dev_id_idx]->assign_Cblock(true);
+				tmp->StoreBlock[run_dev_id_idx]->set_owner((void**)&tmp->StoreBlock[run_dev_id_idx],true);
 #ifdef CDEBUG
 		lprintf(lvl, "Subkernel(dev=%d,id=%d)-Tile(%d.[%d]): Asigned buffer Block in GPU(%d)= %d\n",
 					run_dev_id, id, tmp->id, tmp->GridId, run_dev_id, tmp->StoreBlock[run_dev_id_idx]->id);
@@ -273,6 +280,22 @@ void Subkernel::request_data(){
 #else
 					if (tmp->R_flag) request_tile(j);
 #endif
+				Global_Cache[run_dev_id_idx]->unlock();
+			}
+			else if(tmp->StoreBlock[run_dev_id_idx]->State == NATIVE &&
+				tmp->W_flag && tmp->RW_master!= run_dev_id){
+#ifdef ENABLE_PTHREAD_TILE_REQUEST
+				if (tmp->R_flag) {
+					tile_req_p wrap_request = (tile_req_p) malloc(sizeof(struct tile_req));
+					wrap_request->sk = this;
+					wrap_request->TileIdx = j;
+					s = pthread_create(&thread_id[requested_tiles], &attr, &request_tile_pthread_wrap,
+						wrap_request);
+					requested_tiles++;
+				}
+#else
+				if (tmp->R_flag) request_tile(j);
+#endif
 			}
 			else{
 				tmp->StoreBlock[run_dev_id_idx]->Available->sync_barrier(); // Is this needed?
@@ -283,23 +306,40 @@ void Subkernel::request_data(){
 		else if (TileDimlist[j] == 2){
 			Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) TileList[j];
 			if (tmp->StoreBlock[run_dev_id_idx] == NULL) {
-				tmp->StoreBlock[run_dev_id_idx] = Global_Cache[run_dev_id_idx]->assign_Cblock();
+				Global_Cache[run_dev_id_idx]->lock();
+				tmp->StoreBlock[run_dev_id_idx] = Global_Cache[run_dev_id_idx]->assign_Cblock(true);
 				tmp->StoreBlock[run_dev_id_idx]->set_owner((void**)&tmp->StoreBlock[run_dev_id_idx]);
 #ifdef CDEBUG
 		lprintf(lvl, "Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d]): Asigned buffer Block in GPU(%d)= %d\n",
 					run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2, run_dev_id, tmp->StoreBlock[run_dev_id_idx]->id);
 #endif
 #ifdef ENABLE_PTHREAD_TILE_REQUEST
-					if (tmp->R_flag) {
-						tile_req_p wrap_request = (tile_req_p) malloc(sizeof(struct tile_req));
-						wrap_request->sk = this;
-						wrap_request->TileIdx = j;
-						s = pthread_create(&thread_id[requested_tiles], &attr, &request_tile_pthread_wrap,
-							wrap_request);
-						requested_tiles++;
-					}
+				if (tmp->R_flag) {
+					tile_req_p wrap_request = (tile_req_p) malloc(sizeof(struct tile_req));
+					wrap_request->sk = this;
+					wrap_request->TileIdx = j;
+					s = pthread_create(&thread_id[requested_tiles], &attr, &request_tile_pthread_wrap,
+						wrap_request);
+					requested_tiles++;
+				}
 #else
-					if (tmp->R_flag) request_tile(j);
+				if (tmp->R_flag) request_tile(j);
+#endif
+				Global_Cache[run_dev_id_idx]->unlock();
+			}
+			else if(tmp->StoreBlock[run_dev_id_idx]->State == NATIVE &&
+				tmp->W_flag && tmp->RW_master!= run_dev_id){
+#ifdef ENABLE_PTHREAD_TILE_REQUEST
+				if (tmp->R_flag) {
+					tile_req_p wrap_request = (tile_req_p) malloc(sizeof(struct tile_req));
+					wrap_request->sk = this;
+					wrap_request->TileIdx = j;
+					s = pthread_create(&thread_id[requested_tiles], &attr, &request_tile_pthread_wrap,
+						wrap_request);
+					requested_tiles++;
+				}
+#else
+				if (tmp->R_flag) request_tile(j);
 #endif
 			}
 			else{
@@ -380,7 +420,12 @@ void Subkernel::run_operation(){
 			wrap_oper = (CBlock_wrap_p) malloc (sizeof(struct CBlock_wrap));
 			wrap_oper->CBlock = tmp->StoreBlock[run_dev_id_idx];
 			wrap_oper->lockfree = true;
-			if(tmp->W_flag)	exec_queue[run_dev_id_idx]->add_host_func((void*)&CBlock_RW_wrap, (void*) wrap_oper);
+			if(tmp->W_flag){
+				exec_queue[run_dev_id_idx]->add_host_func((void*)&CBlock_RW_wrap, (void*) wrap_oper);
+				Ptr_int_p wrapped_op = (Ptr_int_p) malloc(sizeof(struct Ptr_int));
+				wrapped_op->int_ptr = &tmp->RW_lock_holders;
+				exec_queue[run_dev_id_idx]->add_host_func((void*)&CoCoDecAsync, (void*) wrapped_op);
+			}
 			else exec_queue[run_dev_id_idx]->add_host_func((void*)&CBlock_RR_wrap, (void*) wrap_oper);
 
 			if(tmp->R_flag) tmp->R_flag--;
@@ -398,7 +443,12 @@ void Subkernel::run_operation(){
 			wrap_oper = (CBlock_wrap_p) malloc (sizeof(struct CBlock_wrap));
 			wrap_oper->CBlock = tmp->StoreBlock[run_dev_id_idx];
 			wrap_oper->lockfree = true;
-			if(tmp->W_flag)	exec_queue[run_dev_id_idx]->add_host_func((void*)&CBlock_RW_wrap, (void*) wrap_oper);
+			if(tmp->W_flag){
+				exec_queue[run_dev_id_idx]->add_host_func((void*)&CBlock_RW_wrap, (void*) wrap_oper);
+				Ptr_int_p wrapped_op = (Ptr_int_p) malloc(sizeof(struct Ptr_int));
+				wrapped_op->int_ptr = &tmp->RW_lock_holders;
+				exec_queue[run_dev_id_idx]->add_host_func((void*)&CoCoDecAsync, (void*) wrapped_op);
+			}
 			else exec_queue[run_dev_id_idx]->add_host_func((void*)&CBlock_RR_wrap, (void*) wrap_oper);
 
 			if(tmp->R_flag) tmp->R_flag--;
@@ -442,7 +492,6 @@ void Subkernel::writeback_data(){
 			if (tmp->WriteBackBlock == NULL)
 				error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d])::writeback_data: Tile(j=%d) WriteBackBlock is NULL\n",
 					run_dev_id, id, tmp->id, tmp->GridId, j);
-			transfer_queues[Writeback_id_idx][run_dev_id_idx]->wait_for_event(operation_complete);
 			if (run_dev_id == Writeback_id){
 				;
 #ifdef DEBUG
@@ -451,9 +500,10 @@ void Subkernel::writeback_data(){
 #endif
 			}
 			else{
-				state prev_state = tmp->WriteBackBlock->set_state(EXCLUSIVE, false);
-				if (prev_state != EXCLUSIVE)
-					error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d])::writeback_data: Tile(j=%d) WriteBackBlock was %s instead of EXCLUSIVE\n",
+				transfer_queues[Writeback_id_idx][run_dev_id_idx]->wait_for_event(operation_complete);
+				state prev_state = tmp->WriteBackBlock->get_state();
+				if (prev_state != NATIVE)
+					error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d])::writeback_data: Tile(j=%d) WriteBackBlock was %s instead of NATIVE\n",
 						run_dev_id, id, tmp->id, tmp->GridId, j, print_state(prev_state));
 #ifdef STEST
 				output_timer[j]->start_point(transfer_queues[Writeback_id_idx][run_dev_id_idx]);
@@ -467,10 +517,6 @@ void Subkernel::writeback_data(){
 #endif
 				// TODO: Should this be here (at transfer's end) or before when the func is scheduled, or nowhere?
 				// tmp->WriteBackBlock->Available->record_to_queue(transfer_queues[Writeback_id_idx][run_dev_id_idx]);
-				//Ptr_and_int_p wrapped_op = (Ptr_and_int_p) malloc(sizeof(struct Ptr_and_int));
-				//wrapped_op->int_ptr = &tmp->RW_master;
-				//wrapped_op->val = Writeback_id;
-				//transfer_queues[Writeback_id_idx][run_dev_id_idx]->add_host_func((void*)&CoCoSetInt, (void*) wrapped_op);
 				CBlock_wrap_p wrap_inval = NULL;
 				wrap_inval = (CBlock_wrap_p) malloc (sizeof(struct CBlock_wrap));
 				wrap_inval->CBlock = tmp->StoreBlock[run_dev_id_idx];
@@ -488,7 +534,6 @@ void Subkernel::writeback_data(){
 			if (tmp->WriteBackBlock == NULL)
 				error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::writeback_data: Tile(j=%d) WriteBackBlock is NULL\n",
 					run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2, j);
-			transfer_queues[Writeback_id_idx][run_dev_id_idx]->wait_for_event(operation_complete);
 			if (run_dev_id == Writeback_id){
 				;
 #ifdef DEBUG
@@ -497,9 +542,10 @@ void Subkernel::writeback_data(){
 #endif
 			}
 			else{
-				state prev_state = tmp->WriteBackBlock->set_state(EXCLUSIVE, false);
-				if (prev_state != EXCLUSIVE)
-					error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::writeback_data: Tile(j=%d) WriteBackBlock was %s instead of EXCLUSIVE\n",
+				transfer_queues[Writeback_id_idx][run_dev_id_idx]->wait_for_event(operation_complete);
+				state prev_state = tmp->WriteBackBlock->get_state();
+				if (prev_state != NATIVE)
+					error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::writeback_data: Tile(j=%d) WriteBackBlock was %s instead of NATIVE\n",
 						run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2, j, print_state(prev_state));
 #ifdef STEST
 				output_timer[j]->start_point(transfer_queues[Writeback_id_idx][run_dev_id_idx]);
@@ -514,10 +560,6 @@ void Subkernel::writeback_data(){
 #endif
 				//TODO: Should this be here (at transfer's end) or before when the func is scheduled, or nowhere?
 				//tmp->WriteBackBlock->Available->record_to_queue(transfer_queues[Writeback_id_idx][run_dev_id_idx]);
-				//Ptr_and_int_p wrapped_op = (Ptr_and_int_p) malloc(sizeof(struct Ptr_and_int));
-				//wrapped_op->int_ptr = &tmp->RW_master;
-				//wrapped_op->val = Writeback_id;
-				//transfer_queues[Writeback_id_idx][run_dev_id_idx]->add_host_func((void*)&CoCoSetInt, (void*) wrapped_op);
 				CBlock_wrap_p wrap_inval = NULL;
 				wrap_inval = (CBlock_wrap_p) malloc (sizeof(struct CBlock_wrap));
 				wrap_inval->CBlock = tmp->StoreBlock[run_dev_id_idx];
@@ -722,35 +764,58 @@ void CoCoPeLiaFreeResources(short dev_id){
 	//__sync_lock_release(&queue_d_allock);
 }
 
-void Subkernel::prepare_launch(){
+void Subkernel::prepare_launch(short dev_id){
+	short lvl = 3;
+#ifdef DEBUG
+	lprintf(lvl, "|-----> Subkernel(dev=%d, id = %d)\n", run_dev_id, id);
+#endif
+
 	for (int j = 0; j < TileNum; j++){
 		if (TileDimlist[j] == 1){
 			Tile1D<VALUE_TYPE>* tmp = (Tile1D<VALUE_TYPE>*) TileList[j];
 			if(tmp->W_flag) {
+				if(tmp->RW_lock_holders > 0 && tmp->RW_lock != dev_id)
+					error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d])::prepare_launch: Tile(j=%d) has RW_lock = %d with RW_lock_holders = %d\n",
+						run_dev_id, id, tmp->id, tmp->GridId, j, tmp->RW_lock, tmp->RW_lock_holders);
 				if (tmp->W_total == tmp->W_flag) WR_first = 1;
-				tmp->RW_lock = tmp->RW_master;
+				tmp->RW_lock = dev_id;
+				tmp->RW_lock_holders++;
+#ifdef DEBUG
+				lprintf(lvl, "Subkernel(dev=%d,id=%d)-Tile(%d.[%d])::prepare_launch: Tile(j=%d) has RW_lock = %d with RW_lock_holders = %d\n",
+					run_dev_id, id, tmp->id, tmp->GridId, j, tmp->RW_lock, tmp->RW_lock_holders);
+#endif
 			}
 		}
 		else if (TileDimlist[j] == 2){
 			Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) TileList[j];
 			if(tmp->W_flag) {
+				if(tmp->RW_lock_holders > 0 && tmp->RW_lock != dev_id)
+					error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::prepare_launch: Tile(j=%d) has RW_lock = %d with RW_lock_holders = %d\n",
+						run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2, j, tmp->RW_lock, tmp->RW_lock_holders);
 				if (tmp->W_total == tmp->W_flag) WR_first = 1;
-				tmp->RW_lock = tmp->RW_master;
+				tmp->RW_lock = dev_id;
+				tmp->RW_lock_holders++;
+#ifdef DEBUG
+				lprintf(lvl, "Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::prepare_launch: Tile(j=%d) has RW_lock = %d with RW_lock_holders = %d\n",
+					run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2, j, tmp->RW_lock, tmp->RW_lock_holders);
+#endif
 			}
 		}
 	}
+#ifdef DEBUG
+	lprintf(lvl, "<-----|\n");
+#endif
 }
 
 short Subkernel::no_locked_tiles(){
-	if (run_dev_id!= -42) return 0;
 	for (int j = 0; j < TileNum; j++){
 		if (TileDimlist[j] == 1){
 			Tile1D<VALUE_TYPE>* tmp = (Tile1D<VALUE_TYPE>*) TileList[j];
-			if(tmp->isLocked()) return 0;
+			if(tmp->RW_lock_holders) return 0;
 		}
 		else if (TileDimlist[j] == 2){
 			Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) TileList[j];
-			if(tmp->isLocked()) return 0;
+			if(tmp->RW_lock_holders) return 0;
 		}
 		else error("Subkernel(dev=%d,id=%d)::writeback_data: Not implemented for TileDim=%d\n", run_dev_id, id, TileDimlist[j]);
 	}
@@ -771,15 +836,20 @@ short Subkernel::is_RW_lock_master(short dev_id){
 	return 1;
 }
 
+/// TODO: To be extra safe, not sure it is required - might slowdown a lot
+int SubkernelSelectLock = 0;
+
 Subkernel* SubkernelSelectNoWriteShare(short dev_id, Subkernel** Subkernel_list, long Subkernel_list_len){
+	while(__sync_lock_test_and_set (&SubkernelSelectLock, 1));
 	Subkernel* curr_sk = NULL;
 	long sk_idx;
 	for (sk_idx = 0; sk_idx < Subkernel_list_len; sk_idx++){
 		curr_sk = Subkernel_list[sk_idx];
-		if (curr_sk->no_locked_tiles() || curr_sk->is_RW_lock_master(dev_id)) break;
+		if (curr_sk->run_dev_id==-42 && (curr_sk->no_locked_tiles() || curr_sk->is_RW_lock_master(dev_id))) break;
 	}
-	if(sk_idx==Subkernel_list_len) return NULL;
-	curr_sk->prepare_launch();
+	if(sk_idx==Subkernel_list_len) curr_sk = NULL;
+	else curr_sk->prepare_launch(dev_id);
+	__sync_lock_release(&SubkernelSelectLock);
 	return curr_sk;
 }
 

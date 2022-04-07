@@ -38,8 +38,8 @@ template<typename dtype>  Tile2D<dtype>::Tile2D(void * in_addr, int in_dim1, int
       WriteBackBlock = init_loc_block_p;
       StoreBlock[iloc] = init_loc_block_p;
       StoreBlock[iloc]->Adrs = in_addr;
-      StoreBlock[iloc]->set_owner((void**)&StoreBlock[iloc]);
-      StoreBlock[iloc]->set_state(EXCLUSIVE,false);
+      StoreBlock[iloc]->set_owner((void**)&StoreBlock[iloc],false);
+      StoreBlock[iloc]->set_state(NATIVE,false);
       ldim[iloc] = in_ldim;
       StoreBlock[iloc]->Available->record_to_queue(NULL);
     }
@@ -49,11 +49,10 @@ template<typename dtype>  Tile2D<dtype>::Tile2D(void * in_addr, int in_dim1, int
     }
   }
   W_flag = R_flag = W_total = 0;
-#ifdef ENABLE_MUTEX_LOCKING
-	//RW_lock.lock();
-#else
-  RW_lock = 0;
-#endif
+
+  RW_lock = -42;
+  RW_lock_holders = 0;
+
   RW_master = init_loc;
   #ifdef DEBUG
   	lprintf(lvl-1, "<-----|\n");
@@ -96,7 +95,9 @@ template<typename dtype> short Tile2D<dtype>::getClosestReadLoc(short dev_id_in)
     }
     StoreBlock[pos]->update_state(false);
     state temp = StoreBlock[pos]->State;
-    if (temp == AVAILABLE || temp == SHARABLE || temp == EXCLUSIVE){
+    if (temp == AVAILABLE || temp == SHARABLE || temp == NATIVE){
+      event_status block_status = StoreBlock[pos]->Available->query_status();
+      if(block_status == COMPLETE || block_status == CHECKED)
       if (link_cost[dev_id_in_idx][pos] < link_cost_min){
         link_cost_min = link_cost[dev_id_in_idx][pos];
         pos_min = pos;
@@ -107,7 +108,19 @@ template<typename dtype> short Tile2D<dtype>::getClosestReadLoc(short dev_id_in)
   lprintf(lvl, "|-----> Tile2D(%d)::getClosestReadLoc(%d): Selecting cached tile in loc =%d \n", id, dev_id_in, pos_min);
 #endif
   if (pos_min >= LOC_NUM) error("Tile2D(%d)::getClosestReadLoc(%d): No location found for tile - bug.", id, dev_id_in);
-  return deidxize(pos_min);
+  Global_Cache[pos_min]->lock();
+  if(StoreBlock[pos_min] != NULL){
+    StoreBlock[pos_min]->update_state(false);
+    state temp = StoreBlock[pos_min]->State;
+    event_status block_status = StoreBlock[pos_min]->Available->query_status();
+    if ((temp == AVAILABLE || temp == SHARABLE || temp == NATIVE) &&
+    (block_status == COMPLETE || block_status == CHECKED))
+      return deidxize(pos_min);
+    else error("Tile2D(%d)::getClosestReadLoc(%d): pos_min = %d selected,\
+      but something changed after locking its cache...fixme\n", id, dev_id_in, pos_min);
+  }
+  else error("Tile2D(%d)::getClosestReadLoc(%d): pos_min = %d selected,\
+    but StoreBlock[pos_min] was NULL after locking its cache...fixme\n", id, dev_id_in, pos_min);
 }
 
 template<typename dtype> double Tile2D<dtype>::getMinLinkCost(short dev_id_in){
@@ -117,8 +130,10 @@ template<typename dtype> double Tile2D<dtype>::getMinLinkCost(short dev_id_in){
   for (int pos =0; pos < LOC_NUM; pos++){
     StoreBlock[pos]->update_state(false);
     state temp = StoreBlock[pos]->State;
-    if (temp == AVAILABLE || temp == SHARABLE || temp == EXCLUSIVE){
-      if (link_cost[dev_id_in_idx][pos] < link_cost_min)
+    if (temp == AVAILABLE || temp == SHARABLE || temp == NATIVE){
+      event_status block_status = StoreBlock[pos]->Available->query_status();
+      if(block_status == COMPLETE || block_status == CHECKED)
+      if(link_cost[dev_id_in_idx][pos] < link_cost_min)
         link_cost_min = link_cost[dev_id_in_idx][pos];
     }
   }

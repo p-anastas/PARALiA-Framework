@@ -44,11 +44,9 @@ template<typename dtype>  Tile1D<dtype>::Tile1D(void * in_addr, int in_dim,
     }
   }
   W_flag = R_flag = W_total = 0;
-#ifdef ENABLE_MUTEX_LOCKING
-	//RW_lock.lock();
-#else
-  RW_lock = 0;
-#endif
+  RW_lock = -42;
+  RW_lock_holders = 0;
+  
   RW_master = init_loc;
   #ifdef DEBUG
   	lprintf(lvl-1, "<-----|\n");

@@ -157,19 +157,19 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 	cpu_timer = csecond();
 #endif
 
-	pthread_barrier_wait (&RunTileMap_sync_barrier);
-
-#ifdef TEST
-	cpu_timer = csecond() - cpu_timer;
-	lprintf(lvl, "Wait barrier(%d): t_wb = %lf ms\n", dev_id, cpu_timer*1000);
-	cpu_timer = csecond();
-#endif
-
 	Global_Cache[idxize(dev_id)]->allocate(true);
 
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer;
 	lprintf(lvl, "Memory management(%d): t_mem = %lf ms\n", dev_id, cpu_timer*1000);
+	cpu_timer = csecond();
+#endif
+
+	pthread_barrier_wait (&RunTileMap_sync_barrier);
+
+#ifdef TEST
+	cpu_timer = csecond() - cpu_timer;
+	lprintf(lvl, "Wait barrier(%d): t_wb = %lf ms\n", dev_id, cpu_timer*1000);
 	cpu_timer = csecond();
 #endif
 
@@ -420,9 +420,9 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 
 	for(int cache_loc = 0; cache_loc < LOC_NUM; cache_loc++)
 		Global_Cache[cache_loc] = new Cache(deidxize(cache_loc),
-			(A_asset->dim1/T + (A_asset->dim1%T)? 1 : 0)* (A_asset->dim2/T + (A_asset->dim2%T)? 1 : 0) +
-			(B_asset->dim1/T + (B_asset->dim1%T)? 1 : 0)* (B_asset->dim2/T + (B_asset->dim2%T)? 1 : 0) +
-			(C_asset->dim1/T + (C_asset->dim1%T)? 1 : 0)* (C_asset->dim2/T + (C_asset->dim2%T)? 1 : 0),
+			(A_asset->dim1/T + ((A_asset->dim1%T)? 1 : 0))* (A_asset->dim2/T + ((A_asset->dim2%T)? 1 : 0)) +
+			(B_asset->dim1/T + ((B_asset->dim1%T)? 1 : 0))* (B_asset->dim2/T + ((B_asset->dim2%T)? 1 : 0)) +
+			(C_asset->dim1/T + ((C_asset->dim1%T)? 1 : 0))* (C_asset->dim2/T + ((C_asset->dim2%T)? 1 : 0)),
 			T*T*sizeof(VALUE_TYPE));
 
 	/// TODO: Split each asset to Tiles
@@ -576,16 +576,16 @@ if(!reuse_model_flag){
   A_asset->DrawTileMap();
   B_asset->DrawTileMap();
 	C_asset->DrawTileMap();
-	for(int i=0; i<autotuned_vals->dev_num;i++) Global_Cache[i]->draw_cache(true,true,true);
+	for(int i=0; i<LOC_NUM;i++) Global_Cache[i]->draw_cache(true,true,true);
 #endif
 
 #ifndef BUFFER_REUSE_ENABLE
-	for(int i=0; i<autotuned_vals->dev_num;i++){
+	for(int i = 0 ; i < LOC_NUM; i++){
 		delete Global_Cache[i];
 		Global_Cache[i] = NULL;
 	}
 #else
-	for(int i=0; i<autotuned_vals->dev_num;i++) Global_Cache[i]->reset(true);
+	for(int i=0; i<LOC_NUM;i++) Global_Cache[i]->reset(true);
 #endif
 
 #ifndef BACKEND_RES_REUSE_ENABLE

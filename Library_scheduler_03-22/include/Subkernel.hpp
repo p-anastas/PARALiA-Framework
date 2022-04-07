@@ -38,7 +38,7 @@ class Subkernel
 		~Subkernel();
 
 		/// Functions
-		void prepare_launch();
+		void prepare_launch(short dev_id);
 		void init_events();
 		void request_data();
 		void request_tile(short TileIdx);

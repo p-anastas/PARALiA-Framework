@@ -34,7 +34,7 @@ add_definitions(-DUNIHELPER_LOCKFREE_ENABLE)
 add_definitions(-DENABLE_SEND_RECV_OVERLAP)
 
 ## Enable using the CPU as an extra device for part of the total workload, if applicable
-#add_definitions(-DENABLE_CPU_WORKLOAD)
+add_definitions(-DENABLE_CPU_WORKLOAD)
 
 ## Enable using the CPU as an extra device for part of the total workload, if applicable
 #add_definitions(-DENABLE_PTHREAD_TILE_REQUEST)
@@ -45,8 +45,8 @@ if (${SCHEDULE_TYPE} EQUAL 0)
   ## Define which subkernel distribution to use
   #add_definitions(-DDISTRIBUTION="ROUND-ROBIN")
   #add_definitions(-DDISTRIBUTION="SPLIT-NAIVE")
-  #add_definitions(-DDISTRIBUTION="SPLIT-CHUNKS-ROBIN")
-  add_definitions(-DDISTRIBUTION="SPLIT-CHUNKS-ROBIN-REVERSE")
+  add_definitions(-DDISTRIBUTION="SPLIT-CHUNKS-ROBIN")
+  #add_definitions(-DDISTRIBUTION="SPLIT-CHUNKS-ROBIN-REVERSE")
   #add_definitions(-DDISTRIBUTION="2D-BLOCK-CYCLIC")
 elseif(${SCHEDULE_TYPE} EQUAL 1)
   add_definitions(-DRUNTIME_SCHEDULER_VERSION)
@@ -69,7 +69,7 @@ add_definitions(-DMULTIFETCH_PENALTY=1)
 add_definitions(-DNORMALIZE_NEAR_SPLIT_LIMIT=0.05)
 
 #Run in testing mode : details about models, decisions and time spend in operations.
-add_definitions(-DTEST)
+#add_definitions(-DTEST)
 
 #Run in Subkernel testing mode : details about time spend in subkernel operations.
 #add_definitions(-DSTEST)

@@ -73,6 +73,13 @@ void CoCoQueueLock(void* wrapped_lock);
 // Unlock wrapped_lock. This functions is fired in a queue to unlock when it reaches that point.
 void CoCoQueueUnlock(void* wrapped_lock);
 
+// Struct containing an int pointer
+typedef struct Ptr_int{
+	int* int_ptr;
+}* Ptr_int_p;
+void CoCoIncAsync(void* wrapped_ptr_int);
+void CoCoDecAsync(void* wrapped_ptr_int);
+
 // Struct containing an int pointer and an int for Asynchronous set
 typedef struct Ptr_and_int{
 	int* int_ptr;

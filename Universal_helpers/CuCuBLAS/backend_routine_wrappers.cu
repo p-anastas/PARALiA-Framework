@@ -33,6 +33,22 @@ void CoCoQueueUnlock(void* wrapped_lock){
 #endif
 }
 
+void CoCoIncAsync(void* wrapped_ptr_int){
+  Ptr_int_p unwrapped = (Ptr_int_p) wrapped_ptr_int;
+  *(unwrapped->int_ptr)++;
+#ifdef DEBUG
+  lprintf(6, "CoCoIncAsync(%p, new_val=%d) ran succesfully.\n", unwrapped->int_ptr, *(unwrapped->int_ptr));
+#endif
+}
+
+void CoCoDecAsync(void* wrapped_ptr_int){
+  Ptr_int_p unwrapped = (Ptr_int_p) wrapped_ptr_int;
+  (*(unwrapped->int_ptr))--;
+#ifdef DEBUG
+  lprintf(6, "CoCoDecAsync(%p, new_val=%d) ran succesfully.\n", unwrapped->int_ptr, *(unwrapped->int_ptr));
+#endif
+}
+
 void CoCoSetInt(void* wrapped_ptr_and_val){
   Ptr_and_int_p unwrapped = (Ptr_and_int_p) wrapped_ptr_and_val;
   *(unwrapped->int_ptr) = unwrapped->val;

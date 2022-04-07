@@ -204,7 +204,7 @@ Event::~Event()
 	cudaError_t err = cudaEventDestroy(*(( cudaEvent_t*) event_backend_ptr));
 	massert(cudaSuccess == err, "Event::~Event - %s\n", cudaGetErrorString(err));
 #else
-	if (status == UNRECORDED) 	Event_num_device[idxize(dev_id+42)]--;
+	if (dev_id < -1) 	Event_num_device[idxize(dev_id+42)]--;
 	else{
 			Event_num_device[idxize(dev_id)]--;
 			cudaError_t err = cudaEventDestroy(*(( cudaEvent_t*) event_backend_ptr));
@@ -333,7 +333,7 @@ void Event::reset(){
 	event_status prev_status = status;
 	status = UNRECORDED;
 #ifdef ENABLE_LAZY_EVENTS
-	if(prev_status!=UNRECORDED){
+	if(dev_id >= -1){
 		dev_id = dev_id - 42;
 		cudaError_t err = cudaEventDestroy(*(( cudaEvent_t*) event_backend_ptr));
 		massert(cudaSuccess == err, "(Lazy)Event::reset - %s\n", cudaGetErrorString(err));
