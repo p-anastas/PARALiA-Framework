@@ -85,6 +85,7 @@ class Event
 		event_status query_status();
 		void checked();
 		void reset();
+		void soft_reset();
 
 };
 

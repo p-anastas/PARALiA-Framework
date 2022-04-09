@@ -158,13 +158,13 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 #endif
 
 	Global_Cache[idxize(dev_id)]->allocate(true);
+	//CoCoSyncCheckErr();
 
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer;
 	lprintf(lvl, "Memory management(%d): t_mem = %lf ms\n", dev_id, cpu_timer*1000);
 	cpu_timer = csecond();
 #endif
-
 	pthread_barrier_wait (&RunTileMap_sync_barrier);
 
 #ifdef TEST
@@ -304,7 +304,7 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 			(gemm_subkernel_data->SubkernelListDev[keri]->writeback_data_out_ts-gemm_entry_ts)*1000,
 			writeback_t_ms, Gval_per_s(request_bytes_out, writeback_t_ms/1000));
 	}
-	double total_cache_timer = CacheGetTimer(dev_id);
+	double total_cache_timer = Global_Cache[dev_id]->timer;
 	lprintf(lvl, "Cache requests total timer (%d): t_cache = %lf ms\n" , dev_id, total_cache_timer*1000);
 #endif
 #ifdef TEST
@@ -560,16 +560,6 @@ if(!reuse_model_flag){
 	lprintf(lvl, "t_predicted for T=%zu was %.2lf ms : %lf percentile error\n", T, best_pred_p->pred_t*1000,
 	(best_pred_p->pred_t==0)? 0.0: (best_pred_p->pred_t - cpu_timer )/best_pred_p->pred_t*100);
 	cpu_timer = csecond();
-#endif
-
-#ifdef MULTIDEVICE_REDUCTION_ENABLE
-	CoCoReduceSyncThreads();
-#ifdef TEST
-	cpu_timer = csecond() - cpu_timer;
-	lprintf(lvl, "Gathered reduce pthreads for all devices -> t_reduce_extra = %lf ms\n",
-		cpu_timer*1000);
-	cpu_timer = csecond();
-#endif
 #endif
 
 #ifdef DDEBUG

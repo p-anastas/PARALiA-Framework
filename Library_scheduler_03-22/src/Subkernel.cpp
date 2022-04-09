@@ -143,13 +143,6 @@ void Subkernel::request_tile(short TileIdx){
 			error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d])::request_tile: Fetching from tile in GPU(%d) with INVALID state\n",
 				run_dev_id, id, tmp->id,  tmp->GridId, FetchFromId);
 
-		if(tmp->W_flag);
-		else{
-			tmp->StoreBlock[FetchFromId_idx]->add_reader();
-			Global_Cache[FetchFromId_idx]->unlock();
-		}
-		if(tmp->W_flag) tmp->StoreBlock[run_dev_id_idx]->add_writer();
-		else tmp->StoreBlock[run_dev_id_idx]->add_reader();
 
 #ifdef STEST
 		input_timer[TileIdx]->start_point(transfer_queues[run_dev_id_idx][FetchFromId_idx]);
@@ -162,11 +155,13 @@ void Subkernel::request_tile(short TileIdx){
 		bytes_in[TileIdx] = tmp->size();
 #endif
 		if(tmp->W_flag){
-			if (tmp->StoreBlock[FetchFromId_idx]!= tmp->WriteBackBlock){
-				CacheBlock* tmp_ptr = tmp->StoreBlock[FetchFromId_idx];
-				tmp->StoreBlock[FetchFromId_idx]->reset(false, true);
-				tmp_ptr->set_state(INVALID, false);
-			}
+			//if (tmp->StoreBlock[FetchFromId_idx]!= tmp->WriteBackBlock){
+				CBlock_wrap_p wrap_inval = NULL;
+				wrap_inval = (CBlock_wrap_p) malloc (sizeof(struct CBlock_wrap));
+				wrap_inval->CBlock = tmp->StoreBlock[FetchFromId_idx];
+				wrap_inval->lockfree = true;
+				transfer_queues[run_dev_id_idx][FetchFromId_idx]->add_host_func((void*)&CBlock_INV_wrap, (void*) wrap_inval);
+			//}
 		}
 		else{
 			wrap_read = (CBlock_wrap_p) malloc (sizeof(struct CBlock_wrap));
@@ -201,14 +196,6 @@ void Subkernel::request_tile(short TileIdx){
 			error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::request_tile: Fetching from tile in GPU(%d) with INVALID state\n",
 				run_dev_id, id, tmp->id,  tmp->GridId1, tmp->GridId2, FetchFromId);
 
-		if(tmp->W_flag);//
-		else{
-			tmp->StoreBlock[FetchFromId_idx]->add_reader();
-			Global_Cache[FetchFromId_idx]->unlock();
-		}
-		if(tmp->W_flag) tmp->StoreBlock[run_dev_id_idx]->add_writer();
-		else tmp->StoreBlock[run_dev_id_idx]->add_reader();
-
 #ifdef STEST
 		input_timer[TileIdx]->start_point(transfer_queues[run_dev_id_idx][FetchFromId_idx]);
 #endif
@@ -221,11 +208,13 @@ void Subkernel::request_tile(short TileIdx){
 		bytes_in[TileIdx]= tmp->size();
 #endif
 		if(tmp->W_flag){
-			if (tmp->StoreBlock[FetchFromId_idx]!= tmp->WriteBackBlock){
-				CacheBlock* tmp_ptr = tmp->StoreBlock[FetchFromId_idx];
-				tmp->StoreBlock[FetchFromId_idx]->reset(false, true);
-				tmp_ptr->set_state(INVALID, false);
-			}
+			//if (tmp->StoreBlock[FetchFromId_idx]!= tmp->WriteBackBlock){
+				CBlock_wrap_p wrap_inval = NULL;
+				wrap_inval = (CBlock_wrap_p) malloc (sizeof(struct CBlock_wrap));
+				wrap_inval->CBlock = tmp->StoreBlock[FetchFromId_idx];
+				wrap_inval->lockfree = true;
+				transfer_queues[run_dev_id_idx][FetchFromId_idx]->add_host_func((void*)&CBlock_INV_wrap, (void*) wrap_inval);
+			//}
 		}
 		else{
 			wrap_read = (CBlock_wrap_p) malloc (sizeof(struct CBlock_wrap));
@@ -260,14 +249,18 @@ void Subkernel::request_data(){
 	for (int j = 0; j < TileNum; j++){
 		if (TileDimlist[j] == 1){
 			Tile1D<VALUE_TYPE>* tmp = (Tile1D<VALUE_TYPE>*) TileList[j];
-			if (tmp->StoreBlock[run_dev_id_idx] == NULL) {
+			if (tmp->StoreBlock[run_dev_id_idx] == NULL ||
+				tmp->StoreBlock[run_dev_id_idx]->State == INVALID) {
 				Global_Cache[run_dev_id_idx]->lock();
 				tmp->StoreBlock[run_dev_id_idx] = Global_Cache[run_dev_id_idx]->assign_Cblock(true);
 				tmp->StoreBlock[run_dev_id_idx]->set_owner((void**)&tmp->StoreBlock[run_dev_id_idx],true);
+				if(tmp->W_flag) tmp->StoreBlock[run_dev_id_idx]->add_writer();
+				else tmp->StoreBlock[run_dev_id_idx]->add_reader();
 #ifdef CDEBUG
 		lprintf(lvl, "Subkernel(dev=%d,id=%d)-Tile(%d.[%d]): Asigned buffer Block in GPU(%d)= %d\n",
 					run_dev_id, id, tmp->id, tmp->GridId, run_dev_id, tmp->StoreBlock[run_dev_id_idx]->id);
 #endif
+				Global_Cache[run_dev_id_idx]->unlock();
 #ifdef ENABLE_PTHREAD_TILE_REQUEST
 					if (tmp->R_flag) {
 						tile_req_p wrap_request = (tile_req_p) malloc(sizeof(struct tile_req));
@@ -280,10 +273,11 @@ void Subkernel::request_data(){
 #else
 					if (tmp->R_flag) request_tile(j);
 #endif
-				Global_Cache[run_dev_id_idx]->unlock();
 			}
 			else if(tmp->StoreBlock[run_dev_id_idx]->State == NATIVE &&
 				tmp->W_flag && tmp->RW_master!= run_dev_id){
+				if(tmp->W_flag) tmp->StoreBlock[run_dev_id_idx]->add_writer();
+				else tmp->StoreBlock[run_dev_id_idx]->add_reader();
 #ifdef ENABLE_PTHREAD_TILE_REQUEST
 				if (tmp->R_flag) {
 					tile_req_p wrap_request = (tile_req_p) malloc(sizeof(struct tile_req));
@@ -305,14 +299,18 @@ void Subkernel::request_data(){
 		}
 		else if (TileDimlist[j] == 2){
 			Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) TileList[j];
-			if (tmp->StoreBlock[run_dev_id_idx] == NULL) {
+			if (tmp->StoreBlock[run_dev_id_idx] == NULL ||
+				tmp->StoreBlock[run_dev_id_idx]->State == INVALID) {
 				Global_Cache[run_dev_id_idx]->lock();
 				tmp->StoreBlock[run_dev_id_idx] = Global_Cache[run_dev_id_idx]->assign_Cblock(true);
 				tmp->StoreBlock[run_dev_id_idx]->set_owner((void**)&tmp->StoreBlock[run_dev_id_idx]);
+				if(tmp->W_flag) tmp->StoreBlock[run_dev_id_idx]->add_writer();
+				else tmp->StoreBlock[run_dev_id_idx]->add_reader();
 #ifdef CDEBUG
 		lprintf(lvl, "Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d]): Asigned buffer Block in GPU(%d)= %d\n",
 					run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2, run_dev_id, tmp->StoreBlock[run_dev_id_idx]->id);
 #endif
+				Global_Cache[run_dev_id_idx]->unlock();
 #ifdef ENABLE_PTHREAD_TILE_REQUEST
 				if (tmp->R_flag) {
 					tile_req_p wrap_request = (tile_req_p) malloc(sizeof(struct tile_req));
@@ -325,10 +323,11 @@ void Subkernel::request_data(){
 #else
 				if (tmp->R_flag) request_tile(j);
 #endif
-				Global_Cache[run_dev_id_idx]->unlock();
 			}
 			else if(tmp->StoreBlock[run_dev_id_idx]->State == NATIVE &&
 				tmp->W_flag && tmp->RW_master!= run_dev_id){
+					if(tmp->W_flag) tmp->StoreBlock[run_dev_id_idx]->add_writer();
+					else tmp->StoreBlock[run_dev_id_idx]->add_reader();
 #ifdef ENABLE_PTHREAD_TILE_REQUEST
 				if (tmp->R_flag) {
 					tile_req_p wrap_request = (tile_req_p) malloc(sizeof(struct tile_req));

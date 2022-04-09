@@ -114,8 +114,11 @@ template<typename dtype> short Tile2D<dtype>::getClosestReadLoc(short dev_id_in)
     state temp = StoreBlock[pos_min]->State;
     event_status block_status = StoreBlock[pos_min]->Available->query_status();
     if ((temp == AVAILABLE || temp == SHARABLE || temp == NATIVE) &&
-    (block_status == COMPLETE || block_status == CHECKED))
+    (block_status == COMPLETE || block_status == CHECKED)){
+      StoreBlock[pos_min]->add_reader();
+      Global_Cache[pos_min]->unlock();
       return deidxize(pos_min);
+    }
     else error("Tile2D(%d)::getClosestReadLoc(%d): pos_min = %d selected,\
       but something changed after locking its cache...fixme\n", id, dev_id_in, pos_min);
   }
