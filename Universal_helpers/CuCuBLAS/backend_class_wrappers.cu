@@ -111,6 +111,7 @@ CommandQueue::~CommandQueue()
 	#ifdef UDDEBUG
 		lprintf(lvl, "[dev_id=%3d] |-----> CommandQueue::~CommandQueue()\n", dev_id);
 	#endif
+		sync_barrier();
 		CoCoPeLiaSelectDevice(dev_id);
 #ifdef ENABLE_PARALLEL_BACKEND
 	for (int par_idx = 0; par_idx < MAX_BACKEND_L; par_idx++ ){
@@ -198,9 +199,9 @@ void CommandQueue::wait_for_event(Event_p Wevent)
 		cudaStream_t stream = *((cudaStream_t*) cqueue_backend_ptr);
 #endif
 		cudaEvent_t cuda_event= *(cudaEvent_t*) Wevent->event_backend_ptr;
+		release_lock();
 		cudaError_t err = cudaStreamWaitEvent(stream, cuda_event, 0); // 0-only parameter = future NVIDIA masterplan?
 		massert(cudaSuccess == err, "CommandQueue::wait_for_event - %s\n", cudaGetErrorString(err));
-		release_lock();
 	}
 #ifdef UDDEBUG
 	lprintf(lvl, "[dev_id=%3d] <-----| CommandQueue::wait_for_event(Event(%d))\n", dev_id, Wevent->id);
@@ -282,23 +283,25 @@ void Event::sync_barrier()
 #ifdef UDDEBUG
 	lprintf(lvl, "[dev_id=%3d] |-----> Event(%d)::sync_barrier()\n", dev_id, id);
 #endif
-	get_lock();
+	//get_lock();
 	if (status != CHECKED){
-		if (status == UNRECORDED){
+		if (status == UNRECORDED){;
 #ifdef DDEBUG
 			warning("Event::sync_barrier(): Tried to sync unrecorded event\n");
 #endif
-			return;
 		}
-		cudaEvent_t cuda_event= *(cudaEvent_t*) event_backend_ptr;
-		cudaError_t err = cudaEventSynchronize(cuda_event);
-		if (status == RECORDED) status = CHECKED;
-		massert(cudaSuccess == err, "Event::sync_barrier() - %s\n", cudaGetErrorString(err));
+		else{
+			cudaEvent_t cuda_event= *(cudaEvent_t*) event_backend_ptr;
+			cudaError_t err = cudaEventSynchronize(cuda_event);
+			if (status == RECORDED) status = CHECKED;
+			massert(cudaSuccess == err, "Event::sync_barrier() - %s\n", cudaGetErrorString(err));
+		}
 	}
-	release_lock();
+	//release_lock();
 #ifdef UDDEBUG
 	lprintf(lvl, "[dev_id=%3d] <-----| Event(%d)::sync_barrier()\n", dev_id, id);
 #endif
+	return;
 }
 
 void Event::record_to_queue(CQueue_p Rr){
@@ -373,7 +376,10 @@ event_status Event::query_status(){
 	enum event_status local_status = status;
 	if (local_status != CHECKED){
 #ifdef ENABLE_LAZY_EVENTS
-		if (local_status == UNRECORDED) return UNRECORDED;
+		if (local_status == UNRECORDED){
+			release_lock();
+			return UNRECORDED;
+		}
 #endif
 		cudaEvent_t cuda_event= *(cudaEvent_t*) event_backend_ptr;
 		cudaError_t err = cudaEventQuery(cuda_event);
@@ -424,10 +430,10 @@ void Event::soft_reset(){
 	lprintf(lvl, "[dev_id=%3d] |-----> Event(%d)::soft_reset()\n", dev_id, id);
 #endif
 	//sync_barrier();
-	//get_lock();
+	get_lock();
 	//event_status prev_status = status;
 	status = UNRECORDED;
-	//release_lock();
+	release_lock();
 #ifdef UDDEBUG
 	lprintf(lvl, "[dev_id=%3d] <-----| Event(%d)::soft_reset()\n", dev_id, id);
 #endif

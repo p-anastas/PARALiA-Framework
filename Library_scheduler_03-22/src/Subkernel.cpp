@@ -62,7 +62,7 @@ void Subkernel::init_events(){
 void Subkernel::sync_request_data_RONLY(){
 	short lvl = 4;
 #ifdef DEBUG
-	lprintf(lvl-1, "|-----> Subkernel(dev=%d,id=%d)::sync_request_data()\n", run_dev_id, id);
+	lprintf(lvl-1, "|-----> Subkernel(dev=%d,id=%d)::sync_request_data_RONLY()\n", run_dev_id, id);
 #endif
 	short run_dev_id_idx = idxize(run_dev_id);
 	for (int j = 0; j < TileNum; j++){
@@ -251,16 +251,15 @@ void Subkernel::request_data(){
 			Tile1D<VALUE_TYPE>* tmp = (Tile1D<VALUE_TYPE>*) TileList[j];
 			if (tmp->StoreBlock[run_dev_id_idx] == NULL ||
 				tmp->StoreBlock[run_dev_id_idx]->State == INVALID) {
-				Global_Cache[run_dev_id_idx]->lock();
-				tmp->StoreBlock[run_dev_id_idx] = Global_Cache[run_dev_id_idx]->assign_Cblock(true);
+				state new_block_state;
+				if(tmp->W_flag) new_block_state = EXCLUSIVE;
+				else new_block_state = SHARABLE;
+				tmp->StoreBlock[run_dev_id_idx] = Global_Cache[run_dev_id_idx]->assign_Cblock(new_block_state,false);
 				tmp->StoreBlock[run_dev_id_idx]->set_owner((void**)&tmp->StoreBlock[run_dev_id_idx],true);
-				if(tmp->W_flag) tmp->StoreBlock[run_dev_id_idx]->add_writer();
-				else tmp->StoreBlock[run_dev_id_idx]->add_reader();
 #ifdef CDEBUG
 		lprintf(lvl, "Subkernel(dev=%d,id=%d)-Tile(%d.[%d]): Asigned buffer Block in GPU(%d)= %d\n",
 					run_dev_id, id, tmp->id, tmp->GridId, run_dev_id, tmp->StoreBlock[run_dev_id_idx]->id);
 #endif
-				Global_Cache[run_dev_id_idx]->unlock();
 #ifdef ENABLE_PTHREAD_TILE_REQUEST
 					if (tmp->R_flag) {
 						tile_req_p wrap_request = (tile_req_p) malloc(sizeof(struct tile_req));
@@ -301,16 +300,15 @@ void Subkernel::request_data(){
 			Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) TileList[j];
 			if (tmp->StoreBlock[run_dev_id_idx] == NULL ||
 				tmp->StoreBlock[run_dev_id_idx]->State == INVALID) {
-				Global_Cache[run_dev_id_idx]->lock();
-				tmp->StoreBlock[run_dev_id_idx] = Global_Cache[run_dev_id_idx]->assign_Cblock(true);
-				tmp->StoreBlock[run_dev_id_idx]->set_owner((void**)&tmp->StoreBlock[run_dev_id_idx]);
-				if(tmp->W_flag) tmp->StoreBlock[run_dev_id_idx]->add_writer();
-				else tmp->StoreBlock[run_dev_id_idx]->add_reader();
+				state new_block_state;
+				if(tmp->W_flag) new_block_state = EXCLUSIVE;
+				else new_block_state = SHARABLE;
+				tmp->StoreBlock[run_dev_id_idx] = Global_Cache[run_dev_id_idx]->assign_Cblock(new_block_state,false);
+				tmp->StoreBlock[run_dev_id_idx]->set_owner((void**)&tmp->StoreBlock[run_dev_id_idx],true);
 #ifdef CDEBUG
 		lprintf(lvl, "Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d]): Asigned buffer Block in GPU(%d)= %d\n",
 					run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2, run_dev_id, tmp->StoreBlock[run_dev_id_idx]->id);
 #endif
-				Global_Cache[run_dev_id_idx]->unlock();
 #ifdef ENABLE_PTHREAD_TILE_REQUEST
 				if (tmp->R_flag) {
 					tile_req_p wrap_request = (tile_req_p) malloc(sizeof(struct tile_req));
@@ -968,4 +966,5 @@ Subkernel* SubkernelSelectMinimizeFetchWritePenaltyMultiFetchPenalty(short dev_i
 
 void CoCopeLiaDevCacheFree(short dev_id){
 	delete Global_Cache[dev_id];
+	Global_Cache[dev_id] = NULL;
 }

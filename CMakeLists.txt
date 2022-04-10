@@ -17,10 +17,10 @@ add_definitions(-DASYNC_ENABLE)
 add_definitions(-DBACKEND_RES_REUSE_ENABLE)
 
 ## Enable GPU and CPU allocated buffer reuse between different calls
-#add_definitions(-DBUFFER_REUSE_ENABLE)
+add_definitions(-DBUFFER_REUSE_ENABLE)
 
 ## Enable lock-free versions of event & Queue management in Universal_helpers
-add_definitions(-DUNIHELPER_LOCKFREE_ENABLE)
+#add_definitions(-DUNIHELPER_LOCKFREE_ENABLE)
 
 ## Enable Locking with mutexes instead of busy-waiting
 #add_definitions(-DENABLE_MUTEX_LOCKING)
@@ -69,7 +69,7 @@ add_definitions(-DMULTIFETCH_PENALTY=1)
 add_definitions(-DNORMALIZE_NEAR_SPLIT_LIMIT=0.05)
 
 #Run in testing mode : details about models, decisions and time spend in operations.
-#add_definitions(-DTEST)
+add_definitions(-DTEST)
 
 #Run in Subkernel testing mode : details about time spend in subkernel operations.
 #add_definitions(-DSTEST)

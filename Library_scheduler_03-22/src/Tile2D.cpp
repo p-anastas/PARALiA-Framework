@@ -18,7 +18,7 @@ template<typename dtype>  Tile2D<dtype>::Tile2D(void * in_addr, int in_dim1, int
 {
   short lvl = 3;
 
-  #ifdef DEBUG
+  #ifdef DDEBUG
     lprintf(lvl-1, "|-----> Tile2D(%d)::Tile2D(in_addr(%d),%d,%d,%d, %d, %d)\n",
       Tile2D_num, CoCoGetPtrLoc(in_addr), in_dim1, in_dim2, in_ldim, inGrid1, inGrid2);
   #endif
@@ -39,7 +39,6 @@ template<typename dtype>  Tile2D<dtype>::Tile2D(void * in_addr, int in_dim1, int
       StoreBlock[iloc] = init_loc_block_p;
       StoreBlock[iloc]->Adrs = in_addr;
       StoreBlock[iloc]->set_owner((void**)&StoreBlock[iloc],false);
-      StoreBlock[iloc]->set_state(NATIVE,false);
       ldim[iloc] = in_ldim;
       StoreBlock[iloc]->Available->record_to_queue(NULL);
     }
@@ -54,7 +53,7 @@ template<typename dtype>  Tile2D<dtype>::Tile2D(void * in_addr, int in_dim1, int
   RW_lock_holders = 0;
 
   RW_master = init_loc;
-  #ifdef DEBUG
+  #ifdef DDEBUG
   	lprintf(lvl-1, "<-----|\n");
   #endif
 }
@@ -81,7 +80,7 @@ template<typename dtype> short Tile2D<dtype>::isLocked(){
 
 template<typename dtype> short Tile2D<dtype>::getClosestReadLoc(short dev_id_in){
   short lvl = 5;
-#ifdef DEBUG
+#ifdef DDEBUG
   lprintf(lvl-1, "|-----> Tile2D(%d)::getClosestReadLoc(%d)\n", id, dev_id_in);
 #endif
   int dev_id_in_idx = idxize(dev_id_in);
@@ -104,19 +103,25 @@ template<typename dtype> short Tile2D<dtype>::getClosestReadLoc(short dev_id_in)
       }
     }
   }
-#ifdef DDEBUG
+#ifdef DEBUG
   lprintf(lvl, "|-----> Tile2D(%d)::getClosestReadLoc(%d): Selecting cached tile in loc =%d \n", id, dev_id_in, pos_min);
 #endif
   if (pos_min >= LOC_NUM) error("Tile2D(%d)::getClosestReadLoc(%d): No location found for tile - bug.", id, dev_id_in);
-  Global_Cache[pos_min]->lock();
-  if(StoreBlock[pos_min] != NULL){
-    StoreBlock[pos_min]->update_state(false);
-    state temp = StoreBlock[pos_min]->State;
-    event_status block_status = StoreBlock[pos_min]->Available->query_status();
+  //Global_Cache[pos_min]->lock();
+  CBlock_p temp_outblock = StoreBlock[pos_min];
+  if(temp_outblock != NULL){
+    temp_outblock->lock();
+    temp_outblock->update_state(true);
+    state temp = temp_outblock->State;
+    event_status block_status = temp_outblock->Available->query_status();
     if ((temp == AVAILABLE || temp == SHARABLE || temp == NATIVE) &&
     (block_status == COMPLETE || block_status == CHECKED)){
-      StoreBlock[pos_min]->add_reader();
-      Global_Cache[pos_min]->unlock();
+      temp_outblock->add_reader(true);
+      //Global_Cache[pos_min]->unlock();
+      temp_outblock->unlock();
+      #ifdef DDEBUG
+        lprintf(lvl-1, "<-----|\n");
+      #endif
       return deidxize(pos_min);
     }
     else error("Tile2D(%d)::getClosestReadLoc(%d): pos_min = %d selected,\

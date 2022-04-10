@@ -45,7 +45,7 @@ template<typename dtype> void Asset1D<dtype>::InitTileMap(int T, Cache_p* init_l
     current_ctr = itt;
     tile_addr = adrs + itt*T*inc;
     Tile_map[current_ctr] = new Tile1D<dtype>(tile_addr, Ttmp, inc, itt,
-      init_loc_cache_p[CoCoGetPtrLoc(adrs)]->assign_Cblock(true));
+      init_loc_cache_p[CoCoGetPtrLoc(adrs)]->assign_Cblock(NATIVE, true));
   }
   #ifdef DEBUG
   	lprintf(lvl-1, "<-----|\n");

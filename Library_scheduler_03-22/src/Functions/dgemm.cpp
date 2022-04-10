@@ -418,12 +418,26 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 
 	size_t T = autotuned_vals->T;
 
-	for(int cache_loc = 0; cache_loc < LOC_NUM; cache_loc++)
-		Global_Cache[cache_loc] = new Cache(deidxize(cache_loc),
-			(A_asset->dim1/T + ((A_asset->dim1%T)? 1 : 0))* (A_asset->dim2/T + ((A_asset->dim2%T)? 1 : 0)) +
-			(B_asset->dim1/T + ((B_asset->dim1%T)? 1 : 0))* (B_asset->dim2/T + ((B_asset->dim2%T)? 1 : 0)) +
-			(C_asset->dim1/T + ((C_asset->dim1%T)? 1 : 0))* (C_asset->dim2/T + ((C_asset->dim2%T)? 1 : 0)),
-			T*T*sizeof(VALUE_TYPE));
+	long long Block_num = (A_asset->dim1/T + ((A_asset->dim1%T)? 1 : 0))* (A_asset->dim2/T + ((A_asset->dim2%T)? 1 : 0)) +
+				(B_asset->dim1/T + ((B_asset->dim1%T)? 1 : 0))* (B_asset->dim2/T + ((B_asset->dim2%T)? 1 : 0)) +
+				(C_asset->dim1/T + ((C_asset->dim1%T)? 1 : 0))* (C_asset->dim2/T + ((C_asset->dim2%T)? 1 : 0));
+	long long Block_sz = 	T*T*sizeof(VALUE_TYPE);
+
+	for(int cache_loc = 0; cache_loc < LOC_NUM; cache_loc++){
+#ifdef BUFFER_REUSE_ENABLE
+	if(Global_Cache[cache_loc] == NULL) Global_Cache[cache_loc] = new Cache(deidxize(cache_loc), Block_num, Block_sz);
+	else if (Global_Cache[cache_loc]->BlockSize != Block_sz || Global_Cache[cache_loc]->BlockNum < Block_num){
+		delete Global_Cache[cache_loc];
+		Global_Cache[cache_loc] = new Cache(deidxize(cache_loc), Block_num, Block_sz);
+	}
+	else{
+		;
+	}
+#else
+		if(Global_Cache[cache_loc]!= NULL) error("CoCopeLiaDgemm: Global_Cache[%d] was not NULL with reuse disabled\n", cache_loc);
+		Global_Cache[cache_loc] = new Cache(deidxize(cache_loc), Block_num, Block_sz);
+#endif
+	}
 
 	/// TODO: Split each asset to Tiles
 	A_asset->InitTileMap(T, T, Global_Cache);
@@ -575,7 +589,7 @@ if(!reuse_model_flag){
 		Global_Cache[i] = NULL;
 	}
 #else
-	for(int i=0; i<LOC_NUM;i++) Global_Cache[i]->reset(true);
+	for(int i=0; i<LOC_NUM;i++) Global_Cache[i]->reset(false,true);
 #endif
 
 #ifndef BACKEND_RES_REUSE_ENABLE
