@@ -62,6 +62,9 @@ class Tile2D
 		int dim1, dim2;
 		int R_flag, W_flag, W_total, RW_master;
 		int RW_lock, RW_lock_holders;
+#ifdef ENABLE_PARALLEL_BACKEND
+		int RW_Master_backend_ctr;
+#endif
 
 		CBlock_p WriteBackBlock;
 		CBlock_p StoreBlock[LOC_NUM];

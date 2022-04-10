@@ -378,7 +378,23 @@ void Subkernel::run_operation(){
 #endif
 	short run_dev_id_idx = idxize(run_dev_id);
 #ifdef ENABLE_PARALLEL_BACKEND
-	short RW_parallel_backend_ctr = exec_queue[run_dev_id_idx]->request_parallel_backend();
+	short RW_parallel_backend_ctr = -42;
+	if(is_RW_lock_master(run_dev_id) > 1){
+		for (int j = 0; j < TileNum; j++){ /// Method only works for max 1 W(rite) Tile.
+			if (TileDimlist[j] == 1){
+					Tile1D<VALUE_TYPE>* tmp = (Tile1D<VALUE_TYPE>*) TileList[j];
+					if(tmp->W_flag) RW_parallel_backend_ctr = tmp->RW_Master_backend_ctr;
+			}
+			else if (TileDimlist[j] == 2){
+					Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) TileList[j];
+					if(tmp->W_flag) RW_parallel_backend_ctr = tmp->RW_Master_backend_ctr;
+			}
+		}
+		exec_queue[run_dev_id_idx]->set_parallel_backend(RW_parallel_backend_ctr);
+	}
+	else{
+		RW_parallel_backend_ctr = exec_queue[run_dev_id_idx]->request_parallel_backend();
+	}
 #endif
 	for (int j = 0; j < TileNum; j++){
 		if (TileDimlist[j] == 1){
@@ -387,6 +403,9 @@ void Subkernel::run_operation(){
 					error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d])::run_operation: Tile(j=%d) Storeblock is NULL\n",
 						run_dev_id, id, tmp->id, tmp->GridId, j);
 				if(tmp->R_flag) exec_queue[run_dev_id_idx]->wait_for_event(tmp->StoreBlock[run_dev_id_idx]->Available);
+				#ifdef ENABLE_PARALLEL_BACKEND
+				if(tmp->W_flag) tmp->RW_Master_backend_ctr = RW_parallel_backend_ctr;
+				#endif
 		}
 		else if (TileDimlist[j] == 2){
 				Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) TileList[j];
@@ -394,6 +413,9 @@ void Subkernel::run_operation(){
 					error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::run_operation: Tile(j=%d) Storeblock is NULL\n",
 						run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2, j);
 				if(tmp->R_flag) exec_queue[run_dev_id_idx]->wait_for_event(tmp->StoreBlock[run_dev_id_idx]->Available);
+				#ifdef ENABLE_PARALLEL_BACKEND
+				if(tmp->W_flag) tmp->RW_Master_backend_ctr = RW_parallel_backend_ctr;
+				#endif
 		}
 	}
 #ifdef STEST
@@ -819,18 +841,47 @@ short Subkernel::no_locked_tiles(){
 	return 1;
 }
 
+/// Value returned only works for max 1 W(rite) Tile - no problem for most BLAS. Bool check holds for any.
 short Subkernel::is_RW_lock_master(short dev_id){
+	short RW_lock_Hos = 0;
 	for (int j = 0; j < TileNum; j++){
 		if (TileDimlist[j] == 1){
 			Tile1D<VALUE_TYPE>* tmp = (Tile1D<VALUE_TYPE>*) TileList[j];
 			if(tmp->W_flag && /*tmp->W_total != tmp->W_flag &&*/ tmp->RW_lock!=dev_id) return 0;
+			else if(tmp->W_flag && tmp->RW_lock==dev_id) RW_lock_Hos = tmp->RW_lock_holders;
 		}
 		else if (TileDimlist[j] == 2){
 			Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) TileList[j];
 			if(tmp->W_flag && /*tmp->W_total != tmp->W_flag &&*/ tmp->RW_lock!=dev_id) return 0;
+			else if(tmp->W_flag && tmp->RW_lock==dev_id) RW_lock_Hos = tmp->RW_lock_holders;
 		}
 	}
-	return 1;
+	return RW_lock_Hos;
+}
+
+
+double Subkernel::opt_fetch_cost_pen_multifetch(short dev_id){
+	double fetch_cost = 0;
+	for (int j = 0; j < TileNum; j++){
+		if (TileDimlist[j] == 1){
+			Tile1D<VALUE_TYPE>* tmp = (Tile1D<VALUE_TYPE>*) TileList[j];
+			error("not implemented\n");
+		}
+		else if (TileDimlist[j] == 2){
+			Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) TileList[j];
+			double temp_fetch_cost = tmp->getMinLinkCost(dev_id);
+			for(int loc_idx = 0; loc_idx < LOC_NUM; loc_idx++){
+				CBlock_p curr_block = tmp->StoreBlock[loc_idx];
+				if(curr_block != NULL && curr_block->Available->query_status() == RECORDED){
+					fetch_cost+=temp_fetch_cost*MULTIFETCH_PENALTY;
+					if (deidxize(loc_idx) == dev_id) warning("opt_fetch_cost_pen_multifetch(dev_id=%d, TiledIdx=%d):\
+						Already fetching in dev_id (?)\n", dev_id, j);
+				}
+			}
+			fetch_cost+= temp_fetch_cost;
+		}
+	}
+	return fetch_cost;
 }
 
 /// TODO: To be extra safe, not sure it is required - might slowdown a lot
@@ -850,29 +901,30 @@ Subkernel* SubkernelSelectNoWriteShare(short dev_id, Subkernel** Subkernel_list,
 	return curr_sk;
 }
 
-/*
-double Subkernel::opt_fetch_cost_pen_multifetch(short dev_id){
-	double fetch_cost = 0;
-	for (int j = 0; j < TileNum; j++){
-		if (TileDimlist[j] == 1){
-			Tile1D<VALUE_TYPE>* tmp = (Tile1D<VALUE_TYPE>*) TileList[j];
-			error("not implemented\n");
-		}
-		else if (TileDimlist[j] == 2){
-			Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) TileList[j];
-			double temp_fetch_cost = tmp->getMinLinkCost(dev_id);
-			for(int loc_idx = 0; loc_idx < LOC_NUM; loc_idx++){
-				if(tmp->CacheLocId[loc_idx] > -1 && CacheGetBlockStateNoLock(deidxize(loc_idx), tmp->CacheLocId[loc_idx]) == FETCHING){
-					fetch_cost+=temp_fetch_cost*MULTIFETCH_PENALTY;
-					if (deidxize(loc_idx) == dev_id) warning("opt_fetch_cost_pen_multifetch(dev_id=%d, TiledIdx=%d): Already fetching in dev_id (?)\n");
-				}
+Subkernel* SubkernelSelectMinimizeFetchWritePenaltyMultiFetchPenalty(short dev_id, Subkernel** Subkernel_list, long Subkernel_list_len){
+	while(__sync_lock_test_and_set (&SubkernelSelectLock, 1));
+	Subkernel* curr_sk = NULL;
+	long sk_idx;
+	double min_fetch_cost = 100000000;
+	Subkernel* min_fetch_cost_sk = NULL;
+	for (sk_idx = 0; sk_idx < Subkernel_list_len; sk_idx++){
+		curr_sk = Subkernel_list[sk_idx];
+		if (curr_sk->run_dev_id==-42 &&
+				(curr_sk->no_locked_tiles() || curr_sk->is_RW_lock_master(dev_id))) {// || curr_sk->is_RW_master(dev_id)){
+			double fetch_cost = curr_sk->opt_fetch_cost_pen_multifetch(dev_id);
+			if(!curr_sk->no_locked_tiles()) fetch_cost+=WRITE_COST_PEPENALTY*fetch_cost;
+			if(fetch_cost < min_fetch_cost){
+				min_fetch_cost = fetch_cost;
+				min_fetch_cost_sk = curr_sk;
 			}
-			fetch_cost+= temp_fetch_cost;
 		}
 	}
-	return fetch_cost;
+	if(min_fetch_cost_sk) min_fetch_cost_sk->prepare_launch(dev_id);
+	__sync_lock_release(&SubkernelSelectLock);
+	return min_fetch_cost_sk;
 }
 
+/*
 double Subkernel::opt_fetch_cost(short dev_id){
 	double fetch_cost = 0;
 	for (int j = 0; j < TileNum; j++){
@@ -930,27 +982,6 @@ Subkernel* SubkernelSelectMinimizeFetchWritePenalty(short dev_id, Subkernel** Su
 		curr_sk = Subkernel_list[sk_idx];
 		if (curr_sk->no_locked_tiles()){// || curr_sk->is_RW_master(dev_id)){
 			double fetch_cost = curr_sk->opt_fetch_cost(dev_id);
-			if(!curr_sk->is_RW_master(dev_id)) fetch_cost+=WRITE_COST_PEPENALTY*fetch_cost;
-			if(fetch_cost < min_fetch_cost){
-				min_fetch_cost = fetch_cost;
-				min_fetch_cost_sk = curr_sk;
-			}
-		}
-	}
-	if(!min_fetch_cost_sk) return NULL;
-	min_fetch_cost_sk->prepare_launch();
-	return min_fetch_cost_sk;
-}
-
-Subkernel* SubkernelSelectMinimizeFetchWritePenaltyMultiFetchPenalty(short dev_id, Subkernel** Subkernel_list, long Subkernel_list_len){
-	Subkernel* curr_sk = NULL;
-	long sk_idx;
-	double min_fetch_cost = 100000000;
-	Subkernel* min_fetch_cost_sk = NULL;
-	for (sk_idx = 0; sk_idx < Subkernel_list_len; sk_idx++){
-		curr_sk = Subkernel_list[sk_idx];
-		if (curr_sk->no_locked_tiles()){// || curr_sk->is_RW_master(dev_id)){
-			double fetch_cost = curr_sk->opt_fetch_cost_pen_multifetch(dev_id);
 			if(!curr_sk->is_RW_master(dev_id)) fetch_cost+=WRITE_COST_PEPENALTY*fetch_cost;
 			if(fetch_cost < min_fetch_cost){
 				min_fetch_cost = fetch_cost;

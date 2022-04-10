@@ -21,6 +21,7 @@ class Subkernel
 		short TileNum, *TileDimlist;
 		void** TileList;
 		Subkernel* prev, * next;
+
 #ifdef STEST
 		Event_timer_p input_timer[3], output_timer[3], operation_timer;
 		double request_data_in_ts, request_tile_in_ts[3], run_operation_in_ts, writeback_data_in_ts;

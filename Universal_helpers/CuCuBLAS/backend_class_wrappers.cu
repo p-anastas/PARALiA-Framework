@@ -225,6 +225,21 @@ int CommandQueue::request_parallel_backend()
 #endif
 	return tmp_backend_ctr;
 }
+
+void CommandQueue::set_parallel_backend(int backend_ctr_in)
+{
+#ifdef UDDEBUG
+	lprintf(lvl, "[dev_id=%3d] |-----> CommandQueue::set_parallel_backend(%d)\n", dev_id, backend_ctr_in);
+#endif
+	get_lock();
+	backend_ctr = backend_ctr_in;
+	release_lock();
+#ifdef UDDEBUG
+	lprintf(lvl, "[dev_id=%3d] <-----| CommandQueue::set_parallel_backend(%d)\n", dev_id, backend_ctr);
+#endif
+	return;
+}
+
 #endif
 
 /*****************************************************/
