@@ -20,15 +20,15 @@ add_definitions(-DBACKEND_RES_REUSE_ENABLE)
 add_definitions(-DBUFFER_REUSE_ENABLE)
 
 ## Enable lock-free versions of event & Queue management in Universal_helpers
-#add_definitions(-DUNIHELPER_LOCKFREE_ENABLE)
+add_definitions(-DUNIHELPER_LOCKFREE_ENABLE)
 
 ## Enable Locking with mutexes instead of busy-waiting
 #add_definitions(-DENABLE_MUTEX_LOCKING)
 
 ## Enable Running multiple backend operations in parallel for each queue
-#add_definitions(-DENABLE_PARALLEL_BACKEND)
+add_definitions(-DENABLE_PARALLEL_BACKEND)
 ## The maximum allowed parallel backend operations per queue
-#add_definitions(-DMAX_BACKEND_L=4)
+add_definitions(-DMAX_BACKEND_L=4)
 
 ## Enable overlapping Send & recv Communication
 add_definitions(-DENABLE_SEND_RECV_OVERLAP)
@@ -45,9 +45,9 @@ if (${SCHEDULE_TYPE} EQUAL 0)
   ## Define which subkernel distribution to use
   #add_definitions(-DDISTRIBUTION="ROUND-ROBIN")
   #add_definitions(-DDISTRIBUTION="SPLIT-NAIVE")
-  add_definitions(-DDISTRIBUTION="SPLIT-CHUNKS-ROBIN")
+  #add_definitions(-DDISTRIBUTION="SPLIT-CHUNKS-ROBIN")
   #add_definitions(-DDISTRIBUTION="SPLIT-CHUNKS-ROBIN-REVERSE")
-  #add_definitions(-DDISTRIBUTION="2D-BLOCK-CYCLIC")
+  add_definitions(-DDISTRIBUTION="2D-BLOCK-CYCLIC")
 elseif(${SCHEDULE_TYPE} EQUAL 1)
   add_definitions(-DRUNTIME_SCHEDULER_VERSION)
 else()
@@ -55,14 +55,14 @@ endif()
 
 ## Define which subkernel selection heuristic to use
 #add_definitions(-DSELECT_HEURISTIC="NAIVE")
-add_definitions(-DSELECT_HEURISTIC="NAIVE-NO-WRITE-SHARE")
+#add_definitions(-DSELECT_HEURISTIC="NAIVE-NO-WRITE-SHARE")
 #add_definitions(-DSELECT_HEURISTIC="MINIMIZE-FETCH")
 #add_definitions(-DSELECT_HEURISTIC="MINIMIZE-FETCH-WRITE-PENALTY")
-#add_definitions(-DSELECT_HEURISTIC="MINIMIZE-FETCH-WRITE-PENALTY-MULTIFETCH-PENALTY")
+add_definitions(-DSELECT_HEURISTIC="MINIMIZE-FETCH-WRITE-PENALTY-MULTIFETCH-PENALTY")
 
 # Extra distribution-related values
-add_definitions(-DWRITE_COST_PEPENALTY=1)
-add_definitions(-DMULTIFETCH_PENALTY=1)
+add_definitions(-DWRITE_COST_PEPENALTY=0.1)
+add_definitions(-DMULTIFETCH_PENALTY=0.2)
 
 ## Define at which percentage to normalize float values for similar data (e.g. costs, splits etc) to avoid empirical errors leaking into decisions
 ## For example see Autotuning_runtime->CoCoPeLiaModel->CoCoPeLiaNormalizeSplit
@@ -72,7 +72,7 @@ add_definitions(-DNORMALIZE_NEAR_SPLIT_LIMIT=0.05)
 add_definitions(-DTEST)
 
 #Run in Subkernel testing mode : details about time spend in subkernel operations.
-#add_definitions(-DSTEST)
+add_definitions(-DSTEST)
 
 #Run in debug mode, which includes detailed function calls and info for error-checking
 #add_definitions(-DDEBUG)
