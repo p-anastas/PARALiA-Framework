@@ -377,7 +377,7 @@ void Subkernel::run_operation(){
 		run_operation_in_ts = csecond();
 #endif
 	short run_dev_id_idx = idxize(run_dev_id);
-	
+
 #ifdef ENABLE_PARALLEL_BACKEND
 	short RW_parallel_backend_ctr = -42;
 	if(is_RW_lock_master(run_dev_id) > 1){
@@ -997,6 +997,6 @@ Subkernel* SubkernelSelectMinimizeFetchWritePenalty(short dev_id, Subkernel** Su
 */
 
 void CoCopeLiaDevCacheFree(short dev_id){
-	delete Global_Cache[dev_id];
-	Global_Cache[dev_id] = NULL;
+	delete Global_Cache[idxize(dev_id)];
+	Global_Cache[idxize(dev_id)] = NULL;
 }

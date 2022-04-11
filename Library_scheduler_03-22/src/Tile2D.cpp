@@ -129,6 +129,7 @@ template<typename dtype> short Tile2D<dtype>::getClosestReadLoc(short dev_id_in)
   }
   else error("Tile2D(%d)::getClosestReadLoc(%d): pos_min = %d selected,\
     but StoreBlock[pos_min] was NULL after locking its cache...fixme\n", id, dev_id_in, pos_min);
+  return -666;
 }
 
 template<typename dtype> double Tile2D<dtype>::getMinLinkCost(short dev_id_in){
@@ -136,7 +137,7 @@ template<typename dtype> double Tile2D<dtype>::getMinLinkCost(short dev_id_in){
   int dev_id_in_idx = idxize(dev_id_in);
   double link_cost_min = 10000000;
   for (int pos =0; pos < LOC_NUM; pos++){
-    if(StoreBlock[pos] == NULL) continue; 
+    if(StoreBlock[pos] == NULL) continue;
     StoreBlock[pos]->update_state(false);
     state temp = StoreBlock[pos]->State;
     if (temp == AVAILABLE || temp == SHARABLE || temp == NATIVE){

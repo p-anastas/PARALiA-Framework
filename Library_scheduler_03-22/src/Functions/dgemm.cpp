@@ -418,7 +418,7 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 
 	size_t T = autotuned_vals->T;
 
-	long long Block_num = (A_asset->dim1/T + ((A_asset->dim1%T)? 1 : 0))* (A_asset->dim2/T + ((A_asset->dim2%T)? 1 : 0)) +
+	int Block_num = (A_asset->dim1/T + ((A_asset->dim1%T)? 1 : 0))* (A_asset->dim2/T + ((A_asset->dim2%T)? 1 : 0)) +
 				(B_asset->dim1/T + ((B_asset->dim1%T)? 1 : 0))* (B_asset->dim2/T + ((B_asset->dim2%T)? 1 : 0)) +
 				(C_asset->dim1/T + ((C_asset->dim1%T)? 1 : 0))* (C_asset->dim2/T + ((C_asset->dim2%T)? 1 : 0));
 	long long Block_sz = 	T*T*sizeof(VALUE_TYPE);
@@ -427,6 +427,13 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 #ifdef BUFFER_REUSE_ENABLE
 	if(Global_Cache[cache_loc] == NULL) Global_Cache[cache_loc] = new Cache(deidxize(cache_loc), Block_num, Block_sz);
 	else if (Global_Cache[cache_loc]->BlockSize != Block_sz || Global_Cache[cache_loc]->BlockNum < Block_num){
+#ifdef DEBUG
+	lprintf(lvl, "CoCopeLiaDgemm: Previous Cache smaller than requested:\
+	Global_Cache[%d]->BlockSize=%lld vs Block_sz = %lld,\
+	Global_Cache[%d]->BlockNum=%d vs Block_num = %d\n",
+	cache_loc, Global_Cache[cache_loc]->BlockSize, Block_sz,
+	cache_loc, Global_Cache[cache_loc]->BlockNum, Block_num);
+#endif
 		delete Global_Cache[cache_loc];
 		Global_Cache[cache_loc] = new Cache(deidxize(cache_loc), Block_num, Block_sz);
 	}
