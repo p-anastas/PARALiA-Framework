@@ -159,14 +159,14 @@ void Subkernel::request_tile(short TileIdx){
 				CBlock_wrap_p wrap_inval = NULL;
 				wrap_inval = (CBlock_wrap_p) malloc (sizeof(struct CBlock_wrap));
 				wrap_inval->CBlock = tmp->StoreBlock[FetchFromId_idx];
-				wrap_inval->lockfree = true;
+				wrap_inval->lockfree = false;
 				transfer_queues[run_dev_id_idx][FetchFromId_idx]->add_host_func((void*)&CBlock_INV_wrap, (void*) wrap_inval);
 			//}
 		}
 		else{
 			wrap_read = (CBlock_wrap_p) malloc (sizeof(struct CBlock_wrap));
 			wrap_read->CBlock = tmp->StoreBlock[FetchFromId_idx];
-			wrap_read->lockfree = true;
+			wrap_read->lockfree = false;
 			transfer_queues[run_dev_id_idx][FetchFromId_idx]->add_host_func((void*)&CBlock_RR_wrap, (void*) wrap_read);
 		}
 		tmp->StoreBlock[run_dev_id_idx]->Available->record_to_queue(transfer_queues[run_dev_id_idx][FetchFromId_idx]);
@@ -212,14 +212,14 @@ void Subkernel::request_tile(short TileIdx){
 				CBlock_wrap_p wrap_inval = NULL;
 				wrap_inval = (CBlock_wrap_p) malloc (sizeof(struct CBlock_wrap));
 				wrap_inval->CBlock = tmp->StoreBlock[FetchFromId_idx];
-				wrap_inval->lockfree = true;
+				wrap_inval->lockfree = false;
 				transfer_queues[run_dev_id_idx][FetchFromId_idx]->add_host_func((void*)&CBlock_INV_wrap, (void*) wrap_inval);
 			//}
 		}
 		else{
 			wrap_read = (CBlock_wrap_p) malloc (sizeof(struct CBlock_wrap));
 			wrap_read->CBlock = tmp->StoreBlock[FetchFromId_idx];
-			wrap_read->lockfree = true;
+			wrap_read->lockfree = false;
 			transfer_queues[run_dev_id_idx][FetchFromId_idx]->add_host_func((void*)&CBlock_RR_wrap, (void*) wrap_read);
 		}
 		tmp->StoreBlock[run_dev_id_idx]->Available->record_to_queue(transfer_queues[run_dev_id_idx][FetchFromId_idx]);
@@ -255,7 +255,7 @@ void Subkernel::request_data(){
 				if(tmp->W_flag) new_block_state = EXCLUSIVE;
 				else new_block_state = SHARABLE;
 				tmp->StoreBlock[run_dev_id_idx] = Global_Cache[run_dev_id_idx]->assign_Cblock(new_block_state,false);
-				tmp->StoreBlock[run_dev_id_idx]->set_owner((void**)&tmp->StoreBlock[run_dev_id_idx],true);
+				tmp->StoreBlock[run_dev_id_idx]->set_owner((void**)&tmp->StoreBlock[run_dev_id_idx],false);
 #ifdef CDEBUG
 		lprintf(lvl, "Subkernel(dev=%d,id=%d)-Tile(%d.[%d]): Asigned buffer Block in GPU(%d)= %d\n",
 					run_dev_id, id, tmp->id, tmp->GridId, run_dev_id, tmp->StoreBlock[run_dev_id_idx]->id);
@@ -304,7 +304,7 @@ void Subkernel::request_data(){
 				if(tmp->W_flag) new_block_state = EXCLUSIVE;
 				else new_block_state = SHARABLE;
 				tmp->StoreBlock[run_dev_id_idx] = Global_Cache[run_dev_id_idx]->assign_Cblock(new_block_state,false);
-				tmp->StoreBlock[run_dev_id_idx]->set_owner((void**)&tmp->StoreBlock[run_dev_id_idx],true);
+				tmp->StoreBlock[run_dev_id_idx]->set_owner((void**)&tmp->StoreBlock[run_dev_id_idx],false);
 #ifdef CDEBUG
 		lprintf(lvl, "Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d]): Asigned buffer Block in GPU(%d)= %d\n",
 					run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2, run_dev_id, tmp->StoreBlock[run_dev_id_idx]->id);
@@ -439,7 +439,7 @@ void Subkernel::run_operation(){
 			CBlock_wrap_p wrap_oper = NULL;
 			wrap_oper = (CBlock_wrap_p) malloc (sizeof(struct CBlock_wrap));
 			wrap_oper->CBlock = tmp->StoreBlock[run_dev_id_idx];
-			wrap_oper->lockfree = true;
+			wrap_oper->lockfree = false;
 			if(tmp->W_flag){
 				exec_queue[run_dev_id_idx]->add_host_func((void*)&CBlock_RW_wrap, (void*) wrap_oper);
 				Ptr_int_p wrapped_op = (Ptr_int_p) malloc(sizeof(struct Ptr_int));
@@ -462,7 +462,7 @@ void Subkernel::run_operation(){
 			CBlock_wrap_p wrap_oper = NULL;
 			wrap_oper = (CBlock_wrap_p) malloc (sizeof(struct CBlock_wrap));
 			wrap_oper->CBlock = tmp->StoreBlock[run_dev_id_idx];
-			wrap_oper->lockfree = true;
+			wrap_oper->lockfree = false;
 			if(tmp->W_flag){
 				exec_queue[run_dev_id_idx]->add_host_func((void*)&CBlock_RW_wrap, (void*) wrap_oper);
 				Ptr_int_p wrapped_op = (Ptr_int_p) malloc(sizeof(struct Ptr_int));
@@ -540,7 +540,7 @@ void Subkernel::writeback_data(){
 				CBlock_wrap_p wrap_inval = NULL;
 				wrap_inval = (CBlock_wrap_p) malloc (sizeof(struct CBlock_wrap));
 				wrap_inval->CBlock = tmp->StoreBlock[run_dev_id_idx];
-				wrap_inval->lockfree = true;
+				wrap_inval->lockfree = false;
 				transfer_queues[Writeback_id_idx][run_dev_id_idx]->add_host_func((void*)&CBlock_INV_wrap, (void*) wrap_inval);
 			}
 		}
@@ -583,7 +583,7 @@ void Subkernel::writeback_data(){
 				CBlock_wrap_p wrap_inval = NULL;
 				wrap_inval = (CBlock_wrap_p) malloc (sizeof(struct CBlock_wrap));
 				wrap_inval->CBlock = tmp->StoreBlock[run_dev_id_idx];
-				wrap_inval->lockfree = true;
+				wrap_inval->lockfree = false;
 				transfer_queues[Writeback_id_idx][run_dev_id_idx]->add_host_func((void*)&CBlock_INV_wrap, (void*) wrap_inval);
 			}
 		}
