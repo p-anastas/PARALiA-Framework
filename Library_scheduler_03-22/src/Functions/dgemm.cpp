@@ -275,12 +275,12 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 			request_bytes_out+= gemm_subkernel_data->SubkernelListDev[keri]->bytes_out[idx];
 			writeback_t_ms+= gemm_subkernel_data->SubkernelListDev[keri]->output_timer[idx]->sync_get_time();
 		}
-		lprintf(lvl, "Subkernel(dev=%d,id=%d):\nRequest_t(%.2lf->%.2lf) total = %lf ms (%3.3lf Gb\s):\
-			\nrequest_tile[%d](%.2lf->%.2lf) = %lf ms (%3.3lf Gb\s)\
-			\nrequest_tile[%d](%.2lf->%.2lf) = %lf ms (%3.3lf Gb\s)\
-			\nrequest_tile[%d](%.2lf->%.2lf) = %lf ms (%3.3lf Gb\s)\
-			\nexec_t(%.2lf->%.2lf) = %lf ms  (%3.3lf Gflops\s)\
-			\nwriteback_t(%.2lf->%.2lf) = %lf ms (%3.3lf Gb\s)\n\n",
+		lprintf(lvl, "Subkernel(dev=%d,id=%d):\nRequest_t(%.1lf->%.1lf) total = %.1lf ms (%3.1lf Gb\s):\
+			\nrequest_tile[%d](%.1lf->%.1lf) = %.1lf ms (%3.1lf Gb\s)\
+			\nrequest_tile[%d](%.1lf->%.1lf) = %.1lf ms (%3.1lf Gb\s)\
+			\nrequest_tile[%d](%.1lf->%.1lf) = %.1lf ms (%3.1lf Gb\s)\
+			\nexec_t(%.1lf->%.1lf) = %.1lf ms  (%3.1lf Gflops\s)\
+			\nwriteback_t(%.1lf->%.1lf) = %.1lf ms (%3.1lf Gb\s)\n\n",
 			gemm_subkernel_data->SubkernelListDev[keri]->run_dev_id, gemm_subkernel_data->SubkernelListDev[keri]->id,
 			(gemm_subkernel_data->SubkernelListDev[keri]->request_data_in_ts-gemm_entry_ts)*1000,
 			(gemm_subkernel_data->SubkernelListDev[keri]->request_data_out_ts-gemm_entry_ts)*1000,

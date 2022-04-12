@@ -291,7 +291,7 @@ void Subkernel::request_data(){
 #endif
 			}
 			else{
-				tmp->StoreBlock[run_dev_id_idx]->Available->sync_barrier(); // Is this needed?
+				//tmp->StoreBlock[run_dev_id_idx]->Available->sync_barrier(); // Is this needed?
 				if (tmp->W_flag) tmp->StoreBlock[run_dev_id_idx]->add_writer();
 				else tmp->StoreBlock[run_dev_id_idx]->add_reader();
 			}
@@ -340,7 +340,7 @@ void Subkernel::request_data(){
 #endif
 			}
 			else{
-				tmp->StoreBlock[run_dev_id_idx]->Available->sync_barrier(); // Is this needed?
+				//tmp->StoreBlock[run_dev_id_idx]->Available->sync_barrier(); // Is this needed?
 				if (tmp->W_flag) tmp->StoreBlock[run_dev_id_idx]->add_writer();
 				else tmp->StoreBlock[run_dev_id_idx]->add_reader();
 			}

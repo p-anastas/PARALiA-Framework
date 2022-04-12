@@ -94,6 +94,8 @@ typedef struct Ptr_and_parent{
 }* Ptr_and_parent_p;
 void CoCoSetPtr(void* wrapped_ptr_and_parent);
 
+void CoCoSetTimerAsync(void* wrapped_timer_Ptr);
+
 void CoCoFreeAllocAsync(void* backend_data);
 
 void cublas_wrap_daxpy(void* backend_data, void* queue_wrap_p);

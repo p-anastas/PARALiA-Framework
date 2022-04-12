@@ -66,6 +66,14 @@ void CoCoSetPtr(void* wrapped_ptr_and_parent){
 #endif
 }
 
+void CoCoSetTimerAsync(void* wrapped_timer_Ptr){
+  double* timer = (double*) wrapped_timer_Ptr;
+  *timer = csecond();
+#ifdef DEBUG
+  lprintf(6, "CoCoSetTimerAsync(%p) ran succesfully.\n", wrapped_timer_Ptr);
+#endif
+}
+
 void CoCoFreeAllocAsync(void* backend_data){
   free(backend_data);
 }
