@@ -23,9 +23,10 @@ class Subkernel
 		Subkernel* prev, * next;
 
 #ifdef STEST
-		Event_timer_p input_timer[3], output_timer[3], operation_timer;
-		double request_data_in_ts, request_tile_in_ts[3], run_operation_in_ts, writeback_data_in_ts;
-		double request_data_out_ts, request_tile_out_ts[3], run_operation_out_ts, writeback_data_out_ts;
+		double req_in_ts = 0, req_out_ts = 0;
+		double reqT_fire_ts[3] = {0}, reqT_start_ts[3] = {0}, reqT_end_ts[3] = {0};
+		double op_fire_ts = 0, op_start_ts = 0, op_end_ts = 0;
+		double wb_fire_ts = 0, wb_start_ts = 0, wb_end_ts = 0;
 		long long bytes_in[3] = {0}, bytes_out[3] = {0}, flops = 0;
 #endif
 		Event* operation_complete;
@@ -73,5 +74,9 @@ Subkernel* SubkernelSelectMinimizeFetchWritePenalty(short dev_id, Subkernel** Su
 Subkernel* SubkernelSelectMinimizeFetchWritePenaltyMultiFetchPenalty(short dev_id, Subkernel** Subkernel_list, long Subkernel_list_len);
 
 void sync_request_paired(short dev_id);
+
+#ifdef STEST
+void STEST_print_SK(kernel_pthread_wrap_p* thread_dev_data_list, double routine_entry_ts, short dev_num);
+#endif
 
 #endif

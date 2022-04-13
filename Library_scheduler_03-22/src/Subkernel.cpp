@@ -39,24 +39,10 @@ Subkernel::~Subkernel(){
 	free(TileList);
 	free(operation_params);
 	delete operation_complete;
-#ifdef STEST
-	for (int idx = 0; idx < TileNum; idx++){
-		delete input_timer[idx];
-		delete output_timer[idx];
-	}
-	delete operation_timer;
-#endif
 }
 
 void Subkernel::init_events(){
 	operation_complete = new Event(run_dev_id);
-#ifdef STEST
-	for (int idx = 0; idx < TileNum; idx++){
-		input_timer[idx] = new Event_timer(run_dev_id);
-		output_timer[idx] = new Event_timer(run_dev_id);
-	}
-	operation_timer = new Event_timer(run_dev_id);
-#endif
 }
 
 void Subkernel::sync_request_data_RONLY(){
@@ -114,7 +100,7 @@ void* request_tile_pthread_wrap(void* wrapped_tile_req){
 
 void Subkernel::request_tile(short TileIdx){
 	#ifdef STEST
-			request_tile_in_ts[TileIdx] = csecond();
+			reqT_fire_ts[TileIdx] = csecond();
 	#endif
 	short lvl = 5;
 	short run_dev_id_idx = idxize(run_dev_id);
@@ -145,13 +131,13 @@ void Subkernel::request_tile(short TileIdx){
 
 
 #ifdef STEST
-		input_timer[TileIdx]->start_point(transfer_queues[run_dev_id_idx][FetchFromId_idx]);
+		transfer_queues[run_dev_id_idx][FetchFromId_idx]->add_host_func((void*)&CoCoSetTimerAsync, (void*) &reqT_start_ts[TileIdx]);
 #endif
 		CoCoMemcpyAsync(tmp->StoreBlock[run_dev_id_idx]->Adrs, tmp->StoreBlock[FetchFromId_idx]->Adrs,
 											((long long) tmp->inc[run_dev_id_idx]) * tmp->dim * tmp->dtypesize(),
 											run_dev_id, FetchFromId, transfer_queues[run_dev_id_idx][FetchFromId_idx]);
 #ifdef STEST
-		input_timer[TileIdx]->stop_point(transfer_queues[run_dev_id_idx][FetchFromId_idx]);
+		transfer_queues[run_dev_id_idx][FetchFromId_idx]->add_host_func((void*)&CoCoSetTimerAsync, (void*) &reqT_end_ts[TileIdx]);
 		bytes_in[TileIdx] = tmp->size();
 #endif
 		if(tmp->W_flag){
@@ -197,14 +183,14 @@ void Subkernel::request_tile(short TileIdx){
 				run_dev_id, id, tmp->id,  tmp->GridId1, tmp->GridId2, FetchFromId);
 
 #ifdef STEST
-		input_timer[TileIdx]->start_point(transfer_queues[run_dev_id_idx][FetchFromId_idx]);
+		transfer_queues[run_dev_id_idx][FetchFromId_idx]->add_host_func((void*)&CoCoSetTimerAsync, (void*) &reqT_start_ts[TileIdx]);
 #endif
 		CoCoMemcpy2DAsync(tmp->StoreBlock[run_dev_id_idx]->Adrs, tmp->ldim[run_dev_id_idx],
 									tmp->StoreBlock[FetchFromId_idx]->Adrs, tmp->ldim[FetchFromId_idx],
 									tmp->dim1, tmp->dim2, tmp->dtypesize(),
 									run_dev_id, FetchFromId, transfer_queues[run_dev_id_idx][FetchFromId_idx]);
 #ifdef STEST
-		input_timer[TileIdx]->stop_point(transfer_queues[run_dev_id_idx][FetchFromId_idx]);
+		transfer_queues[run_dev_id_idx][FetchFromId_idx]->add_host_func((void*)&CoCoSetTimerAsync, (void*) &reqT_end_ts[TileIdx]);
 		bytes_in[TileIdx]= tmp->size();
 #endif
 		if(tmp->W_flag){
@@ -224,9 +210,6 @@ void Subkernel::request_tile(short TileIdx){
 		}
 		tmp->StoreBlock[run_dev_id_idx]->Available->record_to_queue(transfer_queues[run_dev_id_idx][FetchFromId_idx]);
 	}
-#ifdef STEST
-		request_tile_out_ts[TileIdx] = csecond();
-#endif
 }
 
 void Subkernel::request_data(){
@@ -235,7 +218,7 @@ void Subkernel::request_data(){
 	lprintf(lvl-1, "|-----> Subkernel(dev=%d,id=%d)::request_data()\n", run_dev_id, id);
 #endif
 #ifdef STEST
-		request_data_in_ts = csecond();
+		req_in_ts = csecond();
 #endif
 #ifdef ENABLE_PTHREAD_TILE_REQUEST
 	pthread_t thread_id[TileNum];
@@ -361,7 +344,7 @@ for(int i=0; i<requested_tiles;i++){
 }
 #endif
 #ifdef STEST
-		request_data_out_ts = csecond();
+		req_out_ts = csecond();
 #endif
 #ifdef DEBUG
 	lprintf(lvl-1, "<-----|\n");
@@ -374,7 +357,7 @@ void Subkernel::run_operation(){
 	lprintf(lvl-1, "|-----> Subkernel(dev=%d,id=%d)::run_operation()\n", run_dev_id, id);
 #endif
 #ifdef STEST
-		run_operation_in_ts = csecond();
+		op_fire_ts = csecond();
 #endif
 	short run_dev_id_idx = idxize(run_dev_id);
 
@@ -420,7 +403,8 @@ void Subkernel::run_operation(){
 		}
 	}
 #ifdef STEST
-		operation_timer->start_point(exec_queue[run_dev_id_idx]);
+		exec_queue[run_dev_id_idx]->add_host_func(
+				(void*)&CoCoSetTimerAsync, (void*) &op_start_ts);
 		if (!strcmp(op_name,"gemm")){
 			gemm_backend_in_p ptr_ker_translate = (gemm_backend_in_p) operation_params;
 			flops = dgemm_flops(ptr_ker_translate->M, ptr_ker_translate->N, ptr_ker_translate->K);
@@ -428,7 +412,8 @@ void Subkernel::run_operation(){
 #endif
 	backend_run_operation(operation_params, op_name, exec_queue[run_dev_id_idx]);
 #ifdef STEST
-	operation_timer->stop_point(exec_queue[run_dev_id_idx]);
+	exec_queue[run_dev_id_idx]->add_host_func(
+			(void*)&CoCoSetTimerAsync, (void*) &op_end_ts);
 #endif
 	for (int j = 0; j < TileNum; j++){
 		if (TileDimlist[j] == 1){
@@ -482,9 +467,6 @@ void Subkernel::run_operation(){
 #ifndef ASYNC_ENABLE
 	CoCoSyncCheckErr();
 #endif
-#ifdef STEST
-		run_operation_out_ts = csecond();
-#endif
 #ifdef DEBUG
 	lprintf(lvl-1, "<-----|\n");
 #endif
@@ -497,7 +479,7 @@ void Subkernel::writeback_data(){
 	lprintf(lvl-1, "|-----> Subkernel(dev=%d,id=%d)::writeback_data()\n", run_dev_id, id);
 #endif
 #ifdef STEST
-		writeback_data_in_ts = csecond();
+		wb_fire_ts = csecond();
 #endif
 	short run_dev_id_idx = idxize(run_dev_id);
 	short Writeback_id_idx, Writeback_id;
@@ -526,13 +508,15 @@ void Subkernel::writeback_data(){
 					error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d])::writeback_data: Tile(j=%d) WriteBackBlock was %s instead of NATIVE\n",
 						run_dev_id, id, tmp->id, tmp->GridId, j, print_state(prev_state));
 #ifdef STEST
-				output_timer[j]->start_point(transfer_queues[Writeback_id_idx][run_dev_id_idx]);
+				transfer_queues[Writeback_id_idx][run_dev_id_idx]->add_host_func(
+						(void*)&CoCoSetTimerAsync, (void*) &wb_start_ts);
 #endif
 				CoCoMemcpyAsync(tmp->WriteBackBlock->Adrs, tmp->StoreBlock[run_dev_id_idx]->Adrs,
 					((long long) tmp->inc[run_dev_id_idx]) * tmp->dim * tmp->dtypesize(),
 					Writeback_id, run_dev_id, transfer_queues[Writeback_id_idx][run_dev_id_idx]);
 #ifdef STEST
-				output_timer[j]->stop_point(transfer_queues[Writeback_id_idx][run_dev_id_idx]);
+				transfer_queues[Writeback_id_idx][run_dev_id_idx]->add_host_func(
+						(void*)&CoCoSetTimerAsync, (void*) &wb_end_ts);
 				bytes_out[j]= tmp->size();
 #endif
 				// TODO: Should this be here (at transfer's end) or before when the func is scheduled, or nowhere?
@@ -568,14 +552,16 @@ void Subkernel::writeback_data(){
 					error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::writeback_data: Tile(j=%d) WriteBackBlock was %s instead of NATIVE\n",
 						run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2, j, print_state(prev_state));
 #ifdef STEST
-				output_timer[j]->start_point(transfer_queues[Writeback_id_idx][run_dev_id_idx]);
+				transfer_queues[Writeback_id_idx][run_dev_id_idx]->add_host_func(
+						(void*)&CoCoSetTimerAsync, (void*) &wb_start_ts);
 #endif
 				CoCoMemcpy2DAsync(tmp->WriteBackBlock->Adrs, tmp->ldim[Writeback_id_idx],
 					tmp->StoreBlock[run_dev_id_idx]->Adrs, tmp->ldim[run_dev_id_idx],
 					tmp->dim1, tmp->dim2, tmp->dtypesize(),
 					Writeback_id, run_dev_id, transfer_queues[Writeback_id_idx][run_dev_id_idx]);
 #ifdef STEST
-				output_timer[j]->stop_point(transfer_queues[Writeback_id_idx][run_dev_id_idx]);
+				transfer_queues[Writeback_id_idx][run_dev_id_idx]->add_host_func(
+						(void*)&CoCoSetTimerAsync, (void*) &wb_end_ts);
 				bytes_out[j]= tmp->size();
 #endif
 				//TODO: Should this be here (at transfer's end) or before when the func is scheduled, or nowhere?
@@ -592,9 +578,6 @@ void Subkernel::writeback_data(){
 	//writeback_complete->record_to_queue(transfer_queues[Writeback_id_idx][run_dev_id_idx]);
 #ifndef ASYNC_ENABLE
 	CoCoSyncCheckErr();
-#endif
-#ifdef STEST
-		writeback_data_out_ts = csecond();
 #endif
 #ifdef DEBUG
 	lprintf(lvl-1, "<-----|\n");
@@ -1000,3 +983,148 @@ void CoCopeLiaDevCacheFree(short dev_id){
 	delete Global_Cache[idxize(dev_id)];
 	Global_Cache[idxize(dev_id)] = NULL;
 }
+
+#ifdef STEST
+void STEST_print_SK(kernel_pthread_wrap_p* thread_dev_data_list, double routine_entry_ts, short dev_num)
+{
+	int Sk_num_max = 0;
+	for (int d = 0; d < dev_num; d++)
+		if(thread_dev_data_list[d]->SubkernelNumDev > Sk_num_max)
+			Sk_num_max = thread_dev_data_list[d]->SubkernelNumDev;
+
+	lprintf(0,"Pipeline start:\n");
+#ifdef RUNTIME_SCHEDULER_VERSION
+	for (int keri = 0; keri < Sk_num_max; keri++){
+#else
+	for (int keri = Sk_num_max - 1; keri >= 0; keri--){
+#endif
+		double request_t_ms[dev_num] = {0}, exec_t_ms[dev_num] = {0}, writeback_t_ms[dev_num] = {0}, request_tile_ms[dev_num][3];
+		long long request_bytes_in[dev_num] = {0}, request_bytes_out[dev_num] = {0};
+		for (int d = 0; d < dev_num; d++) if(keri < thread_dev_data_list[d]->SubkernelNumDev){
+			writeback_t_ms[d] = (thread_dev_data_list[d]->SubkernelListDev[keri]->wb_end_ts -
+			thread_dev_data_list[d]->SubkernelListDev[keri]->wb_start_ts)*1000;
+		exec_t_ms[d] = (thread_dev_data_list[d]->SubkernelListDev[keri]->op_end_ts -
+			thread_dev_data_list[d]->SubkernelListDev[keri]->op_start_ts)*1000;
+			for(int idx = 0; idx < thread_dev_data_list[d]->SubkernelListDev[keri]->TileNum; idx++){
+				request_bytes_in[d]+= thread_dev_data_list[d]->SubkernelListDev[keri]->bytes_in[idx];
+				request_tile_ms[d][idx] = (thread_dev_data_list[d]->SubkernelListDev[keri]->reqT_end_ts[idx] -
+					thread_dev_data_list[d]->SubkernelListDev[keri]->reqT_start_ts[idx])*1000;
+				request_t_ms[d]+= request_tile_ms[d][idx];
+			}
+		}
+		lprintf(0,"\n");
+		for (int d = 0; d < dev_num; d++) if(keri < thread_dev_data_list[d]->SubkernelNumDev)
+			lprintf(0, "             Subkernel( dev =%2d, id =%6d )             |",
+				thread_dev_data_list[d]->SubkernelListDev[keri]->run_dev_id,
+				thread_dev_data_list[d]->SubkernelListDev[keri]->id);
+				lprintf(0,"\n");
+
+		for (int d = 0; d < dev_num; d++) if(keri < thread_dev_data_list[d]->SubkernelNumDev)
+			lprintf(0, " Req_T (%3.1lf->%3.1lf) total = %3.1lf ms (%3.1lf Gb\\s):              |",
+				(thread_dev_data_list[d]->SubkernelListDev[keri]->req_in_ts-routine_entry_ts)*1000,
+				(thread_dev_data_list[d]->SubkernelListDev[keri]->req_out_ts-routine_entry_ts)*1000,
+				request_t_ms[d], Gval_per_s(request_bytes_in[d], request_t_ms[d]/1000));
+			lprintf(0,"\n");
+
+		for (int tileidx = 0; tileidx < thread_dev_data_list[0]->SubkernelListDev[0]->TileNum; tileidx++){
+				for (int d = 0; d < dev_num; d++) if(keri < thread_dev_data_list[d]->SubkernelNumDev){
+				short Tiledim = thread_dev_data_list[d]->SubkernelListDev[keri]->TileDimlist[tileidx];
+				void* TilePtr = thread_dev_data_list[d]->SubkernelListDev[keri]->TileList[tileidx];
+				lprintf(0, " RCV_T( %3d.[%2d,%2d] ) (%3.1lf: %3.1lf->%3.1lf) = %3.1lf ms (%3.1lf Gb\\s) |",
+					(Tiledim == 2)? ((Tile2D<VALUE_TYPE>*) TilePtr)->id : ((Tile1D<VALUE_TYPE>*) TilePtr)->id,
+					(Tiledim == 2)? ((Tile2D<VALUE_TYPE>*) TilePtr)->GridId1 : ((Tile1D<VALUE_TYPE>*) TilePtr)->GridId,
+					(Tiledim == 2)? ((Tile2D<VALUE_TYPE>*) TilePtr)->GridId2 : -1,
+					(request_tile_ms[d][tileidx])? (thread_dev_data_list[d]->SubkernelListDev[keri]->reqT_fire_ts[tileidx]-routine_entry_ts)*1000 : 0,
+					(request_tile_ms[d][tileidx])? (thread_dev_data_list[d]->SubkernelListDev[keri]->reqT_start_ts[tileidx]-routine_entry_ts)*1000 : 0,
+					(request_tile_ms[d][tileidx])? (thread_dev_data_list[d]->SubkernelListDev[keri]->reqT_end_ts[tileidx]-routine_entry_ts)*1000 : 0,
+					request_tile_ms[d][tileidx],
+					Gval_per_s(thread_dev_data_list[d]->SubkernelListDev[keri]->bytes_in[tileidx], request_tile_ms[d][tileidx]/1000));
+				}
+				lprintf(0,"\n");
+			}
+
+			for (int d = 0; d < dev_num; d++) if(keri < thread_dev_data_list[d]->SubkernelNumDev)
+				lprintf(0, " exec_t(%s) (%3.1lf: %3.1lf->%3.1lf) = %3.1lf ms  (%3.1lf Gflops\\s) |",
+				thread_dev_data_list[d]->SubkernelListDev[keri]->op_name,
+				(thread_dev_data_list[d]->SubkernelListDev[keri]->op_fire_ts-routine_entry_ts)*1000,
+				(thread_dev_data_list[d]->SubkernelListDev[keri]->op_start_ts-routine_entry_ts)*1000,
+				(thread_dev_data_list[d]->SubkernelListDev[keri]->op_end_ts-routine_entry_ts)*1000,
+				exec_t_ms[d], Gval_per_s(thread_dev_data_list[d]->SubkernelListDev[keri]->flops, exec_t_ms[d]/1000));
+				lprintf(0,"\n");
+
+			for (int d = 0; d < dev_num; d++) if(keri < thread_dev_data_list[d]->SubkernelNumDev)
+				lprintf(0, " WB_T(%3.1lf: %3.1lf->%3.1lf) = %3.1lf ms  (%3.1lf Gflops\\s)            |",
+					(writeback_t_ms[d]) ? (thread_dev_data_list[d]->SubkernelListDev[keri]->wb_fire_ts-routine_entry_ts)*1000 : 0,
+					(writeback_t_ms[d]) ? (thread_dev_data_list[d]->SubkernelListDev[keri]->wb_start_ts-routine_entry_ts)*1000 : 0,
+					(writeback_t_ms[d]) ? (thread_dev_data_list[d]->SubkernelListDev[keri]->wb_end_ts-routine_entry_ts)*1000 : 0,
+					writeback_t_ms[d], Gval_per_s(request_bytes_out[d], writeback_t_ms[d]/1000));
+				lprintf(0,"\n\n");
+
+	}
+		/*
+		double request_t_ms = 0,
+		writeback_t_ms = (thread_dev_data_unwrapped->SubkernelListDev[keri]->wb_end_ts -
+			thread_dev_data_unwrapped->SubkernelListDev[keri]->wb_start_ts)*1000,
+		exec_t_ms = (thread_dev_data_unwrapped->SubkernelListDev[keri]->op_end_ts -
+			thread_dev_data_unwrapped->SubkernelListDev[keri]->op_start_ts)*1000,
+		request_tile_ms[3] = {0};
+		long long request_bytes_in = 0, request_bytes_out = 0;
+		for(int idx = 0; idx < thread_dev_data_unwrapped->SubkernelListDev[keri]->TileNum; idx++){
+			request_bytes_in+= thread_dev_data_unwrapped->SubkernelListDev[keri]->bytes_in[idx];
+			request_tile_ms[idx] = (thread_dev_data_unwrapped->SubkernelListDev[keri]->reqT_end_ts[idx] -
+				thread_dev_data_unwrapped->SubkernelListDev[keri]->reqT_start_ts[idx])*1000;
+			request_t_ms+= request_tile_ms[idx];
+		}
+		short* TileDimlist = thread_dev_data_unwrapped->SubkernelListDev[keri]->TileDimlist;
+		void** TileList = thread_dev_data_unwrapped->SubkernelListDev[keri]->TileList;
+		lprintf(0, "Subkernel(dev=%d,id=%d):\nRequest_t(%.1lf->%.1lf) total = %.1lf ms (%3.1lf Gb\\s):\
+			\nRCV_T(%3d.[%2d,%2d]) (%.1lf: %.1lf->%.1lf) = %.1lf ms (%3.1lf Gb\\s)\
+			\nRCV_T(%3d.[%2d,%2d]) (%.1lf: %.1lf->%.1lf) = %.1lf ms (%3.1lf Gb\\s)\
+			\nRCV_T(%3d.[%2d,%2d]) (%.1lf: %.1lf->%.1lf) = %.1lf ms (%3.1lf Gb\\s)\
+			\nexec_t(%.1lf: %.1lf->%.1lf) = %.1lf ms  (%3.1lf Gflops\\s)\
+			\nwriteback_t(%.1lf: %.1lf->%.1lf) = %.1lf ms (%3.1lf Gb\\s)\n\n",
+			thread_dev_data_unwrapped->SubkernelListDev[keri]->run_dev_id, thread_dev_data_unwrapped->SubkernelListDev[keri]->id,
+			(thread_dev_data_unwrapped->SubkernelListDev[keri]->req_in_ts-routine_entry_ts)*1000,
+			(thread_dev_data_unwrapped->SubkernelListDev[keri]->req_out_ts-routine_entry_ts)*1000,
+			request_t_ms, Gval_per_s(request_bytes_in, request_t_ms/1000),
+			(TileDimlist[0] == 2)? ((Tile2D<VALUE_TYPE>*) TileList[0])->id : ((Tile1D<VALUE_TYPE>*) TileList[0])->id,
+			(TileDimlist[0] == 2)? ((Tile2D<VALUE_TYPE>*) TileList[0])->GridId1 : ((Tile1D<VALUE_TYPE>*) TileList[0])->GridId,
+			(TileDimlist[0] == 2)? ((Tile2D<VALUE_TYPE>*) TileList[0])->GridId2 : -1,
+			(request_tile_ms[0])? (thread_dev_data_unwrapped->SubkernelListDev[keri]->reqT_fire_ts[0]-routine_entry_ts)*1000 : 0,
+			(request_tile_ms[0])? (thread_dev_data_unwrapped->SubkernelListDev[keri]->reqT_start_ts[0]-routine_entry_ts)*1000 : 0,
+			(request_tile_ms[0])? (thread_dev_data_unwrapped->SubkernelListDev[keri]->reqT_end_ts[0]-routine_entry_ts)*1000 : 0,
+			request_tile_ms[0],
+			Gval_per_s(thread_dev_data_unwrapped->SubkernelListDev[keri]->bytes_in[0], request_tile_ms[0]/1000),
+
+			(TileDimlist[1] == 2)? ((Tile2D<VALUE_TYPE>*) TileList[1])->id : ((Tile1D<VALUE_TYPE>*) TileList[1])->id,
+			(TileDimlist[1] == 2)? ((Tile2D<VALUE_TYPE>*) TileList[1])->GridId1 : ((Tile1D<VALUE_TYPE>*) TileList[1])->GridId,
+			(TileDimlist[1] == 2)? ((Tile2D<VALUE_TYPE>*) TileList[1])->GridId2 : -1,
+			(request_tile_ms[1])? (thread_dev_data_unwrapped->SubkernelListDev[keri]->reqT_fire_ts[1]-routine_entry_ts)*1000 : 0,
+			(request_tile_ms[1])? (thread_dev_data_unwrapped->SubkernelListDev[keri]->reqT_start_ts[1]-routine_entry_ts)*1000 : 0,
+			(request_tile_ms[1])? (thread_dev_data_unwrapped->SubkernelListDev[keri]->reqT_end_ts[1]-routine_entry_ts)*1000 : 0,
+			request_tile_ms[1],
+			Gval_per_s(thread_dev_data_unwrapped->SubkernelListDev[keri]->bytes_in[1], request_tile_ms[1]/1000),
+
+			(TileDimlist[2] == 2)? ((Tile2D<VALUE_TYPE>*) TileList[2])->id : ((Tile1D<VALUE_TYPE>*) TileList[2])->id,
+			(TileDimlist[2] == 2)? ((Tile2D<VALUE_TYPE>*) TileList[2])->GridId1 : ((Tile1D<VALUE_TYPE>*) TileList[2])->GridId,
+			(TileDimlist[2] == 2)? ((Tile2D<VALUE_TYPE>*) TileList[2])->GridId2 : -1,
+			(request_tile_ms[2])? (thread_dev_data_unwrapped->SubkernelListDev[keri]->reqT_fire_ts[2]-routine_entry_ts)*1000 : 0,
+			(request_tile_ms[2])? (thread_dev_data_unwrapped->SubkernelListDev[keri]->reqT_start_ts[2]-routine_entry_ts)*1000 : 0,
+			(request_tile_ms[2])? (thread_dev_data_unwrapped->SubkernelListDev[keri]->reqT_end_ts[2]-routine_entry_ts)*1000 : 0,
+			request_tile_ms[2],
+			Gval_per_s(thread_dev_data_unwrapped->SubkernelListDev[keri]->bytes_in[2], request_tile_ms[2]/1000),
+
+			(thread_dev_data_unwrapped->SubkernelListDev[keri]->op_fire_ts-routine_entry_ts)*1000,
+			(thread_dev_data_unwrapped->SubkernelListDev[keri]->op_start_ts-routine_entry_ts)*1000,
+			(thread_dev_data_unwrapped->SubkernelListDev[keri]->op_end_ts-routine_entry_ts)*1000,
+			exec_t_ms, Gval_per_s(thread_dev_data_unwrapped->SubkernelListDev[keri]->flops, exec_t_ms/1000),
+
+			(writeback_t_ms) ? (thread_dev_data_unwrapped->SubkernelListDev[keri]->wb_fire_ts-routine_entry_ts)*1000 : 0,
+			(writeback_t_ms) ? (thread_dev_data_unwrapped->SubkernelListDev[keri]->wb_start_ts-routine_entry_ts)*1000 : 0,
+			(writeback_t_ms) ? (thread_dev_data_unwrapped->SubkernelListDev[keri]->wb_end_ts-routine_entry_ts)*1000 : 0,
+			writeback_t_ms, Gval_per_s(request_bytes_out, writeback_t_ms/1000));
+	}
+	*/
+	CoCoSyncCheckErr();
+}
+#endif
