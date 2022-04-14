@@ -49,6 +49,7 @@ if (${SCHEDULE_TYPE} EQUAL 0)
   #add_definitions(-DDISTRIBUTION="SPLIT-CHUNKS-ROBIN-REVERSE")
   #add_definitions(-DDISTRIBUTION="2D-BLOCK-CYCLIC")
 elseif(${SCHEDULE_TYPE} EQUAL 1)
+  add_definitions(-DDISTRIBUTION="ROUND-ROBIN")
   add_definitions(-DRUNTIME_SCHEDULER_VERSION)
 else()
 endif()
@@ -58,7 +59,9 @@ endif()
 #add_definitions(-DSELECT_HEURISTIC="NAIVE-NO-WRITE-SHARE")
 #add_definitions(-DSELECT_HEURISTIC="MINIMIZE-FETCH")
 #add_definitions(-DSELECT_HEURISTIC="MINIMIZE-FETCH-WRITE-PENALTY")
-add_definitions(-DSELECT_HEURISTIC="MINIMIZE-FETCH-WRITE-PENALTY-MULTIFETCH-PENALTY")
+#add_definitions(-DSELECT_HEURISTIC="MINIMIZE-FETCH-WRITE-PENALTY-MULTIFETCH-PENALTY")
+## This last mode is pointless for static schedule type
+add_definitions(-DSELECT_HEURISTIC="MINIMIZE-FETCH-WRITE-PENALTY-MULTIFETCH-PENALTY-MULTIDEV-FAIR")
 
 # Extra distribution-related values
 add_definitions(-DWRITE_COST_PEPENALTY=0.1)

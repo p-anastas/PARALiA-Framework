@@ -28,10 +28,8 @@ double gemm_entry_ts;
 #endif
 
 #include <atomic>
-std::atomic<long long> remaining_Subkernels;
 Subkernel** Subkernel_list;
 int Subkernel_num;
-short remove_dev[LOC_NUM] = {0};
 
 int Sk_select_lock = 0;
 
@@ -174,15 +172,16 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 #endif
 
 	Subkernel * curr = NULL, *prev = NULL;
-#ifdef RUNTIME_SCHEDULER_VERSION
-	while (remaining_Subkernels > 0 && !remove_dev[idxize(dev_id)]){
+	int remaining_Subkernels_dev = gemm_subkernel_data->SubkernelNumDev;
+#ifndef RUNTIME_SCHEDULER_VERSION
+	/// Rename global vars, perfectly safe.
+	Subkernel** Subkernel_list = gemm_subkernel_data->SubkernelListDev;
+	int Subkernel_num = gemm_subkernel_data->SubkernelNumDev;
+#endif
+	while (remaining_Subkernels_dev){
 		prev = curr;
 		if(prev) prev->sync_request_data();
 		while(__sync_lock_test_and_set(&Sk_select_lock, 1));
-		if(!remaining_Subkernels){
-			__sync_lock_release(&Sk_select_lock);
-			break;
-		}
 		if (!strcmp(SELECT_HEURISTIC, "NAIVE"))
 			curr = SubkernelSelectSimple(dev_id, Subkernel_list, Subkernel_num);
 		else if (!strcmp(SELECT_HEURISTIC, "NAIVE-NO-WRITE-SHARE"))
@@ -193,58 +192,28 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 			curr = SubkernelSelectMinimizeFetchWritePenalty(dev_id, Subkernel_list, Subkernel_num);
 		else if (!strcmp(SELECT_HEURISTIC, "MINIMIZE-FETCH-WRITE-PENALTY-MULTIFETCH-PENALTY"))
 			curr = SubkernelSelectMinimizeFetchWritePenaltyMultiFetchPenalty(dev_id, Subkernel_list, Subkernel_num);
+		else if (!strcmp(SELECT_HEURISTIC, "MINIMIZE-FETCH-WRITE-PENALTY-MULTIFETCH-PENALTY-MULTIDEV-FAIR"))
+			curr = SubkernelSelectMinimizeFetchWritePenaltyMultiFetchPenaltyMutlidevFair(dev_id, Subkernel_list, Subkernel_num);
 		else error("CoCopeLiaDgemm: Unknown Subkernel Heuristic %s\n", SELECT_HEURISTIC);
 		if (!curr){
-			__sync_lock_release(&Sk_select_lock);
 //#ifdef DDEBUG
-		//lprintf(lvl, "CoCopeLiaDgemmAgentVoid(%d): Got curr = NULL, repeating search\n", dev_id);
+//		lprintf(lvl, "CoCopeLiaDgemmAgentVoid(%d): Got curr = NULL, repeating search\n", dev_id);
 //#endif
-			continue;
-		}
-		remaining_Subkernels--;
-		gemm_subkernel_data->SubkernelListDev[gemm_subkernel_data->SubkernelNumDev] = curr;
-		gemm_subkernel_data->SubkernelNumDev++;
-		curr->prev = prev;
-		if(prev) prev->next = curr;
-		CoCoGemmUpdateDevice(curr, dev_id);
-		curr->init_events();
-		curr->request_data();
-		CoCoGemmUpdatePointers(curr);
-		__sync_lock_release(&Sk_select_lock);
-		curr->run_operation();
-#ifdef ENABLE_SEND_RECV_OVERLAP
-		curr->writeback_data();
-#endif
-	}
-#else
-	int scheduled[gemm_subkernel_data->SubkernelNumDev] = {0};
-	int remaining_Subkernels_dev = gemm_subkernel_data->SubkernelNumDev;
-	while(remaining_Subkernels_dev){
-		prev = curr;
-		if(prev) prev->sync_request_data();
-		while(__sync_lock_test_and_set(&Sk_select_lock, 1));
-		if (!strcmp(SELECT_HEURISTIC, "NAIVE"))
-			curr = SubkernelSelectSimple(dev_id, gemm_subkernel_data->SubkernelListDev, remaining_Subkernels_dev);
-		else if (!strcmp(SELECT_HEURISTIC, "NAIVE-NO-WRITE-SHARE"))
-			curr = SubkernelSelectNoWriteShare(dev_id, gemm_subkernel_data->SubkernelListDev, remaining_Subkernels_dev);
-		else if (!strcmp(SELECT_HEURISTIC, "MINIMIZE-FETCH"))
-			curr = SubkernelSelectMinimizeFetch(dev_id, gemm_subkernel_data->SubkernelListDev, remaining_Subkernels_dev);
-		else if (!strcmp(SELECT_HEURISTIC, "MINIMIZE-FETCH-WRITE-PENALTY"))
-			curr = SubkernelSelectMinimizeFetchWritePenalty(dev_id, gemm_subkernel_data->SubkernelListDev, remaining_Subkernels_dev);
-		else if (!strcmp(SELECT_HEURISTIC, "MINIMIZE-FETCH-WRITE-PENALTY-MULTIFETCH-PENALTY"))
-			curr = SubkernelSelectMinimizeFetchWritePenaltyMultiFetchPenalty(dev_id, gemm_subkernel_data->SubkernelListDev, remaining_Subkernels_dev);
-		else error("CoCopeLiaDgemm: Unknown Subkernel Heuristic %s\n", SELECT_HEURISTIC);
-		if (!curr){
 			__sync_lock_release(&Sk_select_lock);
 			continue;
 		}
+		remaining_Subkernels_dev--;
+#ifdef RUNTIME_SCHEDULER_VERSION
+		gemm_subkernel_data->SubkernelListDev[gemm_subkernel_data->SubkernelNumDev - (remaining_Subkernels_dev + 1)] = curr;
+#else
 		for (int keri = 0; keri < gemm_subkernel_data->SubkernelNumDev; keri++)
 			if (curr == gemm_subkernel_data->SubkernelListDev[keri]){
-				gemm_subkernel_data->SubkernelListDev[keri] = gemm_subkernel_data->SubkernelListDev[remaining_Subkernels_dev-1];
-				gemm_subkernel_data->SubkernelListDev[remaining_Subkernels_dev-1] = curr;
+				gemm_subkernel_data->SubkernelListDev[keri] = gemm_subkernel_data->SubkernelListDev[remaining_Subkernels_dev];
+				gemm_subkernel_data->SubkernelListDev[remaining_Subkernels_dev] = curr;
 				break;
 			}
-		remaining_Subkernels_dev--;
+		Subkernel_num = remaining_Subkernels_dev;
+#endif
 		curr->prev = prev;
 		if(prev) prev->next = curr;
 		CoCoGemmUpdateDevice(curr, dev_id);
@@ -256,9 +225,7 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 #ifdef ENABLE_SEND_RECV_OVERLAP
 		curr->writeback_data();
 #endif
-
 	}
-#endif
 
 #ifndef ENABLE_SEND_RECV_OVERLAP
 	for (int keri = 0; keri < gemm_subkernel_data->SubkernelNumDev; keri++)
@@ -435,7 +402,6 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 	cpu_timer = csecond();
 #endif
 
-#ifndef RUNTIME_SCHEDULER_VERSION
 	autotuned_vals->Subkernel_dev_id_list = (int**) malloc(autotuned_vals->dev_num*sizeof(int*));
 	for (int devidx = 0; devidx < autotuned_vals->dev_num; devidx++)
 		autotuned_vals->Subkernel_dev_id_list[devidx] = (int*) malloc(Subkernel_num*sizeof(int));
@@ -485,14 +451,8 @@ if(!reuse_model_flag){
 	cpu_timer = csecond();
 #endif
 
-#else
-	remaining_Subkernels = Subkernel_num;
-#endif
-
 	s = pthread_attr_init(&attr);
 	if (s != 0) error("CoCopeLiaDgemm: pthread_attr_init failed s=%d\n", s);
-
-
 
 	pthread_t thread_id[autotuned_vals->dev_num];
 	kernel_pthread_wrap_p thread_dev_data[autotuned_vals->dev_num];
@@ -510,15 +470,11 @@ if(!reuse_model_flag){
 		thread_dev_data[d] = (kernel_pthread_wrap_p) malloc(sizeof(struct kernel_pthread_wrap));
 		thread_dev_data[d]->dev_id = autotuned_vals->dev_ids[d];
 
-#ifdef RUNTIME_SCHEDULER_VERSION
-		thread_dev_data[d]->SubkernelNumDev = 0;
-		thread_dev_data[d]->SubkernelListDev = (Subkernel**) malloc(Subkernel_num*sizeof(Subkernel*));
-#else
-		thread_dev_data[d]->SubkernelListDev = (Subkernel**) malloc(autotuned_vals->Subkernels_per_dev[d]* sizeof(Subkernel*));
+		thread_dev_data[d]->SubkernelNumDev = autotuned_vals->Subkernels_per_dev[d];
+		thread_dev_data[d]->SubkernelListDev = (Subkernel**) malloc(thread_dev_data[d]->SubkernelNumDev*sizeof(Subkernel*));
+#ifndef RUNTIME_SCHEDULER_VERSION
 		for(int skitt = 0; skitt < autotuned_vals->Subkernels_per_dev[d]; skitt++)
 			thread_dev_data[d]->SubkernelListDev[skitt] = Subkernel_list[autotuned_vals->Subkernel_dev_id_list[d][skitt]];
-
-		thread_dev_data[d]->SubkernelNumDev = autotuned_vals->Subkernels_per_dev[d];
 #endif
 
 		s = pthread_create(&thread_id[d], &attr,

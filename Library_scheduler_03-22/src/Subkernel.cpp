@@ -843,6 +843,20 @@ short Subkernel::is_RW_lock_master(short dev_id){
 	return RW_lock_Hos;
 }
 
+double Subkernel::opt_fetch_cost(short dev_id){
+	double fetch_cost = 0;
+	for (int j = 0; j < TileNum; j++){
+		if (TileDimlist[j] == 1){
+			Tile1D<VALUE_TYPE>* tmp = (Tile1D<VALUE_TYPE>*) TileList[j];
+			error("not implemented\n");
+		}
+		else if (TileDimlist[j] == 2){
+			Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) TileList[j];
+			double temp_fetch_cost = tmp->getMinLinkCost(dev_id);
+		}
+	}
+	return fetch_cost;
+}
 
 double Subkernel::opt_fetch_cost_pen_multifetch(short dev_id){
 	double fetch_cost = 0;
@@ -869,10 +883,10 @@ double Subkernel::opt_fetch_cost_pen_multifetch(short dev_id){
 }
 
 /// TODO: To be extra safe, not sure it is required - might slowdown a lot
-int SubkernelSelectLock = 0;
+//int SubkernelSelectLock = 0;
 
 Subkernel* SubkernelSelectNoWriteShare(short dev_id, Subkernel** Subkernel_list, long Subkernel_list_len){
-	while(__sync_lock_test_and_set (&SubkernelSelectLock, 1));
+	//while(__sync_lock_test_and_set (&SubkernelSelectLock, 1));
 	Subkernel* curr_sk = NULL;
 	long sk_idx;
 	for (sk_idx = 0; sk_idx < Subkernel_list_len; sk_idx++){
@@ -881,12 +895,12 @@ Subkernel* SubkernelSelectNoWriteShare(short dev_id, Subkernel** Subkernel_list,
 	}
 	if(sk_idx==Subkernel_list_len) curr_sk = NULL;
 	else curr_sk->prepare_launch(dev_id);
-	__sync_lock_release(&SubkernelSelectLock);
+	//__sync_lock_release(&SubkernelSelectLock);
 	return curr_sk;
 }
 
 Subkernel* SubkernelSelectMinimizeFetchWritePenaltyMultiFetchPenalty(short dev_id, Subkernel** Subkernel_list, long Subkernel_list_len){
-	while(__sync_lock_test_and_set (&SubkernelSelectLock, 1));
+	//while(__sync_lock_test_and_set (&SubkernelSelectLock, 1));
 	Subkernel* curr_sk = NULL;
 	long sk_idx;
 	double min_fetch_cost = 100000000;
@@ -904,25 +918,47 @@ Subkernel* SubkernelSelectMinimizeFetchWritePenaltyMultiFetchPenalty(short dev_i
 		}
 	}
 	if(min_fetch_cost_sk) min_fetch_cost_sk->prepare_launch(dev_id);
-	__sync_lock_release(&SubkernelSelectLock);
+	//__sync_lock_release(&SubkernelSelectLock);
+	return min_fetch_cost_sk;
+}
+
+Subkernel* SubkernelSelectMinimizeFetchWritePenaltyMultiFetchPenaltyMutlidevFair(short dev_id, Subkernel** Subkernel_list, long Subkernel_list_len){
+	//while(__sync_lock_test_and_set (&SubkernelSelectLock, 1));
+	Subkernel* curr_sk = NULL;
+	long sk_idx;
+	double min_fetch_cost = 100000000;
+	Subkernel* min_fetch_cost_sk = NULL;
+	for (sk_idx = 0; sk_idx < Subkernel_list_len; sk_idx++){
+		curr_sk = Subkernel_list[sk_idx];
+		if (curr_sk->run_dev_id==-42 &&
+				(curr_sk->no_locked_tiles() || curr_sk->is_RW_lock_master(dev_id))) {// || curr_sk->is_RW_master(dev_id)){
+			double fetch_cost = curr_sk->opt_fetch_cost_pen_multifetch(dev_id);
+			if(!curr_sk->no_locked_tiles()) fetch_cost+=WRITE_COST_PEPENALTY*fetch_cost;
+			if(fetch_cost < min_fetch_cost){
+				min_fetch_cost = fetch_cost;
+				min_fetch_cost_sk = curr_sk;
+			}
+			else if(fetch_cost == min_fetch_cost && curr_sk->no_locked_tiles()){
+				int other_dev_score_winner = 0;
+				for (int dev = 0; dev< LOC_NUM; dev++) if(deidxize(dev)!= dev_id){
+					double fetch_cost_me = curr_sk->opt_fetch_cost(deidxize(dev)),
+					fetch_cost_bro = min_fetch_cost_sk->opt_fetch_cost(deidxize(dev));
+					if(fetch_cost_me <= fetch_cost_bro) other_dev_score_winner ++;
+					else other_dev_score_winner--;
+				}
+				if(other_dev_score_winner < 0){
+					min_fetch_cost = fetch_cost;
+					min_fetch_cost_sk = curr_sk;
+				}
+			}
+		}
+	}
+	if(min_fetch_cost_sk) min_fetch_cost_sk->prepare_launch(dev_id);
+	//__sync_lock_release(&SubkernelSelectLock);
 	return min_fetch_cost_sk;
 }
 
 /*
-double Subkernel::opt_fetch_cost(short dev_id){
-	double fetch_cost = 0;
-	for (int j = 0; j < TileNum; j++){
-		if (TileDimlist[j] == 1){
-			Tile1D<VALUE_TYPE>* tmp = (Tile1D<VALUE_TYPE>*) TileList[j];
-			error("not implemented\n");
-		}
-		else if (TileDimlist[j] == 2){
-			Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) TileList[j];
-			fetch_cost+= tmp->getMinLinkCost(dev_id);
-		}
-	}
-	return fetch_cost;
-}
 
 Subkernel* SubkernelSelectSimple(short dev_id, Subkernel** Subkernel_list, long Subkernel_list_len){
 	Subkernel* curr_sk = NULL;

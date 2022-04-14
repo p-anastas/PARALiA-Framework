@@ -71,7 +71,10 @@ Subkernel* SubkernelSelectSimple(short dev_id, Subkernel** Subkernel_list, long 
 Subkernel* SubkernelSelectNoWriteShare(short dev_id, Subkernel** Subkernel_list, long Subkernel_list_len);
 Subkernel* SubkernelSelectMinimizeFetch(short dev_id, Subkernel** Subkernel_list, long Subkernel_list_len);
 Subkernel* SubkernelSelectMinimizeFetchWritePenalty(short dev_id, Subkernel** Subkernel_list, long Subkernel_list_len);
-Subkernel* SubkernelSelectMinimizeFetchWritePenaltyMultiFetchPenalty(short dev_id, Subkernel** Subkernel_list, long Subkernel_list_len);
+Subkernel* SubkernelSelectMinimizeFetchWritePenaltyMultiFetchPenalty(short dev_id,
+	Subkernel** Subkernel_list, long Subkernel_list_len);
+Subkernel* SubkernelSelectMinimizeFetchWritePenaltyMultiFetchPenaltyMutlidevFair(short dev_id,
+	Subkernel** Subkernel_list, long Subkernel_list_len);
 
 void sync_request_paired(short dev_id);
 
