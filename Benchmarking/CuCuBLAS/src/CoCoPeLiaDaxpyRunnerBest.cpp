@@ -95,7 +95,7 @@ int main(const int argc, const char *argv[]) {
 	}
 	fprintf(stderr, "\nCoCopeLia DAXPY T_best = %zu : t = %lf ms ( %lf Gflops/s )\n\n", best_T, best_t  * 1000, Gval_per_s(daxpy_flops(N),best_t));
 	predef_control_values-> T = best_T;
-	for (int i = 0; i< return_values->dev_num; i++) CoCopeLiaDevCacheFree(return_values->dev_ids[i]);
+	for (int i = 0; i< LOC_NUM; i++) CoCopeLiaDevCacheFree(deidxize(i));
 
 #ifdef RUNVALIDATION
 	double *y_out, *y_out1;
@@ -108,7 +108,7 @@ int main(const int argc, const char *argv[]) {
 	if (predef_control_values!= NULL) return_values = CoCopeLiaDaxpyControled(N, alpha, x, incx, y, incy, predef_control_values);
 	else return_values = CoCopeLiaDaxpy(N, alpha, x, incx, y, incy);
 	CoCoSyncCheckErr();
-	for (int i = 0; i< return_values->dev_num; i++) CoCopeLiaDevCacheFree(return_values->dev_ids[i]);
+	for (int i = 0; i< LOC_NUM; i++) CoCopeLiaDevCacheFree(deidxize(i));
 
 	CoCoMemcpy(y_out, y, N * incy *sizeof(double), -2, y_loc);
 	CoCoMemcpy(y, y_buf, N * incy *sizeof(double), y_loc, -2);
@@ -180,7 +180,7 @@ int main(const int argc, const char *argv[]) {
 	min_t  * 1000, Gval_per_s(daxpy_flops(N),min_t),
 	max_t  * 1000, Gval_per_s(daxpy_flops(N),max_t));
 
-	for (int i = 0; i< return_values->dev_num; i++) CoCopeLiaDevCacheFree(return_values->dev_ids[i]);
+	for (int i = 0; i< LOC_NUM; i++) CoCopeLiaDevCacheFree(deidxize(i));
 
 	CoCoSyncCheckErr();
 	CoCoFree(x, x_loc);

@@ -74,9 +74,9 @@ void CoCoQueueLock(void* wrapped_lock);
 void CoCoQueueUnlock(void* wrapped_lock);
 
 // Struct containing an int pointer
-typedef struct Ptr_int{
-	int* int_ptr;
-}* Ptr_int_p;
+typedef struct Ptr_atomic_int{
+	std::atomic<int>* ato_int_ptr;
+}* Ptr_atomic_int_p;
 void CoCoIncAsync(void* wrapped_ptr_int);
 void CoCoDecAsync(void* wrapped_ptr_int);
 

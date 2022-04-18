@@ -318,7 +318,7 @@ int main(const int argc, const char *argv[]) {
 		ret_autotune_val = CoCopeLiaDgemm(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC);
 		CoCoSyncCheckErr();
 		cpu_timer  = csecond() - cpu_timer;
-		for (int i = 0; i< ret_autotune_val->dev_num; i++) CoCopeLiaDevCacheFree(ret_autotune_val->dev_ids[i]);
+		for (int i = 0; i< LOC_NUM; i++) CoCopeLiaDevCacheFree(deidxize(i));
 		CoCoSyncCheckErr();
 		double comp_flops = Gval_per_s(dgemm_flops(M,N,K),cpu_timer);
 		fprintf(stderr, "M=%zu, N=%zu, K=%zu: Gflops/s -> ", M, N, K);
@@ -349,7 +349,7 @@ int main(const int argc, const char *argv[]) {
 		ret_autotune_val = CoCopeLiaDgemm(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC);
 		CoCoSyncCheckErr();
 		cpu_timer  = csecond() - cpu_timer;
-		for (int i = 0; i< ret_autotune_val->dev_num; i++) CoCopeLiaDevCacheFree(ret_autotune_val->dev_ids[i]);
+		for (int i = 0; i< LOC_NUM; i++) CoCopeLiaDevCacheFree(deidxize(i));
 		CoCoSyncCheckErr();
 		comp_flops = Gval_per_s(dgemm_flops(M,N,K),cpu_timer);
 		fprintf(stderr, "M=%zu, N=%zu, K=%zu: Gflops/s -> ", M, N, K);
@@ -378,7 +378,7 @@ int main(const int argc, const char *argv[]) {
 		ret_autotune_val = CoCopeLiaDgemm(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC);
 		CoCoSyncCheckErr();
 		cpu_timer  = csecond() - cpu_timer;
-		for (int i = 0; i< ret_autotune_val->dev_num; i++) CoCopeLiaDevCacheFree(ret_autotune_val->dev_ids[i]);
+		for (int i = 0; i< LOC_NUM; i++) CoCopeLiaDevCacheFree(deidxize(i));
 		CoCoSyncCheckErr();
 		comp_flops = Gval_per_s(dgemm_flops(M,N,K),cpu_timer);
 		fprintf(stderr, "M=%zu, N=%zu, K=%zu: Gflops/s -> ", M, N, K);
@@ -454,7 +454,7 @@ int main(const int argc, const char *argv[]) {
 		ret_autotune_val = CoCopeLiaDgemm(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC);
 		CoCoSyncCheckErr();
 		cpu_timer  = csecond() - cpu_timer;
-		for (int i = 0; i< ret_autotune_val->dev_num; i++) CoCopeLiaDevCacheFree(ret_autotune_val->dev_ids[i]);
+		for (int i = 0; i< LOC_NUM; i++) CoCopeLiaDevCacheFree(deidxize(i));
 		CoCoSyncCheckErr();
 		double comp_flops =  Gval_per_s(dgemm_flops(M,N,K),cpu_timer);
 		fprintf(stderr, "M=%zu,N=%zu,K=%zu: Gflops/s -> ", M, N, K);
@@ -482,7 +482,7 @@ int main(const int argc, const char *argv[]) {
 		ret_autotune_val = CoCopeLiaDgemm(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC);
 		CoCoSyncCheckErr();
 		cpu_timer  = csecond() - cpu_timer;
-		for (int i = 0; i< ret_autotune_val->dev_num; i++) CoCopeLiaDevCacheFree(ret_autotune_val->dev_ids[i]);
+		for (int i = 0; i< LOC_NUM; i++) CoCopeLiaDevCacheFree(deidxize(i));
 		CoCoSyncCheckErr();
 		comp_flops =  Gval_per_s(dgemm_flops(M,N,K),cpu_timer);
 		fprintf(stderr, "M=%zu,N=%zu,K=%zu: Gflops/s -> ", M, N, K);

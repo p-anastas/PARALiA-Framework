@@ -16,6 +16,8 @@
 #include <stdio.h>
 #include <stdarg.h>
 
+#include <atomic>
+
 #ifndef LOC_NUM
 #define LOC_NUM (DEV_NUM + 1)
 #endif

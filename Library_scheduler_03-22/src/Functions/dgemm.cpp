@@ -27,7 +27,6 @@ int MGridSz = 0, NGridSz = 0, KGridSz = 0;
 double gemm_entry_ts;
 #endif
 
-#include <atomic>
 Subkernel** Subkernel_list;
 int Subkernel_num;
 
@@ -346,7 +345,7 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 
 	size_t T = autotuned_vals->T;
 
-	int Block_num = (A_asset->dim1/T + ((A_asset->dim1%T)? 1 : 0))* (A_asset->dim2/T + ((A_asset->dim2%T)? 1 : 0)) +
+	int Block_num = 1 + (A_asset->dim1/T + ((A_asset->dim1%T)? 1 : 0))* (A_asset->dim2/T + ((A_asset->dim2%T)? 1 : 0)) +
 				(B_asset->dim1/T + ((B_asset->dim1%T)? 1 : 0))* (B_asset->dim2/T + ((B_asset->dim2%T)? 1 : 0)) +
 				(C_asset->dim1/T + ((C_asset->dim1%T)? 1 : 0))* (C_asset->dim2/T + ((C_asset->dim2%T)? 1 : 0));
 	long long Block_sz = 	T*T*sizeof(VALUE_TYPE);

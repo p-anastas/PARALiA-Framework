@@ -92,7 +92,7 @@ template<typename dtype> short Tile2D<dtype>::getClosestReadLoc(short dev_id_in)
       //  error("Tile2D(%d)::getClosestReadLoc(%d): Should not be called, Tile already available in %d.\n",  id, dev_id_in, dev_id_in);
       continue;
     }
-    StoreBlock[pos]->update_state(false);
+    //StoreBlock[pos]->update_state(false);
     state temp = StoreBlock[pos]->State;
     if (temp == AVAILABLE || temp == SHARABLE || temp == NATIVE){
       event_status block_status = StoreBlock[pos]->Available->query_status();
@@ -111,7 +111,7 @@ template<typename dtype> short Tile2D<dtype>::getClosestReadLoc(short dev_id_in)
   CBlock_p temp_outblock = StoreBlock[pos_min];
   if(temp_outblock != NULL){
     temp_outblock->lock();
-    temp_outblock->update_state(true);
+    //temp_outblock->update_state(true);
     state temp = temp_outblock->State;
     event_status block_status = temp_outblock->Available->query_status();
     if ((temp == AVAILABLE || temp == SHARABLE || temp == NATIVE) &&
@@ -138,7 +138,7 @@ template<typename dtype> double Tile2D<dtype>::getMinLinkCost(short dev_id_in){
   double link_cost_min = 10000000;
   for (int pos =0; pos < LOC_NUM; pos++){
     if(StoreBlock[pos] == NULL) continue;
-    StoreBlock[pos]->update_state(false);
+    //StoreBlock[pos]->update_state(false);
     state temp = StoreBlock[pos]->State;
     if (temp == AVAILABLE || temp == SHARABLE || temp == NATIVE){
       event_status block_status = StoreBlock[pos]->Available->query_status();

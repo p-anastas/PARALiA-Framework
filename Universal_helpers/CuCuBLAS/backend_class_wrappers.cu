@@ -356,8 +356,8 @@ void Event::record_to_queue(CQueue_p Rr){
 #ifdef ENABLE_LAZY_EVENTS
 	else if (status == UNRECORDED){
 		if(dev_id > -1) /// TODO: This used to be an error, but with soft reset it was problematic...is it ok?
-			warning("(Lazy)Event(%d,dev_id = %d)::record_to_queue(%d) - UNRECORDED event suspicious dev_id\n",
-				id, dev_id, Rr->dev_id);
+			;//warning("(Lazy)Event(%d,dev_id = %d)::record_to_queue(%d) - UNRECORDED event suspicious dev_id\n",
+			//	id, dev_id, Rr->dev_id);
 		dev_id = Rr->dev_id;
 		cudaError_t err = cudaEventCreate(( cudaEvent_t*) event_backend_ptr);
 		massert(cudaSuccess == err, "(Lazy)Event(%d,dev_id = %d)::record_to_queue(%d): - %s\n",

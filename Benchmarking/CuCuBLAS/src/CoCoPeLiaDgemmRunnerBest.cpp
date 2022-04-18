@@ -14,8 +14,6 @@
 #define CBLASXT_MAX_SAFE_TILE 10000
 
 int main(const int argc, const char *argv[]) {
-
-
 	char TransA, TransB;
   	double alpha, beta;
 	size_t M, N, K;
@@ -104,7 +102,7 @@ int main(const int argc, const char *argv[]) {
 	}
 	fprintf(stderr, "\nCoCopeLia DGEMM T_best = %zu : t = %lf ms ( %lf Gflops/s )\n\n", best_T, best_t  * 1000, Gval_per_s(dgemm_flops(M,N,K),best_t));
 	predef_control_values-> T = best_T;
-	for (int i = 0; i< return_values->dev_num; i++) CoCopeLiaDevCacheFree(return_values->dev_ids[i]);
+	for (int i = 0; i< LOC_NUM; i++) CoCopeLiaDevCacheFree(deidxize(i));
 
 #ifdef RUNVALIDATION
 	double *C_out, *C_out1;

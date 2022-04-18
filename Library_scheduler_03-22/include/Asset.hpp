@@ -12,6 +12,7 @@
 
 #include "CoCoPeLiaModel.hpp"
 #include "DataCaching.hpp"
+#include <atomic>
 
 template <typename dtype>
 class Tile1D
@@ -26,7 +27,8 @@ class Tile1D
 #ifdef ENABLE_PARALLEL_BACKEND
 		int RW_Master_backend_ctr;
 #endif
-		int RW_lock, RW_lock_holders;
+		int RW_lock;
+		std::atomic<int> RW_lock_holders;
 		CBlock_p WriteBackBlock;
 		CBlock_p StoreBlock[LOC_NUM];
 
@@ -61,7 +63,8 @@ class Tile2D
 		int id, GridId1, GridId2;
 		int dim1, dim2;
 		int R_flag, W_flag, W_total, RW_master;
-		int RW_lock, RW_lock_holders;
+		int RW_lock;
+		std::atomic<int> RW_lock_holders;
 #ifdef ENABLE_PARALLEL_BACKEND
 		int RW_Master_backend_ctr;
 #endif

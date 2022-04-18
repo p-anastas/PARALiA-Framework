@@ -48,15 +48,19 @@ char* CoCoImplementationPrint(){
 }
 
 char* CoCoDistributionPrint(){
-#ifndef RUNTIME_SCHEDULER_VERSION
 	char* string_out = (char*) malloc (256*sizeof(char));
+#ifdef RUNTIME_SCHEDULER_VERSION
 #ifdef DISTRIBUTION
-	sprintf(string_out, "%s", DISTRIBUTION);
+	sprintf(string_out, "RT-%s", DISTRIBUTION);
 #else
 #error
 #endif
 #else
-	char* string_out = "";
+#ifdef DISTRIBUTION
+	sprintf(string_out, "ST-%s", DISTRIBUTION);
+#else
+#error
+#endif
 #endif
 	return string_out;
 }

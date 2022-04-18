@@ -169,7 +169,8 @@ void Subkernel::request_tile(short TileIdx){
 			FetchFromId = tmp->RW_master;
 			tmp->RW_master = run_dev_id;
 			if (FetchFromId == run_dev_id) error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::request_tile W_flag = %d, \
-			FetchFromId == run_dev_id == %d\n", run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2, tmp->W_flag, FetchFromId);
+				FetchFromId == run_dev_id == %d, state[%d] == %s\n",  run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2,
+				tmp->W_flag, FetchFromId, FetchFromId, print_state(tmp->StoreBlock[idxize(FetchFromId)]->State));
 		}
 		short FetchFromId_idx = idxize(FetchFromId);
 #ifdef CDEBUG
@@ -234,6 +235,7 @@ void Subkernel::request_data(){
 			Tile1D<VALUE_TYPE>* tmp = (Tile1D<VALUE_TYPE>*) TileList[j];
 			if (tmp->StoreBlock[run_dev_id_idx] == NULL ||
 				tmp->StoreBlock[run_dev_id_idx]->State == INVALID) {
+				if(tmp->StoreBlock[run_dev_id_idx] != NULL) tmp->StoreBlock[run_dev_id_idx]->Owner_p = NULL;
 				state new_block_state;
 				if(tmp->W_flag) new_block_state = EXCLUSIVE;
 				else new_block_state = SHARABLE;
@@ -283,6 +285,7 @@ void Subkernel::request_data(){
 			Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) TileList[j];
 			if (tmp->StoreBlock[run_dev_id_idx] == NULL ||
 				tmp->StoreBlock[run_dev_id_idx]->State == INVALID) {
+				if(tmp->StoreBlock[run_dev_id_idx] != NULL) tmp->StoreBlock[run_dev_id_idx]->Owner_p = NULL;
 				state new_block_state;
 				if(tmp->W_flag) new_block_state = EXCLUSIVE;
 				else new_block_state = SHARABLE;
@@ -383,7 +386,8 @@ void Subkernel::run_operation(){
 	for (int j = 0; j < TileNum; j++){
 		if (TileDimlist[j] == 1){
 				Tile1D<VALUE_TYPE>* tmp = (Tile1D<VALUE_TYPE>*) TileList[j];
-				if (tmp->StoreBlock[run_dev_id_idx] == NULL)
+				if (tmp->StoreBlock[run_dev_id_idx] == NULL ||
+  tmp->StoreBlock[run_dev_id_idx]->State == INVALID)
 					error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d])::run_operation: Tile(j=%d) Storeblock is NULL\n",
 						run_dev_id, id, tmp->id, tmp->GridId, j);
 				if(tmp->R_flag) exec_queue[run_dev_id_idx]->wait_for_event(tmp->StoreBlock[run_dev_id_idx]->Available);
@@ -393,7 +397,8 @@ void Subkernel::run_operation(){
 		}
 		else if (TileDimlist[j] == 2){
 				Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) TileList[j];
-				if (tmp->StoreBlock[run_dev_id_idx] == NULL)
+				if (tmp->StoreBlock[run_dev_id_idx] == NULL ||
+  tmp->StoreBlock[run_dev_id_idx]->State == INVALID)
 					error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::run_operation: Tile(j=%d) Storeblock is NULL\n",
 						run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2, j);
 				if(tmp->R_flag) exec_queue[run_dev_id_idx]->wait_for_event(tmp->StoreBlock[run_dev_id_idx]->Available);
@@ -418,7 +423,8 @@ void Subkernel::run_operation(){
 	for (int j = 0; j < TileNum; j++){
 		if (TileDimlist[j] == 1){
 			Tile1D<VALUE_TYPE>* tmp = (Tile1D<VALUE_TYPE>*) TileList[j];
-			if (tmp->StoreBlock[run_dev_id_idx] == NULL)
+			if (tmp->StoreBlock[run_dev_id_idx] == NULL ||
+  tmp->StoreBlock[run_dev_id_idx]->State == INVALID)
 				error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d])::run_operation: Tile(j=%d) Storeblock is NULL\n",
 					run_dev_id, id, tmp->id, tmp->GridId, j);
 			CBlock_wrap_p wrap_oper = NULL;
@@ -427,8 +433,8 @@ void Subkernel::run_operation(){
 			wrap_oper->lockfree = false;
 			if(tmp->W_flag){
 				exec_queue[run_dev_id_idx]->add_host_func((void*)&CBlock_RW_wrap, (void*) wrap_oper);
-				Ptr_int_p wrapped_op = (Ptr_int_p) malloc(sizeof(struct Ptr_int));
-				wrapped_op->int_ptr = &tmp->RW_lock_holders;
+				Ptr_atomic_int_p wrapped_op = (Ptr_atomic_int_p) malloc(sizeof(struct Ptr_atomic_int));
+				wrapped_op->ato_int_ptr = &tmp->RW_lock_holders;
 				exec_queue[run_dev_id_idx]->add_host_func((void*)&CoCoDecAsync, (void*) wrapped_op);
 			}
 			else exec_queue[run_dev_id_idx]->add_host_func((void*)&CBlock_RR_wrap, (void*) wrap_oper);
@@ -441,7 +447,8 @@ void Subkernel::run_operation(){
 		}
 		else if (TileDimlist[j] == 2){
 			Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) TileList[j];
-			if (tmp->StoreBlock[run_dev_id_idx] == NULL)
+			if (tmp->StoreBlock[run_dev_id_idx] == NULL ||
+  tmp->StoreBlock[run_dev_id_idx]->State == INVALID)
 				error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::run_operation: Tile(j=%d) Storeblock is NULL\n",
 					run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2, j);
 			CBlock_wrap_p wrap_oper = NULL;
@@ -450,8 +457,8 @@ void Subkernel::run_operation(){
 			wrap_oper->lockfree = false;
 			if(tmp->W_flag){
 				exec_queue[run_dev_id_idx]->add_host_func((void*)&CBlock_RW_wrap, (void*) wrap_oper);
-				Ptr_int_p wrapped_op = (Ptr_int_p) malloc(sizeof(struct Ptr_int));
-				wrapped_op->int_ptr = &tmp->RW_lock_holders;
+				Ptr_atomic_int_p wrapped_op = (Ptr_atomic_int_p) malloc(sizeof(struct Ptr_atomic_int));
+				wrapped_op->ato_int_ptr = &tmp->RW_lock_holders;
 				exec_queue[run_dev_id_idx]->add_host_func((void*)&CoCoDecAsync, (void*) wrapped_op);
 			}
 			else exec_queue[run_dev_id_idx]->add_host_func((void*)&CBlock_RR_wrap, (void*) wrap_oper);
@@ -486,7 +493,8 @@ void Subkernel::writeback_data(){
 	for (int j = 0; j < TileNum; j++) if (WR_last[j]){
 		if (TileDimlist[j] == 1){
 			Tile1D<VALUE_TYPE>* tmp = (Tile1D<VALUE_TYPE>*) TileList[j];
-			if (tmp->StoreBlock[run_dev_id_idx] == NULL)
+			if (tmp->StoreBlock[run_dev_id_idx] == NULL ||
+  tmp->StoreBlock[run_dev_id_idx]->State == INVALID)
 				error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d])::writeback_data: Tile(j=%d) Storeblock is NULL\n",
 					run_dev_id, id, tmp->id, tmp->GridId, j);
 			Writeback_id = tmp->getWriteBackLoc(); //to MASTER
@@ -530,7 +538,8 @@ void Subkernel::writeback_data(){
 		}
 		else if (TileDimlist[j] == 2){
 			Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) TileList[j];
-			if (tmp->StoreBlock[run_dev_id_idx] == NULL)
+			if (tmp->StoreBlock[run_dev_id_idx] == NULL ||
+  tmp->StoreBlock[run_dev_id_idx]->State == INVALID)
 				error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::writeback_data: Tile(j=%d) Storeblock is NULL\n",
 					run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2, j);
 			Writeback_id = tmp->getWriteBackLoc(); //to MASTER
@@ -777,30 +786,30 @@ void Subkernel::prepare_launch(short dev_id){
 		if (TileDimlist[j] == 1){
 			Tile1D<VALUE_TYPE>* tmp = (Tile1D<VALUE_TYPE>*) TileList[j];
 			if(tmp->W_flag) {
-				if(tmp->RW_lock_holders > 0 && tmp->RW_lock != dev_id)
+				if(tmp->RW_lock_holders.load() > 0 && tmp->RW_lock != dev_id)
 					error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d])::prepare_launch: Tile(j=%d) has RW_lock = %d with RW_lock_holders = %d\n",
-						run_dev_id, id, tmp->id, tmp->GridId, j, tmp->RW_lock, tmp->RW_lock_holders);
+						run_dev_id, id, tmp->id, tmp->GridId, j, tmp->RW_lock, tmp->RW_lock_holders.load());
 				if (tmp->W_total == tmp->W_flag) WR_first = 1;
 				tmp->RW_lock = dev_id;
 				tmp->RW_lock_holders++;
 #ifdef DEBUG
 				lprintf(lvl, "Subkernel(dev=%d,id=%d)-Tile(%d.[%d])::prepare_launch: Tile(j=%d) has RW_lock = %d with RW_lock_holders = %d\n",
-					run_dev_id, id, tmp->id, tmp->GridId, j, tmp->RW_lock, tmp->RW_lock_holders);
+					run_dev_id, id, tmp->id, tmp->GridId, j, tmp->RW_lock, tmp->RW_lock_holders.load());
 #endif
 			}
 		}
 		else if (TileDimlist[j] == 2){
 			Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) TileList[j];
 			if(tmp->W_flag) {
-				if(tmp->RW_lock_holders > 0 && tmp->RW_lock != dev_id)
+				if(tmp->RW_lock_holders.load() > 0 && tmp->RW_lock != dev_id)
 					error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::prepare_launch: Tile(j=%d) has RW_lock = %d with RW_lock_holders = %d\n",
-						run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2, j, tmp->RW_lock, tmp->RW_lock_holders);
+						run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2, j, tmp->RW_lock, tmp->RW_lock_holders.load());
 				if (tmp->W_total == tmp->W_flag) WR_first = 1;
 				tmp->RW_lock = dev_id;
 				tmp->RW_lock_holders++;
 #ifdef DEBUG
 				lprintf(lvl, "Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::prepare_launch: Tile(j=%d) has RW_lock = %d with RW_lock_holders = %d\n",
-					run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2, j, tmp->RW_lock, tmp->RW_lock_holders);
+					run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2, j, tmp->RW_lock, tmp->RW_lock_holders.load());
 #endif
 			}
 		}
@@ -814,11 +823,11 @@ short Subkernel::no_locked_tiles(){
 	for (int j = 0; j < TileNum; j++){
 		if (TileDimlist[j] == 1){
 			Tile1D<VALUE_TYPE>* tmp = (Tile1D<VALUE_TYPE>*) TileList[j];
-			if(tmp->RW_lock_holders) return 0;
+			if(tmp->RW_lock_holders.load() > 0 ) return 0;
 		}
 		else if (TileDimlist[j] == 2){
 			Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) TileList[j];
-			if(tmp->RW_lock_holders) return 0;
+			if(tmp->RW_lock_holders.load() > 0) return 0;
 		}
 		else error("Subkernel(dev=%d,id=%d)::writeback_data: Not implemented for TileDim=%d\n", run_dev_id, id, TileDimlist[j]);
 	}
@@ -832,12 +841,12 @@ short Subkernel::is_RW_lock_master(short dev_id){
 		if (TileDimlist[j] == 1){
 			Tile1D<VALUE_TYPE>* tmp = (Tile1D<VALUE_TYPE>*) TileList[j];
 			if(tmp->W_flag && /*tmp->W_total != tmp->W_flag &&*/ tmp->RW_lock!=dev_id) return 0;
-			else if(tmp->W_flag && tmp->RW_lock==dev_id) RW_lock_Hos = tmp->RW_lock_holders;
+			else if(tmp->W_flag && tmp->RW_lock==dev_id) RW_lock_Hos = tmp->RW_lock_holders.load();
 		}
 		else if (TileDimlist[j] == 2){
 			Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) TileList[j];
 			if(tmp->W_flag && /*tmp->W_total != tmp->W_flag &&*/ tmp->RW_lock!=dev_id) return 0;
-			else if(tmp->W_flag && tmp->RW_lock==dev_id) RW_lock_Hos = tmp->RW_lock_holders;
+			else if(tmp->W_flag && tmp->RW_lock==dev_id) RW_lock_Hos = tmp->RW_lock_holders.load();
 		}
 	}
 	return RW_lock_Hos;
