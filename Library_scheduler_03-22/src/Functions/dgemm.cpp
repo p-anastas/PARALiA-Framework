@@ -345,31 +345,44 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 
 	size_t T = autotuned_vals->T;
 
-	int Block_num = 1 + (A_asset->dim1/T + ((A_asset->dim1%T)? 1 : 0))* (A_asset->dim2/T + ((A_asset->dim2%T)? 1 : 0)) +
+	int GPU_Block_num, Block_num = 1 + (A_asset->dim1/T + ((A_asset->dim1%T)? 1 : 0))* (A_asset->dim2/T + ((A_asset->dim2%T)? 1 : 0)) +
 				(B_asset->dim1/T + ((B_asset->dim1%T)? 1 : 0))* (B_asset->dim2/T + ((B_asset->dim2%T)? 1 : 0)) +
 				(C_asset->dim1/T + ((C_asset->dim1%T)? 1 : 0))* (C_asset->dim2/T + ((C_asset->dim2%T)? 1 : 0));
 	long long Block_sz = 	T*T*sizeof(VALUE_TYPE);
-
+	GPU_Block_num = Block_num;
+	if(autotuned_vals->cache_limit > 0){
+		int max_block_num = autotuned_vals->cache_limit/Block_sz;
+		if(max_block_num < Block_num){
+			lprintf(0, "CoCopeLiaDgemm: Input cache limit %lld forces problem to use %d blocks\
+			instead of %d needed for the full problem\n", autotuned_vals->cache_limit, max_block_num, Block_num);
+			int worst_case_ex_blocks = (C_asset->dim1/T + ((C_asset->dim1%T)? 1 : 0))* (C_asset->dim2/T + ((C_asset->dim2%T)? 1 : 0));
+			if(max_block_num < worst_case_ex_blocks) // 3 blocks for 1 sk and 1 extra for rare case of ping-pong exclusive blocks?
+				error("CoCopeLiaDgemm: Not able to run with < %d blocks per cache due to EX scheduling\n", worst_case_ex_blocks);
+				GPU_Block_num = max_block_num;
+		}
+	}
 	for(int cache_loc = 0; cache_loc < LOC_NUM; cache_loc++){
+		int curr_block_num = Block_num;
+		if(deidxize(cache_loc)!= -1) curr_block_num = GPU_Block_num;
 #ifdef BUFFER_REUSE_ENABLE
-	if(Global_Cache[cache_loc] == NULL) Global_Cache[cache_loc] = new Cache(deidxize(cache_loc), Block_num, Block_sz);
-	else if (Global_Cache[cache_loc]->BlockSize != Block_sz || Global_Cache[cache_loc]->BlockNum < Block_num){
+		if(Global_Cache[cache_loc] == NULL) Global_Cache[cache_loc] = new Cache(deidxize(cache_loc), curr_block_num, Block_sz);
+		else if (Global_Cache[cache_loc]->BlockSize != Block_sz || Global_Cache[cache_loc]->BlockNum < curr_block_num){
 #ifdef DEBUG
-	lprintf(lvl, "CoCopeLiaDgemm: Previous Cache smaller than requested:\
-	Global_Cache[%d]->BlockSize=%lld vs Block_sz = %lld,\
-	Global_Cache[%d]->BlockNum=%d vs Block_num = %d\n",
-	cache_loc, Global_Cache[cache_loc]->BlockSize, Block_sz,
-	cache_loc, Global_Cache[cache_loc]->BlockNum, Block_num);
+		lprintf(lvl, "CoCopeLiaDgemm: Previous Cache smaller than requested:\
+		Global_Cache[%d]->BlockSize=%lld vs Block_sz = %lld,\
+		Global_Cache[%d]->BlockNum=%d vs Block_num = %d\n",
+		cache_loc, Global_Cache[cache_loc]->BlockSize, Block_sz,
+		cache_loc, Global_Cache[cache_loc]->BlockNum, curr_block_num);
 #endif
-		delete Global_Cache[cache_loc];
-		Global_Cache[cache_loc] = new Cache(deidxize(cache_loc), Block_num, Block_sz);
-	}
-	else{
-		;
-	}
+			delete Global_Cache[cache_loc];
+			Global_Cache[cache_loc] = new Cache(deidxize(cache_loc), curr_block_num, Block_sz);
+		}
+		else{
+			;
+		}
 #else
-		if(Global_Cache[cache_loc]!= NULL) error("CoCopeLiaDgemm: Global_Cache[%d] was not NULL with reuse disabled\n", cache_loc);
-		Global_Cache[cache_loc] = new Cache(deidxize(cache_loc), Block_num, Block_sz);
+			if(Global_Cache[cache_loc]!= NULL) error("CoCopeLiaDgemm: Global_Cache[%d] was not NULL with reuse disabled\n", cache_loc);
+			Global_Cache[cache_loc] = new Cache(deidxize(cache_loc), curr_block_num, Block_sz);
 #endif
 	}
 
