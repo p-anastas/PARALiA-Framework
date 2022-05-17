@@ -18,17 +18,17 @@ template <typename dtype>
 class Tile1D
 {
 		// Variables
-	private:
-		int WriteBackLoc;
 	public:
+		int WriteBackLoc;
 		int id, GridId;
 		int dim;
 		int R_flag, W_flag, W_total, RW_master;
-#ifdef ENABLE_PARALLEL_BACKEND
-		int RW_Master_backend_ctr;
-#endif
 		int RW_lock;
 		std::atomic<int> RW_lock_holders;
+//#ifdef ENABLE_PARALLEL_BACKEND
+		int RW_Master_backend_ctr;
+//#endif
+
 		CBlock_p WriteBackBlock;
 		CBlock_p StoreBlock[LOC_NUM];
 
@@ -57,17 +57,16 @@ template <typename dtype>
 class Tile2D
 {
 		// Variables
-	private:
-		int WriteBackLoc;
 	public:
+		int WriteBackLoc;
 		int id, GridId1, GridId2;
 		int dim1, dim2;
 		int R_flag, W_flag, W_total, RW_master;
 		int RW_lock;
 		std::atomic<int> RW_lock_holders;
-#ifdef ENABLE_PARALLEL_BACKEND
+//#ifdef ENABLE_PARALLEL_BACKEND
 		int RW_Master_backend_ctr;
-#endif
+//#endif
 
 		CBlock_p WriteBackBlock;
 		CBlock_p StoreBlock[LOC_NUM];
@@ -151,7 +150,7 @@ class Asset1D
 	Tile1D<dtype>* getTile(int iloc);
 	int dtypesize() { return sizeof(dtype); }
 	int size() { return dtypesize()*dim; }
-	void drawTileMap();
+	void DrawTileMap();
 
 	// Backend Functions
 	void prepareAsync(pthread_t* thread_id,

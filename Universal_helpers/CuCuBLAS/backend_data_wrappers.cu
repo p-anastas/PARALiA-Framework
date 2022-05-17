@@ -191,6 +191,11 @@ void CoCoMemcpyAsync(void* dest, void* src, long long bytes, short loc_dest, sho
 }
 
 void CoCoMemcpy2D(void* dest, size_t ldest, void* src, size_t ldsrc, size_t rows, size_t cols, short elemSize, short loc_dest, short loc_src){
+	short lvl = 6;
+#ifdef DDEBUG
+	lprintf(lvl, "CoCoMemcpy2D(dest=%p, ldest =%zu, src=%p, ldsrc = %zu, rows = %zu, cols = %zu, elemsize = %d, loc_dest = %d, loc_src = %d)\n",
+		dest, ldest, src, ldsrc, rows, cols, elemSize, loc_dest, loc_src);
+#endif
 	int count = 42;
 	massert(CUBLAS_STATUS_SUCCESS == cudaGetDeviceCount(&count), "CoCoMemcpy2D: cudaGetDeviceCount failed\n");
 	massert(-2 < loc_dest && loc_dest < count, "CoCoMemcpy2D: Invalid destination device: %d\n", loc_dest);
