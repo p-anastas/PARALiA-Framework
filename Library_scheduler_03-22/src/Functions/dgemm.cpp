@@ -505,13 +505,23 @@ if(!reuse_model_flag){
 		if (s != 0) error("CoCopeLiaDgemm: pthread_join failed with exit value %d", s);
 		//free(res);      /* Free memory allocated by thread */
 	}
-#ifdef TEST
-	cpu_timer = csecond() - cpu_timer;
-	lprintf(lvl, "Fire and gather pthreads for all devices -> t_exec_full = %lf ms\n", cpu_timer*1000);
-	lprintf(lvl, "t_predicted for T=%zu was %.2lf ms : %lf percentile error\n", T, best_pred_p->pred_t*1000,
-	(best_pred_p->pred_t==0)? 0.0: (best_pred_p->pred_t - cpu_timer )/best_pred_p->pred_t*100);
-	cpu_timer = csecond();
-#endif
+
+	int prev_dev = CoCoPeLiaGetDevice();
+
+	/// Small fix since host functions triggered after the last WB belong to a different device,
+	/// resulting in warning if reset cache was reached prior. If it leads to slowdown will be exterminated. 
+	for(int i=0; i<LOC_NUM;i++){
+		CoCoPeLiaSelectDevice(deidxize(i));
+		CoCoSyncCheckErr();
+	}
+	CoCoPeLiaSelectDevice(prev_dev);
+	#ifdef TEST
+		cpu_timer = csecond() - cpu_timer;
+		lprintf(lvl, "Fire and gather pthreads for all devices -> t_exec_full = %lf ms\n", cpu_timer*1000);
+		lprintf(lvl, "t_predicted for T=%zu was %.2lf ms : %lf percentile error\n", T, best_pred_p->pred_t*1000,
+		(best_pred_p->pred_t==0)? 0.0: (best_pred_p->pred_t - cpu_timer )/best_pred_p->pred_t*100);
+		cpu_timer = csecond();
+	#endif
 
 #ifdef STEST
 	STEST_print_SK(thread_dev_data, gemm_entry_ts, autotuned_vals_gemm->dev_num);
