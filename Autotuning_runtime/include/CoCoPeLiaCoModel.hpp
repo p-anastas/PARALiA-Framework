@@ -11,20 +11,23 @@ typedef struct  comm_data{
 	long double tb;
 	long double sl;
 
-	short from, to; 
+	short from, to;
 	char* machine;
 }* CoModel_p;
 
 /// Load parameters from file and return model
 CoModel_p CoModel_init(short to, short from);
 
-/// Predict t_com for bytes using the CoModel 
+/// Create a dummy model in dev_id (for no transfer-medium cases)
+CoModel_p CoModel_init_local(short dev_id);
+
+/// Predict t_com for bytes using the CoModel
 double t_com_predict(CoModel_p model, long double bytes);
 
 /// Predict t_com for bytes using the CoModel with bidirectional overlap slowdown
 double t_com_sl(CoModel_p model, long double bytes);
 
-/// Predict t_com_bid for bytes1,bytes2 using the two link CoModels 
+/// Predict t_com_bid for bytes1,bytes2 using the two link CoModels
 double t_com_bid_predict(CoModel_p model1, CoModel_p model2, long double bytes1, long double bytes2);
 
 #define maxDim_trans 16384
@@ -32,7 +35,7 @@ double t_com_bid_predict(CoModel_p model1, CoModel_p model2, long double bytes1,
 #define step_trans 256
 
 typedef struct  comodel{
-	short from, to; 
+	short from, to;
 
 	// 0 for undef, 1 for average, TODO: 2 for min, 3 for max
 	short mode;

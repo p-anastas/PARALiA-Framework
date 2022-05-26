@@ -2,24 +2,41 @@ cmake_minimum_required (VERSION 3.10)
 ### Initialize the project
 project (CoCopeLia-Autotune VERSION ${PROJECT_VERSION} DESCRIPTION "Auto-tuning function lib for CoCoPeLia" LANGUAGES CXX)
 message( "------------------------------------------------------------------------------------------------")
-message( "Autotuning Runtime - PROJECT_SOURCE_DIR: " ${PROJECT_SOURCE_DIR} )
-#message( "Autotuning Runtime - CMAKE_CURRENT_SOURCE_DIR: " ${CMAKE_CURRENT_SOURCE_DIR} )
-#message( "Autotuning Runtime - CMAKE_CURRENT_BINARY_DIR: " ${CMAKE_CURRENT_BINARY_DIR} )
+message( "Autotuning Runtime exp - PROJECT_SOURCE_DIR: " ${PROJECT_SOURCE_DIR} )
+#message( "Autotuning Runtime exp - CMAKE_CURRENT_SOURCE_DIR: " ${CMAKE_CURRENT_SOURCE_DIR} )
+#message( "Autotuning Runtime exp - CMAKE_CURRENT_BINARY_DIR: " ${CMAKE_CURRENT_BINARY_DIR} )
+
+## Define which cost function to use for device selection
+add_definitions(-DDEV_COST_FUNC="FULL-OVERLAP")
+#add_definitions(-DDEV_COST_FUNC="ZERO-OVERLAP")
+
+## Define an extra percentile overhead for Tile sizes which lead to padding and possible imbalance
+## See Autotuning_runtime->CoCoPeLiaModel->CoCopeLiaPredictReuseHetero
+add_definitions(-DTILE_IMBALANCE_PENALTY=0.05)
+
+## Define an extra percentile overhead for Tile sizes which lead to padding and possible imbalance
+## See Autotuning_runtime->CoCoPeLiaModel->CoCopeLiaPredictReuseHetero
+add_definitions(-DREDUCE_PENALTY=0.1)
+
+## Define which mode to use when calculating relative performance for a problem
+## See Autotuning_runtime->CoCoPeLiaModel->CoCopeLiaPredictReuseHetero
+add_definitions(-DREL_PERF_MODE="PERCENTILE")
+#add_definitions(-DREL_PERF_MODE="ROOT-PROBLEM")
 
 set ( AUTOTUNE_DIR ${PROJECT_SOURCE_DIR} )
-message( "Autotuning Runtime - AUTOTUNE_DIR: " ${AUTOTUNE_DIR} )
+message( "Autotuning Runtime exp - AUTOTUNE_DIR: " ${AUTOTUNE_DIR} )
 
 set (AUTOTUNE_DIR_INC ${AUTOTUNE_DIR}/include)
 include_directories( ${AUTOTUNE_DIR_INC})
-message( "Autotuning Runtime - Included DIR: " ${AUTOTUNE_DIR_INC} )
+message( "Autotuning Runtime exp - Included DIR: " ${AUTOTUNE_DIR_INC} )
 
 include_directories(${UNIHELP_INSTALL_INC})
-message( "Autotuning Runtime - Included DIR: " ${UNIHELP_INSTALL_INC} )
+message( "Autotuning Runtime exp - Included DIR: " ${UNIHELP_INSTALL_INC} )
 
 set (AUTOTUNE_DIR_SRC ${AUTOTUNE_DIR}/src)
-message( "Autotuning Runtime - Source DIR: " ${AUTOTUNE_DIR_SRC} )
+message( "Autotuning Runtime exp - Source DIR: " ${AUTOTUNE_DIR_SRC} )
 
-set (AUTOTUNE_INSTALL ${CMAKE_INSTALL_PROJECT}/Autotuning_Runtime)
+set (AUTOTUNE_INSTALL ${CMAKE_INSTALL_PROJECT}/Autotuning_Runtime_exp)
 file(MAKE_DIRECTORY ${AUTOTUNE_INSTALL})
 
 set (AUTOTUNE_INSTALL_INC ${AUTOTUNE_INSTALL}/include)
@@ -51,7 +68,7 @@ configure_file(${AUTOTUNE_DIR_INC}/CoCoPeLiaModel.hpp ${AUTOTUNE_INSTALL_INC}/Co
 #target_link_libraries(CoCoPeLiaPredictTileTester ${INTERNAL_LINK_LIB} autotuning_runtime unihelpers)
 
 set (AUTOTUNE_INSTALL_INC ${AUTOTUNE_INSTALL_INC} PARENT_SCOPE)
-message( "->\nAutotuning Runtime - Shared Library: " ${CMAKE_LIBRARY_OUTPUT_DIRECTORY} )
-message( "Autotuning Runtime - Shared Library headers: " ${AUTOTUNE_INSTALL_INC} )
-message( "Autotuning Runtime - Model testing bin DIR: " ${CMAKE_RUNTIME_OUTPUT_DIRECTORY} )
+message( "->\nAutotuning Runtime exp - Shared Library: " ${CMAKE_LIBRARY_OUTPUT_DIRECTORY} )
+message( "Autotuning Runtime exp - Shared Library headers: " ${AUTOTUNE_INSTALL_INC} )
+message( "Autotuning Runtime exp - Model testing bin DIR: " ${CMAKE_RUNTIME_OUTPUT_DIRECTORY} )
 message( "------------------------------------------------------------------------------------------------")

@@ -6,7 +6,7 @@ message("CoCopeLia-Framework - BACKEND: " ${BACKEND})
 add_definitions(-DBACKEND="${BACKEND}")
 ## Define the project version (used in logfiles for result testing)
 
-set(PROJECT_VERSION "1.2")
+set(PROJECT_VERSION "1.3")
 message("CoCopeLia-Framework - PROJECT_VERSION: " ${PROJECT_VERSION})
 add_definitions(-DVERSION="${PROJECT_VERSION}")
 
@@ -72,13 +72,13 @@ add_definitions(-DMULTIFETCH_PENALTY=0.2)
 add_definitions(-DNORMALIZE_NEAR_SPLIT_LIMIT=0.05)
 
 #Run in testing mode : details about models, decisions and time spend in operations.
-add_definitions(-DTEST)
+#add_definitions(-DTEST)
 
 #Run in Subkernel testing mode : details about time spend in subkernel operations.
-add_definitions(-DSTEST)
+#add_definitions(-DSTEST)
 
 #Run in debug mode, which includes detailed function calls and info for error-checking
-add_definitions(-DDEBUG)
+#add_definitions(-DDEBUG)
 
 #Run in deep debug mode, for command-to-command debugging
 #add_definitions(-DDDEBUG)
@@ -199,15 +199,8 @@ ADD_SUBDIRECTORY (Universal_helpers)
 ADD_SUBDIRECTORY (Deployment_phase)
 add_definitions(-DDEPLOYDB="${DEPLOYMENT_DIR_DB}")
 
+ADD_SUBDIRECTORY (Autotuning_runtime)
+ADD_SUBDIRECTORY (Library_scheduler)
 
-set(EXPERIMENTAL_VERSION 1)
-if (${EXPERIMENTAL_VERSION} EQUAL 0)
-  ADD_SUBDIRECTORY (Autotuning_runtime)
-	ADD_SUBDIRECTORY (Library_scheduler)
-elseif(${EXPERIMENTAL_VERSION} EQUAL 1)
-  ADD_SUBDIRECTORY (Autotuning_runtime_experimental)
-  ADD_SUBDIRECTORY (Library_scheduler_03-22)
-else()
-endif()
 
 ADD_SUBDIRECTORY (Benchmarking)
