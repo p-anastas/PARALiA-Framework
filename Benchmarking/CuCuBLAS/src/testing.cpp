@@ -70,7 +70,7 @@ void ParseInputLvl1(const int argc, const char *argv[], CoControl_p* predef_cont
 	size_t* D1, size_t* inc1, size_t* inc2, short* loc1, short* loc2, short* outloc1, short* outloc2){
 	if(argc != 13) error("Incorrect input arguments. Usage: ./correct_run\n\tdev_num(auto if <0)\
 	\n\tdev_ids(form example: 0101 for devices 0,2 - ignore if dev_num < 0)\n\tT(auto if <=0)\
-	\n\tcpu_ratio(auto if <0, set to 1 if dev_num=0)\n\t alpha D1 ic1 inc2 loc1 loc2 outloc1 outloc2\n");
+	\n\tcache_max_size(auto if <0)\n\t alpha D1 ic1 inc2 loc1 loc2 outloc1 outloc2\n");
 
 	int dev_num = atoi(argv[1]);
 	size_t dev_ids_token = atoi(argv[2]);
@@ -125,7 +125,7 @@ void ParseInputLvl3(const int argc, const char *argv[], CoControl_p* predef_cont
 		short* loc1, short* loc2, short* loc3, short* outloc){
 	if(argc != 16) error("Incorrect input arguments. Usage: ./correct_run\
 	\n\tdev_num(auto if <0)\n\tdev_ids(form example: 0101 for devices 0,2 - ignore if dev_num < 0)\n\tT(auto if <=0)\
-	\n\tcpu_ratio(auto if <0, set to 1 if dev_num=0)\n\tTransA TransB alpha beta D1 D2 D3 loc1 loc2 loc3 outloc \n");
+	\n\tcache_max_size(auto if <0)\n\tTransA TransB alpha beta D1 D2 D3 loc1 loc2 loc3 outloc \n");
 
 	int dev_num = atoi(argv[1]);
 	size_t dev_ids_token = atoi(argv[2]);

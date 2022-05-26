@@ -18,13 +18,13 @@ pthread_barrier_t  SoftCache_alloc_barrier_axpy;
 axpy_backend_in_p initial_daxpy = NULL;
 
 CoCoModel_p glob_model_axpy[128] = {NULL};
-Cache_p Global_Cache[LOC_NUM] = {NULL};
+//Cache_p Global_Cache[LOC_NUM] = {NULL};
 CoControl_p predef_vals_axpy = NULL;
 CoControl_p autotuned_vals_axpy = NULL;
 int NGridSz_axpy = 0;
 
 #ifdef STEST
-double daxpy_entry_ts;
+double axpy_entry_ts;
 #endif
 
 Subkernel** Subkernel_list_axpy;
@@ -216,7 +216,9 @@ CoControl_p CoCopeLiaDaxpy(size_t N, VALUE_TYPE alpha, VALUE_TYPE* x, size_t inc
 	lprintf(lvl-1, "|-----> CoCopeLiaDaxpy\n");
 	double cpu_timer = csecond();
 #endif
-
+#ifdef STEST
+	axpy_entry_ts = csecond();
+#endif
 	int prev_dev_id = CoCoPeLiaGetDevice();
 
 	short reuse_model_flag = 1;
@@ -340,7 +342,7 @@ CoControl_p CoCopeLiaDaxpy(size_t N, VALUE_TYPE alpha, VALUE_TYPE* x, size_t inc
 		&Subkernel_num_axpy);
 #ifdef DEBUG
 	lprintf(lvl, "Subkernel_num_axpy = %d {N}GridSz = {%d}, num_devices = %d\n\n",
-		Subkernel_num_axpy, NGridSz_axpy, num_devices);
+		Subkernel_num_axpy, NGridSz_axpy, autotuned_vals_axpy->dev_num);
 #endif
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer;
@@ -513,7 +515,8 @@ CoControl_p CoCopeLiaDaxpy(size_t N, VALUE_TYPE alpha, VALUE_TYPE* x, size_t inc
 
 /// A modification of CoCopeLiaDaxpy but with given parameters (mainly for performance/debug purposes)
 CoControl_p CoCopeLiaDaxpyControled(size_t N, VALUE_TYPE alpha, VALUE_TYPE* x, size_t incx, VALUE_TYPE* y, size_t incy, CoControl_p predef_control_values){
-	if (predef_control_values == NULL) return CoCopeLiaDaxpy(N, alpha, x, incx, y, incy);
+	if (!predef_control_values) return CoCopeLiaDaxpy(N, alpha, x, incx, y, incy);
+	if (predef_vals_axpy == NULL) predef_vals_axpy = (CoControl_p) malloc(sizeof(struct CoControl));
 	predef_vals_axpy->T = predef_control_values->T;
 	predef_vals_axpy->dev_num = predef_control_values->dev_num;
 	for(int idx =0; idx < LOC_NUM; idx++)

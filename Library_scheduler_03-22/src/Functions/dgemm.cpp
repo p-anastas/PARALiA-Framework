@@ -18,7 +18,7 @@ pthread_barrier_t  SoftCache_alloc_barrier_gemm;
 gemm_backend_in_p initial_gemm = NULL;
 
 CoCoModel_p glob_model_gemm[128] = {NULL};
-Cache_p Global_Cache[LOC_NUM] = {NULL};
+//Cache_p Global_Cache[LOC_NUM] = {NULL};
 CoControl_p predef_vals_gemm = NULL;
 CoControl_p autotuned_vals_gemm = NULL;
 int MGridSz = 0, NGridSz = 0, KGridSz = 0;
@@ -353,8 +353,12 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 	if(autotuned_vals_gemm->cache_limit > 0){
 		int max_block_num = autotuned_vals_gemm->cache_limit/Block_sz;
 		if(max_block_num < Block_num){
-			lprintf(0, "CoCopeLiaDgemm: Input cache limit %lld forces problem to use %d blocks\
-			instead of %d needed for the full problem\n", autotuned_vals_gemm->cache_limit, max_block_num, Block_num);
+			//#ifdef DEBUG
+			if(!reuse_model_flag){
+				lprintf(0, "CoCopeLiaDgemm: Input cache limit %lld forces problem to use %d blocks\
+					instead of %d needed for the full problem\n", autotuned_vals_gemm->cache_limit, max_block_num, Block_num);
+				lprintf(0, "====================================\n");
+			}
 			// With Parallel backends unfortunately == SK_blocks + Max_Exclusive_Blocks - 1
 			int worst_case_ex_blocks = 3; //2 + (C_asset->dim1/T + ((C_asset->dim1%T)? 1 : 0))* (C_asset->dim2/T + ((C_asset->dim2%T)? 1 : 0));
 			if(max_block_num < worst_case_ex_blocks)
@@ -509,7 +513,7 @@ if(!reuse_model_flag){
 	int prev_dev = CoCoPeLiaGetDevice();
 
 	/// Small fix since host functions triggered after the last WB belong to a different device,
-	/// resulting in warning if reset cache was reached prior. If it leads to slowdown will be exterminated. 
+	/// resulting in warning if reset cache was reached prior. If it leads to slowdown will be exterminated.
 	for(int i=0; i<LOC_NUM;i++){
 		CoCoPeLiaSelectDevice(deidxize(i));
 		CoCoSyncCheckErr();

@@ -9,7 +9,7 @@
 
 int Tile2D_num = 0;
 
-double link_cost[LOC_NUM][LOC_NUM];
+double link_cost_2D[LOC_NUM][LOC_NUM];
 
 template class Tile2D<double>;
 
@@ -85,7 +85,7 @@ template<typename dtype> short Tile2D<dtype>::getClosestReadLoc(short dev_id_in)
 #endif
   int dev_id_in_idx = idxize(dev_id_in);
   int pos_min = LOC_NUM;
-  double link_cost_min = 10000000;
+  double link_cost_2D_min = 10000000;
   for (int pos =0; pos < LOC_NUM; pos++){
     if (pos == dev_id_in_idx || StoreBlock[pos] == NULL) {
       //if (StoreBlock[pos]!= NULL)
@@ -97,8 +97,8 @@ template<typename dtype> short Tile2D<dtype>::getClosestReadLoc(short dev_id_in)
     if (temp == AVAILABLE || temp == SHARABLE || temp == NATIVE){
       event_status block_status = StoreBlock[pos]->Available->query_status();
       if(block_status == COMPLETE || block_status == CHECKED)
-      if (link_cost[dev_id_in_idx][pos] < link_cost_min){
-        link_cost_min = link_cost[dev_id_in_idx][pos];
+      if (link_cost_2D[dev_id_in_idx][pos] < link_cost_2D_min){
+        link_cost_2D_min = link_cost_2D[dev_id_in_idx][pos];
         pos_min = pos;
       }
     }
@@ -135,7 +135,7 @@ template<typename dtype> short Tile2D<dtype>::getClosestReadLoc(short dev_id_in)
 template<typename dtype> double Tile2D<dtype>::getMinLinkCost(short dev_id_in){
   short lvl = 5;
   int dev_id_in_idx = idxize(dev_id_in);
-  double link_cost_min = 10000000;
+  double link_cost_2D_min = 10000000;
   for (int pos =0; pos < LOC_NUM; pos++){
     if(StoreBlock[pos] == NULL) continue;
     //StoreBlock[pos]->update_state(false);
@@ -143,11 +143,11 @@ template<typename dtype> double Tile2D<dtype>::getMinLinkCost(short dev_id_in){
     if (temp == AVAILABLE || temp == SHARABLE || temp == NATIVE){
       event_status block_status = StoreBlock[pos]->Available->query_status();
       if(block_status == COMPLETE || block_status == CHECKED)
-      if(link_cost[dev_id_in_idx][pos] < link_cost_min)
-        link_cost_min = link_cost[dev_id_in_idx][pos];
+      if(link_cost_2D[dev_id_in_idx][pos] < link_cost_2D_min)
+        link_cost_2D_min = link_cost_2D[dev_id_in_idx][pos];
     }
   }
-  return link_cost_min;
+  return link_cost_2D_min;
 }
 
 void CoCoUpdateLinkSpeed2D(CoControl_p autotuned_vals, CoCoModel_p* glob_model){
@@ -159,23 +159,23 @@ void CoCoUpdateLinkSpeed2D(CoControl_p autotuned_vals, CoCoModel_p* glob_model){
 		short dev_id_idi = idxize(autotuned_vals->dev_ids[i]);
     for(int j = 0; j < LOC_NUM; j++){
       short dev_id_idj = idxize(j);
-      if(dev_id_idi == dev_id_idj) link_cost[dev_id_idi][dev_id_idj] = 0;
-      else link_cost[dev_id_idi][dev_id_idj] = t_com_predict(glob_model[dev_id_idi]->revlink[dev_id_idj], autotuned_vals->T*autotuned_vals->T*sizeof(VALUE_TYPE));
+      if(dev_id_idi == dev_id_idj) link_cost_2D[dev_id_idi][dev_id_idj] = 0;
+      else link_cost_2D[dev_id_idi][dev_id_idj] = t_com_predict(glob_model[dev_id_idi]->revlink[dev_id_idj], autotuned_vals->T*autotuned_vals->T*sizeof(VALUE_TYPE));
     }
     for(int j = 0; j < LOC_NUM; j++){
       short dev_id_idj = idxize(j);
       if(dev_id_idi == dev_id_idj) continue;
       int flag_normalize[LOC_NUM] = {0}, normalize_num = 1;
-      double normalize_sum = link_cost[dev_id_idi][dev_id_idj];
+      double normalize_sum = link_cost_2D[dev_id_idi][dev_id_idj];
       flag_normalize[j] = 1;
       for (int k = j + 1; k < LOC_NUM; k++)
-        if(abs(link_cost[dev_id_idi][dev_id_idj] - link_cost[dev_id_idi][idxize(k)])
-          /link_cost[dev_id_idi][dev_id_idj] < NORMALIZE_NEAR_SPLIT_LIMIT){
+        if(abs(link_cost_2D[dev_id_idi][dev_id_idj] - link_cost_2D[dev_id_idi][idxize(k)])
+          /link_cost_2D[dev_id_idi][dev_id_idj] < NORMALIZE_NEAR_SPLIT_LIMIT){
           flag_normalize[k] = 1;
-          normalize_sum+=link_cost[dev_id_idi][idxize(k)];
+          normalize_sum+=link_cost_2D[dev_id_idi][idxize(k)];
           normalize_num++;
         }
-      for (int k = j ; k < LOC_NUM; k++) if(flag_normalize[k]) link_cost[dev_id_idi][idxize(k)] = normalize_sum/normalize_num;
+      for (int k = j ; k < LOC_NUM; k++) if(flag_normalize[k]) link_cost_2D[dev_id_idi][idxize(k)] = normalize_sum/normalize_num;
     }
   }
   #ifdef DEBUG

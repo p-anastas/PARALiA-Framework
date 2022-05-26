@@ -9,6 +9,8 @@
 
 int Tile1D_num = 0;
 
+double link_cost_1D[LOC_NUM][LOC_NUM];
+
 template class Tile1D<double>;
 
 template<typename dtype>  Tile1D<dtype>::Tile1D(void * in_addr, int in_dim,
@@ -46,7 +48,7 @@ template<typename dtype>  Tile1D<dtype>::Tile1D(void * in_addr, int in_dim,
   W_flag = R_flag = W_total = 0;
   RW_lock = -42;
   RW_lock_holders = 0;
-  
+
   RW_master = init_loc;
   #ifdef DEBUG
   	lprintf(lvl-1, "<-----|\n");
@@ -100,4 +102,37 @@ template<typename dtype> short Tile1D<dtype>::getClosestReadLoc(short dev_id_in)
   }
   if (pos >= LOC_NUM) error("Tile1D(%d)::getClosestReadLoc(%d): No location found for tile - bug.", id, dev_id_in);
   return deidxize(pos);
+}
+
+void CoCoUpdateLinkSpeed1D(CoControl_p autotuned_vals, CoCoModel_p* glob_model){
+  short lvl = 2;
+  #ifdef DDEBUG
+    lprintf(lvl, "|-----> CoCoUpdateLinkSpeed2D(dev_num = %d, LOC_NUM = %d)\n", autotuned_vals->dev_num, LOC_NUM);
+  #endif
+  for (int i = 0; i < autotuned_vals->dev_num; i++){
+		short dev_id_idi = idxize(autotuned_vals->dev_ids[i]);
+    for(int j = 0; j < LOC_NUM; j++){
+      short dev_id_idj = idxize(j);
+      if(dev_id_idi == dev_id_idj) link_cost_1D[dev_id_idi][dev_id_idj] = 0;
+      else link_cost_1D[dev_id_idi][dev_id_idj] = t_com_predict(glob_model[dev_id_idi]->revlink[dev_id_idj], autotuned_vals->T*sizeof(VALUE_TYPE));
+    }
+    for(int j = 0; j < LOC_NUM; j++){
+      short dev_id_idj = idxize(j);
+      if(dev_id_idi == dev_id_idj) continue;
+      int flag_normalize[LOC_NUM] = {0}, normalize_num = 1;
+      double normalize_sum = link_cost_1D[dev_id_idi][dev_id_idj];
+      flag_normalize[j] = 1;
+      for (int k = j + 1; k < LOC_NUM; k++)
+        if(abs(link_cost_1D[dev_id_idi][dev_id_idj] - link_cost_1D[dev_id_idi][idxize(k)])
+          /link_cost_1D[dev_id_idi][dev_id_idj] < NORMALIZE_NEAR_SPLIT_LIMIT){
+          flag_normalize[k] = 1;
+          normalize_sum+=link_cost_1D[dev_id_idi][idxize(k)];
+          normalize_num++;
+        }
+      for (int k = j ; k < LOC_NUM; k++) if(flag_normalize[k]) link_cost_1D[dev_id_idi][idxize(k)] = normalize_sum/normalize_num;
+    }
+  }
+  #ifdef DEBUG
+    lprintf(lvl-1, "<-----| CoCoUpdateLinkSpeed1D()\n");
+  #endif
 }
