@@ -356,7 +356,7 @@ lprintf(lvl, "CoCoDistributeSubkernels2DBlockCyclic:\nDevices = %d, D1_parts = %
           dev_sk_ctr_list[devidx]++;
         }
 #ifdef PDEBUG
-    lprintf(lvl, "CoCoDistributeSubkernels2DBlockCyclic:\nDistributing %d Subkernels to %d devices\n",
+    lprintf(lvl, "CoCoDistributeSubkernels2DBlockCyclic:\nDistributing %ld Subkernels to %d devices\n",
       Subkernel_num, autotune_vals->dev_num);
     lprintf(lvl, "Device Ids : [ ");
     for (int i =0; i < autotune_vals->dev_num; i++) fprintf(stderr, "%d ", autotune_vals->dev_ids[i]);

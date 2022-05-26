@@ -36,7 +36,7 @@ for filename in entries:
 		indata = pd.read_csv(InDataDir+'/'+filename, header = None)
 		if len(parts) == 2:
 			print('%s : no flags' %filename)
-			outdata.append(indata, verify_integrity=True)
+			outdata = pd.concat([outdata,indata], ignore_index=True)
 		else: 
 			flags = parts[2:]
 			print(flags)
@@ -48,8 +48,9 @@ for filename in entries:
 			if outdata.empty:
 				outdata = indata.copy()
 			else:
-				outdata = pd.concat([outdata,indata], ignore_index=True) #outdata.append(indata, ignore_index=True, verify_integrity=True)
+				outdata = pd.concat([outdata,indata], ignore_index=True)
 		#[-1].split('-')[1]
 		#print(indata)
+print(outdata)
 final_output = outdata.sort_values(0)
 final_output.to_csv("%s/%s_lookup-table_dev-%d.log" %(OutDataDir, func, dev_id), index = False, header = False, float_format = '%e')		

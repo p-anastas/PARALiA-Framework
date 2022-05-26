@@ -117,7 +117,7 @@ tunableParams_p CoCoAutotuneParameters(const char* routine_name, void* initial_p
 			autotuned_vals->dev_ids, glob_model, autotuned_vals->T);
 #ifdef PDEBUG
 		lprintf(lvl, "====================================\n");
-		lprintf(lvl, "Using predefined T=%zu and dev_num=%d, autotuned split = %s -> %s : t_pred = %lf\n",
+		lprintf(lvl, "Using predefined T=%ld and dev_num=%d, autotuned split = %s -> %s : t_pred = %lf\n",
 			autotuned_vals->T, autotuned_vals->dev_num, printlist<short>(autotuned_vals->dev_ids, autotuned_vals->dev_num),
 			printlist<double>(best_pred_p->rel_dev_score, autotuned_vals->dev_num), best_pred_p->pred_t*1000);
 		lprintf(lvl, "====================================\n");
@@ -146,7 +146,7 @@ tunableParams_p CoCoAutotuneParameters(const char* routine_name, void* initial_p
 			autotuned_vals->dev_ids[idx] = dev_ids[autotuned_vals->dev_num - 1][idx];
 #ifdef PDEBUG
 		lprintf(lvl, "====================================\n");
-		lprintf(lvl, "Using predefined T=%zu, autotuned dev_num=%d and split = %s -> %s : t_pred = %lf\n",
+		lprintf(lvl, "Using predefined T=%ld, autotuned dev_num=%d and split = %s -> %s : t_pred = %lf\n",
 			autotuned_vals->T, autotuned_vals->dev_num, printlist<short>(autotuned_vals->dev_ids, autotuned_vals->dev_num),
 			printlist<double>(best_pred_p->rel_dev_score, autotuned_vals->dev_num), best_pred_p->pred_t*1000);
 		lprintf(lvl, "====================================\n");
@@ -158,7 +158,7 @@ tunableParams_p CoCoAutotuneParameters(const char* routine_name, void* initial_p
 		autotuned_vals->T = best_pred_p->T;
 #ifdef PDEBUG
 		lprintf(lvl, "====================================\n");
-		lprintf(lvl, "Using predefined dev_num = %d, autotuned T = %zu and split = %s -> %s : t_pred = %lf\n",
+		lprintf(lvl, "Using predefined dev_num = %d, autotuned T = %ld and split = %s -> %s : t_pred = %lf\n",
 			autotuned_vals->dev_num, autotuned_vals->T, printlist<short>(autotuned_vals->dev_ids, autotuned_vals->dev_num),
 			printlist<double>(best_pred_p->rel_dev_score, autotuned_vals->dev_num), best_pred_p->pred_t*1000);
 		lprintf(lvl, "====================================\n");
@@ -186,13 +186,14 @@ tunableParams_p CoCoAutotuneParameters(const char* routine_name, void* initial_p
 			autotuned_vals->dev_ids[idx] = dev_ids[autotuned_vals->dev_num - 1][idx];
 #ifdef PDEBUG
 		lprintf(lvl, "====================================\n");
-		lprintf(lvl, "Using autotuned dev_num = %d, T = %zu and split = %s -> %s : t_pred = %lf\n",
+		lprintf(lvl, "Using autotuned dev_num = %d, T = %ld and split = %s -> %s : t_pred = %lf\n",
 			autotuned_vals->dev_num, autotuned_vals->T, printlist<short>(autotuned_vals->dev_ids, autotuned_vals->dev_num),
 			printlist<double>(best_pred_p->rel_dev_score, autotuned_vals->dev_num), best_pred_p->pred_t*1000);
 		lprintf(lvl, "====================================\n");
 #endif
 	}
-	else error("Unknown predefined parameter combination\n");
+	else error("CoCoAutotuneParameters: Unknown predefined parameter combination\
+	(predef_vals = %p, predef_vals->T = %ld , autotune_eval_devices = %d)\n", (predef_vals) ? (predef_vals): NULL, (predef_vals) ? predef_vals->T : -42, autotune_eval_devices);
 	if (predef_vals && predef_vals->cache_limit > 0)
 		autotuned_vals->cache_limit = predef_vals->cache_limit;
 	else autotuned_vals->cache_limit = 0;
@@ -207,7 +208,7 @@ tunableParams_p CoCoAutotuneParameters(const char* routine_name, void* initial_p
 
 if(!reuse_model_flag){
 		lprintf(0, "====================================\n");
-		lprintf(0, "CoCoAutotuneParameters: T=%zu,  dev_num=%d, split = %s -> %s : t_pred = %lf\n",
+		lprintf(0, "CoCoAutotuneParameters: T=%ld,  dev_num=%d, split = %s -> %s : t_pred = %lf\n",
 			autotuned_vals->T, autotuned_vals->dev_num, printlist<short>(autotuned_vals->dev_ids, autotuned_vals->dev_num),
 			printlist<double>(best_pred_p->rel_dev_score, autotuned_vals->dev_num), best_pred_p->pred_t*1000);
 		lprintf(0, "====================================\n");
@@ -277,11 +278,11 @@ tunableParams_p CoCoPeLiaModelMultidevOptimizeTileAndSplit(short used_devs, shor
 	CoCoModel_p model = dev_model_list[first_model_idx];
 	tunableParams_p outparams = tunableParamsInit();
 	//TODO: Naive naive naive! Should replace with something better at some point.
-	size_t min_T = 0, max_allowed_T = 0, ctr = 0;
+	long int min_T = 0, max_allowed_T = 0, ctr = 0;
 	max_allowed_T = fmin(fmin(model->D1, model->D2),model->D3);
 	min_T = ((GPUexec3Model_p)model->GPUexec_model_ptr)->T_lookup_buf[0];
 #ifdef PDEBUG
-		lprintf(lvl, "min_T = %d, max_allowed_T = %d\n",
+		lprintf(lvl, "min_T = %ld, max_allowed_T = %ld\n",
 			min_T, max_allowed_T);
 #endif
 	if (min_T > max_allowed_T){
@@ -289,13 +290,13 @@ tunableParams_p CoCoPeLiaModelMultidevOptimizeTileAndSplit(short used_devs, shor
 		// FIXME: Undefined performance for tiles < than the smaller microbenchmark
 		outparams->pred_t = 0;
 #ifdef PDEBUG
-		lprintf(lvl, "min_T = %d > max_allowed_T = %d: returning T = %d",
+		lprintf(lvl, "min_T = %ld > max_allowed_T = %ld: returning T = %ld",
 			min_T, max_allowed_T, max_allowed_T);
 #endif
 		return outparams;
 	}
 	double temp_t, min_overlap_t = 10000000, temp_score = 0;
-	size_t prev_trial_T = 0;
+	long int prev_trial_T = 0;
 
 	outparams->rel_dev_score = (double*) malloc(sizeof(double)*used_devs);
 	int best_idx = -1;
@@ -314,7 +315,7 @@ tunableParams_p CoCoPeLiaModelMultidevOptimizeTileAndSplit(short used_devs, shor
 	}
 
 	for (ctr = 0 ; ctr < ((GPUexec3Model_p)model->GPUexec_model_ptr)->lines ; ctr++){
-		size_t trial_T = ((GPUexec3Model_p)model->GPUexec_model_ptr)->T_lookup_buf[ctr];
+		long int trial_T = ((GPUexec3Model_p)model->GPUexec_model_ptr)->T_lookup_buf[ctr];
 		if (trial_T > max_allowed_T) break;
 		if (trial_T ==  prev_trial_T) continue;
 /*
@@ -343,10 +344,10 @@ tunableParams_p CoCoPeLiaModelMultidevOptimizeTileAndSplit(short used_devs, shor
 			model = dev_model_list[cur_dev_idx];
 			temp_t = CoCoPeLiaModelPredictHetero(model, used_devs, used_dev_ids, outparams->rel_dev_score, trial_T, COCOPELIA_HETERO_REUSE);
 			if(temp_t > 0) temp_overlap_t = fmax(temp_overlap_t, temp_t);
-			else error("CoCoPeLiaModelPredictHetero(%p(dev_id = %d, (idx = %d )), trial_T = %d): negative prediction temp_t = %lf\n",
+			else error("CoCoPeLiaModelPredictHetero(%p(dev_id = %d, (idx = %d )), trial_T = %ld): negative prediction temp_t = %lf\n",
 				model, cur_dev_id, cur_dev_idx, trial_T, temp_t);
 #ifdef PDEBUG
-			lprintf(lvl, "CoCoPeLiaModelPredictHetero(%p) for dev_id = %d (idx = %d ) with trial_T = %d: temp_overlap_t = %lf, temp_t = %lf\n",
+			lprintf(lvl, "CoCoPeLiaModelPredictHetero(%p) for dev_id = %d (idx = %d ) with trial_T = %ld: temp_overlap_t = %lf, temp_t = %lf\n",
 				model, cur_dev_id, cur_dev_idx, trial_T, temp_overlap_t, temp_t);
 #endif
 		}
@@ -364,7 +365,7 @@ tunableParams_p CoCoPeLiaModelMultidevOptimizeTileAndSplit(short used_devs, shor
 	lprintf(lvl, "Best %d percentages : [ ", used_devs);
 	for (int i =0; i < used_devs; i++) fprintf(stderr, "%.3lf ", outparams->rel_dev_score[i]);
 	lprintf(0, "]\n");
-	lprintf(lvl, "Predict T=%zu : t_pred = %lf\n", outparams->T, outparams->pred_t);
+	lprintf(lvl, "Predict T=%ld : t_pred = %lf\n", outparams->T, outparams->pred_t);
 #endif
 #ifdef TEST
 	timer = csecond() - timer;
@@ -372,14 +373,14 @@ tunableParams_p CoCoPeLiaModelMultidevOptimizeTileAndSplit(short used_devs, shor
 	lprintf(lvl-1, "<-----|\n");
 #endif
 #ifdef DEBUG
-	lprintf(lvl, "outparams->T = %zu\n : outparams->pred_t = %lf ms\n", outparams->T, outparams->pred_t);
+	lprintf(lvl, "outparams->T = %ld\n : outparams->pred_t = %lf ms\n", outparams->T, outparams->pred_t);
 	lprintf(lvl-1, "<-----|\n");
 #endif
 	return outparams;
 }
 
 tunableParams_p CoCoPeLiaModelMultidevOptimizeSplit(short used_devs, short* used_dev_ids,
-	CoCoModel_p* dev_model_list, int T){
+	CoCoModel_p* dev_model_list, long int T){
 	short lvl = 3;
 #ifdef DEBUG
 	lprintf(lvl-1, "|-----> CoCoPeLiaModelMultidevOptimizeSplit(used_devs=%d, used_dev_ids= [ ", used_devs);
@@ -393,13 +394,13 @@ tunableParams_p CoCoPeLiaModelMultidevOptimizeSplit(short used_devs, short* used
 	CoCoModel_p model = dev_model_list[first_model_idx];
 	tunableParams_p outparams = tunableParamsInit();
 	//TODO: Naive naive naive! Should replace with something better at some point.
-	size_t max_allowed_T = 0, ctr = 0;
+	long int max_allowed_T = 0, ctr = 0;
 	max_allowed_T = fmin(fmin(model->D1, model->D2),model->D3);
 #ifdef PDEBUG
-		lprintf(lvl, "max_allowed_T = %d\n", max_allowed_T);
+		lprintf(lvl, "max_allowed_T = %ld\n", max_allowed_T);
 #endif
 	if (T > max_allowed_T)
-		error("CoCoPeLiaModelMultidevOptimizeSplit: Give T = %d > max_allowed_T = %d\n", T, max_allowed_T);
+		error("CoCoPeLiaModelMultidevOptimizeSplit: Give T = %ld > max_allowed_T = %ld\n", T, max_allowed_T);
 
 	double temp_t, min_overlap_t = 10000000, temp_score = 0;
 
@@ -424,10 +425,10 @@ tunableParams_p CoCoPeLiaModelMultidevOptimizeSplit(short used_devs, short* used
 		model = dev_model_list[cur_dev_idx];
 		temp_t = CoCoPeLiaModelPredictHetero(model, used_devs, used_dev_ids, outparams->rel_dev_score, T, COCOPELIA_HETERO_REUSE);
 		if(temp_t > 0) temp_overlap_t = fmax(temp_overlap_t, temp_t);
-		else error("CoCoPeLiaModelPredictHetero(%p(dev_id = %d, (idx = %d )), T = %d): negative prediction temp_t = %lf\n",
+		else error("CoCoPeLiaModelPredictHetero(%p(dev_id = %d, (idx = %d )), T = %ld): negative prediction temp_t = %lf\n",
 			model, cur_dev_id, cur_dev_idx, T, temp_t);
 #ifdef PDEBUG
-		lprintf(lvl, "CoCoPeLiaModelPredictHetero(%p) for dev_id = %d (idx = %d ) with T = %d: temp_overlap_t = %lf, temp_t = %lf\n",
+		lprintf(lvl, "CoCoPeLiaModelPredictHetero(%p) for dev_id = %d (idx = %d ) with T = %ld: temp_overlap_t = %lf, temp_t = %lf\n",
 			model, cur_dev_id, cur_dev_idx, T, temp_overlap_t, temp_t);
 #endif
 	}
@@ -440,7 +441,7 @@ tunableParams_p CoCoPeLiaModelMultidevOptimizeSplit(short used_devs, short* used
 	lprintf(lvl, "Best %d percentages : [ ", used_devs);
 	for (int i =0; i < used_devs; i++) fprintf(stderr, "%.5lf ", outparams->rel_dev_score[i]);
 	lprintf(0, "]\n");
-	lprintf(lvl, "Predict T=%zu : t_pred = %lf\n", outparams->T, outparams->pred_t);
+	lprintf(lvl, "Predict T=%ld : t_pred = %lf\n", outparams->T, outparams->pred_t);
 #endif
 #ifdef TEST
 	timer = csecond() - timer;
@@ -448,7 +449,7 @@ tunableParams_p CoCoPeLiaModelMultidevOptimizeSplit(short used_devs, short* used
 	lprintf(lvl-1, "<-----|\n");
 #endif
 #ifdef DEBUG
-	lprintf(lvl, "outparams->T = %zu\n : outparams->pred_t = %lf ms\n", outparams->T, outparams->pred_t);
+	lprintf(lvl, "outparams->T = %ld\n : outparams->pred_t = %lf ms\n", outparams->T, outparams->pred_t);
 	lprintf(lvl-1, "<-----|\n");
 #endif
 	return outparams;
@@ -469,19 +470,23 @@ CoCoModel_p CoCoPeLiaTileModelInit(short dev_id, const char* func, void* func_da
 		}
 		else out_model->link[idx] = out_model->revlink[idx] = CoModel_init_local(dev_id);
 	}
-	out_model->GPUexec_model_ptr = (void*) GPUexec3Model_init(dev_id, func);
+	if ( !strcmp(func, "Dgemm") || !strcmp(func, "Sgemm")) out_model->GPUexec_model_ptr = (void*) GPUexec3Model_init(dev_id, func);
+	else if (0)  out_model->GPUexec_model_ptr = (void*) GPUexec2Model_init(dev_id, func);
+	else if ( !strcmp(func, "Daxpy") || !strcmp(func, "Saxpy")) out_model->GPUexec_model_ptr = (void*) GPUexec1Model_init(dev_id, func);
+	else error("CoCoPeLiaModelInit: Model for '%s' func not integrated", func);
 	out_model->V = (Vdata_p) malloc(sizeof(struct V_struct));
 	out_model->flags = (flagParams_p) malloc(sizeof(struct flagParams));
 	out_model->dev_id = dev_id;
 
 	if ( !strcmp(func, "Dgemm") || !strcmp(func, "Sgemm")) return CoCoModel_gemm_init(out_model, dev_id, func, (gemm_backend_in_p) func_data);
+	else if ( !strcmp(func, "Daxpy") || !strcmp(func, "Saxpy")) return CoCoModel_axpy_init(out_model, dev_id, func, (axpy_backend_in_p) func_data);
 	else error("CoCoPeLiaModelInit: Model for '%s' func not integrated", func);
 }
 
 double CoCopeLiaPredictReuseHetero(CoCo_model* model, short used_devs, short* used_dev_ids,
-	double* used_dev_relative_scores, size_t T){
+	double* used_dev_relative_scores, long int T){
 	short lvl = 4;
-	size_t prob_dims = 0, reset_D1 = model->D1, reset_D2 = model->D2, reset_D3 = model->D3;
+	long int prob_dims = 0, reset_D1 = model->D1, reset_D2 = model->D2, reset_D3 = model->D3;
 	double imb_time_multiplier = 1.0, reduce_time_multiplier = 1.0;
 #define ENABLE_HETERO_RELATIVE_DIMS
 #ifdef ENABLE_HETERO_RELATIVE_DIMS
@@ -513,16 +518,16 @@ double CoCopeLiaPredictReuseHetero(CoCo_model* model, short used_devs, short* us
 		model->dev_id, used_devs);
 	double problem_percentage = used_dev_relative_scores[iloc];
 #ifdef PDEBUG
-	lprintf(lvl, "CoCopeLiaPredictReuseHetero(dev_id=%d) prob_dims = %zu, problem_percentage = %lf\n",
+	lprintf(lvl, "CoCopeLiaPredictReuseHetero(dev_id=%d) prob_dims = %ld, problem_percentage = %lf\n",
 		model->dev_id, prob_dims, problem_percentage);
 #endif
 	if (!strcmp(REL_PERF_MODE, "ROOT-PROBLEM")){
-		if (reset_D1 != -1) model->D1 = (size_t) reset_D1* 1.0* pow(problem_percentage, 1.0/prob_dims);
-		if (reset_D2 != -1) model->D2 = (size_t) reset_D2* 1.0* pow(problem_percentage, 1.0/prob_dims);
-		if (reset_D3 != -1) model->D3 = (size_t) reset_D3* 1.0* pow(problem_percentage, 1.0/prob_dims);
+		if (reset_D1 != -1) model->D1 = (long int) reset_D1* 1.0* pow(problem_percentage, 1.0/prob_dims);
+		if (reset_D2 != -1) model->D2 = (long int) reset_D2* 1.0* pow(problem_percentage, 1.0/prob_dims);
+		if (reset_D3 != -1) model->D3 = (long int) reset_D3* 1.0* pow(problem_percentage, 1.0/prob_dims);
 	}
 #ifdef PDEBUG
-	lprintf(lvl, "CoCopeLiaPredictReuseHetero(dev_id=%d) Modified Dims D1 = %zu, D2 = %zu, D3 = %zu, imb_time_multiplier = %lf, reduce_time_multiplier = %lf\n",
+	lprintf(lvl, "CoCopeLiaPredictReuseHetero(dev_id=%d) Modified Dims D1 = %ld, D2 = %ld, D3 = %ld, imb_time_multiplier = %lf, reduce_time_multiplier = %lf\n",
 		model->dev_id, model->D1, model->D2, model->D3, imb_time_multiplier, reduce_time_multiplier);
 #endif
 #endif
@@ -537,7 +542,7 @@ double CoCopeLiaPredictReuseHetero(CoCo_model* model, short used_devs, short* us
 	return result;
 }
 
-double CoCoPeLiaModelPredictHetero(CoCo_model* model, short used_devs, short* used_dev_ids, double* used_dev_relative_scores, size_t T, ModelType mode){
+double CoCoPeLiaModelPredictHetero(CoCo_model* model, short used_devs, short* used_dev_ids, double* used_dev_relative_scores, long int T, ModelType mode){
 	switch(mode){
 		case COCOPELIA_HETERO_REUSE:
 			return CoCopeLiaPredictReuseHetero(model, used_devs, used_dev_ids, used_dev_relative_scores, T);
@@ -546,7 +551,7 @@ double CoCoPeLiaModelPredictHetero(CoCo_model* model, short used_devs, short* us
 	}
 }
 
-double CoCoPeLiaModelPredict(CoCo_model* model, size_t T, ModelType mode){
+double CoCoPeLiaModelPredict(CoCo_model* model, long int T, ModelType mode){
 	switch(mode){
 		case WERKHOVEN:
 			return WerkhovenModelPredictWrapper(model, T, 0);
@@ -573,10 +578,10 @@ double CoCopeLiaPredictFullOverlap(CoCoModel_p model)
 {
 	short lvl = 4;
 	double t_recv_full = 0, t_send_full = 0, t_exec_full = 0, t_total = 0;
-	size_t maxT = GPUexec3MaxT((GPUexec3Model_p)model->GPUexec_model_ptr);
-	size_t Tbig = GPUexec3NearestT((GPUexec3Model_p)model->GPUexec_model_ptr,
+	long int maxT = GPUexec3MaxT((GPUexec3Model_p)model->GPUexec_model_ptr);
+	long int Tbig = GPUexec3NearestT((GPUexec3Model_p)model->GPUexec_model_ptr,
 		fmin(maxT, fmin(fmin(model->D1,model->D2), model->D3)));
-	//fprintf(stderr, "Tbig = %zu\n", Tbig);
+	//fprintf(stderr, "Tbig = %ld\n", Tbig);
 	t_exec_full = (model->D1*1.0/Tbig * model->D2*1.0/Tbig * model->D3*1.0/Tbig)*
 		GPUexec3Model_predict((GPUexec3Model_p)model->GPUexec_model_ptr, Tbig, model->flags->TransA, model->flags->TransB);
 	if ( t_exec_full < 0){
@@ -620,10 +625,10 @@ double CoCopeLiaPredictZeroOverlap(CoCoModel_p model)
 {
 	short lvl = 4;
 	double t_recv_full = 0, t_send_full = 0, t_exec_full = 0, t_total = 0;
-	size_t maxT = GPUexec3MaxT((GPUexec3Model_p)model->GPUexec_model_ptr);
-	size_t Tbig = GPUexec3NearestT((GPUexec3Model_p)model->GPUexec_model_ptr,
+	long int maxT = GPUexec3MaxT((GPUexec3Model_p)model->GPUexec_model_ptr);
+	long int Tbig = GPUexec3NearestT((GPUexec3Model_p)model->GPUexec_model_ptr,
 		fmin(maxT, fmin(fmin(model->D1,model->D2), model->D3)));
-	//fprintf(stderr, "Tbig = %zu\n", Tbig);
+	//fprintf(stderr, "Tbig = %ld\n", Tbig);
 	t_exec_full = (model->D1*1.0/Tbig * model->D2*1.0/Tbig * model->D3*1.0/Tbig)*
 		GPUexec3Model_predict((GPUexec3Model_p)model->GPUexec_model_ptr, Tbig, model->flags->TransA, model->flags->TransB);
 	if ( t_exec_full < 0){
@@ -664,7 +669,7 @@ double CoCopeLiaPredictZeroOverlap(CoCoModel_p model)
 	return t_total;
 }
 
-double CoCopeLiaPredictBaseline(CoCoModel_p model, size_t T)
+double CoCopeLiaPredictBaseline(CoCoModel_p model, long int T)
 {
 	short lvl = 4;
 	double t_recv_T3[LOC_NUM] = {0}, t_send_T3[LOC_NUM] = {0}, t_exec_T3 = 0, t_total = 0;
@@ -696,7 +701,7 @@ double CoCopeLiaPredictBaseline(CoCoModel_p model, size_t T)
 	double mv_t_recv_T3 = t_recv_T3[idxize(mv_dev_id)], mv_t_send_T3 = t_send_T3[idxize(mv_dev_id)];
 
 	double t_over_T3;
-	size_t numTin = 0, numTout = 0;
+	int numTin = 0, numTout = 0;
 
 	double ker_over =  (1.0*model->D1/T)*(1.0*model->D2/T)*(1.0*model->D3/T) - 1;
 	for (int i = 0; i < model->V->numT; i++){
@@ -709,7 +714,7 @@ double CoCopeLiaPredictBaseline(CoCoModel_p model, size_t T)
 	+ t_exec_T3 + numTin * mv_t_recv_T3 + numTout * mv_t_send_T3;
 
 #ifdef DPDEBUG
-	fprintf(stderr, "CoCopelia (T=%zu) predicted :\n"
+	fprintf(stderr, "CoCopelia (T=%ld) predicted :\n"
 	"\t -> numTin = %d -> numTout = %d\n"
 	"\tmv_t_recv_T3: %lf ms ( %lf Gb/s)\n"
 	"\tt_execT3: %lf ms (%lf GFlops/s)\n"
@@ -725,7 +730,7 @@ double CoCopeLiaPredictBaseline(CoCoModel_p model, size_t T)
 	return t_total;
 }
 
-double CoCopeLiaPredictDataLoc(CoCoModel_p model, size_t T)
+double CoCopeLiaPredictDataLoc(CoCoModel_p model, long int T)
 {
 	short lvl = 4;
 	double t_recv_T3[LOC_NUM] = {0}, t_send_T3[LOC_NUM] = {0}, t_exec_T3 = 0, t_total = 0;
@@ -757,7 +762,7 @@ double CoCopeLiaPredictDataLoc(CoCoModel_p model, size_t T)
 	double mv_t_recv_T3 = t_recv_T3[idxize(mv_dev_id)], mv_t_send_T3 = t_send_T3[idxize(mv_dev_id)];
 
 	double t_over_T3;
-	size_t numTin = 0, numTout = 0;
+	int numTin = 0, numTout = 0;
 
 	double ker_over =  (1.0*model->D1/T)*(1.0*model->D2/T)*(1.0*model->D3/T) - 1;
 	for (int i = 0; i < model->V->numT; i++){
@@ -770,7 +775,7 @@ double CoCopeLiaPredictDataLoc(CoCoModel_p model, size_t T)
 	+ t_exec_T3 + numTin * mv_t_recv_T3 + numTout * mv_t_send_T3;
 
 #ifdef DPDEBUG
-	fprintf(stderr, "CoCopelia (T=%zu) predicted :\n"
+	fprintf(stderr, "CoCopelia (T=%ld) predicted :\n"
 	"\t -> numTin = %d -> numTout = %d\n"
 	"\tmv_t_recv_T3: %lf ms ( %lf Gb/s)\n"
 	"\tt_execT3: %lf ms (%lf GFlops/s)\n"
@@ -787,7 +792,7 @@ double CoCopeLiaPredictDataLoc(CoCoModel_p model, size_t T)
 }
 
 ///  Predicts 3-way overlaped execution time for BLAS3 Square tilling blocking without data reuse.
-double CoCopeLiaPredictBidirectional(CoCoModel_p model, size_t T)
+double CoCopeLiaPredictBidirectional(CoCoModel_p model, long int T)
 {
 	short lvl = 4;
 	double t_recv_T3[LOC_NUM] = {0}, t_send_T3[LOC_NUM] = {0}, t_exec_T3 = 0, t_total = 0;
@@ -819,7 +824,7 @@ double CoCopeLiaPredictBidirectional(CoCoModel_p model, size_t T)
 	double mv_t_recv_T3 = t_recv_T3[idxize(mv_dev_id)], mv_t_send_T3 = t_send_T3[idxize(mv_dev_id)];
 
 	double t_over_T3;
-	size_t numTin = 0, numTout = 0;
+	int numTin = 0, numTout = 0;
 
 	double ker_over =  (1.0*model->D1/T)*(1.0*model->D2/T)*(1.0*model->D3/T) - 1;
 	for (int i = 0; i < model->V->numT; i++){
@@ -834,11 +839,11 @@ double CoCopeLiaPredictBidirectional(CoCoModel_p model, size_t T)
 	+ t_exec_T3 + numTin * mv_t_recv_T3 + numTout * mv_t_send_T3;
 
 #ifdef DPDEBUG
-	fprintf(stderr, "CoCopelia (T=%zu) predicted :\n"
+	fprintf(stderr, "CoCopelia (T=%ld) predicted :\n"
 	"\t -> numTin = %d -> numTout = %d\n"
 	"\tmv_t_recv_T3: %lf ms ( %lf Gb/s)\n"
 	"\tt_execT3: %lf ms (%lf GFlops/s)\n"
-	"\mv_t_send_T3t: %lf ms ( %lf Gb/s)\n"
+	"\tmv_t_send_T3t: %lf ms ( %lf Gb/s)\n"
 	"\tt_over_T3: %lf ms\n"
 	"\tt_total: %lf ms (%lf GFlops/s)\n\n",
 	T, numTin, numTout,
@@ -853,7 +858,7 @@ double CoCopeLiaPredictBidirectional(CoCoModel_p model, size_t T)
 
 }
 
-double CoCopeLiaPredictReuse(CoCoModel_p model, size_t T)
+double CoCopeLiaPredictReuse(CoCoModel_p model, long int T)
 {
 	short lvl = 4;
 	double t_recv_T3[LOC_NUM] = {0}, t_send_T3[LOC_NUM] = {0}, t_exec_T3 = 0, t_total = 0;
@@ -884,7 +889,7 @@ double CoCopeLiaPredictReuse(CoCoModel_p model, size_t T)
 #endif
 	double mv_t_recv_T3 = t_recv_T3[idxize(mv_dev_id)], mv_t_send_T3 = t_send_T3[idxize(mv_dev_id)];
 
-	size_t numTin = 0, numTout = 0;
+	int numTin = 0, numTout = 0;
 
 	double zero_over = 0, one_over = 0, two_over = 0;
 	zero_over =  (1.0*model->D1/T)*(1.0*model->D2/T)*(1.0*model->D3/T) - 1;
@@ -914,7 +919,7 @@ double CoCopeLiaPredictReuse(CoCoModel_p model, size_t T)
 	+ numTin * mv_t_recv_T3 + numTout * mv_t_send_T3;
 
 #ifdef DPDEBUG
-	lprintf(lvl, "CoCopelia (T=%d) predicted :\n"
+	lprintf(lvl, "CoCopelia (T=%ld) predicted :\n"
 	"\tmv_t_recv_T3: %lf ms ( %lf Gb/s)\n"
 	"\t -> two_over = %lf -> one_over = %lf -> zero_over = %lf\n"
 	"\tt_execT3: %lf ms (%lf GFlops/s)\n"
@@ -931,7 +936,7 @@ double CoCopeLiaPredictReuse(CoCoModel_p model, size_t T)
 }
 
 /// TODO: currently d2h overlap is ignored
-double CoCopeLiaPipelineEmulate(CoCoModel_p model, size_t T){
+double CoCopeLiaPipelineEmulate(CoCoModel_p model, long int T){
 	CoModel_p h2d_model = model->revlink[LOC_NUM-1], d2h_model = model->link[LOC_NUM-1];
 	double t_h2d_T3 = 0, t_d2h_T3 = 0, t_exec_T3 = 0, t_total = 0;
 	t_exec_T3 = GPUexec3Model_predict((GPUexec3Model_p) model->GPUexec_model_ptr, T, model->flags->TransA, model->flags->TransB);
@@ -945,31 +950,31 @@ double CoCopeLiaPipelineEmulate(CoCoModel_p model, size_t T){
 		return -1.0;
 	}
 
-	size_t D1_last = model->D1%T , D2_last = model->D2%T, D3_last= model->D3%T;
-	size_t D1_parts = model->D1/T , D2_parts = model->D2/T, D3_parts = model->D3/T;
+	long int D1_last = model->D1%T , D2_last = model->D2%T, D3_last= model->D3%T;
+	long int D1_parts = model->D1/T , D2_parts = model->D2/T, D3_parts = model->D3/T;
 	if (D1_last > T/2) D1_parts++;
 	else D1_last+=T;
 	if (D2_last > T/2) D2_parts++;
 	else D2_last+=T;
 	if (D3_last > T/2) D3_parts++;
 	else D3_last+=T;
-	//printf("D1_parts=%zu,D2_parts=%zu,D3_parts=%zu\n", D1_parts, D2_parts, D3_parts);
-	//printf("D1_last=%zu,D2_last=%zu,D3_last=%zu\n", D1_last, D2_last, D3_last);
+	//printf("D1_parts=%ld,D2_parts=%ld,D3_parts=%ld\n", D1_parts, D2_parts, D3_parts);
+	//printf("D1_last=%ld,D2_last=%ld,D3_last=%ld\n", D1_last, D2_last, D3_last);
 
 	if (!D1_parts || !D2_parts || !D3_parts) error("CoCoModel_pipeline_simulate3: Some dim cut is considered 0");
-	size_t numTin = 0, numTout = 0;
+	int numTin = 0, numTout = 0;
 	short *idx_matrix[model->V->numT];
 
 	for (int i = 0; i < model->V->numT; i++){
 		if (*model->V->Dim1[i] < 1 || *model->V->Dim2[i] < 1) error("CoCoModel_pipeline_simulate3: Invalid data struct dims");
-		size_t Dim1_num = *model->V->Dim1[i]/T;
+		long int Dim1_num = *model->V->Dim1[i]/T;
 		if(*model->V->Dim1[i]%T > T/2) Dim1_num++;
-		size_t Dim2_num = *model->V->Dim2[i]/T;
+		long int Dim2_num = *model->V->Dim2[i]/T;
 		if(*model->V->Dim2[i]%T > T/2) Dim2_num++;
 		idx_matrix[i] = (short*) calloc (Dim1_num*Dim2_num, sizeof(short));
 		/// First element 0 because its not accounted in pipeline
 		if (model->V->loc[i]) for (int j = 0; j < Dim1_num*Dim2_num; j++) idx_matrix[i][j] = model->V->loc[i];
-		//printf("Dim1_num=%zu,Dim2_num=%zu\n", Dim1_num, Dim2_num);
+		//printf("Dim1_num=%ld,Dim2_num=%ld\n", Dim1_num, Dim2_num);
 		//matrix_visualize(idx_matrix[i], Dim1_num, Dim2_num);
 		numTin += model->V->in[i] * remote(model->V->loc[i], model->dev_id);
 		numTout += model->V->out[i] * model->V->out_loc[i];
@@ -1011,15 +1016,15 @@ double CoCopeLiaPipelineEmulate(CoCoModel_p model, size_t T){
 
 	/*for (int i = 0; i < model->V->numT; i++){
 		if (*model->V->Dim1[i] < 1 || *model->V->Dim2[i] < 1) error("CoCoModel_predict3: Invalid data struct dims");
-		size_t Dim1_num = *model->V->Dim1[i]/T;
+		long int Dim1_num = *model->V->Dim1[i]/T;
 		if(*model->V->Dim1[i]%T > T/2) Dim1_num++;
-		size_t Dim2_num = *model->V->Dim2[i]/T;
+		long int Dim2_num = *model->V->Dim2[i]/T;
 		if(*model->V->Dim2[i]%T > T/2) Dim2_num++;
 		matrix_visualize(idx_matrix[i], Dim1_num, Dim2_num);
 	}*/
 
 	/*
-	fprintf(stderr, "CoCopelia Simulator(T=%zu) predicted :\n"
+	fprintf(stderr, "CoCopelia Simulator(T=%ld) predicted :\n"
 	"\tt_h2d_T3: %lf ms ( %lf Gb/s)\n"
 	"\tt_execT3: %lf ms (%lf GFlops/s)\n"
 	"\tt_d2h_T3: %lf ms ( %lf Gb/s)\n"
@@ -1035,14 +1040,14 @@ double CoCopeLiaPipelineEmulate(CoCoModel_p model, size_t T){
 ///  Initializes the model for gemm
 CoCoModel_p CoCoModel_gemm_init(CoCoModel_p out_model, short dev_id, const char* func, gemm_backend_in_p func_data){
 	char TransA = func_data->TransA, TransB = func_data->TransB;
-	size_t M = func_data->M, N = func_data->N, K = func_data->K;
+	long int M = func_data->M, N = func_data->N, K = func_data->K;
 	short A_loc, A_out_loc = A_loc = CoCoGetPtrLoc(*func_data->A),
 				B_loc, B_out_loc = B_loc = CoCoGetPtrLoc(*func_data->B),
 				C_loc, C_out_loc = C_loc = CoCoGetPtrLoc(*func_data->C);
-	size_t ldA = func_data->ldA, ldB = func_data->ldB, ldC = func_data->ldC;
+	long int ldA = func_data->ldA, ldB = func_data->ldB, ldC = func_data->ldC;
 	short lvl = 3;
 #ifdef DEBUG
-	lprintf(lvl-1, "|-----> CoCoModel_gemm_init(model, %c, %c, %zu, %zu, %zu, %d, %d, %d, %d, %d, %d, %zu, %zu, %zu, %d, %s)\n", TransA, TransB, M, N, K, A_loc, B_loc, C_loc, A_out_loc, B_out_loc, C_out_loc, ldA, ldB, ldC, dev_id, func);
+	lprintf(lvl-1, "|-----> CoCoModel_gemm_init(model, %c, %c, %ld, %ld, %ld, %d, %d, %d, %d, %d, %d, %ld, %ld, %ld, %d, %s)\n", TransA, TransB, M, N, K, A_loc, B_loc, C_loc, A_out_loc, B_out_loc, C_out_loc, ldA, ldB, ldC, dev_id, func);
 #endif
 	out_model->func = func;
 	// Gemm Routine info
@@ -1084,9 +1089,58 @@ CoCoModel_p CoCoModel_gemm_init(CoCoModel_p out_model, short dev_id, const char*
 	out_model->V->out_loc[2] = C_out_loc;
 
 #ifdef DEBUG
-	lprintf(lvl, "CoCoModel_gemm initalized for %s->\nInitial problem dims: D1 = %zu, D2 = %zu, D3 = %zu\n"
-	"Data tiles : A(%zu,%zu), B(%zu,%zu), C(%zu,%zu) in loc (%d,%d,%d)\n", \
+	lprintf(lvl, "CoCoModel_gemm initalized for %s->\nInitial problem dims: D1 = %ld, D2 = %ld, D3 = %ld\n"
+	"Data tiles : A(%ld,%ld), B(%ld,%ld), C(%ld,%ld) in loc (%d,%d,%d)\n", \
 	func, out_model->D1, out_model->D2, out_model->D3, out_model->D1, out_model->D3, out_model->D3, out_model->D2, out_model->D1, out_model->D2, out_model->V->out_loc[0], out_model->V->out_loc[1], out_model->V->out_loc[2]);
+	lprintf(lvl-1, "<-----|\n");
+#endif
+	return out_model;
+}
+
+///  Initializes the model for gemm
+CoCoModel_p CoCoModel_axpy_init(CoCoModel_p out_model, short dev_id, const char* func, axpy_backend_in_p func_data){
+	long int N = func_data->N;
+	short x_loc, x_out_loc = x_loc = CoCoGetPtrLoc(*func_data->x),
+				y_loc, y_out_loc = y_loc = CoCoGetPtrLoc(*func_data->y);
+	long int incx = func_data->incx, incy = func_data->incy;
+	short lvl = 3;
+#ifdef DEBUG
+	lprintf(lvl-1, "|-----> CoCoModel_axpy_init(model,%ld, %d, %d, %d, %d, %d, %d, %d, %s)\n",
+		N, x_loc, y_loc, x_out_loc, y_out_loc, incx, incy, dev_id, func);
+#endif
+	out_model->func = func;
+	// Axpy Routine info
+	out_model->V->numT = 2;
+
+	if (!strcmp(func, "Daxpy")) out_model->V->dtype_sz = sizeof(double);
+	else if (!strcmp(func, "Saxpy")) out_model->V->dtype_sz = sizeof(float);
+
+	out_model->V->in[0] = 1;
+	out_model->V->in[1] = 1;
+
+	out_model->V->out[0] = 0;
+	out_model->V->out[1] = 1;
+
+	out_model->D1 = N;
+	out_model->D2 = -1;
+	out_model->D3 = -1;
+
+	out_model->V->Dim1[0] = &out_model->D1;
+	out_model->V->Dim1[1] = &out_model->D1;
+
+	out_model->V->Dim2[0] = NULL;
+	out_model->V->Dim2[1] = NULL;
+
+	out_model->V->loc[0] = x_loc;
+	out_model->V->loc[1] = y_loc;
+
+	out_model->V->out_loc[0] = x_out_loc;
+	out_model->V->out_loc[1] = y_out_loc;
+
+#ifdef DEBUG
+	lprintf(lvl, "CoCoModel_axpy initalized for %s->\nInitial problem dims: D1 = %ld, D2 = %ld, D3 = %ld\n"
+	"Data tiles : x(%ld), y(%ld), in loc (%d,%d)\n", \
+	func, out_model->D1, out_model->D2, out_model->D3, out_model->D1, out_model->D1, out_model->V->out_loc[0], out_model->V->out_loc[1]);
 	lprintf(lvl-1, "<-----|\n");
 #endif
 	return out_model;
@@ -1104,7 +1158,7 @@ tunableParams_p CoCoPeLiaModelOptimizeTile(CoCoModel_p model, ModelType mode){
 #endif
 	tunableParams_p outparams = tunableParamsInit();
 	//TODO: Naive naive naive! Should replace with something better at some point.
-	size_t min_T = 0, max_allowed_T = 0, ctr = 0;
+	long int min_T = 0, max_allowed_T = 0, ctr = 0;
 	max_allowed_T = fmin(fmin(model->D1, model->D2),model->D3);
 	min_T = ((GPUexec3Model_p)model->GPUexec_model_ptr)->T_lookup_buf[0];
 	if (min_T > max_allowed_T){
@@ -1114,15 +1168,15 @@ tunableParams_p CoCoPeLiaModelOptimizeTile(CoCoModel_p model, ModelType mode){
 		return outparams;
 	}
 	double temp_t, min_t = CoCoPeLiaModelPredict(model, ((GPUexec3Model_p)model->GPUexec_model_ptr)->T_lookup_buf[0], mode);
-	size_t prev_trial_T = 0;
+	long int prev_trial_T = 0;
 	if(min_t < 0) error("CoCoPeLiaModelOptimizeTile: First value in DM results in negative prediction");
 	for (ctr = 1 ; ctr < ((GPUexec3Model_p)model->GPUexec_model_ptr)->lines ; ctr++){
-		size_t trial_T = ((GPUexec3Model_p)model->GPUexec_model_ptr)->T_lookup_buf[ctr];
+		long int trial_T = ((GPUexec3Model_p)model->GPUexec_model_ptr)->T_lookup_buf[ctr];
 		if (trial_T > max_allowed_T) break;
 		if (trial_T == prev_trial_T) continue;
 		temp_t = CoCoPeLiaModelPredict(model, trial_T, mode);
 
-		//fprintf(stderr, "Checking T = %zu\n : t = %lf ms\n", trial_T, temp_t*1000);
+		//fprintf(stderr, "Checking T = %ld\n : t = %lf ms\n", trial_T, temp_t*1000);
 		if (temp_t >= 0 && temp_t < min_t ){
 			min_t = temp_t;
 			min_T = trial_T;
@@ -1137,7 +1191,7 @@ tunableParams_p CoCoPeLiaModelOptimizeTile(CoCoModel_p model, ModelType mode){
 	lprintf(lvl-1, "<-----|\n");
 #endif
 #ifdef DEBUG
-	lprintf(lvl, "T = %zu\n : t_min = %lf ms\n", min_T, min_t*1000);
+	lprintf(lvl, "T = %ld\n : t_min = %lf ms\n", min_T, min_t*1000);
 	lprintf(lvl-1, "<-----|\n");
 #endif
 	return outparams;
@@ -1175,6 +1229,6 @@ tunableParams_p tunableParamsInit(){
 
 const char* printTunableParams(tunableParams_p params){
 	char* buf = (char*) malloc(256*sizeof(char));
-	sprintf(buf, "{%zu|%e}", params->T, params->pred_t);
+	sprintf(buf, "{%ld|%e}", params->T, params->pred_t);
 	return buf;
 }

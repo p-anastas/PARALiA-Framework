@@ -88,7 +88,7 @@ double t_com_predict(CoModel_p model, long double bytes)
 	if (bytes < 0) return -1;
 	else if ( bytes == 0) return 0;
 #ifdef DPDEBUG
-		lprintf(4, "t_com_predict(%llf): ti = %lf, tb = %lf -> t_com = %lf ms\n",
+		lprintf(4, "t_com_predict(%Lf): ti = %Lf, tb = %Lf -> t_com = %Lf ms\n",
 			bytes, model->ti, model-> tb, (model->ti + model-> tb*bytes)*1000);
 #endif
 	return model->ti + model-> tb*bytes;

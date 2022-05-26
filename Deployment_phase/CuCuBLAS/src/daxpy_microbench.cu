@@ -7,6 +7,9 @@
 #include <cassert>
 #include "microbenchmarks.hpp"
 
+//TODO: This should at some point be removed (some fuctions require wrapping)
+#include "backend_wrappers.hpp"
+
 void report_run(char* filename, size_t N, double mean_t, double margin_err, size_t sample_sz, double bench_t){
 
 	FILE* fp = fopen(filename,"a");
@@ -33,7 +36,7 @@ int main(const int argc, const char *argv[]) {
   	}
 
 	char *filename = (char *) malloc(256* sizeof(char));
-	sprintf(filename, "%s/Benchmark-Results/cublasDaxpy_dev-%d_min-%d_step-%d_%s.log", DEPLOYDB, dev_id, MIN_DIM_BLAS1, STEP_BLAS1, VERSION);
+	sprintf(filename, "%s/Benchmark-Results/cublasDaxpy_dev-%d_%s.log", DEPLOYDB, dev_id, VERSION);
 	check_benchmark(filename);
 
 	size_t free_cuda_mem, max_cuda_mem;
@@ -80,8 +83,13 @@ int main(const int argc, const char *argv[]) {
 
 	// Warmup
 	for ( int itt = 0; itt <1; itt++){
-		assert(CUBLAS_STATUS_SUCCESS == cublasDaxpy(handle0, maxDim, &alpha, x_dev, incx, y_dev, incy));
-		cudaStreamSynchronize(host_stream);
+		if(dev_id != -1){
+			assert(CUBLAS_STATUS_SUCCESS == cublasDaxpy(handle0, maxDim, &alpha, x_dev, incx, y_dev, incy));
+			cudaStreamSynchronize(host_stream);
+		}
+		else cblas_daxpy(maxDim, alpha, x_dev, incx, y_dev, incy);
+
+
 	}
 	CoCoSyncCheckErr();
 #ifdef AUTO_BENCH_USE_BOOST
@@ -96,8 +104,11 @@ int main(const int argc, const char *argv[]) {
 		double std_dev = 0;
 		for (sample_sz = 1; sample_sz < MICRO_MAX_ITER + 1; sample_sz++) {
 			cpu_timer = csecond();
-			assert(CUBLAS_STATUS_SUCCESS == cublasDaxpy(handle0, T, &alpha, x_dev, incx, y_dev, incy));
-			cudaStreamSynchronize(host_stream);
+			if(dev_id != -1){
+				assert(CUBLAS_STATUS_SUCCESS == cublasDaxpy(handle0, T, &alpha, x_dev, incx, y_dev, incy));
+				cudaStreamSynchronize(host_stream);
+			}
+			else cblas_daxpy(T, alpha, x_dev, incx, y_dev, incy);
 			cpu_timer  = csecond() - cpu_timer ;
 			cublas_t_vals[sample_sz-1] = cpu_timer;
 			cublas_t_sum += cublas_t_vals[sample_sz-1];
@@ -130,8 +141,11 @@ int main(const int argc, const char *argv[]) {
 		bench_t = csecond();
 		for (int itt = 0; itt < ITER; itt ++) {
 			cpu_timer = csecond();
-			assert(CUBLAS_STATUS_SUCCESS == cublasDaxpy(handle0, T, &alpha, x_dev, incx, y_dev, incy));
-			cudaStreamSynchronize(host_stream);
+			if(dev_id != -1){
+				assert(CUBLAS_STATUS_SUCCESS == cublasDaxpy(handle0, T, &alpha, x_dev, incx, y_dev, incy));
+				cudaStreamSynchronize(host_stream);
+			}
+			else cblas_daxpy(T, alpha, x_dev, incx, y_dev, incy);
 			cpu_timer  = csecond() - cpu_timer ;
 			cublas_t_av += cpu_timer;
 			if (cpu_timer > cublas_t_max) cublas_t_max = cpu_timer;

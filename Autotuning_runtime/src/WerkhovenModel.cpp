@@ -80,12 +80,12 @@ double WerkhovenModelInternal(CoCoModel_p model, long long h2d_bytes, long long 
 
 //FIXME: Fails for some tiles because of adaptive step
 ///  Predicts 3-way overlaped execution time for nStream (equal) data blocks of any kernel using Werkhoven's model.
-double WerkhovenModelPredict(CoCoModel_p model, long long h2d_bytes, long long d2h_bytes, size_t T)
+double WerkhovenModelPredict(CoCoModel_p model, long long h2d_bytes, long long d2h_bytes, long int T)
 {
 	// Linear performance assumption used by werkhoven.
 	double t_kernel = 0;
-	size_t maxT = GPUexec3MaxT((GPUexec3Model_p)model->GPUexec_model_ptr); //CoCopeLiaGetMaxSqdimLvl3(model->V->numT, model->V->dtype_sz, STEP_BLAS3); //
-	size_t Tbig = GPUexec3NearestT((GPUexec3Model_p)model->GPUexec_model_ptr, fmin(maxT, fmin(fmin(model->D1,model->D2), model->D3)));
+	long int maxT = GPUexec3MaxT((GPUexec3Model_p)model->GPUexec_model_ptr); //CoCopeLiaGetMaxSqdimLvl3(model->V->numT, model->V->dtype_sz, STEP_BLAS3); //
+	long int Tbig = GPUexec3NearestT((GPUexec3Model_p)model->GPUexec_model_ptr, fmin(maxT, fmin(fmin(model->D1,model->D2), model->D3)));
 	//fprintf(stderr, "Tbig = %zu\n", Tbig);
 	t_kernel = (model->D1*1.0/Tbig * model->D2*1.0/Tbig * model->D3*1.0/Tbig)* GPUexec3Model_predict((GPUexec3Model_p)model->GPUexec_model_ptr, Tbig, model->flags->TransA, model->flags->TransB);
 	double nStreams = (1.0*model->D1/T)*(1.0*model->D2/T)*(1.0*model->D3/T);
@@ -93,7 +93,7 @@ double WerkhovenModelPredict(CoCoModel_p model, long long h2d_bytes, long long d
 }
 
 ///  Predicts 3-way overlaped execution time for nStream (equal) data blocks of any kernel using Werkhoven's model but with the tile exec time (bottom-up).
-double WerkhovenModelPredictExecTiled(CoCoModel_p model, long long h2d_bytes, long long d2h_bytes, size_t T)
+double WerkhovenModelPredictExecTiled(CoCoModel_p model, long long h2d_bytes, long long d2h_bytes, long int T)
 {
 	// Modified version which uses exec time lookup like CoCopeLia.
 	double t_kernel = 0;
@@ -102,7 +102,7 @@ double WerkhovenModelPredictExecTiled(CoCoModel_p model, long long h2d_bytes, lo
 	return WerkhovenModelInternal(model, h2d_bytes, d2h_bytes, nStreams, t_kernel*nStreams, t_kernel);
 }
 
-double WerkhovenModelPredictWrapper(CoCo_model* model, size_t T, short t_exec_method){ // t_exec_method: 0 = default (top down), 1 = Data-loc aware, 2 = Tile-specific lookup
+double WerkhovenModelPredictWrapper(CoCo_model* model, long int T, short t_exec_method){ // t_exec_method: 0 = default (top down), 1 = Data-loc aware, 2 = Tile-specific lookup
 	if (!strcmp(model->func, "Dgemm")) switch(t_exec_method){
 			case 0: return WerkhovenModelPredict(model, (model->D1*model->D3 + model->D3*model->D2 + model->D1*model->D2)*sizeof(double), model->D1*model->D2*sizeof(double), T);
 			case 1: return WerkhovenModelPredict(model, (model->V->out_loc[0]*model->D1*model->D3 + model->V->out_loc[1]*model->D3*model->D2 + model->V->out_loc[2]*model->D1*model->D2)*sizeof(double), model->V->out_loc[2]*model->D1*model->D2*sizeof(double), T);

@@ -18,8 +18,8 @@ typedef struct V_struct{
 	short out[4]; // Possibly modified from scalar_nz
 
 	// Problem specific
-	size_t *Dim1[4];
-	size_t *Dim2[4];
+	long int *Dim1[4];
+	long int *Dim2[4];
 	short loc[4];
 	short out_loc[4];
 
@@ -40,7 +40,7 @@ enum ModelType{
 #ifndef COCONTROL_H
 #define COCONTROL_H
 typedef struct CoControl{
-	int T = 0;
+	long int T = 0;
 	short dev_num = -1;
 	short dev_ids[LOC_NUM];
 	int Subkernels_per_dev[LOC_NUM];
@@ -50,7 +50,7 @@ typedef struct CoControl{
 #endif
 
 typedef struct tunableParams{
-	int T;
+	long int T;
 	double* rel_dev_score;
 	double pred_t;
 }* tunableParams_p;
@@ -58,6 +58,8 @@ typedef struct tunableParams{
 typedef struct flagParams{
 	char TransA;
 	char TransB;
+	int incx;
+	int incy;
 	//TODO: Add all flags used in BLAS, only applicable initialized/used for each routine.
 }* flagParams_p;
 
@@ -66,10 +68,9 @@ typedef struct CoCo_model{
 	CoModel_p link[LOC_NUM], revlink[LOC_NUM];
 	const char* func;
 	//double Ker_pot;
-	size_t D1, D2, D3;
+	long int D1, D2, D3;
 	flagParams_p flags;
 	void* GPUexec_model_ptr;
-	// FIXME: Add cpu_exec prediction
 	int dev_id;
 
 }* CoCoModel_p;
@@ -84,7 +85,7 @@ tunableParams_p CoCoPeLiaModelMultidevOptimizeTileAndSplit(short used_devs, shor
 	CoCoModel_p* dev_model_list);
 
 tunableParams_p CoCoPeLiaModelMultidevOptimizeSplit(short used_devs, short* used_dev_ids,
-	CoCoModel_p* dev_model_list, int T);
+	CoCoModel_p* dev_model_list, long int T);
 
 /// A naive prediction of the full-overlap (~unreachable) performance of a modeled routine
 double CoCopeLiaPredictFullOverlap(CoCoModel_p model);
@@ -93,26 +94,25 @@ double CoCopeLiaPredictFullOverlap(CoCoModel_p model);
 double CoCopeLiaPredictZeroOverlap(CoCoModel_p model);
 
 ///  Mode-Generalized prediction wrapper
-double CoCoPeLiaModelPredict(CoCoModel_p model, size_t T, ModelType mode);
+double CoCoPeLiaModelPredict(CoCoModel_p model, long int T, ModelType mode);
 
 /// Mode-Generalized prediction wrapper for heterogeneous
 double CoCoPeLiaModelPredictHetero(CoCo_model* model, short used_devs,
-	short* used_dev_ids, double* used_dev_relative_scores, size_t T, ModelType mode);
+	short* used_dev_ids, double* used_dev_relative_scores, long int T, ModelType mode);
 
-double WerkhovenModelPredictWrapper(CoCo_model* model, size_t T, short t_exec_method);
-double CoCopeLiaPredictBaseline(CoCoModel_p model, size_t T);
-double CoCopeLiaPredictDataLoc(CoCoModel_p model, size_t T);
-double CoCopeLiaPredictBidirectional(CoCoModel_p model, size_t T);
-double CoCopeLiaPredictReuse(CoCoModel_p model, size_t T);
-double CoCopeLiaPipelineEmulate(CoCoModel_p model, size_t T);
+double WerkhovenModelPredictWrapper(CoCo_model* model, long int T, short t_exec_method);
+double CoCopeLiaPredictBaseline(CoCoModel_p model, long int T);
+double CoCopeLiaPredictDataLoc(CoCoModel_p model, long int T);
+double CoCopeLiaPredictBidirectional(CoCoModel_p model, long int T);
+double CoCopeLiaPredictReuse(CoCoModel_p model, long int T);
+double CoCopeLiaPipelineEmulate(CoCoModel_p model, long int T);
 
 CoCoModel_p CoCoPeLiaTileModelInit(short dev_id, const char* func_name, void* func_data);
 ///  Predicts Best tile size for 3-way overlaped execution time for BLAS3 2-dim blocking.
 tunableParams_p CoCoPeLiaModelOptimizeTile(CoCoModel_p model, ModelType mode);
 
 CoCoModel_p CoCoModel_gemm_init(CoCoModel_p base_model, short dev_id, const char* func, gemm_backend_in_p func_data);
-CoCoModel_p CoCoModel_axpy_init(size_t N, short x_loc, short y_loc, short dev_id, const char* func);
-
+CoCoModel_p CoCoModel_axpy_init(CoCoModel_p out_model, short dev_id, const char* func, axpy_backend_in_p func_data);
 const char* printModel(ModelType mode);
 
 tunableParams_p tunableParamsInit();
