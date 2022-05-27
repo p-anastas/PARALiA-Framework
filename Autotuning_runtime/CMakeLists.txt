@@ -56,7 +56,9 @@ add_definitions(-DTESTDIR="${AUTOTUNE_INSTALL}/testLogs")
 add_library(autotuning_runtime SHARED
 ${AUTOTUNE_DIR_SRC}/CoCoPeLiaCoModel.cpp
 ${AUTOTUNE_DIR_SRC}/CoCoPeLiaGPUexec.cpp
-${AUTOTUNE_DIR_SRC}/CoCoPeLiaModel.cpp
+${AUTOTUNE_DIR_SRC}/CoCoPeLiaModelWrap.cpp
+${AUTOTUNE_DIR_SRC}/CoCoPeLiaModelLvl1.cpp
+${AUTOTUNE_DIR_SRC}/CoCoPeLiaModelLvl3.cpp
 ${AUTOTUNE_DIR_SRC}/WerkhovenModel.cpp
 ${AUTOTUNE_DIR_SRC}/Distributions.cpp
 )

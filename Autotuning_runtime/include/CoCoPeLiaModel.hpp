@@ -36,6 +36,14 @@ enum ModelType{
 	COCOPELIA_PIPELINE_EMULATE = 7,
 	COCOPELIA_HETERO_REUSE = 8
 };
+const char* printModel(ModelType mode);
+
+enum ProblemType{
+	BLAS1 = 0,
+	BLAS2 = 1,
+	BLAS3 = 2
+};
+const char* printProblem(ProblemType problem);
 
 #ifndef COCONTROL_H
 #define COCONTROL_H
@@ -67,6 +75,7 @@ typedef struct CoCo_model{
 	Vdata_p V;
 	CoModel_p link[LOC_NUM], revlink[LOC_NUM];
 	const char* func;
+	ProblemType problem;
 	//double Ker_pot;
 	long int D1, D2, D3;
 	flagParams_p flags;
@@ -111,12 +120,8 @@ CoCoModel_p CoCoPeLiaTileModelInit(short dev_id, const char* func_name, void* fu
 ///  Predicts Best tile size for 3-way overlaped execution time for BLAS3 2-dim blocking.
 tunableParams_p CoCoPeLiaModelOptimizeTile(CoCoModel_p model, ModelType mode);
 
-CoCoModel_p CoCoModel_gemm_init(CoCoModel_p base_model, short dev_id, const char* func, gemm_backend_in_p func_data);
-CoCoModel_p CoCoModel_axpy_init(CoCoModel_p out_model, short dev_id, const char* func, axpy_backend_in_p func_data);
-const char* printModel(ModelType mode);
 
 tunableParams_p tunableParamsInit();
-
 const char* printTunableParams(tunableParams_p params);
 
 /// Each device gets 1/num_devices Subkernels without acounting for their size or location
