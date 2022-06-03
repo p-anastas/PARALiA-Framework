@@ -28,7 +28,7 @@ double axpy_entry_ts;
 #endif
 
 Subkernel** Subkernel_list_axpy;
-int Subkernel_num_axpy;
+long Subkernel_num_axpy;
 
 int Sk_select_lock = 0;
 
@@ -134,7 +134,7 @@ void* CoCopeLiaAxpyAgentVoid(void* kernel_pthread_wrapped){
 #ifndef RUNTIME_SCHEDULER_VERSION
 	/// Rename global vars, perfectly safe.
 	Subkernel** Subkernel_list_axpy = axpy_subkernel_data->SubkernelListDev;
-	int Subkernel_num_axpy = axpy_subkernel_data->SubkernelNumDev;
+	long Subkernel_num_axpy = axpy_subkernel_data->SubkernelNumDev;
 #endif
 	while (remaining_Subkernels_dev){
 		prev = curr;

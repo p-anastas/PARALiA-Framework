@@ -26,8 +26,9 @@ class Subkernel
 		double req_in_ts = 0, req_out_ts = 0;
 		double reqT_fire_ts[3] = {0}, reqT_start_ts[3] = {0}, reqT_end_ts[3] = {0};
 		double op_fire_ts = 0, op_start_ts = 0, op_end_ts = 0;
-		double wb_fire_ts = 0, wb_start_ts = 0, wb_end_ts = 0;
+		double wbT_fire_ts[3] = {0}, wbT_start_ts[3] = {0}, wbT_end_ts[3] = {0};
 		long long bytes_in[3] = {0}, bytes_out[3] = {0}, flops = 0;
+		short dev_in_from[3], dev_in_to[3], dev_out_from[3], dev_out_to[3];
 #endif
 		Event* operation_complete;
 		void* operation_params;
@@ -51,6 +52,7 @@ class Subkernel
 
 		short no_locked_tiles();
 		short is_RW_lock_master(short dev_id);
+		short RW_lock_initialized();
 		double opt_fetch_cost(short dev_id);
 		double opt_fetch_cost_pen_multifetch(short dev_id);
 };
@@ -72,6 +74,9 @@ Subkernel* SubkernelSelectNoWriteShare(short dev_id, Subkernel** Subkernel_list,
 Subkernel* SubkernelSelectMinimizeFetch(short dev_id, Subkernel** Subkernel_list, long Subkernel_list_len);
 Subkernel* SubkernelSelectMinimizeFetchWritePenalty(short dev_id, Subkernel** Subkernel_list, long Subkernel_list_len);
 Subkernel* SubkernelSelectMinimizeFetchWritePenaltyMultiFetchPenalty(short dev_id,
+	Subkernel** Subkernel_list, long Subkernel_list_len);
+
+Subkernel* SubkernelSelectMinimizeFetchNoWriteShareMultiFetchPenaltyMutlidevFair(short dev_id,
 	Subkernel** Subkernel_list, long Subkernel_list_len);
 Subkernel* SubkernelSelectMinimizeFetchWritePenaltyMultiFetchPenaltyMutlidevFair(short dev_id,
 	Subkernel** Subkernel_list, long Subkernel_list_len);

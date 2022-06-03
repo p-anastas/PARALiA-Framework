@@ -30,7 +30,8 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${UNIHELP_INSTALL_LIB})
 set (UNIHELP_INSTALL_INC ${UNIHELP_INSTALL}/include)
 file(MAKE_DIRECTORY ${UNIHELP_INSTALL_INC})
 
-## Enable using lazy events; e.g. event backends are created on first record on the corresponding device
+## Enable using lazy events; e.g. event backends are created on first record on the corresponding device.
+#FIXME: Current CoCoPeLia version only work with lazy events.
 add_definitions(-DENABLE_LAZY_EVENTS)
 
 add_library(unihelpers SHARED

@@ -191,6 +191,8 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 			curr = SubkernelSelectMinimizeFetchWritePenalty(dev_id, Subkernel_list_gemm, Subkernel_num_gemm);
 		else if (!strcmp(SELECT_HEURISTIC, "MINIMIZE-FETCH-WRITE-PENALTY-MULTIFETCH-PENALTY"))
 			curr = SubkernelSelectMinimizeFetchWritePenaltyMultiFetchPenalty(dev_id, Subkernel_list_gemm, Subkernel_num_gemm);
+		else if (!strcmp(SELECT_HEURISTIC, "MINIMIZE-FETCH-NO-WRITE-SHARE-MULTIFETCH-PENALTY-MULTIDEV-FAIR"))
+			curr = SubkernelSelectMinimizeFetchNoWriteShareMultiFetchPenaltyMutlidevFair(dev_id, Subkernel_list_gemm, Subkernel_num_gemm);
 		else if (!strcmp(SELECT_HEURISTIC, "MINIMIZE-FETCH-WRITE-PENALTY-MULTIFETCH-PENALTY-MULTIDEV-FAIR"))
 			curr = SubkernelSelectMinimizeFetchWritePenaltyMultiFetchPenaltyMutlidevFair(dev_id, Subkernel_list_gemm, Subkernel_num_gemm);
 		else error("CoCopeLiaDgemm: Unknown Subkernel Heuristic %s\n", SELECT_HEURISTIC);

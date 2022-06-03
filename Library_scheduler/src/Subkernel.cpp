@@ -10,6 +10,8 @@
 #include "DataCaching.hpp"
 #include "backend_wrappers.hpp"
 
+#include <cfloat>
+
 int transfer_link_sharing[LOC_NUM][LOC_NUM][2];
 CQueue_p transfer_queues[LOC_NUM][LOC_NUM] = {{NULL}}, exec_queue[LOC_NUM] = {NULL};
 int Subkernel_ctr = 0, backend_init_flag[LOC_NUM] = {0};
@@ -23,9 +25,11 @@ Subkernel::Subkernel(short TileNum_in, const char* name){
 	TileDimlist = (short*) malloc(TileNum*sizeof(short));
 	TileList = (void**) malloc(TileNum*sizeof(void*));
 	prev = next = NULL;
-//#ifdef STEST
-//	bytes_in = bytes_out = flops = 0;
-//#endif
+#ifdef STEST
+	for (int i = 0; i < 3; i++){
+		dev_in_from[i] = dev_in_to[i] = dev_out_from[i] = dev_out_to[i] = -2;
+	}
+#endif
 }
 
 Subkernel::~Subkernel(){
@@ -116,9 +120,9 @@ void Subkernel::request_tile(short TileIdx){
 			FetchFromId = tmp->RW_master;
 			tmp->StoreBlock[idxize(FetchFromId)]->add_reader();
 			tmp->RW_master = run_dev_id;
-			if (FetchFromId == run_dev_id) error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d])::request_tile W_flag = %d, \
-			FetchFromId == run_dev_id == %d\n", run_dev_id, id, tmp->id,  tmp->GridId, tmp->W_flag, FetchFromId);
 		}
+		if (FetchFromId == run_dev_id) error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d])::request_tile W_flag = %d, \
+		FetchFromId == run_dev_id == %d\n", run_dev_id, id, tmp->id,  tmp->GridId, tmp->W_flag, FetchFromId);
 		short FetchFromId_idx = idxize(FetchFromId);
 #ifdef DEBUG
 		lprintf(lvl, "Subkernel(dev=%d,id=%d)-Tile(%d.[%d]): Fetching Block(%d) on GPU(%d) from Block(%d) on GPU(%d)\n",
@@ -140,6 +144,8 @@ void Subkernel::request_tile(short TileIdx){
 #ifdef STEST
 		transfer_queues[run_dev_id_idx][FetchFromId_idx]->add_host_func((void*)&CoCoSetTimerAsync, (void*) &reqT_end_ts[TileIdx]);
 		bytes_in[TileIdx] = tmp->size();
+		dev_in_from[TileIdx] = FetchFromId;
+		dev_in_to[TileIdx] = run_dev_id;
 #endif
 		if(tmp->W_flag){
 			//if (tmp->StoreBlock[FetchFromId_idx]!= tmp->WriteBackBlock){
@@ -170,10 +176,10 @@ void Subkernel::request_tile(short TileIdx){
 			FetchFromId = tmp->RW_master;
 			tmp->StoreBlock[idxize(FetchFromId)]->add_reader();
 			tmp->RW_master = run_dev_id;
-			if (FetchFromId == run_dev_id) error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::request_tile W_flag = %d, \
-				FetchFromId == run_dev_id == %d, state[%d] == %s\n",  run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2,
-				tmp->W_flag, FetchFromId, FetchFromId, print_state(tmp->StoreBlock[idxize(FetchFromId)]->State));
 		}
+		if (FetchFromId == run_dev_id) error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::request_tile W_flag = %d, \
+			FetchFromId == run_dev_id == %d, state[%d] == %s\n",  run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2,
+			tmp->W_flag, FetchFromId, FetchFromId, print_state(tmp->StoreBlock[idxize(FetchFromId)]->State));
 		short FetchFromId_idx = idxize(FetchFromId);
 #ifdef DEBUG
 		lprintf(lvl, "Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d]): Fetching Block(%d) on GPU(%d) from Block(%d) on GPU(%d)\n",
@@ -195,6 +201,8 @@ void Subkernel::request_tile(short TileIdx){
 #ifdef STEST
 		transfer_queues[run_dev_id_idx][FetchFromId_idx]->add_host_func((void*)&CoCoSetTimerAsync, (void*) &reqT_end_ts[TileIdx]);
 		bytes_in[TileIdx]= tmp->size();
+		dev_in_from[TileIdx] = FetchFromId;
+		dev_in_to[TileIdx] = run_dev_id;
 #endif
 		if(tmp->W_flag){
 			//if (tmp->StoreBlock[FetchFromId_idx]!= tmp->WriteBackBlock){
@@ -500,7 +508,7 @@ void Subkernel::writeback_data(){
 	lprintf(lvl-1, "|-----> Subkernel(dev=%d,id=%d)::writeback_data()\n", run_dev_id, id);
 #endif
 #ifdef STEST
-		wb_fire_ts = csecond();
+	wbT_fire_ts[0] = wbT_fire_ts[1] = wbT_fire_ts[2] = csecond();
 #endif
 	short run_dev_id_idx = idxize(run_dev_id);
 	short Writeback_id_idx, Writeback_id;
@@ -531,15 +539,17 @@ void Subkernel::writeback_data(){
 						run_dev_id, id, tmp->id, tmp->GridId, j, print_state(prev_state));
 #ifdef STEST
 				transfer_queues[Writeback_id_idx][run_dev_id_idx]->add_host_func(
-						(void*)&CoCoSetTimerAsync, (void*) &wb_start_ts);
+						(void*)&CoCoSetTimerAsync, (void*) &(wbT_start_ts[j]));
 #endif
 				CoCoMemcpyAsync(tmp->WriteBackBlock->Adrs, tmp->StoreBlock[run_dev_id_idx]->Adrs,
 					((long long) tmp->inc[run_dev_id_idx]) * tmp->dim * tmp->dtypesize(),
 					Writeback_id, run_dev_id, transfer_queues[Writeback_id_idx][run_dev_id_idx]);
 #ifdef STEST
 				transfer_queues[Writeback_id_idx][run_dev_id_idx]->add_host_func(
-						(void*)&CoCoSetTimerAsync, (void*) &wb_end_ts);
+						(void*)&CoCoSetTimerAsync, (void*) &(wbT_end_ts[j]));
 				bytes_out[j]= tmp->size();
+				dev_out_from[j] = run_dev_id;
+				dev_out_to[j] = Writeback_id;
 #endif
 				Ptr_atomic_int_p wrapped_op = (Ptr_atomic_int_p) malloc(sizeof(struct Ptr_atomic_int));
 				wrapped_op->ato_int_ptr = &tmp->RW_lock_holders;
@@ -578,7 +588,7 @@ void Subkernel::writeback_data(){
 						run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2, j, print_state(prev_state));
 #ifdef STEST
 				transfer_queues[Writeback_id_idx][run_dev_id_idx]->add_host_func(
-						(void*)&CoCoSetTimerAsync, (void*) &wb_start_ts);
+						(void*)&CoCoSetTimerAsync, (void*) &(wbT_start_ts[j]));
 #endif
 				CoCoMemcpy2DAsync(tmp->WriteBackBlock->Adrs, tmp->ldim[Writeback_id_idx],
 					tmp->StoreBlock[run_dev_id_idx]->Adrs, tmp->ldim[run_dev_id_idx],
@@ -586,8 +596,10 @@ void Subkernel::writeback_data(){
 					Writeback_id, run_dev_id, transfer_queues[Writeback_id_idx][run_dev_id_idx]);
 #ifdef STEST
 				transfer_queues[Writeback_id_idx][run_dev_id_idx]->add_host_func(
-						(void*)&CoCoSetTimerAsync, (void*) &wb_end_ts);
+						(void*)&CoCoSetTimerAsync, (void*) &(wbT_end_ts[j]));
 				bytes_out[j]= tmp->size();
+				dev_out_from[j] = run_dev_id;
+				dev_out_to[j] = Writeback_id;
 #endif
 
 				Ptr_atomic_int_p wrapped_op = (Ptr_atomic_int_p) malloc(sizeof(struct Ptr_atomic_int));
@@ -815,6 +827,21 @@ short Subkernel::is_RW_lock_master(short dev_id){
 	return RW_lock_Hos;
 }
 
+/// Value returned only works for max 1 W(rite) Tile - no problem for most BLAS. Bool check holds for any.
+short Subkernel::RW_lock_initialized(){
+	for (int j = 0; j < TileNum; j++){
+		if (TileDimlist[j] == 1){
+			Tile1D<VALUE_TYPE>* tmp = (Tile1D<VALUE_TYPE>*) TileList[j];
+			if(tmp->W_flag && /*tmp->W_total != tmp->W_flag &&*/ tmp->RW_lock!=-42) return 1;
+		}
+		else if (TileDimlist[j] == 2){
+			Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) TileList[j];
+			if(tmp->W_flag && /*tmp->W_total != tmp->W_flag &&*/ tmp->RW_lock!=-42) return 1;
+		}
+	}
+	return 0;
+}
+
 double Subkernel::opt_fetch_cost(short dev_id){
 	double fetch_cost = 0;
 	for (int j = 0; j < TileNum; j++){
@@ -860,13 +887,29 @@ double Subkernel::opt_fetch_cost_pen_multifetch(short dev_id){
 /// TODO: To be extra safe, not sure it is required - might slowdown a lot
 //int SubkernelSelectLock = 0;
 
+Subkernel* SubkernelSelectSimple(short dev_id, Subkernel** Subkernel_list, long Subkernel_list_len){
+	//while(__sync_lock_test_and_set (&SubkernelSelectLock, 1));
+	Subkernel* curr_sk = NULL;
+	long sk_idx;
+	for (sk_idx = 0; sk_idx < Subkernel_list_len; sk_idx++){
+		curr_sk = Subkernel_list[sk_idx];
+		//printf("SubkernelSelectSimple(dev_id=%d): curr_sk->run_dev_id = %d, curr_sk->no_locked_tiles() = %d, curr_sk->is_RW_lock_master(dev_id) = %d\n",
+		//	dev_id, curr_sk->run_dev_id, curr_sk->no_locked_tiles(), curr_sk->is_RW_lock_master(dev_id));
+		if (curr_sk->run_dev_id==-42 && (curr_sk->no_locked_tiles() || curr_sk->is_RW_lock_master(dev_id))) break;
+	}
+	if(sk_idx==Subkernel_list_len) curr_sk = NULL;
+	else curr_sk->prepare_launch(dev_id);
+	//__sync_lock_release(&SubkernelSelectLock);
+	return curr_sk;
+}
+
 Subkernel* SubkernelSelectNoWriteShare(short dev_id, Subkernel** Subkernel_list, long Subkernel_list_len){
 	//while(__sync_lock_test_and_set (&SubkernelSelectLock, 1));
 	Subkernel* curr_sk = NULL;
 	long sk_idx;
 	for (sk_idx = 0; sk_idx < Subkernel_list_len; sk_idx++){
 		curr_sk = Subkernel_list[sk_idx];
-		if (curr_sk->run_dev_id==-42 && (curr_sk->no_locked_tiles() || curr_sk->is_RW_lock_master(dev_id))) break;
+		if (curr_sk->run_dev_id==-42 && (!curr_sk->RW_lock_initialized() || curr_sk->is_RW_lock_master(dev_id))) break;
 	}
 	if(sk_idx==Subkernel_list_len) curr_sk = NULL;
 	else curr_sk->prepare_launch(dev_id);
@@ -878,14 +921,15 @@ Subkernel* SubkernelSelectMinimizeFetchWritePenaltyMultiFetchPenalty(short dev_i
 	//while(__sync_lock_test_and_set (&SubkernelSelectLock, 1));
 	Subkernel* curr_sk = NULL;
 	long sk_idx;
-	double min_fetch_cost = 100000000;
+	double min_fetch_cost = DBL_MAX;
 	Subkernel* min_fetch_cost_sk = NULL;
 	for (sk_idx = 0; sk_idx < Subkernel_list_len; sk_idx++){
 		curr_sk = Subkernel_list[sk_idx];
 		if (curr_sk->run_dev_id==-42 &&
 				(curr_sk->no_locked_tiles() || curr_sk->is_RW_lock_master(dev_id))) {// || curr_sk->is_RW_master(dev_id)){
 			double fetch_cost = curr_sk->opt_fetch_cost_pen_multifetch(dev_id);
-			if(!curr_sk->no_locked_tiles()) fetch_cost+=WRITE_COST_PEPENALTY*fetch_cost;
+			if(!curr_sk->no_locked_tiles()) fetch_cost+=PARALLEL_BACKEND_SET_PENALTY*fetch_cost;
+			else if(!curr_sk->is_RW_lock_master(dev_id)) fetch_cost+=WTILE_TRANSFER_PENALTY*fetch_cost/curr_sk->TileNum;
 			if(fetch_cost < min_fetch_cost){
 				min_fetch_cost = fetch_cost;
 				min_fetch_cost_sk = curr_sk;
@@ -896,7 +940,43 @@ Subkernel* SubkernelSelectMinimizeFetchWritePenaltyMultiFetchPenalty(short dev_i
 	//__sync_lock_release(&SubkernelSelectLock);
 	return min_fetch_cost_sk;
 }
-gdgdlg
+
+Subkernel* SubkernelSelectMinimizeFetchNoWriteShareMultiFetchPenaltyMutlidevFair(short dev_id, Subkernel** Subkernel_list, long Subkernel_list_len){
+	//while(__sync_lock_test_and_set (&SubkernelSelectLock, 1));
+	Subkernel* curr_sk = NULL;
+	long sk_idx;
+	double min_fetch_cost = DBL_MAX;
+	Subkernel* min_fetch_cost_sk = NULL;
+	for (sk_idx = 0; sk_idx < Subkernel_list_len; sk_idx++){
+		curr_sk = Subkernel_list[sk_idx];
+		if (curr_sk->run_dev_id==-42 &&
+				(!curr_sk->RW_lock_initialized() || curr_sk->is_RW_lock_master(dev_id))) {
+			double fetch_cost = curr_sk->opt_fetch_cost_pen_multifetch(dev_id);
+			if(!curr_sk->no_locked_tiles()) fetch_cost+=PARALLEL_BACKEND_SET_PENALTY*fetch_cost;
+			if(fetch_cost < min_fetch_cost){
+				min_fetch_cost = fetch_cost;
+				min_fetch_cost_sk = curr_sk;
+			}
+			else if(fetch_cost == min_fetch_cost && curr_sk->no_locked_tiles()){
+				int other_dev_score_winner = 0;
+				for (int dev = 0; dev< LOC_NUM; dev++) if(deidxize(dev)!= dev_id){
+					double fetch_cost_me = curr_sk->opt_fetch_cost(deidxize(dev)),
+					fetch_cost_bro = min_fetch_cost_sk->opt_fetch_cost(deidxize(dev));
+					if(fetch_cost_me <= fetch_cost_bro) other_dev_score_winner ++;
+					else other_dev_score_winner--;
+				}
+				if(other_dev_score_winner < 0){
+					min_fetch_cost = fetch_cost;
+					min_fetch_cost_sk = curr_sk;
+				}
+			}
+		}
+	}
+	if(min_fetch_cost_sk) min_fetch_cost_sk->prepare_launch(dev_id);
+	//__sync_lock_release(&SubkernelSelectLock);
+	return min_fetch_cost_sk;
+}
+
 Subkernel* SubkernelSelectMinimizeFetchWritePenaltyMultiFetchPenaltyMutlidevFair(short dev_id, Subkernel** Subkernel_list, long Subkernel_list_len){
 	//while(__sync_lock_test_and_set (&SubkernelSelectLock, 1));
 	Subkernel* curr_sk = NULL;
@@ -906,9 +986,10 @@ Subkernel* SubkernelSelectMinimizeFetchWritePenaltyMultiFetchPenaltyMutlidevFair
 	for (sk_idx = 0; sk_idx < Subkernel_list_len; sk_idx++){
 		curr_sk = Subkernel_list[sk_idx];
 		if (curr_sk->run_dev_id==-42 &&
-				(curr_sk->no_locked_tiles() || curr_sk->is_RW_lock_master(dev_id))) {// || curr_sk->is_RW_master(dev_id)){
+				(curr_sk->no_locked_tiles() || curr_sk->is_RW_lock_master(dev_id))) {
 			double fetch_cost = curr_sk->opt_fetch_cost_pen_multifetch(dev_id);
-			if(!curr_sk->no_locked_tiles()) fetch_cost+=WRITE_COST_PEPENALTY*fetch_cost;
+			if(!curr_sk->no_locked_tiles()) fetch_cost+=PARALLEL_BACKEND_SET_PENALTY*fetch_cost;
+			else if(!curr_sk->is_RW_lock_master(dev_id)) fetch_cost+=WTILE_TRANSFER_PENALTY*fetch_cost/curr_sk->TileNum;
 			if(fetch_cost < min_fetch_cost){
 				min_fetch_cost = fetch_cost;
 				min_fetch_cost_sk = curr_sk;
@@ -1012,16 +1093,18 @@ void STEST_print_SK(kernel_pthread_wrap_p* thread_dev_data_list, double routine_
 			Sk_num_max = thread_dev_data_list[d]->SubkernelNumDev;
 
 	lprintf(0,"Pipeline start:\n");
+	int transfer_map[LOC_NUM][LOC_NUM] ={{0}}, total_h2d_R = 0, total_d2d_R = 0, total_reuse_R = 0, total_d2h_R = 0,
+		total_h2d_W = 0, total_d2d_W = 0, total_reuse_W = 0, total_d2h_W = 0;
 #ifdef RUNTIME_SCHEDULER_VERSION
 	for (int keri = 0; keri < Sk_num_max; keri++){
 #else
 	for (int keri = Sk_num_max - 1; keri >= 0; keri--){
 #endif
-		double request_t_ms[dev_num] = {0}, exec_t_ms[dev_num] = {0}, writeback_t_ms[dev_num] = {0}, request_tile_ms[dev_num][3];
-		long long request_bytes_in[dev_num] = {0}, request_bytes_out[dev_num] = {0};
+		double request_t_ms[dev_num] = {0}, exec_t_ms[dev_num] = {0}, writeback_t_ms[dev_num] = {0},
+			writeback_tile_ms[dev_num][3], request_tile_ms[dev_num][3];
+		long long request_bytes_in[dev_num] = {0}, writeback_bytes_out[dev_num] = {0};
 		for (int d = 0; d < dev_num; d++) if(keri < thread_dev_data_list[d]->SubkernelNumDev){
-			writeback_t_ms[d] = (thread_dev_data_list[d]->SubkernelListDev[keri]->wb_end_ts -
-			thread_dev_data_list[d]->SubkernelListDev[keri]->wb_start_ts)*1000;
+
 		exec_t_ms[d] = (thread_dev_data_list[d]->SubkernelListDev[keri]->op_end_ts -
 			thread_dev_data_list[d]->SubkernelListDev[keri]->op_start_ts)*1000;
 			for(int idx = 0; idx < thread_dev_data_list[d]->SubkernelListDev[keri]->TileNum; idx++){
@@ -1029,17 +1112,21 @@ void STEST_print_SK(kernel_pthread_wrap_p* thread_dev_data_list, double routine_
 				request_tile_ms[d][idx] = (thread_dev_data_list[d]->SubkernelListDev[keri]->reqT_end_ts[idx] -
 					thread_dev_data_list[d]->SubkernelListDev[keri]->reqT_start_ts[idx])*1000;
 				request_t_ms[d]+= request_tile_ms[d][idx];
+				writeback_bytes_out[d]+= thread_dev_data_list[d]->SubkernelListDev[keri]->bytes_out[idx];
+				writeback_tile_ms[d][idx]= (thread_dev_data_list[d]->SubkernelListDev[keri]->wbT_end_ts[idx] -
+					thread_dev_data_list[d]->SubkernelListDev[keri]->wbT_start_ts[idx])*1000;
+				writeback_t_ms[d] += writeback_tile_ms[d][idx];
 			}
 		}
 		lprintf(0,"\n");
 		for (int d = 0; d < dev_num; d++) if(keri < thread_dev_data_list[d]->SubkernelNumDev)
-			lprintf(0, "             Subkernel( dev =%2d, id =%6d )             |",
+			lprintf(0, "             Subkernel( dev =%2d, id =%6d )                                |",
 				thread_dev_data_list[d]->SubkernelListDev[keri]->run_dev_id,
 				thread_dev_data_list[d]->SubkernelListDev[keri]->id);
 				lprintf(0,"\n");
 
 		for (int d = 0; d < dev_num; d++) if(keri < thread_dev_data_list[d]->SubkernelNumDev)
-			lprintf(0, " Req_T (%3.1lf->%3.1lf) total = %3.1lf ms (%3.1lf Gb\\s):              |",
+			lprintf(0, " Req_T (%3.1lf->%3.1lf) total = %3.1lf ms (%3.1lf Gb\\s):                                |",
 				(thread_dev_data_list[d]->SubkernelListDev[keri]->req_in_ts-routine_entry_ts)*1000,
 				(thread_dev_data_list[d]->SubkernelListDev[keri]->req_out_ts-routine_entry_ts)*1000,
 				request_t_ms[d], Gval_per_s(request_bytes_in[d], request_t_ms[d]/1000));
@@ -1047,23 +1134,49 @@ void STEST_print_SK(kernel_pthread_wrap_p* thread_dev_data_list, double routine_
 
 		for (int tileidx = 0; tileidx < thread_dev_data_list[0]->SubkernelListDev[0]->TileNum; tileidx++){
 				for (int d = 0; d < dev_num; d++) if(keri < thread_dev_data_list[d]->SubkernelNumDev){
-				short Tiledim = thread_dev_data_list[d]->SubkernelListDev[keri]->TileDimlist[tileidx];
-				void* TilePtr = thread_dev_data_list[d]->SubkernelListDev[keri]->TileList[tileidx];
-				lprintf(0, " RCV_T( %3d.[%2d,%2d] ) (%3.1lf: %3.1lf->%3.1lf) = %3.1lf ms (%3.1lf Gb\\s) |",
-					(Tiledim == 2)? ((Tile2D<VALUE_TYPE>*) TilePtr)->id : ((Tile1D<VALUE_TYPE>*) TilePtr)->id,
-					(Tiledim == 2)? ((Tile2D<VALUE_TYPE>*) TilePtr)->GridId1 : ((Tile1D<VALUE_TYPE>*) TilePtr)->GridId,
-					(Tiledim == 2)? ((Tile2D<VALUE_TYPE>*) TilePtr)->GridId2 : -1,
-					(request_tile_ms[d][tileidx])? (thread_dev_data_list[d]->SubkernelListDev[keri]->reqT_fire_ts[tileidx]-routine_entry_ts)*1000 : 0,
-					(request_tile_ms[d][tileidx])? (thread_dev_data_list[d]->SubkernelListDev[keri]->reqT_start_ts[tileidx]-routine_entry_ts)*1000 : 0,
-					(request_tile_ms[d][tileidx])? (thread_dev_data_list[d]->SubkernelListDev[keri]->reqT_end_ts[tileidx]-routine_entry_ts)*1000 : 0,
-					request_tile_ms[d][tileidx],
-					Gval_per_s(thread_dev_data_list[d]->SubkernelListDev[keri]->bytes_in[tileidx], request_tile_ms[d][tileidx]/1000));
+					short Tiledim = thread_dev_data_list[d]->SubkernelListDev[keri]->TileDimlist[tileidx];
+					void* TilePtr = thread_dev_data_list[d]->SubkernelListDev[keri]->TileList[tileidx];
+					lprintf(0, " RCV_T( T(%3d.[%2d,%2d]) Dev (%2d)->(%2d) ) (%3.1lf: %3.1lf->%3.1lf) = %3.1lf ms (%3.1lf Gb\\s) |",
+						(Tiledim == 2)? ((Tile2D<VALUE_TYPE>*) TilePtr)->id : ((Tile1D<VALUE_TYPE>*) TilePtr)->id,
+						(Tiledim == 2)? ((Tile2D<VALUE_TYPE>*) TilePtr)->GridId1 : ((Tile1D<VALUE_TYPE>*) TilePtr)->GridId,
+						(Tiledim == 2)? ((Tile2D<VALUE_TYPE>*) TilePtr)->GridId2 : -1,
+						thread_dev_data_list[d]->SubkernelListDev[keri]->dev_in_from[tileidx],
+						thread_dev_data_list[d]->SubkernelListDev[keri]->dev_in_to[tileidx],
+						(request_tile_ms[d][tileidx])? (thread_dev_data_list[d]->SubkernelListDev[keri]->reqT_fire_ts[tileidx]-routine_entry_ts)*1000 : 0,
+						(request_tile_ms[d][tileidx])? (thread_dev_data_list[d]->SubkernelListDev[keri]->reqT_start_ts[tileidx]-routine_entry_ts)*1000 : 0,
+						(request_tile_ms[d][tileidx])? (thread_dev_data_list[d]->SubkernelListDev[keri]->reqT_end_ts[tileidx]-routine_entry_ts)*1000 : 0,
+						request_tile_ms[d][tileidx],
+						Gval_per_s(thread_dev_data_list[d]->SubkernelListDev[keri]->bytes_in[tileidx], request_tile_ms[d][tileidx]/1000));
+
+					short dev_from = thread_dev_data_list[d]->SubkernelListDev[keri]->dev_in_from[tileidx],
+						dev_to = thread_dev_data_list[d]->SubkernelListDev[keri]->dev_in_to[tileidx];
+					short is_reader = (Tiledim == 2)? ((Tile2D<VALUE_TYPE>*) TilePtr)->R_flag : ((Tile1D<VALUE_TYPE>*) TilePtr)->R_flag;
+					short is_writer = (Tiledim == 2)? ((Tile2D<VALUE_TYPE>*) TilePtr)->W_total : ((Tile1D<VALUE_TYPE>*) TilePtr)->W_total;
+					if (dev_from != -2 && dev_to != -2){
+						transfer_map[idxize(dev_from)][idxize(dev_to)]++;
+						if (dev_from == -1){
+							if(is_writer) total_h2d_W++;
+							else total_h2d_R++;
+						}
+						else if(dev_to == -1)
+							if(is_writer) total_d2h_W++;
+							else total_d2h_R++;
+						else{
+							if(is_writer) total_d2d_W++;
+							else total_d2d_R++;
+						}
+					}
+					else{
+						if(is_writer) total_reuse_W++;
+						else total_reuse_R++;
+					}
+
 				}
 				lprintf(0,"\n");
 			}
 
 			for (int d = 0; d < dev_num; d++) if(keri < thread_dev_data_list[d]->SubkernelNumDev)
-				lprintf(0, " exec_t(%s) (%3.1lf: %3.1lf->%3.1lf) = %3.1lf ms  (%3.1lf Gflops\\s) |",
+				lprintf(0, " exec_t(%s) (%3.1lf: %3.1lf->%3.1lf) = %3.1lf ms  (%3.1lf Gflops\\s)                    |",
 				thread_dev_data_list[d]->SubkernelListDev[keri]->op_name,
 				(thread_dev_data_list[d]->SubkernelListDev[keri]->op_fire_ts-routine_entry_ts)*1000,
 				(thread_dev_data_list[d]->SubkernelListDev[keri]->op_start_ts-routine_entry_ts)*1000,
@@ -1071,15 +1184,71 @@ void STEST_print_SK(kernel_pthread_wrap_p* thread_dev_data_list, double routine_
 				exec_t_ms[d], Gval_per_s(thread_dev_data_list[d]->SubkernelListDev[keri]->flops, exec_t_ms[d]/1000));
 				lprintf(0,"\n");
 
-			for (int d = 0; d < dev_num; d++) if(keri < thread_dev_data_list[d]->SubkernelNumDev)
-				lprintf(0, " WB_T(%3.1lf: %3.1lf->%3.1lf) = %3.1lf ms  (%3.1lf Gflops\\s)            |",
-					(writeback_t_ms[d]) ? (thread_dev_data_list[d]->SubkernelListDev[keri]->wb_fire_ts-routine_entry_ts)*1000 : 0,
-					(writeback_t_ms[d]) ? (thread_dev_data_list[d]->SubkernelListDev[keri]->wb_start_ts-routine_entry_ts)*1000 : 0,
-					(writeback_t_ms[d]) ? (thread_dev_data_list[d]->SubkernelListDev[keri]->wb_end_ts-routine_entry_ts)*1000 : 0,
-					writeback_t_ms[d], Gval_per_s(request_bytes_out[d], writeback_t_ms[d]/1000));
-				lprintf(0,"\n\n");
-
+		for (int tileidx = 0; tileidx < thread_dev_data_list[0]->SubkernelListDev[0]->TileNum; tileidx++){
+			short Tiledim = thread_dev_data_list[0]->SubkernelListDev[keri]->TileDimlist[tileidx];
+			void* TilePtr = thread_dev_data_list[0]->SubkernelListDev[keri]->TileList[tileidx];
+			short is_writer = (Tiledim == 2)? ((Tile2D<VALUE_TYPE>*) TilePtr)->W_total : ((Tile1D<VALUE_TYPE>*) TilePtr)->W_total;
+			if(is_writer){
+				for (int d = 0; d < dev_num; d++) if(keri < thread_dev_data_list[d]->SubkernelNumDev){
+					lprintf(0, " WB_T( T(%3d.[%2d,%2d]) Dev (%2d)->(%2d) ) (%3.1lf: %3.1lf->%3.1lf) = %3.1lf ms  (%3.1lf Gb\\s) |",
+						(Tiledim == 2)? ((Tile2D<VALUE_TYPE>*) TilePtr)->id : ((Tile1D<VALUE_TYPE>*) TilePtr)->id,
+						(Tiledim == 2)? ((Tile2D<VALUE_TYPE>*) TilePtr)->GridId1 : ((Tile1D<VALUE_TYPE>*) TilePtr)->GridId,
+						(Tiledim == 2)? ((Tile2D<VALUE_TYPE>*) TilePtr)->GridId2 : -1,
+						thread_dev_data_list[d]->SubkernelListDev[keri]->dev_out_from[tileidx],
+						thread_dev_data_list[d]->SubkernelListDev[keri]->dev_out_to[tileidx],
+						(writeback_t_ms[d]) ? (thread_dev_data_list[d]->SubkernelListDev[keri]->wbT_fire_ts[tileidx]-routine_entry_ts)*1000 : 0,
+						(writeback_t_ms[d]) ? (thread_dev_data_list[d]->SubkernelListDev[keri]->wbT_start_ts[tileidx]-routine_entry_ts)*1000 : 0,
+						(writeback_t_ms[d]) ? (thread_dev_data_list[d]->SubkernelListDev[keri]->wbT_end_ts[tileidx]-routine_entry_ts)*1000 : 0,
+						writeback_tile_ms[d][tileidx], Gval_per_s(thread_dev_data_list[d]->SubkernelListDev[keri]->bytes_out[tileidx], writeback_tile_ms[d][tileidx]/1000));
+						short dev_from = thread_dev_data_list[d]->SubkernelListDev[keri]->dev_out_from[tileidx],
+							dev_to = thread_dev_data_list[d]->SubkernelListDev[keri]->dev_out_to[tileidx];
+						short is_reader = (Tiledim == 2)? ((Tile2D<VALUE_TYPE>*) TilePtr)->R_flag : ((Tile1D<VALUE_TYPE>*) TilePtr)->R_flag;
+						short is_writer = (Tiledim == 2)? ((Tile2D<VALUE_TYPE>*) TilePtr)->W_total : ((Tile1D<VALUE_TYPE>*) TilePtr)->W_total;
+						if (dev_from != -2 && dev_to != -2){
+							transfer_map[idxize(dev_from)][idxize(dev_to)]++;
+							if (dev_from == -1){
+								if(is_writer) total_h2d_W++;
+								else total_h2d_R++;
+							}
+							else if(dev_to == -1)
+								if(is_writer) total_d2h_W++;
+								else total_d2h_R++;
+							else{
+								if(is_writer) total_d2d_W++;
+								else total_d2d_R++;
+							}
+						}
+					}
+					lprintf(0,"\n");
+				}
+			}
 	}
 	CoCoSyncCheckErr();
+	lprintf(0,"\n Tranfer Map:\n   |");
+	for (int d2 = 0; d2 < LOC_NUM; d2++)
+		lprintf(0, "  %2d  |", deidxize(d2));
+	lprintf(0, "\n   |");
+	for (int d2 = 0; d2 < LOC_NUM; d2++)
+		lprintf(0, "-------");
+	lprintf(0, "\n");
+	for (int d1 = 0; d1 < LOC_NUM; d1++){
+		lprintf(0, "%2d | ", deidxize(d1));
+		for (int d2 = 0; d2 < LOC_NUM; d2++){
+			lprintf(0, "%4d | ", transfer_map[d1][d2]);
+		}
+		lprintf(0, "\n");
+	}
+	lprintf(0, "\n");
+	lprintf(0,"\nSum-up R-Tiles:\n");
+	lprintf(0,"Total H2D transfers = %d\n", total_h2d_R);
+	lprintf(0,"Total D2D transfers = %d\n", total_d2d_R);
+	lprintf(0,"Total Reused = %d\n", total_reuse_R);
+	lprintf(0,"Total D2H = %d\n", total_d2h_R);
+	lprintf(0,"\nSum-up W-Tiles:\n");
+	lprintf(0,"Total H2D transfers = %d\n", total_h2d_W);
+	lprintf(0,"Total D2D transfers = %d\n", total_d2d_W);
+	lprintf(0,"Total Reused = %d\n", total_reuse_W);
+	lprintf(0,"Total D2H = %d\n", total_d2h_W);
+	lprintf(0, "\n");
 }
 #endif
