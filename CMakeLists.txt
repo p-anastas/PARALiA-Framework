@@ -34,7 +34,7 @@ add_definitions(-DMAX_BACKEND_L=4)
 add_definitions(-DENABLE_SEND_RECV_OVERLAP)
 
 ## Enable using the CPU as an extra device for part of the total workload, if applicable
-add_definitions(-DENABLE_CPU_WORKLOAD)
+#add_definitions(-DENABLE_CPU_WORKLOAD)
 
 ## Enable using the CPU as an extra device for part of the total workload, if applicable
 #add_definitions(-DENABLE_PTHREAD_TILE_REQUEST)
@@ -55,17 +55,21 @@ else()
 endif()
 
 ## Define which subkernel selection heuristic to use
-#add_definitions(-DSELECT_HEURISTIC="NAIVE")
+#FIXME: NO-WRITE-SHARE do not work with set number of subkernels, only for correctness checking.
 #add_definitions(-DSELECT_HEURISTIC="NAIVE-NO-WRITE-SHARE")
+#add_definitions(-DSELECT_HEURISTIC="MINIMIZE-FETCH-NO-WRITE-SHARE-MULTIFETCH-PENALTY-MULTIDEV-FAIR")
+
+#add_definitions(-DSELECT_HEURISTIC="NAIVE")
 #add_definitions(-DSELECT_HEURISTIC="MINIMIZE-FETCH")
 #add_definitions(-DSELECT_HEURISTIC="MINIMIZE-FETCH-WRITE-PENALTY")
-#add_definitions(-DSELECT_HEURISTIC="MINIMIZE-FETCH-WRITE-PENALTY-MULTIFETCH-PENALTY")
+add_definitions(-DSELECT_HEURISTIC="MINIMIZE-FETCH-WRITE-PENALTY-MULTIFETCH-PENALTY")
 ## This last mode is pointless for static schedule type
-add_definitions(-DSELECT_HEURISTIC="MINIMIZE-FETCH-WRITE-PENALTY-MULTIFETCH-PENALTY-MULTIDEV-FAIR")
+#add_definitions(-DSELECT_HEURISTIC="MINIMIZE-FETCH-WRITE-PENALTY-MULTIFETCH-PENALTY-MULTIDEV-FAIR")
 
 # Extra distribution-related values
-add_definitions(-DWRITE_COST_PEPENALTY=0.1)
-add_definitions(-DMULTIFETCH_PENALTY=0.2)
+add_definitions(-DPARALLEL_BACKEND_SET_PENALTY=0.25)
+add_definitions(-DWTILE_TRANSFER_PENALTY=2)
+add_definitions(-DMULTIFETCH_PENALTY=1)
 
 ## Define at which percentage to normalize float values for similar data (e.g. costs, splits etc) to avoid empirical errors leaking into decisions
 ## For example see Autotuning_runtime->CoCoPeLiaModel->CoCoPeLiaNormalizeSplit

@@ -82,26 +82,74 @@ template<typename dtype> short Tile1D<dtype>::isLocked(){
 // For now: closest = already in device, then other GPUs, then host (since devices in order etc, host after in CacheLocId)
 template<typename dtype> short Tile1D<dtype>::getClosestReadLoc(short dev_id_in){
   short lvl = 5;
-#ifdef DEBUG
+#ifdef DDEBUG
   lprintf(lvl-1, "|-----> Tile1D(%d)::getClosestReadLoc(%d)\n", id, dev_id_in);
 #endif
-  short pos = 0;
-  for (pos =0; pos < LOC_NUM; pos++){
-    if (idxize(pos) == dev_id_in){
-      if (StoreBlock[pos]!= NULL)
-        error("Tile1D(%d)::getClosestReadLoc(%d): Should not be called, Tile already available in %d.\n",  id, dev_id_in, dev_id_in);
+  int dev_id_in_idx = idxize(dev_id_in);
+  int pos_min = LOC_NUM;
+  double link_cost_1D_min = 10000000;
+  for (int pos =0; pos < LOC_NUM; pos++){
+    if (pos == dev_id_in_idx || StoreBlock[pos] == NULL) {
+      //if (StoreBlock[pos]!= NULL)
+      //  error("Tile2D(%d)::getClosestReadLoc(%d): Should not be called, Tile already available in %d.\n",  id, dev_id_in, dev_id_in);
       continue;
     }
-    if (StoreBlock[pos]!= NULL){
-      state temp = StoreBlock[pos]->State;
-      if (temp == AVAILABLE || temp == SHARABLE) break;
-#ifdef DDEBUG
-  lprintf(lvl, "|-----> Tile1D(%d)::getClosestReadLoc(%d): Selecting cached tile in loc =%d \n", id, dev_id_in, pos);
-#endif
+    //StoreBlock[pos]->update_state(false);
+    state temp = StoreBlock[pos]->State;
+    if (temp == AVAILABLE || temp == SHARABLE || temp == NATIVE){
+      event_status block_status = StoreBlock[pos]->Available->query_status();
+      if(block_status == COMPLETE || block_status == CHECKED)
+      if (link_cost_1D[dev_id_in_idx][pos] < link_cost_1D_min){
+        link_cost_1D_min = link_cost_1D[dev_id_in_idx][pos];
+        pos_min = pos;
+      }
     }
   }
-  if (pos >= LOC_NUM) error("Tile1D(%d)::getClosestReadLoc(%d): No location found for tile - bug.", id, dev_id_in);
-  return deidxize(pos);
+#ifdef DEBUG
+  lprintf(lvl, "|-----> Tile1D(%d)::getClosestReadLoc(%d): Selecting cached tile in loc =%d \n", id, dev_id_in, pos_min);
+#endif
+  if (pos_min >= LOC_NUM) error("Tile1D(%d)::getClosestReadLoc(%d): No location found for tile - bug.", id, dev_id_in);
+  //Global_Cache[pos_min]->lock();
+  CBlock_p temp_outblock = StoreBlock[pos_min];
+  if(temp_outblock != NULL){
+    temp_outblock->lock();
+    //temp_outblock->update_state(true);
+    state temp = temp_outblock->State;
+    event_status block_status = temp_outblock->Available->query_status();
+    if ((temp == AVAILABLE || temp == SHARABLE || temp == NATIVE) &&
+    (block_status == COMPLETE || block_status == CHECKED)){
+      temp_outblock->add_reader(true);
+      //Global_Cache[pos_min]->unlock();
+      temp_outblock->unlock();
+      #ifdef DDEBUG
+        lprintf(lvl-1, "<-----|\n");
+      #endif
+      return deidxize(pos_min);
+    }
+    else error("Tile1D(%d)::getClosestReadLoc(%d): pos_min = %d selected,\
+      but something changed after locking its cache...fixme\n", id, dev_id_in, pos_min);
+  }
+  else error("Tile1D(%d)::getClosestReadLoc(%d): pos_min = %d selected,\
+    but StoreBlock[pos_min] was NULL after locking its cache...fixme\n", id, dev_id_in, pos_min);
+  return -666;
+}
+
+template<typename dtype> double Tile1D<dtype>::getMinLinkCost(short dev_id_in){
+  short lvl = 5;
+  int dev_id_in_idx = idxize(dev_id_in);
+  double link_cost_1D_min = 10000000;
+  for (int pos =0; pos < LOC_NUM; pos++){
+    if(StoreBlock[pos] == NULL) continue;
+    //StoreBlock[pos]->update_state(false);
+    state temp = StoreBlock[pos]->State;
+    if (temp == AVAILABLE || temp == SHARABLE || temp == NATIVE){
+      event_status block_status = StoreBlock[pos]->Available->query_status();
+      if(block_status == COMPLETE || block_status == CHECKED)
+      if(link_cost_1D[dev_id_in_idx][pos] < link_cost_1D_min)
+        link_cost_1D_min = link_cost_1D[dev_id_in_idx][pos];
+    }
+  }
+  return link_cost_1D_min;
 }
 
 void CoCoUpdateLinkSpeed1D(CoControl_p autotuned_vals, CoCoModel_p* glob_model){

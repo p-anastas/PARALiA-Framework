@@ -28,7 +28,7 @@ double axpy_entry_ts;
 #endif
 
 Subkernel** Subkernel_list_axpy;
-long Subkernel_num_axpy;
+int Subkernel_num_axpy;
 
 int Sk_select_lock = 0;
 
@@ -134,7 +134,7 @@ void* CoCopeLiaAxpyAgentVoid(void* kernel_pthread_wrapped){
 #ifndef RUNTIME_SCHEDULER_VERSION
 	/// Rename global vars, perfectly safe.
 	Subkernel** Subkernel_list_axpy = axpy_subkernel_data->SubkernelListDev;
-	long Subkernel_num_axpy = axpy_subkernel_data->SubkernelNumDev;
+	int Subkernel_num_axpy = axpy_subkernel_data->SubkernelNumDev;
 #endif
 	while (remaining_Subkernels_dev){
 		prev = curr;
@@ -192,7 +192,7 @@ void* CoCopeLiaAxpyAgentVoid(void* kernel_pthread_wrapped){
 
 	CoCoSyncCheckErr();
 #ifdef TEST
-	double total_cache_timer = Global_Cache[dev_id]->timer;
+	double total_cache_timer = Global_Cache[idxize(dev_id)]->timer;
 	lprintf(lvl, "Cache requests total timer (%d): t_cache = %lf ms\n" , dev_id, total_cache_timer*1000);
 	cpu_timer = csecond() - cpu_timer;
 	lprintf(lvl, "Subkernels complete(%d): t_comp = %lf ms\n" , dev_id, cpu_timer*1000);
@@ -337,8 +337,7 @@ CoControl_p CoCopeLiaDaxpy(size_t N, VALUE_TYPE alpha, VALUE_TYPE* x, size_t inc
 	cpu_timer = csecond();
 #endif
 
-	int Subkernel_num_axpy;
-	Subkernel** Subkernel_list_axpy = CoCoAsignTilesToSubkernelsDaxpy(x_asset, y_asset, T,
+	Subkernel_list_axpy = CoCoAsignTilesToSubkernelsDaxpy(x_asset, y_asset, T,
 		&Subkernel_num_axpy);
 #ifdef DEBUG
 	lprintf(lvl, "Subkernel_num_axpy = %d {N}GridSz = {%d}, num_devices = %d\n\n",

@@ -865,7 +865,15 @@ double Subkernel::opt_fetch_cost_pen_multifetch(short dev_id){
 	for (int j = 0; j < TileNum; j++){
 		if (TileDimlist[j] == 1){
 			Tile1D<VALUE_TYPE>* tmp = (Tile1D<VALUE_TYPE>*) TileList[j];
-			error("Subkernel::opt_fetch_cost_pen_multifetch: 1D not implemented\n");
+			double temp_fetch_cost = tmp->getMinLinkCost(dev_id);
+			for(int loc_idx = 0; loc_idx < LOC_NUM; loc_idx++){
+				CBlock_p curr_block = tmp->StoreBlock[loc_idx];
+				if(curr_block != NULL && curr_block->Available->query_status() == RECORDED){
+					fetch_cost+=temp_fetch_cost*MULTIFETCH_PENALTY;
+					if (deidxize(loc_idx) == dev_id) warning("opt_fetch_cost_pen_multifetch(dev_id=%d, TiledIdx=%d):\
+						Already fetching in dev_id (?)\n", dev_id, j);
+				}
+			}
 		}
 		else if (TileDimlist[j] == 2){
 			Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) TileList[j];
@@ -891,6 +899,7 @@ Subkernel* SubkernelSelectSimple(short dev_id, Subkernel** Subkernel_list, long 
 	//while(__sync_lock_test_and_set (&SubkernelSelectLock, 1));
 	Subkernel* curr_sk = NULL;
 	long sk_idx;
+	//if(!Subkernel_list_len) warning("SubkernelSelectSimple: Gave 0 subkernel len with list = %p\n", Subkernel_list);
 	for (sk_idx = 0; sk_idx < Subkernel_list_len; sk_idx++){
 		curr_sk = Subkernel_list[sk_idx];
 		//printf("SubkernelSelectSimple(dev_id=%d): curr_sk->run_dev_id = %d, curr_sk->no_locked_tiles() = %d, curr_sk->is_RW_lock_master(dev_id) = %d\n",
