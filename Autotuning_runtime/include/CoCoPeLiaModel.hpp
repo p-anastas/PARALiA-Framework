@@ -34,7 +34,8 @@ enum ModelType{
 	COCOPELIA_BIDIRECTIONAL = 5,
 	COCOPELIA_REUSE = 6,
 	COCOPELIA_PIPELINE_EMULATE = 7,
-	COCOPELIA_HETERO_REUSE = 8
+	COCOPELIA_HETERO_REUSE = 8,
+	COCOPELIA_HETERO_BIDIRECTIONAL = 9
 };
 const char* printModel(ModelType mode);
 
@@ -116,10 +117,12 @@ double CoCopeLiaPredictBidirectional(CoCoModel_p model, long int T);
 double CoCopeLiaPredictReuse(CoCoModel_p model, long int T);
 double CoCopeLiaPipelineEmulate(CoCoModel_p model, long int T);
 
+long int CoCopeLiaMinT(CoCoModel_p model);
+long int CoCopeLiaMaxT(CoCoModel_p model);
+
 CoCoModel_p CoCoPeLiaTileModelInit(short dev_id, const char* func_name, void* func_data);
 ///  Predicts Best tile size for 3-way overlaped execution time for BLAS3 2-dim blocking.
 tunableParams_p CoCoPeLiaModelOptimizeTile(CoCoModel_p model, ModelType mode);
-
 
 tunableParams_p tunableParamsInit();
 const char* printTunableParams(tunableParams_p params);

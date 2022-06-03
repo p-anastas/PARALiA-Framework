@@ -148,7 +148,7 @@ int main(const int argc, const char *argv[]) {
 		}
 	}
 	fprintf(stderr, "\nCoCopeLia DGEMM T_best = %zu, Dev_num_best = %d %s: t = %lf ms ( %lf Gflops/s )\n\n",
-		best_T, best_D, printlist(best_dev_ids, best_D), best_t  * 1000, Gval_per_s(dgemm_flops(M,N,K),best_t));
+		best_T, best_D, printlist(best_dev_ids, best_D), best_t  * 1000, Gval_per_s(gemm_flops(M,N,K),best_t));
 	predef_control_values->T = best_T;
 	predef_control_values->dev_num = best_D;
 	for (int i = 0; i< predef_control_values->dev_num; i++)
@@ -218,10 +218,10 @@ int main(const int argc, const char *argv[]) {
 	avg_t/=bench_it;
 	fprintf(stderr, "CoCopeLia (%s):\n\tfirst_it_t = %lf ms ( %lf Gflops/s )\n\tavg_t = %lf ms ( %lf Gflops/s )\n\tmin_t = %lf ms ( %lf Gflops/s )\n\tmax_t = %lf ms ( %lf Gflops/s )\n",
 	CoControlPrint(return_values),
-	first_over_t  * 1000, Gval_per_s(dgemm_flops(M,N,K),first_over_t),
-	avg_t  * 1000, Gval_per_s(dgemm_flops(M,N,K),avg_t),
-	min_t  * 1000, Gval_per_s(dgemm_flops(M,N,K),min_t),
-	max_t  * 1000, Gval_per_s(dgemm_flops(M,N,K),max_t));
+	first_over_t  * 1000, Gval_per_s(gemm_flops(M,N,K),first_over_t),
+	avg_t  * 1000, Gval_per_s(gemm_flops(M,N,K),avg_t),
+	min_t  * 1000, Gval_per_s(gemm_flops(M,N,K),min_t),
+	max_t  * 1000, Gval_per_s(gemm_flops(M,N,K),max_t));
 
 	for (int i = 0; i< LOC_NUM; i++) CoCopeLiaDevCacheFree(deidxize(i));
 

@@ -15,6 +15,220 @@
 #include "unihelpers.hpp"
 #include "Werkhoven.hpp"
 
+double CoCopeLiaPredictFullOverlap(CoCoModel_p model)
+{
+	switch(model->problem){
+		case BLAS1:
+			return CoCopeLiaPredictFullOverlapBLAS1(model);
+		case BLAS2:
+			error("CoCopeLiaPredictFullOverlap: BLAS 2 Not implemented\n");
+			return 0;
+		case BLAS3:
+			return CoCopeLiaPredictFullOverlapBLAS3(model);
+		default:
+			error("CoCopeLiaPredictFullOverlap: Invalid Problem %s", printProblem(model->problem));
+	}
+	return 0;
+}
+
+double CoCopeLiaPredictZeroOverlap(CoCoModel_p model)
+{
+	switch(model->problem){
+		case BLAS1:
+			return CoCopeLiaPredictZeroOverlapBLAS1(model);
+		case BLAS2:
+			error("CoCopeLiaPredictZeroOverlap: BLAS 2 Not implemented\n");
+			return 0;
+		case BLAS3:
+			return CoCopeLiaPredictZeroOverlapBLAS3(model);
+		default:
+			error("CoCopeLiaPredictZeroOverlap: Invalid Problem %s", printProblem(model->problem));
+	}
+	return 0;
+}
+
+
+double CoCopeLiaPredictBaseline(CoCoModel_p model, long int T)
+{
+	switch(model->problem){
+		case BLAS1:
+			//return CoCopeLiaPredictBaselineBLAS1(model, T);
+		case BLAS2:
+			error("CoCopeLiaPredictBaseline: BLAS 2 Not implemented\n");
+			return 0;
+		case BLAS3:
+			return CoCopeLiaPredictBaselineBLAS3(model, T);
+		default:
+			error("CoCopeLiaPredictBaseline: Invalid Problem %s", printProblem(model->problem));
+	}
+	return 0;
+}
+
+
+double CoCopeLiaPredictDataLoc(CoCoModel_p model, long int T)
+{
+	switch(model->problem){
+		case BLAS1:
+			//return CoCopeLiaPredictDataLocBLAS1(model, T);
+		case BLAS2:
+			error("CoCopeLiaPredictDataLoc: BLAS 2 Not implemented\n");
+			return 0;
+		case BLAS3:
+			return CoCopeLiaPredictDataLocBLAS3(model, T);
+		default:
+			error("CoCopeLiaPredictDataLoc: Invalid Problem %s", printProblem(model->problem));
+	}
+	return 0;
+}
+
+
+///  Predicts 3-way overlaped execution time for BLAS3 Square tilling blocking without data reuse.
+double CoCopeLiaPredictBidirectional(CoCoModel_p model, long int T)
+{
+	switch(model->problem){
+		case BLAS1:
+			//return CoCopeLiaPredictBidirectionalBLAS1(model, T);
+		case BLAS2:
+			error("CoCopeLiaPredictBidirectional: BLAS 2 Not implemented\n");
+			return 0;
+		case BLAS3:
+			return CoCopeLiaPredictBidirectionalBLAS3(model, T);
+		default:
+			error("CoCopeLiaPredictBidirectional: Invalid Problem %s", printProblem(model->problem));
+	}
+	return 0;
+}
+
+
+double CoCopeLiaPredictReuse(CoCoModel_p model, long int T)
+{
+	switch(model->problem){
+		case BLAS1:
+			//return CoCopeLiaPredictReuseBLAS1(model, T);
+		case BLAS2:
+			error("CoCopeLiaPredictReuse: BLAS 2 Not implemented\n");
+			return 0;
+		case BLAS3:
+			return CoCopeLiaPredictReuseBLAS3(model, T);
+		default:
+			error("CoCopeLiaPredictReuse: Invalid Problem %s", printProblem(model->problem));
+	}
+	return 0;
+}
+
+
+/// TODO: currently d2h overlap is ignored
+double CoCopeLiaPipelineEmulate(CoCoModel_p model, long int T)
+{
+	switch(model->problem){
+		case BLAS1:
+			//return CoCopeLiaPipelineEmulateBLAS1(model, T);
+		case BLAS2:
+			error("CoCopeLiaPipelineEmulate: BLAS 2 Not implemented\n");
+			return 0;
+		case BLAS3:
+			return CoCopeLiaPipelineEmulateBLAS3(model, T);
+		default:
+			error("CoCopeLiaPipelineEmulate: Invalid Problem %s", printProblem(model->problem));
+	}
+	return 0;
+}
+
+
+double CoCopeLiaPredictReuseHetero(CoCoModel_p model, short used_devs, short* used_dev_ids,
+	double* used_dev_relative_scores, long int T)
+{
+	switch(model->problem){
+		case BLAS1:
+			//return CoCopeLiaPredictReuseHeteroBLAS1(model, T);
+			error("CoCopeLiaPredictReuseHetero: BLAS 1 Not implemented\n");
+		case BLAS2:
+			error("CoCopeLiaPredictReuseHetero: BLAS 2 Not implemented\n");
+			return 0;
+		case BLAS3:
+			return CoCopeLiaPredictReuseHeteroBLAS3(model, used_devs, used_dev_ids,
+				used_dev_relative_scores, T);
+		default:
+			error("CoCopeLiaPredictReuseHetero: Invalid Problem %s", printProblem(model->problem));
+	}
+	return 0;
+}
+
+double CoCopeLiaPredictBidirectionalHetero(CoCoModel_p model, short used_devs, short* used_dev_ids,
+	double* used_dev_relative_scores, long int T)
+{
+	switch(model->problem){
+		case BLAS1:
+			return CoCopeLiaPredictBidirectionalHeteroBLAS1(model, used_devs, used_dev_ids,
+				used_dev_relative_scores, T);
+		case BLAS2:
+			error("CoCopeLiaPredictBidirectionalHetero: BLAS 2 Not implemented\n");
+		case BLAS3:
+			error("CoCopeLiaPredictBidirectionalHetero: BLAS 3 Not implemented\n");
+		default:
+			error("CoCopeLiaPredictBidirectionalHetero: Invalid Problem %s", printProblem(model->problem));
+	}
+	return 0;
+}
+
+long int CoCopeLiaMinT(CoCoModel_p model){
+	switch(model->problem){
+		case BLAS1:
+			return CoCopeLiaMinAllowedTBLAS1(model);
+		case BLAS2:
+			error("CoCopeLiaMinT: BLAS 2 Not implemented\n");
+			return 0;
+		case BLAS3:
+			return CoCopeLiaMinAllowedTBLAS3(model);
+		default:
+			error("CoCopeLiaMinT: Invalid Problem %s", printProblem(model->problem));
+	}
+	return 0;
+}
+
+long int CoCopeLiaMaxT(CoCoModel_p model){
+	switch(model->problem){
+		case BLAS1:
+			return CoCopeLiaMaxAllowedTBLAS1(model);
+		case BLAS2:
+			error("CoCopeLiaMaxT: BLAS 2 Not implemented\n");
+			return 0;
+		case BLAS3:
+			return CoCopeLiaMaxAllowedTBLAS3(model);
+		default:
+			error("CoCopeLiaMaxT: Invalid Problem %s", printProblem(model->problem));
+	}
+	return 0;
+}
+
+int CoCoPeLiaGPUexecGetLines(CoCoModel_p model){
+	switch(model->problem){
+		case BLAS1:
+			return ((GPUexec1Model_p)model->GPUexec_model_ptr)->lines;
+		case BLAS2:
+			return ((GPUexec2Model_p)model->GPUexec_model_ptr)->lines;
+		case BLAS3:
+			return ((GPUexec3Model_p)model->GPUexec_model_ptr)->lines;
+		default:
+			error("CoCoPeLiaGPUexecGetLines: Invalid Problem %s", printProblem(model->problem));
+	}
+	return 0;
+}
+
+long int CoCoPeLiaGPUexecGetElem(CoCoModel_p model, int idx){
+	switch(model->problem){
+		case BLAS1:
+			return ((GPUexec1Model_p)model->GPUexec_model_ptr)->T_lookup_buf[idx];
+		case BLAS2:
+			return ((GPUexec2Model_p)model->GPUexec_model_ptr)->T_lookup_buf[idx];
+		case BLAS3:
+			return ((GPUexec3Model_p)model->GPUexec_model_ptr)->T_lookup_buf[idx];
+		default:
+			error("CoCoPeLiaGPUexecGetLines: Invalid Problem %s", printProblem(model->problem));
+	}
+	return 0;
+}
+
 void CoCoPeLiaNormalizeSplit(double* score_list, int list_len){
 	for (int i = 0; i < list_len; i++)
 	if(score_list[i] < NORMALIZE_NEAR_SPLIT_LIMIT){
@@ -279,10 +493,9 @@ tunableParams_p CoCoPeLiaModelMultidevOptimizeTileAndSplit(short used_devs, shor
 	short first_model_idx = (used_dev_ids[0] == -1) ? LOC_NUM - 1 : used_dev_ids[0];
 	CoCoModel_p model = dev_model_list[first_model_idx];
 	tunableParams_p outparams = tunableParamsInit();
-	//TODO: Naive naive naive! Should replace with something better at some point.
 	long int min_T = 0, max_allowed_T = 0, ctr = 0;
-	max_allowed_T = fmin(fmin(model->D1, model->D2),model->D3);
-	min_T = ((GPUexec3Model_p)model->GPUexec_model_ptr)->T_lookup_buf[0];
+	max_allowed_T = CoCopeLiaMaxT(model);
+	min_T = CoCopeLiaMinT(model);
 #ifdef PDEBUG
 		lprintf(lvl, "min_T = %ld, max_allowed_T = %ld\n",
 			min_T, max_allowed_T);
@@ -315,9 +528,9 @@ tunableParams_p CoCoPeLiaModelMultidevOptimizeTileAndSplit(short used_devs, shor
 				used_dev_ids[idx], idx, outparams->rel_dev_score[idx]);
 #endif
 	}
-
-	for (ctr = 0 ; ctr < ((GPUexec3Model_p)model->GPUexec_model_ptr)->lines ; ctr++){
-		long int trial_T = ((GPUexec3Model_p)model->GPUexec_model_ptr)->T_lookup_buf[ctr];
+	int lines = CoCoPeLiaGPUexecGetLines(model);
+	for (ctr = 0 ; ctr < lines ; ctr++){
+		long int trial_T = CoCoPeLiaGPUexecGetElem(model, ctr);
 		if (trial_T > max_allowed_T) break;
 		if (trial_T ==  prev_trial_T) continue;
 /*
@@ -344,7 +557,22 @@ tunableParams_p CoCoPeLiaModelMultidevOptimizeTileAndSplit(short used_devs, shor
 		for(int idx = 0; idx < used_devs; idx++){
 			short cur_dev_id = used_dev_ids[idx], cur_dev_idx = (cur_dev_id == -1)? LOC_NUM - 1 : cur_dev_id;
 			model = dev_model_list[cur_dev_idx];
-			temp_t = CoCoPeLiaModelPredictHetero(model, used_devs, used_dev_ids, outparams->rel_dev_score, trial_T, COCOPELIA_HETERO_REUSE);
+			ModelType used_model;
+			switch(model->problem){
+				case BLAS1:
+					used_model = COCOPELIA_HETERO_BIDIRECTIONAL;
+					break;
+				case BLAS2:
+					used_model = COCOPELIA_HETERO_BIDIRECTIONAL;
+					break;
+				case BLAS3:
+					used_model = COCOPELIA_HETERO_REUSE;
+					break;
+				default:
+					error("CoCoPeLiaModelMultidevOptimizeTileAndSplit:\
+					model->problem switch default reached\n");
+			}
+				temp_t = CoCoPeLiaModelPredictHetero(model, used_devs, used_dev_ids, outparams->rel_dev_score, trial_T, used_model);
 			if(temp_t > 0) temp_overlap_t = fmax(temp_overlap_t, temp_t);
 			else error("CoCoPeLiaModelPredictHetero(%p(dev_id = %d, (idx = %d )), trial_T = %ld): negative prediction temp_t = %lf\n",
 				model, cur_dev_id, cur_dev_idx, trial_T, temp_t);
@@ -397,7 +625,7 @@ tunableParams_p CoCoPeLiaModelMultidevOptimizeSplit(short used_devs, short* used
 	tunableParams_p outparams = tunableParamsInit();
 	//TODO: Naive naive naive! Should replace with something better at some point.
 	long int max_allowed_T = 0, ctr = 0;
-	max_allowed_T = fmin(fmin(model->D1, model->D2),model->D3);
+	max_allowed_T = CoCopeLiaMaxT(model);
 #ifdef PDEBUG
 		lprintf(lvl, "max_allowed_T = %ld\n", max_allowed_T);
 #endif
@@ -425,7 +653,22 @@ tunableParams_p CoCoPeLiaModelMultidevOptimizeSplit(short used_devs, short* used
 	for(int idx = 0; idx < used_devs; idx++){
 		short cur_dev_id = used_dev_ids[idx], cur_dev_idx = idxize(cur_dev_id);
 		model = dev_model_list[cur_dev_idx];
-		temp_t = CoCoPeLiaModelPredictHetero(model, used_devs, used_dev_ids, outparams->rel_dev_score, T, COCOPELIA_HETERO_REUSE);
+		ModelType used_model;
+		switch(model->problem){
+			case BLAS1:
+				used_model = COCOPELIA_HETERO_BIDIRECTIONAL;
+				break;
+			case BLAS2:
+				used_model = COCOPELIA_HETERO_BIDIRECTIONAL;
+				break;
+			case BLAS3:
+				used_model = COCOPELIA_HETERO_REUSE;
+				break;
+			default:
+				error("CoCoPeLiaModelMultidevOptimizeTileAndSplit:\
+				model->problem switch default reached\n");
+		}
+		temp_t = CoCoPeLiaModelPredictHetero(model, used_devs, used_dev_ids, outparams->rel_dev_score, T, used_model);
 		if(temp_t > 0) temp_overlap_t = fmax(temp_overlap_t, temp_t);
 		else error("CoCoPeLiaModelPredictHetero(%p(dev_id = %d, (idx = %d )), T = %ld): negative prediction temp_t = %lf\n",
 			model, cur_dev_id, cur_dev_idx, T, temp_t);
@@ -478,7 +721,7 @@ CoCoModel_p CoCoPeLiaTileModelInit(short dev_id, const char* func, void* func_da
 
 	if ( !strcmp(func, "Daxpy") || !strcmp(func, "Saxpy")) out_model->problem = BLAS1;
 	else if (0) out_model->problem = BLAS2;
-	if ( !strcmp(func, "Dgemm") || !strcmp(func, "Sgemm")) out_model->problem = BLAS3;
+	else if ( !strcmp(func, "Dgemm") || !strcmp(func, "Sgemm")) out_model->problem = BLAS3;
 	else error("CoCoPeLiaModelInit: Problem type for '%s' func not integrated\n", func);
 
 	switch(out_model->problem){
@@ -487,7 +730,7 @@ CoCoModel_p CoCoPeLiaTileModelInit(short dev_id, const char* func, void* func_da
 			return CoCoModelFuncInitBLAS1(out_model, dev_id, func, func_data);
 			break;
 		case BLAS2:
-			error("Not Implemented\n");
+			error("CoCoPeLiaTileModelInit: GPUexec2Model_init Not Implemented\n");
 		 	out_model->GPUexec_model_ptr = (void*) GPUexec2Model_init(dev_id, func);
 			break;
 		case BLAS3:
@@ -500,71 +743,15 @@ CoCoModel_p CoCoPeLiaTileModelInit(short dev_id, const char* func, void* func_da
 	}
 }
 
-double CoCopeLiaPredictReuseHetero(CoCo_model* model, short used_devs, short* used_dev_ids,
-	double* used_dev_relative_scores, long int T){
-	short lvl = 4;
-	long int prob_dims = 0, reset_D1 = model->D1, reset_D2 = model->D2, reset_D3 = model->D3;
-	double imb_time_multiplier = 1.0, reduce_time_multiplier = 1.0;
-#define ENABLE_HETERO_RELATIVE_DIMS
-#ifdef ENABLE_HETERO_RELATIVE_DIMS
-	if (reset_D1 != -1){
-#ifdef TILE_IMBALANCE_PENALTY
-		if (reset_D1%T) imb_time_multiplier+=TILE_IMBALANCE_PENALTY;
-#endif
-		prob_dims++;
-	}
-	if (reset_D2 != -1){
-#ifdef TILE_IMBALANCE_PENALTY
-		if (reset_D2%T) imb_time_multiplier+=TILE_IMBALANCE_PENALTY;
-#endif
-		prob_dims++;
-	}
-	if (reset_D3 != -1){
-#ifdef TILE_IMBALANCE_PENALTY
-		if (reset_D3%T) imb_time_multiplier+=TILE_IMBALANCE_PENALTY;
-#endif
-#ifdef REDUCE_PENALTY
-		if ((reset_D1/T + (reset_D1%T)? 1 : 0)*(reset_D2/T + (reset_D2%T)? 1 : 0)*(reset_D3/T + (reset_D3%T)? 1 : 0)%used_devs) reduce_time_multiplier+=REDUCE_PENALTY;
-#endif
-		prob_dims++;
-	}
-	short iloc = -1;
-	for (int idx = 0; idx < used_devs; idx++)
-		if (used_dev_ids[idx] == model->dev_id){ iloc = idx; break; }
-	if (iloc == -1) error("CoCopeLiaPredictReuseHetero:  model->dev_id = %d not found in used_dev_ids[%d]\n",
-		model->dev_id, used_devs);
-	double problem_percentage = used_dev_relative_scores[iloc];
-#ifdef PDEBUG
-	lprintf(lvl, "CoCopeLiaPredictReuseHetero(dev_id=%d) prob_dims = %ld, problem_percentage = %lf\n",
-		model->dev_id, prob_dims, problem_percentage);
-#endif
-	if (!strcmp(REL_PERF_MODE, "ROOT-PROBLEM")){
-		if (reset_D1 != -1) model->D1 = (long int) reset_D1* 1.0* pow(problem_percentage, 1.0/prob_dims);
-		if (reset_D2 != -1) model->D2 = (long int) reset_D2* 1.0* pow(problem_percentage, 1.0/prob_dims);
-		if (reset_D3 != -1) model->D3 = (long int) reset_D3* 1.0* pow(problem_percentage, 1.0/prob_dims);
-	}
-#ifdef PDEBUG
-	lprintf(lvl, "CoCopeLiaPredictReuseHetero(dev_id=%d) Modified Dims D1 = %ld, D2 = %ld, D3 = %ld, imb_time_multiplier = %lf, reduce_time_multiplier = %lf\n",
-		model->dev_id, model->D1, model->D2, model->D3, imb_time_multiplier, reduce_time_multiplier);
-#endif
-#endif
-	double result = imb_time_multiplier* reduce_time_multiplier* CoCopeLiaPredictReuse(model, T);
-	if (!strcmp(REL_PERF_MODE, "PERCENTILE")) result*=problem_percentage;
-	else if (!strcmp(REL_PERF_MODE, "ROOT-PROBLEM")){
-		model->D1 = reset_D1;
-		model->D2 = reset_D2;
-		model->D3 = reset_D3;
-	}
-	else error("CoCopeLiaPredictReuseHetero: Unknown REL_PERF_MODE = %s\n", REL_PERF_MODE);
-	return result;
-}
-
 double CoCoPeLiaModelPredictHetero(CoCo_model* model, short used_devs, short* used_dev_ids, double* used_dev_relative_scores, long int T, ModelType mode){
 	switch(mode){
+		case COCOPELIA_HETERO_BIDIRECTIONAL:
+			return CoCopeLiaPredictBidirectionalHetero(model, used_devs, used_dev_ids, used_dev_relative_scores, T);
 		case COCOPELIA_HETERO_REUSE:
 			return CoCopeLiaPredictReuseHetero(model, used_devs, used_dev_ids, used_dev_relative_scores, T);
+
 		default:
-			error("CoCoPeLiaModelPredictHetero: Invalid mode %s", printModel(mode));
+			error("CoCoPeLiaModelPredictHetero: Invalid mode %s\n", printModel(mode));
 	}
 }
 
@@ -591,125 +778,6 @@ double CoCoPeLiaModelPredict(CoCo_model* model, long int T, ModelType mode){
 	}
 }
 
-double CoCopeLiaPredictFullOverlap(CoCoModel_p model)
-{
-	switch(model->problem){
-		case BLAS1:
-			//return CoCopeLiaPredictFullOverlapBLAS1(model);
-		case BLAS2:
-			error("Not implemented\n");
-			return 0;
-		case BLAS3:
-			return CoCopeLiaPredictFullOverlapBLAS3(model);
-		default:
-			error("CoCopeLiaPredictFullOverlap: Invalid Problem %s", printProblem(model->problem));
-	}
-	return 0;
-}
-
-double CoCopeLiaPredictZeroOverlap(CoCoModel_p model)
-{
-	switch(model->problem){
-		case BLAS1:
-			//return CoCopeLiaPredictZeroOverlapBLAS1(model);
-		case BLAS2:
-			error("Not implemented\n");
-			return 0;
-		case BLAS3:
-			return CoCopeLiaPredictZeroOverlapBLAS3(model);
-		default:
-			error("CoCopeLiaPredictZeroOverlap: Invalid Problem %s", printProblem(model->problem));
-	}
-	return 0;
-}
-
-
-double CoCopeLiaPredictBaseline(CoCoModel_p model, long int T)
-{
-	switch(model->problem){
-		case BLAS1:
-			//return CoCopeLiaPredictBaselineBLAS1(model, T);
-		case BLAS2:
-			error("Not implemented\n");
-			return 0;
-		case BLAS3:
-			return CoCopeLiaPredictBaselineBLAS3(model, T);
-		default:
-			error("CoCopeLiaPredictBaseline: Invalid Problem %s", printProblem(model->problem));
-	}
-	return 0;
-}
-
-
-double CoCopeLiaPredictDataLoc(CoCoModel_p model, long int T)
-{
-	switch(model->problem){
-		case BLAS1:
-			//return CoCopeLiaPredictDataLocBLAS1(model, T);
-		case BLAS2:
-			error("Not implemented\n");
-			return 0;
-		case BLAS3:
-			return CoCopeLiaPredictDataLocBLAS3(model, T);
-		default:
-			error("CoCopeLiaPredictDataLoc: Invalid Problem %s", printProblem(model->problem));
-	}
-	return 0;
-}
-
-
-///  Predicts 3-way overlaped execution time for BLAS3 Square tilling blocking without data reuse.
-double CoCopeLiaPredictBidirectional(CoCoModel_p model, long int T)
-{
-	switch(model->problem){
-		case BLAS1:
-			//return CoCopeLiaPredictBidirectionalBLAS1(model, T);
-		case BLAS2:
-			error("Not implemented\n");
-			return 0;
-		case BLAS3:
-			return CoCopeLiaPredictBidirectionalBLAS3(model, T);
-		default:
-			error("CoCopeLiaPredictBidirectional: Invalid Problem %s", printProblem(model->problem));
-	}
-	return 0;
-}
-
-
-double CoCopeLiaPredictReuse(CoCoModel_p model, long int T)
-{
-	switch(model->problem){
-		case BLAS1:
-			//return CoCopeLiaPredictReuseBLAS1(model, T);
-		case BLAS2:
-			error("Not implemented\n");
-			return 0;
-		case BLAS3:
-			return CoCopeLiaPredictReuseBLAS3(model, T);
-		default:
-			error("CoCopeLiaPredictReuse: Invalid Problem %s", printProblem(model->problem));
-	}
-	return 0;
-}
-
-
-/// TODO: currently d2h overlap is ignored
-double CoCopeLiaPipelineEmulate(CoCoModel_p model, long int T)
-{
-	switch(model->problem){
-		case BLAS1:
-			//return CoCopeLiaPipelineEmulateBLAS1(model, T);
-		case BLAS2:
-			error("Not implemented\n");
-			return 0;
-		case BLAS3:
-			return CoCopeLiaPipelineEmulateBLAS3(model, T);
-		default:
-			error("CoCopeLiaPipelineEmulate: Invalid Problem %s", printProblem(model->problem));
-	}
-	return 0;
-}
-
 ///  Itterates through benchmarked values for T and chooses the Tbest that minimizes total time.
 tunableParams_p CoCoPeLiaModelOptimizeTile(CoCoModel_p model, ModelType mode){
 	short lvl = 3;
@@ -723,19 +791,19 @@ tunableParams_p CoCoPeLiaModelOptimizeTile(CoCoModel_p model, ModelType mode){
 	tunableParams_p outparams = tunableParamsInit();
 	//TODO: Naive naive naive! Should replace with something better at some point.
 	long int min_T = 0, max_allowed_T = 0, ctr = 0;
-	max_allowed_T = fmin(fmin(model->D1, model->D2),model->D3);
-	min_T = ((GPUexec3Model_p)model->GPUexec_model_ptr)->T_lookup_buf[0];
+	max_allowed_T = CoCopeLiaMaxT(model);
+	min_T = CoCopeLiaMinT(model);
 	if (min_T > max_allowed_T){
 		outparams->T = max_allowed_T;
 		// FIXME: Undefined performance for tiles < than the smaller microbenchmark
 		outparams->pred_t = 0;
 		return outparams;
 	}
-	double temp_t, min_t = CoCoPeLiaModelPredict(model, ((GPUexec3Model_p)model->GPUexec_model_ptr)->T_lookup_buf[0], mode);
+	double temp_t, min_t = CoCoPeLiaModelPredict(model, CoCoPeLiaGPUexecGetElem(model, 0), mode);
 	long int prev_trial_T = 0;
 	if(min_t < 0) error("CoCoPeLiaModelOptimizeTile: First value in DM results in negative prediction");
-	for (ctr = 1 ; ctr < ((GPUexec3Model_p)model->GPUexec_model_ptr)->lines ; ctr++){
-		long int trial_T = ((GPUexec3Model_p)model->GPUexec_model_ptr)->T_lookup_buf[ctr];
+	for (ctr = 1 ; ctr < CoCoPeLiaGPUexecGetLines(model); ctr++){
+		long int trial_T = CoCoPeLiaGPUexecGetElem(model, ctr);
 		if (trial_T > max_allowed_T) break;
 		if (trial_T == prev_trial_T) continue;
 		temp_t = CoCoPeLiaModelPredict(model, trial_T, mode);
@@ -779,6 +847,10 @@ const char* printModel(ModelType mode){
 		return "COCOPELIA_REUSE";
 	case (COCOPELIA_PIPELINE_EMULATE):
 		return "COCOPELIA_PIPELINE_EMULATE";
+	case (COCOPELIA_HETERO_BIDIRECTIONAL):
+		return "COCOPELIA_HETERO_BIDIRECTIONAL";
+	case (COCOPELIA_HETERO_REUSE):
+		return "COCOPELIA_HETERO_REUSE";
 	default:
 		error("printModel: Invalid mode\n");
 	}

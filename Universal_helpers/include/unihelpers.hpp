@@ -202,10 +202,11 @@ short Dtest_equality(double* C_comp, double* C, long long size);
 short Stest_equality(float* C_comp, float* C, long long size);
 
 double Gval_per_s(long long value, double time);
-long long dgemm_flops(size_t M, size_t N, size_t K);
-long long dgemm_memory(size_t M, size_t N, size_t K, size_t A_loc, size_t B_loc, size_t C_loc);
+long long gemm_flops(size_t M, size_t N, size_t K);
+long long gemm_memory(size_t M, size_t N, size_t K, size_t A_loc, size_t B_loc, size_t C_loc, short dsize);
 
-long long daxpy_flops(size_t N);
+long long axpy_flops(long int  N);
+long long axpy_memory(long int N, size_t x_loc, size_t y_loc, short dsize);
 
 size_t count_lines(FILE* fp); // TODO: Where is this used?
 void check_benchmark(char *filename);

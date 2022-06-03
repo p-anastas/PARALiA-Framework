@@ -231,18 +231,21 @@ double Gval_per_s(long long value, double time){
   return value / (time * 1e9);
 }
 
-long long dgemm_flops(size_t M, size_t N, size_t K){
+long long gemm_flops(size_t M, size_t N, size_t K){
 	return (long long) M * N * (2 * K + 1);
 }
 
-long long dgemm_memory(size_t M, size_t N, size_t K, size_t A_loc, size_t B_loc, size_t C_loc){
-	return (M * K * A_loc + K * N * B_loc + M * N * C_loc)*sizeof(double);
+long long gemm_memory(size_t M, size_t N, size_t K, size_t A_loc, size_t B_loc, size_t C_loc, short dsize){
+	return (M * K * A_loc + K * N * B_loc + M * N * C_loc)*dsize;
 }
 
-long long daxpy_flops(size_t N){
+long long axpy_flops(long int  N){
 	return (long long) 2* N;
 }
 
+long long axpy_memory(long int  N, size_t x_loc, size_t y_loc, short dsize){
+	return (long long) N*(x_loc + y_loc)*dsize;
+}
 
 /*
 long long dgemv_flops(size_t M, size_t N){

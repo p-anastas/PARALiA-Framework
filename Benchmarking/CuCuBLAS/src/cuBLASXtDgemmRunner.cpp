@@ -131,7 +131,7 @@ int main(const int argc, const char *argv[]) {
 				cublasXt_tile = T_trial;
 			}
 		}
-		fprintf(stderr, "\nCUBLASXT DGEMM T_best = %zu : t = %lf ms ( %lf Gflops/s )\n\n", cublasXt_tile, cublasXt_t  * 1000, Gval_per_s(dgemm_flops(M,N,K),cublasXt_t));
+		fprintf(stderr, "\nCUBLASXT DGEMM T_best = %zu : t = %lf ms ( %lf Gflops/s )\n\n", cublasXt_tile, cublasXt_t  * 1000, Gval_per_s(gemm_flops(M,N,K),cublasXt_t));
 	}
 	return_values->T = cublasXt_tile;
 	fprintf(stderr,"Running CUBLASXT DGEMM-> M = %zu, N = %zu, K = %zu T_best = %zu\n", M, N, K, cublasXt_tile);
@@ -155,9 +155,9 @@ int main(const int argc, const char *argv[]) {
 	avg_t/=bench_it;
 	fprintf(stderr, "cuBLASXt (%s):\n\tavg_t = %lf ms ( %lf Gflops/s )\n\tmin_t = %lf ms ( %lf Gflops/s )\n\tmax_t = %lf ms ( %lf Gflops/s )\n",
 	CoControlPrint(return_values),
-	avg_t  * 1000, Gval_per_s(dgemm_flops(M,N,K),avg_t),
-	min_t  * 1000, Gval_per_s(dgemm_flops(M,N,K),min_t),
-	max_t  * 1000, Gval_per_s(dgemm_flops(M,N,K),max_t));
+	avg_t  * 1000, Gval_per_s(gemm_flops(M,N,K),avg_t),
+	min_t  * 1000, Gval_per_s(gemm_flops(M,N,K),min_t),
+	max_t  * 1000, Gval_per_s(gemm_flops(M,N,K),max_t));
 
 	CoCoSyncCheckErr();
 	CoCoFree(A, A_loc);

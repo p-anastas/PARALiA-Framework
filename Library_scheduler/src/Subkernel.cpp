@@ -422,7 +422,7 @@ void Subkernel::run_operation(){
 				(void*)&CoCoSetTimerAsync, (void*) &op_start_ts);
 		if (!strcmp(op_name,"gemm")){
 			gemm_backend_in_p ptr_ker_translate = (gemm_backend_in_p) operation_params;
-			flops = dgemm_flops(ptr_ker_translate->M, ptr_ker_translate->N, ptr_ker_translate->K);
+			flops = gemm_flops(ptr_ker_translate->M, ptr_ker_translate->N, ptr_ker_translate->K);
 		}
 #endif
 	backend_run_operation(operation_params, op_name, exec_queue[run_dev_id_idx]);
@@ -668,74 +668,12 @@ void CoCoPeLiaInitResources(short dev_id){
 	transfer_link_sharing[LOC_NUM - 1][6][1] = 7;
 	transfer_link_sharing[LOC_NUM - 1][7][0] = LOC_NUM - 1;
 	transfer_link_sharing[LOC_NUM - 1][7][1] = 6;
-
-	typedef struct {
-	  kaapi_device_t inherited;
-	  CUdevice       cu_device;
-	  CUcontext      ctx;
-	  uint64_t*      affinity; // of size cuda_count_perfrank -1
-	  size_t         free_mem;
-	  size_t         size_alloc;
-	  size_t         size_free;
-	  size_t         mem_limit;
-
-	  struct {
-	    bool overlap;      // if the device can concurrently copy memory between host and device while executing a kernel
-	    bool integrated;   // if the device is integrated with the memory subsystem
-	    bool map;          // if the device can map host memory into the CUDA address space
-	    bool concurrent;   // if the device supports executing multiple kernels within the same context simultaneously
-	    int async_engines; // Number of asynchronous engines
-	    size_t mem_total;  //total GPU memory size in bytes
-	    char name[64];     // GPU name
-	  } prop;
-	} kaapi_device_cuda_t;
-
-  int pi;
-	CUresult res;
-	CUcontext ctx;
-	CUdevice cu_device;
-	res = cuDeviceGet(&cu_device, dev_id);
-	CoCoASyncCheckErr();
-	res = cuCtxCreate(&ctx, CU_CTX_SCHED_AUTO, cu_device);
-	CoCoASyncCheckErr();
-
-	res = cuDeviceGetAttribute (&pi, CU_DEVICE_ATTRIBUTE_GPU_OVERLAP, cu_device);
-	CudaCheckError(res);
-	//device->prop.overlap = pi;
-
-	res = cuDeviceGetAttribute (&pi, CU_DEVICE_ATTRIBUTE_INTEGRATED, cu_device);
-	CudaCheckError(res);
-	//device->prop.integrated = pi;
-
-	res = cuDeviceGetAttribute (&pi, CU_DEVICE_ATTRIBUTE_CAN_MAP_HOST_MEMORY, cu_device);
-	CudaCheckError(res);
-	//device->prop.map = pi;
-
-	res = cuDeviceGetAttribute (&pi, CU_DEVICE_ATTRIBUTE_CONCURRENT_KERNELS, cu_device);
-	CudaCheckError(res);
-	//device->prop.concurrent = pi;
-
-	//res = cuDeviceTotalMem(&device->prop.mem_total, cu_device);
-	//CudaCheckError(res);
-
-	//memset(device->prop.name, 0, 64*sizeof(char));
-	//res = cuDeviceGetName(device->prop.name, 64, cu_device);
-	//CudaCheckError(res);
-
-	res = cuDeviceGetAttribute (&pi, CU_DEVICE_ATTRIBUTE_ASYNC_ENGINE_COUNT, cu_device);
-	if(res != CUDA_SUCCESS)
-		pi = 1;
-	int async_engines = pi;
-//#ifdef DEBUG
-	lprintf(lvl, "CoCoPeLiaInitResources(dev=%d): Allows %d async engines == %d\n",
-		dev_id, async_engines);
-//#endif
-	res = cuCtxDestroy(ctx);
 */
 	short dev_id_idx = idxize(dev_id);
 	for(short dev_id_idy = 0 ; dev_id_idy < LOC_NUM; dev_id_idy++)
 	if(dev_id_idy!=dev_id_idx){
 		if (!transfer_queues[dev_id_idx][dev_id_idy]){
+			//printf("dev_id = %d, dev_id_idx = %d, dev_id_idy = %d, LOC_NUM = %d\n", dev_id, dev_id_idx, dev_id_idy, LOC_NUM);
 			short shared_iloc0 = transfer_link_sharing[dev_id_idx][dev_id_idy][0],
 				shared_iloc1 = transfer_link_sharing[dev_id_idx][dev_id_idy][1];
 			if( shared_iloc0 != - 42){ // The smallest index shared link allocates the queue
@@ -880,14 +818,17 @@ short Subkernel::is_RW_lock_master(short dev_id){
 double Subkernel::opt_fetch_cost(short dev_id){
 	double fetch_cost = 0;
 	for (int j = 0; j < TileNum; j++){
+		double temp_fetch_cost = 0 ;
 		if (TileDimlist[j] == 1){
 			Tile1D<VALUE_TYPE>* tmp = (Tile1D<VALUE_TYPE>*) TileList[j];
-			error("not implemented\n");
+			error("Subkernel::opt_fetch_cost: 1D not implemented\n");
+			// double temp_fetch_cost = tmp->getMinLinkCost(dev_id);
 		}
 		else if (TileDimlist[j] == 2){
 			Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) TileList[j];
 			double temp_fetch_cost = tmp->getMinLinkCost(dev_id);
 		}
+		fetch_cost+= temp_fetch_cost;
 	}
 	return fetch_cost;
 }
@@ -897,7 +838,7 @@ double Subkernel::opt_fetch_cost_pen_multifetch(short dev_id){
 	for (int j = 0; j < TileNum; j++){
 		if (TileDimlist[j] == 1){
 			Tile1D<VALUE_TYPE>* tmp = (Tile1D<VALUE_TYPE>*) TileList[j];
-			error("not implemented\n");
+			error("Subkernel::opt_fetch_cost_pen_multifetch: 1D not implemented\n");
 		}
 		else if (TileDimlist[j] == 2){
 			Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) TileList[j];
@@ -955,7 +896,7 @@ Subkernel* SubkernelSelectMinimizeFetchWritePenaltyMultiFetchPenalty(short dev_i
 	//__sync_lock_release(&SubkernelSelectLock);
 	return min_fetch_cost_sk;
 }
-
+gdgdlg
 Subkernel* SubkernelSelectMinimizeFetchWritePenaltyMultiFetchPenaltyMutlidevFair(short dev_id, Subkernel** Subkernel_list, long Subkernel_list_len){
 	//while(__sync_lock_test_and_set (&SubkernelSelectLock, 1));
 	Subkernel* curr_sk = NULL;

@@ -132,6 +132,19 @@ GPUexec2Model_p GPUexec2Model_init(short dev_id, const char* func){
 }
 /* ============================BLAS1 Models================================= */
 
+long int GPUexec1MinT(GPUexec1Model_p model){
+	long int result = model->T_lookup_buf[0];
+	for (long int ctr = 0; ctr < model->lines; ctr++)
+		if (model->T_lookup_buf[ctr] < result) result = model->T_lookup_buf[ctr];
+	return result;
+}
+long int GPUexec1MaxT(GPUexec1Model_p model){
+	long int result = model->T_lookup_buf[0];
+	for (long int ctr = 0; ctr < model->lines; ctr++)
+		if (model->T_lookup_buf[ctr] > result) result = model->T_lookup_buf[ctr];
+	return result;
+}
+
 long int GPUexec1NearestT(GPUexec1Model_p model, long int Tin){
 	//TODO: Assumes sorted, must fix at some point
 	if (Tin < model->T_lookup_buf[0]) return  model->T_lookup_buf[0];

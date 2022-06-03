@@ -22,6 +22,15 @@ double GPUexec1Model_predict(GPUexec1Model_p model, long int T);
 /* ============================BLAS2 Models================================= */
 
 typedef struct  BLAS2_data{
+	short dev_id;
+	const char* func;
+
+	// TODO: add more complicated selection taking error margins into account.
+	short mode;
+	long int* T_lookup_buf;
+	double* av_time_buf;
+	long int lines;
+	char* TransA_buf;
 }* GPUexec2Model_p;
 
 /// Load parameters from file and return  BLAS 2 execution time model
@@ -50,6 +59,11 @@ typedef struct  BLAS3_data{
 long int GPUexec3MinT(GPUexec3Model_p model);
 long int GPUexec3MaxT(GPUexec3Model_p model);
 long int GPUexec3NearestT(GPUexec3Model_p model, long int Tin);
+
+/// Helper functions for getting important database limits and info
+long int GPUexec1MinT(GPUexec1Model_p model);
+long int GPUexec1MaxT(GPUexec1Model_p model);
+long int GPUexec1NearestT(GPUexec1Model_p model, long int Tin);
 
 /// Load parameters from file and return  BLAS 3 execution time model
 GPUexec3Model_p GPUexec3Model_init(short dev, const char* func);

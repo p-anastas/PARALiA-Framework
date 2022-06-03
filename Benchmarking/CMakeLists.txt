@@ -93,12 +93,14 @@ add_executable (CoCoPeLiaDgemmRunner ${BENCH_DIR_SRC}/CoCoPeLiaDgemmRunner.cpp )
 add_executable (CoCoPeLiaDgemmRunnerBest ${BENCH_DIR_SRC}/CoCoPeLiaDgemmRunnerBest.cpp )
 add_executable (CoCoPeLiaDgemmRunnerBestest ${BENCH_DIR_SRC}/CoCoPeLiaDgemmRunnerBestest.cpp )
 
+add_executable (CoCoPeLiaDaxpyRunner ${BENCH_DIR_SRC}/CoCoPeLiaDaxpyRunner.cpp )
 add_executable (CoCoPeLiaDaxpyRunnerBest ${BENCH_DIR_SRC}/CoCoPeLiaDaxpyRunnerBest.cpp )
 
 target_link_libraries(CoCoPeLiaDgemmTester ${INTERNAL_LINK_LIB} benchcocopelia)
 target_link_libraries(CoCoPeLiaDgemmRunner ${INTERNAL_LINK_LIB} benchcocopelia unihelpers)
 target_link_libraries(CoCoPeLiaDgemmRunnerBest ${INTERNAL_LINK_LIB} benchcocopelia unihelpers)
 target_link_libraries(CoCoPeLiaDgemmRunnerBestest ${INTERNAL_LINK_LIB} benchcocopelia unihelpers)
+target_link_libraries(CoCoPeLiaDaxpyRunner ${INTERNAL_LINK_LIB} benchcocopelia unihelpers)
 target_link_libraries(CoCoPeLiaDaxpyRunnerBest ${INTERNAL_LINK_LIB} benchcocopelia unihelpers)
 
 set (BENCH_INSTALL_INC ${BENCH_INSTALL_INC} PARENT_SCOPE)

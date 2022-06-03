@@ -10,6 +10,7 @@
 #include "CoCoPeLiaCoModel.hpp"
 #include "CoCoPeLiaGPUexec.hpp"
 #include "CoCoPeLiaModel.hpp"
+#include "CoCoPeLiaModelLvl3.hpp"
 #include "unihelpers.hpp"
 #include "Werkhoven.hpp"
 
@@ -53,9 +54,9 @@ double CoCopeLiaPredictFullOverlapBLAS3(CoCoModel_p model)
 	"\tt_send_full: %lf ms ( %lf Gb/s)\n"
 	"\tt_total: %lf ms (%lf GFlops/s)\n\n",
 	t_recv_full*1000, Gval_per_s(recv_sz,t_recv_full),
-	t_exec_full*1000, Gval_per_s(dgemm_flops(model->D1,model->D2,model->D3), t_exec_full),
+	t_exec_full*1000, Gval_per_s(gemm_flops(model->D1,model->D2,model->D3), t_exec_full),
 	t_send_full*1000, Gval_per_s(send_sz,t_send_full),
-	t_total*1000, Gval_per_s(dgemm_flops(model->D1,model->D2,model->D3), t_total));
+	t_total*1000, Gval_per_s(gemm_flops(model->D1,model->D2,model->D3), t_total));
 #endif
 
 	return t_total;
@@ -101,9 +102,9 @@ double CoCopeLiaPredictZeroOverlapBLAS3(CoCoModel_p model)
 	"\tt_send_full: %lf ms ( %lf Gb/s)\n"
 	"\tt_total: %lf ms (%lf GFlops/s)\n\n",
 	t_recv_full*1000, Gval_per_s(recv_sz,t_recv_full),
-	t_exec_full*1000, Gval_per_s(dgemm_flops(model->D1,model->D2,model->D3), t_exec_full),
+	t_exec_full*1000, Gval_per_s(gemm_flops(model->D1,model->D2,model->D3), t_exec_full),
 	t_send_full*1000, Gval_per_s(send_sz,t_send_full),
-	t_total*1000, Gval_per_s(dgemm_flops(model->D1,model->D2,model->D3), t_total));
+	t_total*1000, Gval_per_s(gemm_flops(model->D1,model->D2,model->D3), t_total));
 #endif
 
 	return t_total;
@@ -162,9 +163,9 @@ double CoCopeLiaPredictBaselineBLAS3(CoCoModel_p model, long int T)
 	"\tt_total: %lf ms (%lf GFlops/s)\n\n",
 	T, numTin, numTout,
 	mv_t_recv_T3*1000, Gval_per_s(T*T*model->V->dtype_sz,mv_t_recv_T3),
-	t_exec_T3*1000, Gval_per_s(dgemm_flops(T,T,T), t_exec_T3),
+	t_exec_T3*1000, Gval_per_s(gemm_flops(T,T,T), t_exec_T3),
 	mv_t_send_T3*1000, Gval_per_s(T*T*model->V->dtype_sz,mv_t_send_T3),
-	t_total*1000, Gval_per_s(dgemm_flops(model->D1,model->D2,model->D3), t_total));
+	t_total*1000, Gval_per_s(gemm_flops(model->D1,model->D2,model->D3), t_total));
 #endif
 
 	return t_total;
@@ -223,9 +224,9 @@ double CoCopeLiaPredictDataLocBLAS3(CoCoModel_p model, long int T)
 	"\tt_total: %lf ms (%lf GFlops/s)\n\n",
 	T, numTin, numTout,
 	mv_t_recv_T3*1000, Gval_per_s(T*T*model->V->dtype_sz,mv_t_recv_T3),
-	t_exec_T3*1000, Gval_per_s(dgemm_flops(T,T,T), t_exec_T3),
+	t_exec_T3*1000, Gval_per_s(gemm_flops(T,T,T), t_exec_T3),
 	mv_t_send_T3*1000, Gval_per_s(T*T*model->V->dtype_sz,mv_t_send_T3),
-	t_total*1000, Gval_per_s(dgemm_flops(model->D1,model->D2,model->D3), t_total));
+	t_total*1000, Gval_per_s(gemm_flops(model->D1,model->D2,model->D3), t_total));
 #endif
 
 	return t_total;
@@ -288,10 +289,10 @@ double CoCopeLiaPredictBidirectionalBLAS3(CoCoModel_p model, long int T)
 	"\tt_total: %lf ms (%lf GFlops/s)\n\n",
 	T, numTin, numTout,
 	mv_t_recv_T3*1000, Gval_per_s(T*T*model->V->dtype_sz,mv_t_recv_T3),
-	t_exec_T3*1000, Gval_per_s(dgemm_flops(T,T,T), t_exec_T3),
+	t_exec_T3*1000, Gval_per_s(gemm_flops(T,T,T), t_exec_T3),
 	mv_t_send_T3*1000, Gval_per_s(T*T*model->V->dtype_sz,mv_t_send_T3),
 	t_over_T3*1000,
-	t_total*1000, Gval_per_s(dgemm_flops(model->D1,model->D2,model->D3), t_total));
+	t_total*1000, Gval_per_s(gemm_flops(model->D1,model->D2,model->D3), t_total));
 #endif
 
 	return t_total;
@@ -367,9 +368,9 @@ double CoCopeLiaPredictReuseBLAS3(CoCoModel_p model, long int T)
 	"\tt_total: %lf ms (%lf GFlops/s)\n\n",
 	T, mv_t_recv_T3*1000, Gval_per_s(T*T*model->V->dtype_sz,mv_t_recv_T3),
 	two_over, one_over, zero_over,
-	t_exec_T3*1000, Gval_per_s(dgemm_flops(T,T,T), t_exec_T3),
+	t_exec_T3*1000, Gval_per_s(gemm_flops(T,T,T), t_exec_T3),
 	mv_t_send_T3*1000, Gval_per_s(T*T*model->V->dtype_sz,mv_t_send_T3),
-	t_total*1000, Gval_per_s(dgemm_flops(model->D1,model->D2,model->D3), t_total));
+	t_total*1000, Gval_per_s(gemm_flops(model->D1,model->D2,model->D3), t_total));
 #endif
 
 	return t_total;
@@ -470,11 +471,70 @@ double CoCopeLiaPipelineEmulateBLAS3(CoCoModel_p model, long int T){
 	"\tt_d2h_T3: %lf ms ( %lf Gb/s)\n"
 	"\tt_total: %lf ms (%lf GFlops/s)\n\n",
 	T, t_h2d_T3*1000, Gval_per_s(T*T*model->V->dtype_sz,t_h2d_T3),
-	t_exec_T3*1000, Gval_per_s(dgemm_flops(T,T,T), t_exec_T3),
+	t_exec_T3*1000, Gval_per_s(gemm_flops(T,T,T), t_exec_T3),
 	t_d2h_T3*1000, Gval_per_s(T*T*model->V->dtype_sz,t_d2h_T3),
-	t_total*1000, Gval_per_s(dgemm_flops(model->D1,model->D2,model->D3), t_total));
+	t_total*1000, Gval_per_s(gemm_flops(model->D1,model->D2,model->D3), t_total));
 	*/
 	return t_total;
+}
+
+double CoCopeLiaPredictReuseHeteroBLAS3(CoCo_model* model, short used_devs, short* used_dev_ids,
+	double* used_dev_relative_scores, long int T){
+	short lvl = 4;
+	long int prob_dims = 0, reset_D1 = model->D1, reset_D2 = model->D2, reset_D3 = model->D3;
+	double imb_time_multiplier = 1.0, reduce_time_multiplier = 1.0;
+#define ENABLE_HETERO_RELATIVE_DIMS
+#ifdef ENABLE_HETERO_RELATIVE_DIMS
+	if (reset_D1 != -1){
+#ifdef TILE_IMBALANCE_PENALTY
+		if (reset_D1%T) imb_time_multiplier+=TILE_IMBALANCE_PENALTY;
+#endif
+		prob_dims++;
+	}
+	if (reset_D2 != -1){
+#ifdef TILE_IMBALANCE_PENALTY
+		if (reset_D2%T) imb_time_multiplier+=TILE_IMBALANCE_PENALTY;
+#endif
+		prob_dims++;
+	}
+	if (reset_D3 != -1){
+#ifdef TILE_IMBALANCE_PENALTY
+		if (reset_D3%T) imb_time_multiplier+=TILE_IMBALANCE_PENALTY;
+#endif
+#ifdef REDUCE_PENALTY
+		if ((reset_D1/T + (reset_D1%T)? 1 : 0)*(reset_D2/T + (reset_D2%T)? 1 : 0)*(reset_D3/T + (reset_D3%T)? 1 : 0)%used_devs) reduce_time_multiplier+=REDUCE_PENALTY;
+#endif
+		prob_dims++;
+	}
+	short iloc = -1;
+	for (int idx = 0; idx < used_devs; idx++)
+		if (used_dev_ids[idx] == model->dev_id){ iloc = idx; break; }
+	if (iloc == -1) error("CoCopeLiaPredictReuseHeteroBLAS3:  model->dev_id = %d not found in used_dev_ids[%d]\n",
+		model->dev_id, used_devs);
+	double problem_percentage = used_dev_relative_scores[iloc];
+#ifdef PDEBUG
+	lprintf(lvl, "CoCopeLiaPredictReuseHeteroBLAS3(dev_id=%d) prob_dims = %ld, problem_percentage = %lf\n",
+		model->dev_id, prob_dims, problem_percentage);
+#endif
+	if (!strcmp(REL_PERF_MODE, "ROOT-PROBLEM")){
+		if (reset_D1 != -1) model->D1 = (long int) reset_D1* 1.0* pow(problem_percentage, 1.0/prob_dims);
+		if (reset_D2 != -1) model->D2 = (long int) reset_D2* 1.0* pow(problem_percentage, 1.0/prob_dims);
+		if (reset_D3 != -1) model->D3 = (long int) reset_D3* 1.0* pow(problem_percentage, 1.0/prob_dims);
+	}
+#ifdef PDEBUG
+	lprintf(lvl, "CoCopeLiaPredictReuseHeteroBLAS3(dev_id=%d) Modified Dims D1 = %ld, D2 = %ld, D3 = %ld, imb_time_multiplier = %lf, reduce_time_multiplier = %lf\n",
+		model->dev_id, model->D1, model->D2, model->D3, imb_time_multiplier, reduce_time_multiplier);
+#endif
+#endif
+	double result = imb_time_multiplier* reduce_time_multiplier* CoCopeLiaPredictReuseBLAS3(model, T);
+	if (!strcmp(REL_PERF_MODE, "PERCENTILE")) result*=problem_percentage;
+	else if (!strcmp(REL_PERF_MODE, "ROOT-PROBLEM")){
+		model->D1 = reset_D1;
+		model->D2 = reset_D2;
+		model->D3 = reset_D3;
+	}
+	else error("CoCopeLiaPredictReuseHeteroBLAS3: Unknown REL_PERF_MODE = %s\n", REL_PERF_MODE);
+	return result;
 }
 
 ///  Initializes the model for gemm
@@ -535,6 +595,14 @@ CoCoModel_p CoCoModel_gemm_init(CoCoModel_p out_model, short dev_id, const char*
 	lprintf(lvl-1, "<-----|\n");
 #endif
 	return out_model;
+}
+
+long int CoCopeLiaMinAllowedTBLAS3(CoCoModel_p model){
+		return GPUexec3MinT((GPUexec3Model_p)model->GPUexec_model_ptr);
+}
+
+long int CoCopeLiaMaxAllowedTBLAS3(CoCoModel_p model){
+		return fmin(fmin(model->D1, model->D2),model->D3);
 }
 
 ///  Initializes the model for gemm

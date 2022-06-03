@@ -99,7 +99,6 @@ int main(const int argc, const char *argv[]) {
 #endif
 
 	cpu_timer = csecond();
-	// First call for Validate
 	if (predef_control_values!= NULL) return_values = CoCopeLiaDgemmControled(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC, predef_control_values);
 	else return_values = CoCopeLiaDgemm(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC);
 	CoCoSyncCheckErr();
@@ -131,10 +130,10 @@ int main(const int argc, const char *argv[]) {
 	avg_t/=bench_it;
 	fprintf(stderr, "CoCopeLia (%s):\n\tfirst_it_t = %lf ms ( %lf Gflops/s )\n\tavg_t = %lf ms ( %lf Gflops/s )\n\tmin_t = %lf ms ( %lf Gflops/s )\n\tmax_t = %lf ms ( %lf Gflops/s )\n",
 	CoControlPrint(return_values),
-	first_over_t  * 1000, Gval_per_s(dgemm_flops(M,N,K),first_over_t),
-	avg_t  * 1000, Gval_per_s(dgemm_flops(M,N,K),avg_t),
-	min_t  * 1000, Gval_per_s(dgemm_flops(M,N,K),min_t),
-	max_t  * 1000, Gval_per_s(dgemm_flops(M,N,K),max_t));
+	first_over_t  * 1000, Gval_per_s(gemm_flops(M,N,K),first_over_t),
+	avg_t  * 1000, Gval_per_s(gemm_flops(M,N,K),avg_t),
+	min_t  * 1000, Gval_per_s(gemm_flops(M,N,K),min_t),
+	max_t  * 1000, Gval_per_s(gemm_flops(M,N,K),max_t));
 
 	for (int i = 0; i< LOC_NUM; i++) CoCopeLiaDevCacheFree(deidxize(i));
 

@@ -35,7 +35,7 @@ template<typename dtype> void Asset1D<dtype>::InitTileMap(int T, Cache_p* init_l
   if (TLast > 0) GridSz++;
   else TLast=T;
 
-  Tile_map = (Tile1D<dtype>**) malloc(sizeof(Tile2D<dtype>*)*GridSz);
+  Tile_map = (Tile1D<dtype>**) malloc(sizeof(Tile1D<dtype>*)*GridSz);
 
   int current_ctr, Ttmp;
   void* tile_addr = NULL;
@@ -45,7 +45,7 @@ template<typename dtype> void Asset1D<dtype>::InitTileMap(int T, Cache_p* init_l
     current_ctr = itt;
     tile_addr = adrs + itt*T*inc;
     Tile_map[current_ctr] = new Tile1D<dtype>(tile_addr, Ttmp, inc, itt,
-      init_loc_cache_p[CoCoGetPtrLoc(adrs)]->assign_Cblock(NATIVE, true));
+      init_loc_cache_p[idxize(CoCoGetPtrLoc(adrs))]->assign_Cblock(NATIVE, true));
   }
   #ifdef DEBUG
   	lprintf(lvl-1, "<-----|\n");

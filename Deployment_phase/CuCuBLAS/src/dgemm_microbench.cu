@@ -137,7 +137,7 @@ int main(const int argc, const char *argv[]) {
 			if (sample_sz > MICRO_MIN_ITER && error_margin/cublas_t_mean  * 100 <= 5) break;
 		}
 		bench_t = csecond() - bench_t;
-		fprintf(stderr, "Microbenchmark (M = N = K = %zu) complete:\t mean_exec_t=%lf ms ( %.1lf Gflops/s ), Error Margin (percentage of mean) = %lf %, Itter = %d, Microbench_t = %lf\n\n", T, cublas_t_mean  * 1000, Gval_per_s(dgemm_flops(T,T,T), cublas_t_mean), error_margin/cublas_t_mean  * 100, sample_sz, bench_t);
+		fprintf(stderr, "Microbenchmark (M = N = K = %zu) complete:\t mean_exec_t=%lf ms ( %.1lf Gflops/s ), Error Margin (percentage of mean) = %lf %, Itter = %d, Microbench_t = %lf\n\n", T, cublas_t_mean  * 1000, Gval_per_s(gemm_flops(T,T,T), cublas_t_mean), error_margin/cublas_t_mean  * 100, sample_sz, bench_t);
 		CoCoSyncCheckErr();
 
 		report_run(filename, T, T, T, cublas_t_mean, error_margin, sample_sz, bench_t);

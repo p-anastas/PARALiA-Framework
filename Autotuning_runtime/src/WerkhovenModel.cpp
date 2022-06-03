@@ -72,7 +72,7 @@ double WerkhovenModelInternal(CoCoModel_p model, long long h2d_bytes, long long 
 	"\tt_d2h: %lf ms\n"
 	"\t -> total: %lf ms (%lf GFlops/s)\n"
 	"\tExpected Speedup = \t%.3lf\n\n",
-	1000*res_h2d, 1000*res_ker, 1000*res_d2h, 1000*result, Gval_per_s(dgemm_flops(model->D1,model->D2,model->D3), result), overlap_speedup);
+	1000*res_h2d, 1000*res_ker, 1000*res_d2h, 1000*result, Gval_per_s(gemm_flops(model->D1,model->D2,model->D3), result), overlap_speedup);
 
 	return result;
 }

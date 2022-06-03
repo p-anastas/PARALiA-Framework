@@ -93,7 +93,7 @@ int main(const int argc, const char *argv[]) {
 				best_T = T_trial;
 			}
 	}
-	fprintf(stderr, "\nCoCopeLia DAXPY T_best = %zu : t = %lf ms ( %lf Gflops/s )\n\n", best_T, best_t  * 1000, Gval_per_s(daxpy_flops(N),best_t));
+	fprintf(stderr, "\nCoCopeLia DAXPY T_best = %zu : t = %lf ms ( %lf Gflops/s )\n\n", best_T, best_t  * 1000, Gval_per_s(axpy_flops(N),best_t));
 	predef_control_values-> T = best_T;
 	for (int i = 0; i< LOC_NUM; i++) CoCopeLiaDevCacheFree(deidxize(i));
 
@@ -175,10 +175,10 @@ int main(const int argc, const char *argv[]) {
 	avg_t/=bench_it;
 	fprintf(stderr, "CoCopeLia Daxpy(%s):\n\tfirst_it_t = %lf ms ( %lf Gflops/s )\n\tavg_t = %lf ms ( %lf Gflops/s )\n\tmin_t = %lf ms ( %lf Gflops/s )\n\tmax_t = %lf ms ( %lf Gflops/s )\n",
 	CoControlPrint(return_values),
-	first_over_t  * 1000, Gval_per_s(daxpy_flops(N),first_over_t),
-	avg_t  * 1000, Gval_per_s(daxpy_flops(N),avg_t),
-	min_t  * 1000, Gval_per_s(daxpy_flops(N),min_t),
-	max_t  * 1000, Gval_per_s(daxpy_flops(N),max_t));
+	first_over_t  * 1000, Gval_per_s(axpy_flops(N),first_over_t),
+	avg_t  * 1000, Gval_per_s(axpy_flops(N),avg_t),
+	min_t  * 1000, Gval_per_s(axpy_flops(N),min_t),
+	max_t  * 1000, Gval_per_s(axpy_flops(N),max_t));
 
 	for (int i = 0; i< LOC_NUM; i++) CoCopeLiaDevCacheFree(deidxize(i));
 

@@ -189,10 +189,10 @@ int main(const int argc, const char *argv[]) {
 	avg_t/=bench_it;
 	fprintf(stderr, "XKBLAS (%s):\n\tfirst_it_t = %lf ms ( %lf Gflops/s )\n\tavg_t = %lf ms ( %lf Gflops/s )\n\tmin_t = %lf ms ( %lf Gflops/s )\n\tmax_t = %lf ms ( %lf Gflops/s )\n",
 	CoControlPrint(return_values),
-	first_over_t  * 1000, Gval_per_s(dgemm_flops(M,N,K),first_over_t),
-	avg_t  * 1000, Gval_per_s(dgemm_flops(M,N,K),avg_t),
-	min_t  * 1000, Gval_per_s(dgemm_flops(M,N,K),min_t),
-	max_t  * 1000, Gval_per_s(dgemm_flops(M,N,K),max_t));
+	first_over_t  * 1000, Gval_per_s(gemm_flops(M,N,K),first_over_t),
+	avg_t  * 1000, Gval_per_s(gemm_flops(M,N,K),avg_t),
+	min_t  * 1000, Gval_per_s(gemm_flops(M,N,K),min_t),
+	max_t  * 1000, Gval_per_s(gemm_flops(M,N,K),max_t));
 
 	XKBLASFlushGPUBuf();
 	CoCoSyncCheckErr();

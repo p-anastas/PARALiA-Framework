@@ -64,7 +64,8 @@ int current_ctr = 0;
 			ptr_ker_translate->x = NULL;
 			ptr_ker_translate->y = NULL;
 			ptr_ker_translate->alpha = initial_daxpy->alpha;
-			ptr_ker_translate->incx = initial_daxpy->incy;
+			ptr_ker_translate->incx = initial_daxpy->incx;
+			ptr_ker_translate->incy = initial_daxpy->incy;
 			// No interal dims for axpy to reduce
 			kernels[current_ctr]->WR_first = 0;
 			kernels[current_ctr]->WR_last = (short*) calloc (2, sizeof(short));
@@ -275,7 +276,6 @@ CoControl_p CoCopeLiaDaxpy(size_t N, VALUE_TYPE alpha, VALUE_TYPE* x, size_t inc
 	cpu_timer = csecond();
 #endif
 
-
 	CoCoUpdateLinkSpeed1D(autotuned_vals_axpy, glob_model_axpy);
 
 #ifdef TEST
@@ -423,7 +423,6 @@ CoControl_p CoCopeLiaDaxpy(size_t N, VALUE_TYPE alpha, VALUE_TYPE* x, size_t inc
 		for(int skitt = 0; skitt < autotuned_vals_axpy->Subkernels_per_dev[d]; skitt++)
 			thread_dev_data[d]->SubkernelListDev[skitt] = Subkernel_list_axpy[autotuned_vals_axpy->Subkernel_dev_id_list[d][skitt]];
 	#endif
-
 		s = pthread_create(&thread_id[d], &attr,
 																	&CoCopeLiaAxpyAgentVoid, thread_dev_data[d]);
 
