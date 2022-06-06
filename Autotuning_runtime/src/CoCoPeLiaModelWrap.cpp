@@ -493,28 +493,9 @@ tunableParams_p CoCoPeLiaModelMultidevOptimizeTileAndSplit(short used_devs, shor
 	short first_model_idx = (used_dev_ids[0] == -1) ? LOC_NUM - 1 : used_dev_ids[0];
 	CoCoModel_p model = dev_model_list[first_model_idx];
 	tunableParams_p outparams = tunableParamsInit();
-	long int min_T = 0, max_allowed_T = 0, ctr = 0;
-	max_allowed_T = CoCopeLiaMaxT(model);
-	min_T = CoCopeLiaMinT(model);
-#ifdef PDEBUG
-		lprintf(lvl, "min_T = %ld, max_allowed_T = %ld\n",
-			min_T, max_allowed_T);
-#endif
-	if (min_T > max_allowed_T){
-		outparams->T = max_allowed_T;
-		// FIXME: Undefined performance for tiles < than the smaller microbenchmark
-		outparams->pred_t = 0;
-#ifdef PDEBUG
-		lprintf(lvl, "min_T = %ld > max_allowed_T = %ld: returning T = %ld",
-			min_T, max_allowed_T, max_allowed_T);
-#endif
-		return outparams;
-	}
-	double temp_t, min_overlap_t = 10000000, temp_score = 0;
-	long int prev_trial_T = 0;
-
 	outparams->rel_dev_score = (double*) malloc(sizeof(double)*used_devs);
 	int best_idx = -1;
+	double temp_score = 0;
 	for(int idx = 0; idx < used_devs; idx++){
 		outparams->rel_dev_score[idx] = CoCopeLiaPredictFullOverlap(dev_model_list[idx]);
 		if (outparams->rel_dev_score[idx] != 0) outparams->rel_dev_score[idx] = 1/outparams->rel_dev_score[idx];
@@ -528,6 +509,28 @@ tunableParams_p CoCoPeLiaModelMultidevOptimizeTileAndSplit(short used_devs, shor
 				used_dev_ids[idx], idx, outparams->rel_dev_score[idx]);
 #endif
 	}
+
+	long int min_T = 0, max_allowed_T = 0, ctr = 0;
+	max_allowed_T = CoCopeLiaMaxT(model);
+	min_T = CoCopeLiaMinT(model);
+#ifdef PDEBUG
+		lprintf(lvl, "min_T = %ld, max_allowed_T = %ld\n",
+			min_T, max_allowed_T);
+#endif
+	if (min_T > max_allowed_T){
+		outparams->T = max_allowed_T;
+		// FIXME: Undefined performance for tiles < than the smaller microbenchmark
+		outparams->pred_t = 0;
+		CoCoPeLiaNormalizeSplit(outparams->rel_dev_score, used_devs);
+#ifdef PDEBUG
+		lprintf(lvl, "min_T = %ld > max_allowed_T = %ld: returning T = %ld",
+			min_T, max_allowed_T, max_allowed_T);
+#endif
+		return outparams;
+	}
+	double temp_t, min_overlap_t = 10000000;
+	long int prev_trial_T = 0;
+
 	int lines = CoCoPeLiaGPUexecGetLines(model);
 	for (ctr = 0 ; ctr < lines ; ctr++){
 		long int trial_T = CoCoPeLiaGPUexecGetElem(model, ctr);

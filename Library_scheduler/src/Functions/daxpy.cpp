@@ -58,6 +58,7 @@ int current_ctr = 0;
 			((Tile1D<VALUE_TYPE>*)kernels[current_ctr]->TileList[0])->R_flag = 1;
 			((Tile1D<VALUE_TYPE>*)kernels[current_ctr]->TileList[1])->R_flag = 1;
 			((Tile1D<VALUE_TYPE>*)kernels[current_ctr]->TileList[1])->W_flag = 1;
+			((Tile1D<VALUE_TYPE>*)kernels[current_ctr]->TileList[1])->W_total = 1;
 			kernels[current_ctr]->operation_params = (void*) malloc(sizeof(struct axpy_backend_in));
 			axpy_backend_in_p ptr_ker_translate = (axpy_backend_in_p) kernels[current_ctr]->operation_params;
 			ptr_ker_translate->N = ((Tile1D<VALUE_TYPE>*) kernels[current_ctr]->TileList[0])->dim;

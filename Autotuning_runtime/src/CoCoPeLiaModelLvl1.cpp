@@ -111,11 +111,12 @@ double CoCopeLiaPredictFullOverlapBLAS1(CoCoModel_p model)
 
 	t_total = fmax(t_exec_full, fmax(t_recv_full, t_send_full));
 #ifdef DPDEBUG
-	fprintf(stderr, "CoCopelia FullOverlap :\n"
+	fprintf(stderr, "CoCopelia FullOverlap BLAS1 (dev = %d):\n"
 	"\tt_recv_full: %lf ms ( %lf Gb/s)\n"
 	"\tt_exec_full: %lf ms (%lf GFlops/s)\n"
 	"\tt_send_full: %lf ms ( %lf Gb/s)\n"
 	"\tt_total: %lf ms (%lf GFlops/s)\n\n",
+	model->dev_id,
 	t_recv_full*1000, Gval_per_s(recv_sz,t_recv_full),
 	t_exec_full*1000, Gval_per_s(axpy_flops(model->D1), t_exec_full),
 	t_send_full*1000, Gval_per_s(send_sz,t_send_full),
@@ -157,11 +158,12 @@ double CoCopeLiaPredictZeroOverlapBLAS1(CoCoModel_p model)
 
 	t_total = t_exec_full + t_recv_full + t_send_full;
 #ifdef DPDEBUG
-	fprintf(stderr, "CoCopelia ZeroOverlap :\n"
+	fprintf(stderr, "CoCopelia ZeroOverlap BLAS1 (dev = %d):\n"
 	"\tt_recv_full: %lf ms ( %lf Gb/s)\n"
 	"\tt_exec_full: %lf ms (%lf GFlops/s)\n"
 	"\tt_send_full: %lf ms ( %lf Gb/s)\n"
 	"\tt_total: %lf ms (%lf GFlops/s)\n\n",
+	model->dev_id,
 	t_recv_full*1000, Gval_per_s(recv_sz,t_recv_full),
 	t_exec_full*1000, Gval_per_s(axpy_flops(model->D1), t_exec_full),
 	t_send_full*1000, Gval_per_s(send_sz,t_send_full),
@@ -219,14 +221,14 @@ double CoCopeLiaPredictBidirectionalBLAS1(CoCoModel_p model, long int T)
 	+ fmax(t_exec_T1, numTout * mv_t_send_T1) + numTin * mv_t_recv_T1 + numTout * mv_t_send_T1;
 
 #ifdef DPDEBUG
-	fprintf(stderr, "CoCopelia Bidirectional(T=%ld) predicted :\n"
+	fprintf(stderr, "CoCopelia Bidirectional(T=%ld)  BLAS1 (dev = %d) predicted :\n"
 	"\t -> numTin = %d -> numTout = %d\n"
 	"\tmv_t_recv_T1: %lf ms ( %lf Gb/s)\n"
 	"\tt_execT1: %lf ms (%lf GFlops/s)\n"
 	"\tmv_t_send_T1: %lf ms ( %lf Gb/s)\n"
 	"\tt_over_T1: %lf ms\n"
 	"\tt_total: %lf ms (%lf GFlops/s)\n\n",
-	T, numTin, numTout,
+	T, model->dev_id, numTin, numTout,
 	mv_t_recv_T1*1000, Gval_per_s(T*model->V->dtype_sz,mv_t_recv_T1),
 	t_exec_T1*1000, Gval_per_s(axpy_flops(T), t_exec_T1),
 	mv_t_send_T1*1000, Gval_per_s(T*model->V->dtype_sz,mv_t_send_T1),
@@ -241,28 +243,13 @@ double CoCopeLiaPredictBidirectionalBLAS1(CoCoModel_p model, long int T)
 double CoCopeLiaPredictBidirectionalHeteroBLAS1(CoCo_model* model, short used_devs, short* used_dev_ids,
 	double* used_dev_relative_scores, long int T){
 	short lvl = 4;
-	long int prob_dims = 0, reset_D1 = model->D1, reset_D2 = model->D2, reset_D3 = model->D3;
+	long int prob_dims = 0, reset_D1 = model->D1;
 	double imb_time_multiplier = 1.0, reduce_time_multiplier = 1.0;
 #define ENABLE_HETERO_RELATIVE_DIMS
 #ifdef ENABLE_HETERO_RELATIVE_DIMS
-	if (reset_D1 != -1){
+	if (reset_D1 != 1){
 #ifdef TILE_IMBALANCE_PENALTY
 		if (reset_D1%T) imb_time_multiplier+=TILE_IMBALANCE_PENALTY;
-#endif
-		prob_dims++;
-	}
-	if (reset_D2 != -1){
-#ifdef TILE_IMBALANCE_PENALTY
-		if (reset_D2%T) imb_time_multiplier+=TILE_IMBALANCE_PENALTY;
-#endif
-		prob_dims++;
-	}
-	if (reset_D3 != -1){
-#ifdef TILE_IMBALANCE_PENALTY
-		if (reset_D3%T) imb_time_multiplier+=TILE_IMBALANCE_PENALTY;
-#endif
-#ifdef REDUCE_PENALTY
-		if ((reset_D1/T + (reset_D1%T)? 1 : 0)*(reset_D2/T + (reset_D2%T)? 1 : 0)*(reset_D3/T + (reset_D3%T)? 1 : 0)%used_devs) reduce_time_multiplier+=REDUCE_PENALTY;
 #endif
 		prob_dims++;
 	}
@@ -277,21 +264,24 @@ double CoCopeLiaPredictBidirectionalHeteroBLAS1(CoCo_model* model, short used_de
 		model->dev_id, prob_dims, problem_percentage);
 #endif
 	if (!strcmp(REL_PERF_MODE, "ROOT-PROBLEM")){
-		if (reset_D1 != -1) model->D1 = (long int) reset_D1* 1.0* pow(problem_percentage, 1.0/prob_dims);
-		if (reset_D2 != -1) model->D2 = (long int) reset_D2* 1.0* pow(problem_percentage, 1.0/prob_dims);
-		if (reset_D3 != -1) model->D3 = (long int) reset_D3* 1.0* pow(problem_percentage, 1.0/prob_dims);
+		if (reset_D1 != 1) model->D1 = (long int) reset_D1* 1.0* pow(problem_percentage, 1.0/prob_dims);
 	}
 #ifdef PDEBUG
-	lprintf(lvl, "CoCopeLiaPredictBidirectionalHeteroBLAS1(dev_id=%d) Modified Dims D1 = %ld, D2 = %ld, D3 = %ld, imb_time_multiplier = %lf, reduce_time_multiplier = %lf\n",
-		model->dev_id, model->D1, model->D2, model->D3, imb_time_multiplier, reduce_time_multiplier);
+	lprintf(lvl, "CoCopeLiaPredictBidirectionalHeteroBLAS1(dev_id=%d) Modified Dims D1 = %ld, imb_time_multiplier = %lf\n",
+		model->dev_id, model->D1, imb_time_multiplier);
 #endif
 #endif
 	double result = imb_time_multiplier* reduce_time_multiplier* CoCopeLiaPredictBidirectionalBLAS1(model, T);
-	if (!strcmp(REL_PERF_MODE, "PERCENTILE")) result*=problem_percentage;
+	if (!strcmp(REL_PERF_MODE, "PERCENTILE")){
+		#ifdef DPDEBUG
+			lprintf(lvl, "CoCopeLiaPredictBidirectionalHeteroBLAS1(dev_id=%d) REL_PERF_MODE = PERCENTILE:\
+			Modifying result with problem_percentage = %lf, old_res = %lf ms, new_res = %lf ms\n",
+				model->dev_id, problem_percentage, result*1000, result*problem_percentage*1000);
+		#endif
+		result*=problem_percentage;
+	}
 	else if (!strcmp(REL_PERF_MODE, "ROOT-PROBLEM")){
 		model->D1 = reset_D1;
-		model->D2 = reset_D2;
-		model->D3 = reset_D3;
 	}
 	else error("CoCopeLiaPredictBidirectionalHeteroBLAS1: Unknown REL_PERF_MODE = %s\n", REL_PERF_MODE);
 	return result;

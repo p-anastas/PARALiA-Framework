@@ -34,7 +34,7 @@ add_definitions(-DMAX_BACKEND_L=4)
 add_definitions(-DENABLE_SEND_RECV_OVERLAP)
 
 ## Enable using the CPU as an extra device for part of the total workload, if applicable
-#add_definitions(-DENABLE_CPU_WORKLOAD)
+add_definitions(-DENABLE_CPU_WORKLOAD)
 
 ## Enable using the CPU as an extra device for part of the total workload, if applicable
 #add_definitions(-DENABLE_PTHREAD_TILE_REQUEST)
@@ -76,10 +76,10 @@ add_definitions(-DMULTIFETCH_PENALTY=1)
 add_definitions(-DNORMALIZE_NEAR_SPLIT_LIMIT=0.05)
 
 #Run in testing mode : details about models, decisions and time spend in operations.
-add_definitions(-DTEST)
+#add_definitions(-DTEST)
 
 #Run in Subkernel testing mode : details about time spend in subkernel operations.
-add_definitions(-DSTEST)
+#add_definitions(-DSTEST)
 
 #Run in debug mode, which includes detailed function calls and info for error-checking
 #add_definitions(-DDEBUG)
@@ -88,10 +88,10 @@ add_definitions(-DSTEST)
 #add_definitions(-DDDEBUG)
 
 #Run Prediction debug mode (autotuning runtime stuff)
-#add_definitions(-DPDEBUG)
+add_definitions(-DPDEBUG)
 
 #Run Prediction deep debug mode (all autotuning runtime stuff)
-#add_definitions(-DDPDEBUG)
+add_definitions(-DDPDEBUG)
 
 #Run in caching debug mode, for cache-related debugging
 #add_definitions(-DCDEBUG)

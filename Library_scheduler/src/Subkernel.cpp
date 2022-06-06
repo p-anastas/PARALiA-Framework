@@ -432,6 +432,10 @@ void Subkernel::run_operation(){
 			gemm_backend_in_p ptr_ker_translate = (gemm_backend_in_p) operation_params;
 			flops = gemm_flops(ptr_ker_translate->M, ptr_ker_translate->N, ptr_ker_translate->K);
 		}
+		if (!strcmp(op_name,"axpy")){
+			axpy_backend_in_p ptr_ker_translate = (axpy_backend_in_p) operation_params;
+			flops = axpy_flops(ptr_ker_translate->N);
+		}
 #endif
 	backend_run_operation(operation_params, op_name, exec_queue[run_dev_id_idx]);
 #ifdef STEST
@@ -1194,8 +1198,8 @@ void STEST_print_SK(kernel_pthread_wrap_p* thread_dev_data_list, double routine_
 				lprintf(0,"\n");
 
 		for (int tileidx = 0; tileidx < thread_dev_data_list[0]->SubkernelListDev[0]->TileNum; tileidx++){
-			short Tiledim = thread_dev_data_list[0]->SubkernelListDev[keri]->TileDimlist[tileidx];
-			void* TilePtr = thread_dev_data_list[0]->SubkernelListDev[keri]->TileList[tileidx];
+			short Tiledim = thread_dev_data_list[0]->SubkernelListDev[0]->TileDimlist[tileidx];
+			void* TilePtr = thread_dev_data_list[0]->SubkernelListDev[0]->TileList[tileidx];
 			short is_writer = (Tiledim == 2)? ((Tile2D<VALUE_TYPE>*) TilePtr)->W_total : ((Tile1D<VALUE_TYPE>*) TilePtr)->W_total;
 			if(is_writer){
 				for (int d = 0; d < dev_num; d++) if(keri < thread_dev_data_list[d]->SubkernelNumDev){
