@@ -179,23 +179,18 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 #endif
 	while (remaining_Subkernels_dev){
 		prev = curr;
-		if(prev) prev->sync_request_data();
+		if(prev){
+#ifdef ENABLE_TILE_PREFETCH
+			if (remaining_Subkernels_dev < gemm_subkernel_data->SubkernelNumDev - 1){
+				while(__sync_lock_test_and_set(&Sk_select_lock_gemm, 1));
+				SubkernelPrefetchCheapRONLYTiles(2, dev_id, Subkernel_list_gemm, Subkernel_num_gemm);
+				__sync_lock_release(&Sk_select_lock_gemm);
+			}
+#endif
+			prev->sync_request_data();
+		}
 		while(__sync_lock_test_and_set(&Sk_select_lock_gemm, 1));
-		if (!strcmp(SELECT_HEURISTIC, "NAIVE"))
-			curr = SubkernelSelectSimple(dev_id, Subkernel_list_gemm, Subkernel_num_gemm);
-		else if (!strcmp(SELECT_HEURISTIC, "NAIVE-NO-WRITE-SHARE"))
-			curr = SubkernelSelectNoWriteShare(dev_id, Subkernel_list_gemm, Subkernel_num_gemm);
-		else if (!strcmp(SELECT_HEURISTIC, "MINIMIZE-FETCH"))
-			curr = SubkernelSelectMinimizeFetch(dev_id, Subkernel_list_gemm, Subkernel_num_gemm);
-		else if (!strcmp(SELECT_HEURISTIC, "MINIMIZE-FETCH-WRITE-PENALTY"))
-			curr = SubkernelSelectMinimizeFetchWritePenalty(dev_id, Subkernel_list_gemm, Subkernel_num_gemm);
-		else if (!strcmp(SELECT_HEURISTIC, "MINIMIZE-FETCH-WRITE-PENALTY-MULTIFETCH-PENALTY"))
-			curr = SubkernelSelectMinimizeFetchWritePenaltyMultiFetchPenalty(dev_id, Subkernel_list_gemm, Subkernel_num_gemm);
-		else if (!strcmp(SELECT_HEURISTIC, "MINIMIZE-FETCH-NO-WRITE-SHARE-MULTIFETCH-PENALTY-MULTIDEV-FAIR"))
-			curr = SubkernelSelectMinimizeFetchNoWriteShareMultiFetchPenaltyMutlidevFair(dev_id, Subkernel_list_gemm, Subkernel_num_gemm);
-		else if (!strcmp(SELECT_HEURISTIC, "MINIMIZE-FETCH-WRITE-PENALTY-MULTIFETCH-PENALTY-MULTIDEV-FAIR"))
-			curr = SubkernelSelectMinimizeFetchWritePenaltyMultiFetchPenaltyMutlidevFair(dev_id, Subkernel_list_gemm, Subkernel_num_gemm);
-		else error("CoCopeLiaDgemm: Unknown Subkernel Heuristic %s\n", SELECT_HEURISTIC);
+		curr = SubkernelSelect(dev_id, Subkernel_list_gemm, Subkernel_num_gemm);
 		if (!curr){
 //#ifdef DDEBUG
 //		lprintf(lvl, "CoCopeLiaDgemmAgentVoid(%d): Got curr = NULL, repeating search\n", dev_id);

@@ -53,8 +53,7 @@ class Subkernel
 		short no_locked_tiles();
 		short is_RW_lock_master(short dev_id);
 		short RW_lock_initialized();
-		double opt_fetch_cost(short dev_id);
-		double opt_fetch_cost_pen_multifetch(short dev_id);
+		long double opt_fetch_cost(short dev_id);
 };
 
 typedef struct kernel_pthread_wrap{
@@ -69,17 +68,9 @@ typedef struct kernel_pthread_wrap{
 void 	CoCoPeLiaInitResources(short dev_id);
 void 	CoCoPeLiaFreeResources(short dev_id);
 
-Subkernel* SubkernelSelectSimple(short dev_id, Subkernel** Subkernel_list, long Subkernel_list_len);
-Subkernel* SubkernelSelectNoWriteShare(short dev_id, Subkernel** Subkernel_list, long Subkernel_list_len);
-Subkernel* SubkernelSelectMinimizeFetch(short dev_id, Subkernel** Subkernel_list, long Subkernel_list_len);
-Subkernel* SubkernelSelectMinimizeFetchWritePenalty(short dev_id, Subkernel** Subkernel_list, long Subkernel_list_len);
-Subkernel* SubkernelSelectMinimizeFetchWritePenaltyMultiFetchPenalty(short dev_id,
-	Subkernel** Subkernel_list, long Subkernel_list_len);
+int SubkernelPrefetchCheapRONLYTiles(int numTiles, short dev_id, Subkernel** Subkernel_list, long Subkernel_list_len);
 
-Subkernel* SubkernelSelectMinimizeFetchNoWriteShareMultiFetchPenaltyMutlidevFair(short dev_id,
-	Subkernel** Subkernel_list, long Subkernel_list_len);
-Subkernel* SubkernelSelectMinimizeFetchWritePenaltyMultiFetchPenaltyMutlidevFair(short dev_id,
-	Subkernel** Subkernel_list, long Subkernel_list_len);
+Subkernel* SubkernelSelect(short dev_id, Subkernel** Subkernel_list, long Subkernel_list_len);
 
 void sync_request_paired(short dev_id);
 

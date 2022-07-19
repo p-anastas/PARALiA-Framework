@@ -137,11 +137,12 @@ template<typename dtype> double Tile2D<dtype>::getMinLinkCost(short dev_id_in){
   int dev_id_in_idx = idxize(dev_id_in);
   double link_cost_2D_min = 10000000;
   for (int pos =0; pos < LOC_NUM; pos++){
-    if(StoreBlock[pos] == NULL) continue;
+    CBlock_p temp_outblock = StoreBlock[pos];
+    if(temp_outblock == NULL) continue;
     //StoreBlock[pos]->update_state(false);
-    state temp = StoreBlock[pos]->State;
+    state temp = temp_outblock->State;
     if (temp == AVAILABLE || temp == SHARABLE || temp == NATIVE){
-      event_status block_status = StoreBlock[pos]->Available->query_status();
+      event_status block_status = temp_outblock->Available->query_status();
       if(block_status == COMPLETE || block_status == CHECKED)
       if(link_cost_2D[dev_id_in_idx][pos] < link_cost_2D_min)
         link_cost_2D_min = link_cost_2D[dev_id_in_idx][pos];

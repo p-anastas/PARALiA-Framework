@@ -141,19 +141,7 @@ void* CoCopeLiaAxpyAgentVoid(void* kernel_pthread_wrapped){
 		prev = curr;
 		if(prev) prev->sync_request_data();
 		while(__sync_lock_test_and_set(&Sk_select_lock, 1));
-		if (!strcmp(SELECT_HEURISTIC, "NAIVE"))
-			curr = SubkernelSelectSimple(dev_id, Subkernel_list_axpy, Subkernel_num_axpy);
-		else if (!strcmp(SELECT_HEURISTIC, "NAIVE-NO-WRITE-SHARE"))
-			curr = SubkernelSelectNoWriteShare(dev_id, Subkernel_list_axpy, Subkernel_num_axpy);
-		else if (!strcmp(SELECT_HEURISTIC, "MINIMIZE-FETCH"))
-			curr = SubkernelSelectMinimizeFetch(dev_id, Subkernel_list_axpy, Subkernel_num_axpy);
-		else if (!strcmp(SELECT_HEURISTIC, "MINIMIZE-FETCH-WRITE-PENALTY"))
-			curr = SubkernelSelectMinimizeFetchWritePenalty(dev_id, Subkernel_list_axpy, Subkernel_num_axpy);
-		else if (!strcmp(SELECT_HEURISTIC, "MINIMIZE-FETCH-WRITE-PENALTY-MULTIFETCH-PENALTY"))
-			curr = SubkernelSelectMinimizeFetchWritePenaltyMultiFetchPenalty(dev_id, Subkernel_list_axpy, Subkernel_num_axpy);
-		else if (!strcmp(SELECT_HEURISTIC, "MINIMIZE-FETCH-WRITE-PENALTY-MULTIFETCH-PENALTY-MULTIDEV-FAIR"))
-			curr = SubkernelSelectMinimizeFetchWritePenaltyMultiFetchPenaltyMutlidevFair(dev_id, Subkernel_list_axpy, Subkernel_num_axpy);
-		else error("CoCoPeLiaAxpy: Unknown Subkernel Heuristic %s\n", SELECT_HEURISTIC);
+		curr = SubkernelSelect(dev_id, Subkernel_list_axpy, Subkernel_num_axpy);
 		if (!curr){
 	//#ifdef DDEBUG
 	//		lprintf(lvl, "CoCoPeLiaAxpyAgentVoid(%d): Got curr = NULL, repeating search\n", dev_id);

@@ -43,8 +43,8 @@ file(MAKE_DIRECTORY ${BENCH_INSTALL}/testLogs)
 add_definitions(-DTESTLIBDIR="${BENCH_INSTALL}/testLogs")
 
 #BLASX libs and includes
-#set (BLASX_PREFIX "/zhome/academic/HLRS/xex/xexpanas/BLASX-pinned") #  vulcan
-set (BLASX_PREFIX "/home/users/panastas/PhD_stuff/Other-libs/BLASX-pinned") # silver1
+set (BLASX_PREFIX "/zhome/academic/HLRS/xex/xexpanas/BLASX-pinned") # TODO: vulcan
+#set (BLASX_PREFIX "/home/users/panastas/PhD_stuff/Other-libs/BLASX-pinned") # TODO: silver1
 set (BLASX_INCLUDE_DIRS ${BLASX_PREFIX}/include)
 include_directories(${BLASX_INCLUDE_DIRS} )
 message( "Benchmarking - Included BLASx: " ${BLASX_INCLUDE_DIRS} )
@@ -53,13 +53,15 @@ set (BLASX_LINK  "-L${BLASX_LD} -lblasx" )
 message( "Benchmarking - Linking BLASx: " ${BLASX_LINK} )
 
 #XKBLAS libs and includes
-#set (XKBLAS_PREFIX "/zhome/academic/HLRS/xex/xexpanas/xkblas-basic/install_vulcan") #  (testbed-II-TeslaV100 build vulcan
-set (XKBLAS_PREFIX "/home/users/panastas/PhD_stuff/Other-libs/xkblas-silver1/install") # silver1
+#set (XKBLAS_PREFIX "/zhome/academic/HLRS/xex/xexpanas/xkblas-basic/install_vulcan") # TODO: vulcan cuda 10.1.243
+set (XKBLAS_PREFIX "/zhome/academic/HLRS/xex/xexpanas/xkblas-basic/install_vulcan_11") # TODO: vulcan
+#set (XKBLAS_PREFIX "/home/users/panastas/PhD_stuff/Other-libs/xkblas-silver1/install") # TODO: silver1
 set (XKBLAS_INCLUDE_DIRS ${XKBLAS_PREFIX}/include)
 include_directories(${XKBLAS_INCLUDE_DIRS} )
 message( "Benchmarking - Included XKBLAS: " ${XKBLAS_INCLUDE_DIRS} )
 set (XKBLAS_LD ${XKBLAS_PREFIX}/lib)
-set (XKBLAS_LINK  "-L${XKBLAS_LD}  -lm -lpthread -lkaapi -lxkblas -lcuda" )
+set (XKBLAS_LINK  "-L${XKBLAS_LD}  -lm -lpthread -lkaapi -lxkblas -lcuda" )  # TODO: silver1
+set (XKBLAS_LINK  "-L${XKBLAS_LD}  -lm -lpthread -lkaapi -lxkblas /opt/system/nvidia/ALL.ALL.510.73.08/libcuda.so.510.73.08") # TODO: Vulcan
 message( "Benchmarking - Linking XKBLAS: " ${XKBLAS_LINK} )
 
 add_library(benchcocopelia SHARED
@@ -80,13 +82,17 @@ add_executable (cuBLASXtDgemmRunner ${BENCH_DIR_SRC}/cuBLASXtDgemmRunner.cpp )
 add_executable (BLASxDgemmRunner ${BENCH_DIR_SRC}/BLASxDgemmRunner.cpp ${BENCH_DIR_SRC}/BLASXWrappers.cpp)
 add_executable (BLASxExDgemmRunner ${BENCH_DIR_SRC}/BLASxExDgemmRunner.cpp ${BENCH_DIR_SRC}/BLASXWrappers.cpp)
 add_executable (XKBLASDgemmRunner ${BENCH_DIR_SRC}/XKBLASDgemmRunner.cpp)
-add_executable (CoCoPeLiaTestTools ${BENCH_DIR_SRC}/CoCoPeLiaTestTools.cpp)
+
+add_executable (CoCoPeLiaTestLinkOverlap ${BENCH_DIR_SRC}/CoCoPeLiaTestLinkOverlap.cpp)
+add_executable (CoCoPeLiaTestFasTransfer ${BENCH_DIR_SRC}/CoCoPeLiaTestFasTransfer.cpp)
 
 target_link_libraries(cuBLASXtDgemmRunner ${INTERNAL_LINK_LIB} benchcocopelia unihelpers)
 target_link_libraries(BLASxDgemmRunner ${INTERNAL_LINK_LIB} benchcocopelia unihelpers ${BLASX_LINK})
 target_link_libraries(BLASxExDgemmRunner ${INTERNAL_LINK_LIB} benchcocopelia unihelpers ${BLASX_LINK})
 target_link_libraries(XKBLASDgemmRunner ${INTERNAL_LINK_LIB} benchcocopelia unihelpers ${XKBLAS_LINK} )
-target_link_libraries(CoCoPeLiaTestTools ${INTERNAL_LINK_LIB} benchcocopelia unihelpers )
+
+target_link_libraries(CoCoPeLiaTestLinkOverlap ${INTERNAL_LINK_LIB} benchcocopelia unihelpers )
+target_link_libraries(CoCoPeLiaTestFasTransfer ${INTERNAL_LINK_LIB} benchcocopelia unihelpers )
 
 add_executable (CoCoPeLiaDgemmTester ${BENCH_DIR_SRC}/CoCoPeLiaDgemmTester.cpp )
 add_executable (CoCoPeLiaDgemmRunner ${BENCH_DIR_SRC}/CoCoPeLiaDgemmRunner.cpp )
