@@ -45,6 +45,7 @@ class Subkernel
 		void init_events();
 		void request_data();
 		void request_tile(short TileIdx);
+		void request_tile_hops(short TileIdx); // Experimental
 		void sync_request_data_RONLY();
 		void sync_request_data();
 		void run_operation();

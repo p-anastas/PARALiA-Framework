@@ -102,6 +102,134 @@ void* request_tile_pthread_wrap(void* wrapped_tile_req){
 	return NULL;
 }
 
+#ifdef ENABLE_TRANSFER_HOPS
+void Subkernel::request_tile_hops(short TileIdx){
+	#ifdef STEST
+			reqT_fire_ts[TileIdx] = csecond();
+	#endif
+	short lvl = 5;
+	short run_dev_id_idx = idxize(run_dev_id);
+	if (TileDimlist[TileIdx] == 1){
+		warning("Subkernel::request_tile_hops() not implemented for 1D, calling Subkernel::request_tile\n");
+		request_tile(TileIdx);
+	}
+	else if (TileDimlist[TileIdx] == 2){
+			Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) TileList[TileIdx];
+#ifdef DEBUG
+		lprintf(lvl-1, "|-----> Subkernel(dev=%d,id=%d)::request_tile(Tile(%d.[%d,%d]))\n",
+			run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2);
+#endif
+		short FetchFromId = -42;
+		if(!tmp->W_flag) FetchFromId = tmp->getClosestReadLoc(run_dev_id);
+		else {
+			FetchFromId = tmp->RW_master;
+			tmp->StoreBlock[idxize(FetchFromId)]->add_reader();
+			tmp->RW_master = run_dev_id;
+		}
+		if (FetchFromId == run_dev_id) error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::request_tile W_flag = %d, \
+			FetchFromId == run_dev_id == %d, state[%d] == %s\n",  run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2,
+			tmp->W_flag, FetchFromId, FetchFromId, print_state(tmp->StoreBlock[idxize(FetchFromId)]->State));
+		short FetchFromId_idx = idxize(FetchFromId);
+#ifdef DEBUG
+		lprintf(lvl, "Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d]): Fetching Block(%d) on GPU(%d) from Block(%d) on GPU(%d)\n",
+			run_dev_id, id, tmp->id,  tmp->GridId1, tmp->GridId2, tmp->StoreBlock[run_dev_id_idx]->id, run_dev_id,
+			tmp->StoreBlock[FetchFromId_idx]->id, FetchFromId);
+#endif
+		CBlock_wrap_p wrap_read = NULL;
+		if (tmp->StoreBlock[FetchFromId_idx]->State == INVALID)
+			error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::request_tile: Fetching from tile in GPU(%d) with INVALID state\n",
+				run_dev_id, id, tmp->id,  tmp->GridId1, tmp->GridId2, FetchFromId);
+
+		CQueue_p used_queue;
+		if(link_hop_num[run_dev_id_idx][FetchFromId_idx] == 0 || tmp->W_flag){
+			used_queue = transfer_queues[run_dev_id_idx][FetchFromId_idx];
+			used_queue->wait_for_event(tmp->StoreBlock[FetchFromId_idx]->Available);
+#ifdef STEST
+			used_queue->add_host_func((void*)&CoCoSetTimerAsync, (void*) &reqT_start_ts[TileIdx]);
+#endif
+			CoCoMemcpy2DAsync(tmp->StoreBlock[run_dev_id_idx]->Adrs, tmp->ldim[run_dev_id_idx],
+										tmp->StoreBlock[FetchFromId_idx]->Adrs, tmp->ldim[FetchFromId_idx],
+										tmp->dim1, tmp->dim2, tmp->dtypesize(),
+										run_dev_id, FetchFromId, used_queue);
+#ifdef STEST
+			used_queue->add_host_func((void*)&CoCoSetTimerAsync, (void*) &reqT_end_ts[TileIdx]);
+			bytes_in[TileIdx]= tmp->size();
+			dev_in_from[TileIdx] = FetchFromId;
+			dev_in_to[TileIdx] = run_dev_id;
+#endif
+		}
+		else{
+			link_road_p test_road = (link_road_p) malloc(sizeof(struct link_road));
+			int inter_hop_num = link_hop_num[run_dev_id_idx][FetchFromId_idx];
+			test_road->hop_num = 2 + inter_hop_num;
+			test_road->hop_uid_list[0] = FetchFromId;
+			test_road->hop_uid_list[1 + inter_hop_num] = run_dev_id;
+
+			test_road->hop_ldim_list[0] = tmp->ldim[FetchFromId_idx];
+			test_road->hop_ldim_list[1 + inter_hop_num] = tmp->ldim[run_dev_id_idx];
+
+			test_road->hop_buf_list[0] = tmp->StoreBlock[FetchFromId_idx]->Adrs;
+			test_road->hop_buf_list[1 + inter_hop_num] = tmp->StoreBlock[run_dev_id_idx]->Adrs;
+
+			for(int inter_hop = 0 ; inter_hop < inter_hop_num; inter_hop++){
+				test_road->hop_uid_list[1+ inter_hop] = link_hop_route[run_dev_id_idx][FetchFromId_idx][inter_hop];
+				test_road->hop_ldim_list[1+ inter_hop] = tmp->ldim[run_dev_id_idx];
+				test_road->hop_cqueue_list[inter_hop] = transfer_queues[idxize(test_road->hop_uid_list[1+inter_hop])][idxize(test_road->hop_uid_list[inter_hop])];
+
+
+				if (tmp->StoreBlock[idxize(test_road->hop_uid_list[1+inter_hop])] != NULL &&
+					tmp->StoreBlock[idxize(test_road->hop_uid_list[1+inter_hop])]->State != INVALID)
+					error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::request_tile_hops W_flag = %d, \
+						FetchFromId = %d, run_dev_id = %d, hop_id = %d already cached in loc\n",  run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2,
+						tmp->W_flag, FetchFromId, run_dev_id, test_road->hop_uid_list[1+ inter_hop]);
+
+				if(tmp->StoreBlock[idxize(test_road->hop_uid_list[1+inter_hop])] != NULL)
+					tmp->StoreBlock[idxize(test_road->hop_uid_list[1+inter_hop])]->Owner_p = NULL;
+				state new_block_state;
+				if(tmp->W_flag) new_block_state = EXCLUSIVE;
+				else new_block_state = SHARABLE;
+				tmp->StoreBlock[idxize(test_road->hop_uid_list[1+inter_hop])] = Global_Cache[idxize(test_road->hop_uid_list[1+inter_hop])]->assign_Cblock(new_block_state,false);
+				tmp->StoreBlock[idxize(test_road->hop_uid_list[1+inter_hop])]->set_owner((void**)&tmp->StoreBlock[idxize(test_road->hop_uid_list[1+inter_hop])],false);
+				if(tmp->W_flag) tmp->StoreBlock[idxize(test_road->hop_uid_list[1+inter_hop])]->init_writeback_info(tmp->WriteBackBlock,
+					&(tmp->RW_master), tmp->dim1, tmp->dim2, tmp->ldim[idxize(test_road->hop_uid_list[1+inter_hop])], tmp->ldim[idxize(tmp->WriteBackLoc)],
+					tmp->dtypesize(), transfer_queues[idxize(tmp->getWriteBackLoc())][idxize(test_road->hop_uid_list[1+inter_hop])], false);
+
+				test_road->hop_buf_list[1 + inter_hop] = tmp->StoreBlock[idxize(test_road->hop_uid_list[1+inter_hop])]->Adrs;
+				test_road->hop_event_list[inter_hop] = tmp->StoreBlock[idxize(test_road->hop_uid_list[1+inter_hop])]->Available;
+			}
+
+			test_road->hop_cqueue_list[0]->wait_for_event(tmp->StoreBlock[FetchFromId_idx]->Available);
+
+			used_queue = test_road->hop_cqueue_list[inter_hop_num] =
+				transfer_queues[idxize(test_road->hop_uid_list[1+inter_hop_num])][idxize(test_road->hop_uid_list[inter_hop_num])];
+			test_road->hop_event_list[inter_hop_num] = tmp->StoreBlock[run_dev_id_idx]->Available;
+			FasTCoCoMemcpy2DAsync(test_road, tmp->dim1, tmp->dim2, tmp->dtypesize());
+
+			lprintf(1, "Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::request_tile_hops W_flag = %d, \
+				%2d->%2d transfer sequence -> %s\n", run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2,
+				tmp->W_flag, FetchFromId, run_dev_id,
+				printlist(link_hop_route[run_dev_id_idx][FetchFromId_idx], link_hop_num[run_dev_id_idx][FetchFromId_idx]));
+		}
+		if(tmp->W_flag){
+			//if (tmp->StoreBlock[FetchFromId_idx]!= tmp->WriteBackBlock){
+				CBlock_wrap_p wrap_inval = NULL;
+				wrap_inval = (CBlock_wrap_p) malloc (sizeof(struct CBlock_wrap));
+				wrap_inval->CBlock = tmp->StoreBlock[FetchFromId_idx];
+				wrap_inval->lockfree = false;
+				used_queue->add_host_func((void*)&CBlock_RR_INV_wrap, (void*) wrap_inval);
+			//}
+		}
+		else{
+			wrap_read = (CBlock_wrap_p) malloc (sizeof(struct CBlock_wrap));
+			wrap_read->CBlock = tmp->StoreBlock[FetchFromId_idx];
+			wrap_read->lockfree = false;
+			used_queue->add_host_func((void*)&CBlock_RR_wrap, (void*) wrap_read);
+		}
+		tmp->StoreBlock[run_dev_id_idx]->Available->record_to_queue(used_queue);
+	}
+}
+#endif
+
 void Subkernel::request_tile(short TileIdx){
 	#ifdef STEST
 			reqT_fire_ts[TileIdx] = csecond();
@@ -134,7 +262,7 @@ void Subkernel::request_tile(short TileIdx){
 			error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d])::request_tile: Fetching from tile in GPU(%d) with INVALID state\n",
 				run_dev_id, id, tmp->id,  tmp->GridId, FetchFromId);
 
-
+		transfer_queues[run_dev_id_idx][FetchFromId_idx]->wait_for_event(tmp->StoreBlock[FetchFromId_idx]->Available);
 #ifdef STEST
 		transfer_queues[run_dev_id_idx][FetchFromId_idx]->add_host_func((void*)&CoCoSetTimerAsync, (void*) &reqT_start_ts[TileIdx]);
 #endif
@@ -191,6 +319,7 @@ void Subkernel::request_tile(short TileIdx){
 			error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::request_tile: Fetching from tile in GPU(%d) with INVALID state\n",
 				run_dev_id, id, tmp->id,  tmp->GridId1, tmp->GridId2, FetchFromId);
 
+		transfer_queues[run_dev_id_idx][FetchFromId_idx]->wait_for_event(tmp->StoreBlock[FetchFromId_idx]->Available);
 #ifdef STEST
 		transfer_queues[run_dev_id_idx][FetchFromId_idx]->add_host_func((void*)&CoCoSetTimerAsync, (void*) &reqT_start_ts[TileIdx]);
 #endif
@@ -260,15 +389,22 @@ void Subkernel::request_data(){
 #endif
 #ifdef ENABLE_PTHREAD_TILE_REQUEST
 					if (tmp->R_flag) {
-						tile_req_p wrap_request = (tile_req_p) malloc(sizeof(struct tile_req));
-						wrap_request->sk = this;
-						wrap_request->TileIdx = j;
-						s = pthread_create(&thread_id[requested_tiles], &attr, &request_tile_pthread_wrap,
-							wrap_request);
-						requested_tiles++;
+						if(!tmp->W_flag){
+							tile_req_p wrap_request = (tile_req_p) malloc(sizeof(struct tile_req));
+							wrap_request->sk = this;
+							wrap_request->TileIdx = j;
+							s = pthread_create(&thread_id[requested_tiles], &attr, &request_tile_pthread_wrap,
+								wrap_request);
+							requested_tiles++;
+						}
+						else request_tile(j);
 					}
 #else
+#ifdef ENABLE_TRANSFER_HOPS
+					if (tmp->R_flag) request_tile_hops(j);
+#else
 					if (tmp->R_flag) request_tile(j);
+#endif
 #endif
 			}
 			else if(tmp->StoreBlock[run_dev_id_idx]->State == NATIVE &&
@@ -277,15 +413,22 @@ void Subkernel::request_data(){
 				else tmp->StoreBlock[run_dev_id_idx]->add_reader();
 #ifdef ENABLE_PTHREAD_TILE_REQUEST
 				if (tmp->R_flag) {
-					tile_req_p wrap_request = (tile_req_p) malloc(sizeof(struct tile_req));
-					wrap_request->sk = this;
-					wrap_request->TileIdx = j;
-					s = pthread_create(&thread_id[requested_tiles], &attr, &request_tile_pthread_wrap,
-						wrap_request);
-					requested_tiles++;
+					if(!tmp->W_flag){
+						tile_req_p wrap_request = (tile_req_p) malloc(sizeof(struct tile_req));
+						wrap_request->sk = this;
+						wrap_request->TileIdx = j;
+						s = pthread_create(&thread_id[requested_tiles], &attr, &request_tile_pthread_wrap,
+							wrap_request);
+						requested_tiles++;
+					}
+					else request_tile(j);
 				}
 #else
-				if (tmp->R_flag) request_tile(j);
+#ifdef ENABLE_TRANSFER_HOPS
+					if (tmp->R_flag) request_tile_hops(j);
+#else
+					if (tmp->R_flag) request_tile(j);
+#endif
 #endif
 			}
 			else{
@@ -323,7 +466,11 @@ void Subkernel::request_data(){
 					requested_tiles++;
 				}
 #else
-				if (tmp->R_flag) request_tile(j);
+#ifdef ENABLE_TRANSFER_HOPS
+					if (tmp->R_flag) request_tile_hops(j);
+#else
+					if (tmp->R_flag) request_tile(j);
+#endif
 #endif
 			}
 			else if(tmp->StoreBlock[run_dev_id_idx]->State == NATIVE &&
@@ -340,7 +487,11 @@ void Subkernel::request_data(){
 					requested_tiles++;
 				}
 #else
-				if (tmp->R_flag) request_tile(j);
+#ifdef ENABLE_TRANSFER_HOPS
+					if (tmp->R_flag) request_tile_hops(j);
+#else
+					if (tmp->R_flag) request_tile(j);
+#endif
 #endif
 			}
 			else{
@@ -695,26 +846,27 @@ void CoCoPeLiaInitResources(short dev_id){
 			//printf("dev_id = %d, dev_id_idx = %d, dev_id_idy = %d, LOC_NUM = %d\n", dev_id, dev_id_idx, dev_id_idy, LOC_NUM);
 			short shared_iloc0 = transfer_link_sharing[dev_id_idx][dev_id_idy][0],
 				shared_iloc1 = transfer_link_sharing[dev_id_idx][dev_id_idy][1];
+			short queue_id = (dev_id_idy == LOC_NUM - 1)? deidxize(dev_id_idx) : deidxize(dev_id_idy);
 			if( shared_iloc0 != - 42){ // The smallest index shared link allocates the queue
 				if (dev_id_idx*LOC_NUM + dev_id_idy < shared_iloc0*LOC_NUM + shared_iloc1){
-					transfer_queues[dev_id_idx][dev_id_idy] = new CommandQueue(dev_id);
+					transfer_queues[dev_id_idx][dev_id_idy] = new CommandQueue(queue_id);
 					transfer_queues[shared_iloc0][shared_iloc1] = transfer_queues[dev_id_idx][dev_id_idy];
 				}
 			}
-			else transfer_queues[dev_id_idx][dev_id_idy] = new CommandQueue(dev_id);
+			else transfer_queues[dev_id_idx][dev_id_idy] = new CommandQueue(queue_id);
 		}
 		if (!transfer_queues[dev_id_idy][dev_id_idx]){
 			short shared_iloc0 = transfer_link_sharing[dev_id_idy][dev_id_idx][0],
 				shared_iloc1 = transfer_link_sharing[dev_id_idy][dev_id_idx][1];
 			if( shared_iloc0 != - 42){ // The smallest index shared link allocates the queue
 				if (dev_id_idy*LOC_NUM + dev_id_idx < shared_iloc0*LOC_NUM + shared_iloc1){
-					short writeback_queue_id = (dev_id_idy == LOC_NUM - 1)? dev_id : deidxize(dev_id_idy);
+					short writeback_queue_id = (dev_id_idx == LOC_NUM - 1)? deidxize(dev_id_idy) : deidxize(dev_id_idx);
 					transfer_queues[dev_id_idy][dev_id_idx] = new CommandQueue(writeback_queue_id);
 					transfer_queues[shared_iloc0][shared_iloc1] = transfer_queues[dev_id_idy][dev_id_idx];
 				}
 			}
 			else{
-				short writeback_queue_id = (dev_id_idy == LOC_NUM - 1)? dev_id : deidxize(dev_id_idy);
+				short writeback_queue_id = (dev_id_idx == LOC_NUM - 1)? deidxize(dev_id_idy) : deidxize(dev_id_idx);
 				transfer_queues[dev_id_idy][dev_id_idx] = new CommandQueue(writeback_queue_id);
 			}
 		}

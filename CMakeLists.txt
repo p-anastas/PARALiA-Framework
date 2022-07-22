@@ -42,6 +42,8 @@ add_definitions(-DENABLE_CPU_WORKLOAD)
 ## Enable pre-fetching (cheap) tiles for future subkernels
 #add_definitions(-DENABLE_TILE_PREFETCH)
 
+## Enable using transfer hops for faster transfers between multiple links
+#add_definitions(-DENABLE_TRANSFER_HOPS)
 
 ## Enable sharing of bandwidth between links that utilize the same underlying hardware communication resources
 add_definitions(-DENABLE_LINK_BW_SHARING)
@@ -52,9 +54,9 @@ if (${SCHEDULE_TYPE} EQUAL 0)
   ## Define which subkernel distribution to use
   #add_definitions(-DDISTRIBUTION="ROUND-ROBIN")
   #add_definitions(-DDISTRIBUTION="SPLIT-NAIVE")
-  add_definitions(-DDISTRIBUTION="SPLIT-CHUNKS-ROBIN")
+  #add_definitions(-DDISTRIBUTION="SPLIT-CHUNKS-ROBIN")
   #add_definitions(-DDISTRIBUTION="SPLIT-CHUNKS-ROBIN-REVERSE")
-  #add_definitions(-DDISTRIBUTION="2D-BLOCK-CYCLIC")
+  add_definitions(-DDISTRIBUTION="2D-BLOCK-CYCLIC")
 elseif(${SCHEDULE_TYPE} EQUAL 1)
   add_definitions(-DDISTRIBUTION="ROUND-ROBIN")
   add_definitions(-DRUNTIME_SCHEDULER_VERSION)
@@ -62,11 +64,12 @@ else()
 endif()
 
 #Run subkernels in provided order
-#add_definitions(-DSERIAL_SUBKERNEL_SELECTION)
+add_definitions(-DSERIAL_SUBKERNEL_SELECTION)
 ## Define subkernel selection heuristic values. 0 = No penalty
 
-add_definitions(-DMULTIFETCH_PENALTY=1)
-add_definitions(-DWTILE_TRANSFER_PENALTY=0.2)
+add_definitions(-DMULTIFETCH_PENALTY=2)
+add_definitions(-DFETCH_UNAVAILABLE_PENALTY=0.2)
+add_definitions(-DWTILE_TRANSFER_PENALTY=1)
 add_definitions(-DPARALLELBBOTLENECK_PENALTY=0)
 add_definitions(-DEXSTEAL_PENALTY=10)
 
@@ -78,7 +81,7 @@ add_definitions(-DNORMALIZE_NEAR_SPLIT_LIMIT=0.05)
 #add_definitions(-DTEST)
 
 #Run in Subkernel testing mode : details about time spend in subkernel operations.
-add_definitions(-DSTEST)
+#add_definitions(-DSTEST)
 
 #Run in Deep Subkernel testing mode : many details about time spend in subkernel operations.
 #add_definitions(-DDSTEST)

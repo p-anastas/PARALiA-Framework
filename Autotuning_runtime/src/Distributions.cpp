@@ -338,13 +338,21 @@ void CoCoDistributeSubkernels2DBlockCyclic(CoControl_p autotune_vals,
     //if (g==0) { D1_parts = 1; D2_parts = autotune_vals->dev_num; }
     else { D1_parts = g; D2_parts = autotune_vals->dev_num/g; }
   }
+  if(D1GridSz < D1_parts || D2GridSz < D2_parts){
+    warning("CoCoDistributeSubkernels2DBlockCyclic:\nGrid(%d,%d) smaller than {D1,D2}_parts = (%d,%d)\
+    using CoCoDistributeSubkernelsRoundRobinChunk instead\n", D1GridSz, D2GridSz, D1_parts, D2_parts);
+    CoCoDistributeSubkernelsRoundRobinChunk(autotune_vals, pred_p, Subkernel_num, D3GridSz);
+    return;
+  }
+  int D1GridSz_div = D1GridSz/D1_parts*D1_parts, D2GridSz_div = D2GridSz/D2_parts*D2_parts,
+      D1GridSz_mod = D1GridSz%D1_parts, D2GridSz_mod = D2GridSz%D2_parts;
 #ifdef PDEBUG
 lprintf(lvl, "CoCoDistributeSubkernels2DBlockCyclic:\nDevices = %d, D1_parts = %d, D2_parts = %d\n",
   autotune_vals->dev_num, D1_parts, D2_parts);
 #endif
   int sk_ctr, devidx, dev_sk_ctr_list[autotune_vals->dev_num] = {0};
-  for (int D1 = 0; D1 < D1GridSz; D1++)
-    for (int D2 = 0; D2 < D2GridSz; D2++)
+  for (int D1 = 0; D1 < D1GridSz_div; D1++)
+    for (int D2 = 0; D2 < D2GridSz_div; D2++)
         for (int D3 = 0; D3 < D3GridSz; D3++){
           sk_ctr = D1*D2GridSz*D3GridSz + D2*D3GridSz+D3;
           devidx = D1/(D1GridSz/D1_parts)*D2_parts + D2/(D2GridSz/D2_parts);
@@ -352,9 +360,72 @@ lprintf(lvl, "CoCoDistributeSubkernels2DBlockCyclic:\nDevices = %d, D1_parts = %
           lprintf(lvl, "CoCoDistributeSubkernels2DBlockCyclic:\nsk_ctr[%d,%d,%d] = %d, devidx = %d\n",
             D1,D2,D3, sk_ctr, devidx);
 #endif
+          while(dev_sk_ctr_list[devidx] == autotune_vals->Subkernels_per_dev[devidx]){
+            if(devidx == autotune_vals->dev_num - 1) devidx = 0;
+            else devidx++;
+          }
           autotune_vals->Subkernel_dev_id_list[devidx][dev_sk_ctr_list[devidx]] = sk_ctr;
           dev_sk_ctr_list[devidx]++;
         }
+
+  devidx = 0;
+
+  for (int D1 = 0; D1 < D1GridSz_div; D1++)
+    for (int D2 = D2GridSz_div; D2 < D2GridSz_div + D2GridSz_mod; D2++){
+      for (int D3 = 0; D3 < D3GridSz; D3++){
+        sk_ctr = D1*D2GridSz*D3GridSz + D2*D3GridSz+D3;
+#ifdef PDEBUG
+        lprintf(lvl, "CoCoDistributeSubkernels2DBlockCyclic:\nsk_ctr[%d,%d,%d] = %d, devidx = %d\n",
+          D1,D2,D3, sk_ctr, devidx);
+#endif
+        while(dev_sk_ctr_list[devidx] == autotune_vals->Subkernels_per_dev[devidx]){
+          if(devidx == autotune_vals->dev_num - 1) devidx = 0;
+          else devidx++;
+        }
+        autotune_vals->Subkernel_dev_id_list[devidx][dev_sk_ctr_list[devidx]] = sk_ctr;
+        dev_sk_ctr_list[devidx]++;
+      }
+      if(devidx == autotune_vals->dev_num - 1) devidx = 0;
+      else devidx++;
+    }
+
+  for (int D1 = D1GridSz_div; D1 < D1GridSz_div + D1GridSz_mod; D1++)
+    for (int D2 = 0; D2 < D2GridSz_div; D2++){
+      for (int D3 = 0; D3 < D3GridSz; D3++){
+        sk_ctr = D1*D2GridSz*D3GridSz + D2*D3GridSz+D3;
+#ifdef PDEBUG
+        lprintf(lvl, "CoCoDistributeSubkernels2DBlockCyclic:\nsk_ctr[%d,%d,%d] = %d, devidx = %d\n",
+          D1,D2,D3, sk_ctr, devidx);
+#endif
+        while(dev_sk_ctr_list[devidx] == autotune_vals->Subkernels_per_dev[devidx]){
+          if(devidx == autotune_vals->dev_num - 1) devidx = 0;
+          else devidx++;
+        }
+        autotune_vals->Subkernel_dev_id_list[devidx][dev_sk_ctr_list[devidx]] = sk_ctr;
+        dev_sk_ctr_list[devidx]++;
+      }
+      if(devidx == autotune_vals->dev_num - 1) devidx = 0;
+      else devidx++;
+    }
+
+  for (int D1 = D1GridSz_div; D1 < D1GridSz_div + D1GridSz_mod; D1++)
+    for (int D2 = D2GridSz_div; D2 < D2GridSz_div + D2GridSz_mod; D2++){
+        for (int D3 = 0; D3 < D3GridSz; D3++){
+          sk_ctr = D1*D2GridSz*D3GridSz + D2*D3GridSz+D3;
+#ifdef PDEBUG
+          lprintf(lvl, "CoCoDistributeSubkernels2DBlockCyclic:\nsk_ctr[%d,%d,%d] = %d, devidx = %d\n",
+            D1,D2,D3, sk_ctr, devidx);
+#endif
+          while(dev_sk_ctr_list[devidx] == autotune_vals->Subkernels_per_dev[devidx]){
+            if(devidx == autotune_vals->dev_num - 1) devidx = 0;
+            else devidx++;
+          }
+          autotune_vals->Subkernel_dev_id_list[devidx][dev_sk_ctr_list[devidx]] = sk_ctr;
+          dev_sk_ctr_list[devidx]++;
+        }
+        if(devidx == autotune_vals->dev_num - 1) devidx = 0;
+        else devidx++;
+      }
 #ifdef PDEBUG
     lprintf(lvl, "CoCoDistributeSubkernels2DBlockCyclic:\nDistributing %ld Subkernels to %d devices\n",
       Subkernel_num, autotune_vals->dev_num);

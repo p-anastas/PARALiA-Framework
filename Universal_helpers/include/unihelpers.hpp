@@ -146,6 +146,20 @@ size_t CoCoGetMaxDimAsset1D(short Asset1DNum, short dsize, size_t step, short lo
 
 short CoCoGetPtrLoc(const void * in_ptr);
 
+// Struct for multi-hop optimized transfers
+typedef struct link_road{
+	int hop_num;
+	int hop_uid_list[LOC_NUM];
+	void* hop_buf_list[LOC_NUM];
+	int hop_ldim_list[LOC_NUM];
+
+	CQueue_p hop_cqueue_list[LOC_NUM-1];
+	Event_p hop_event_list[LOC_NUM-1];
+}* link_road_p;
+
+// A memcpy implementation using multiple units as intermendiate hops for a better transfer bandwidth
+void FasTCoCoMemcpy2DAsync(link_road_p roadMap, size_t rows, size_t cols, short elemSize);
+
 /*****************************************************/
 /// Timers for benchmarks
 // CPU accurate timer

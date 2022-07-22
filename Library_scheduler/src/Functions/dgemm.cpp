@@ -29,6 +29,8 @@ double gemm_entry_ts;
 
 Subkernel** Subkernel_list_gemm;
 int Subkernel_num_gemm;
+int remaining_Subkernels;
+int curr_sk_idx_gemm = 0;
 
 int Sk_select_lock_gemm = 0;
 
@@ -171,17 +173,19 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 #endif
 
 	Subkernel * curr = NULL, *prev = NULL;
-	int remaining_Subkernels_dev = gemm_subkernel_data->SubkernelNumDev;
 #ifndef RUNTIME_SCHEDULER_VERSION
 	/// Rename global vars, perfectly safe.
 	Subkernel** Subkernel_list_gemm = gemm_subkernel_data->SubkernelListDev;
 	int Subkernel_num_gemm = gemm_subkernel_data->SubkernelNumDev;
+	int remaining_Subkernels = Subkernel_num_gemm;
+#else
+	gemm_subkernel_data->SubkernelNumDev = 0 ;
 #endif
-	while (remaining_Subkernels_dev){
+	while (remaining_Subkernels){
 		prev = curr;
 		if(prev){
 #ifdef ENABLE_TILE_PREFETCH
-			if (remaining_Subkernels_dev < gemm_subkernel_data->SubkernelNumDev - 1){
+			if (remaining_Subkernels < gemm_subkernel_data->SubkernelNumDev - 1){
 				while(__sync_lock_test_and_set(&Sk_select_lock_gemm, 1));
 				SubkernelPrefetchCheapRONLYTiles(2, dev_id, Subkernel_list_gemm, Subkernel_num_gemm);
 				__sync_lock_release(&Sk_select_lock_gemm);
@@ -190,25 +194,43 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 			prev->sync_request_data();
 		}
 		while(__sync_lock_test_and_set(&Sk_select_lock_gemm, 1));
+
+		// if(curr_sk_idx_gemm < autotuned_vals_gemm->dev_num && autotuned_vals_gemm->dev_ids[curr_sk_idx_gemm] != dev_id){
+		// 	__sync_lock_release(&Sk_select_lock_gemm);
+		// 	continue;
+		// } // Fire first round in device order
+
+		// if(autotuned_vals_gemm->dev_ids[curr_sk_idx_gemm] != dev_id){
+		// 	__sync_lock_release(&Sk_select_lock_gemm);
+		// 	continue;
+		// } // Fire all rounds in device order
+
 		curr = SubkernelSelect(dev_id, Subkernel_list_gemm, Subkernel_num_gemm);
 		if (!curr){
 //#ifdef DDEBUG
 //		lprintf(lvl, "CoCopeLiaDgemmAgentVoid(%d): Got curr = NULL, repeating search\n", dev_id);
 //#endif
+
+			// if (curr_sk_idx_gemm < autotuned_vals_gemm->dev_num) curr_sk_idx_gemm++; // Fire first round in device order
+
+			// if (curr_sk_idx_gemm == autotuned_vals_gemm->dev_num -1) curr_sk_idx_gemm = 0;
+			// else curr_sk_idx_gemm++; // Fire all rounds in device order
+
 			__sync_lock_release(&Sk_select_lock_gemm);
 			continue;
 		}
-		remaining_Subkernels_dev--;
+		remaining_Subkernels--;
 #ifdef RUNTIME_SCHEDULER_VERSION
-		gemm_subkernel_data->SubkernelListDev[gemm_subkernel_data->SubkernelNumDev - (remaining_Subkernels_dev + 1)] = curr;
+		gemm_subkernel_data->SubkernelListDev[gemm_subkernel_data->SubkernelNumDev] = curr;
+		gemm_subkernel_data->SubkernelNumDev++;
 #else
 		for (int keri = 0; keri < gemm_subkernel_data->SubkernelNumDev; keri++)
 			if (curr == gemm_subkernel_data->SubkernelListDev[keri]){
-				gemm_subkernel_data->SubkernelListDev[keri] = gemm_subkernel_data->SubkernelListDev[remaining_Subkernels_dev];
-				gemm_subkernel_data->SubkernelListDev[remaining_Subkernels_dev] = curr;
+				gemm_subkernel_data->SubkernelListDev[keri] = gemm_subkernel_data->SubkernelListDev[remaining_Subkernels];
+				gemm_subkernel_data->SubkernelListDev[remaining_Subkernels] = curr;
 				break;
 			}
-		Subkernel_num_gemm = remaining_Subkernels_dev;
+		Subkernel_num_gemm = remaining_Subkernels;
 #endif
 		curr->prev = prev;
 		if(prev) prev->next = curr;
@@ -216,6 +238,12 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 		curr->init_events();
 		curr->request_data();
 		CoCoGemmUpdatePointers(curr);
+
+		//if (curr_sk_idx_gemm < autotuned_vals_gemm->dev_num) curr_sk_idx_gemm++;  // Fire first round in device order
+
+		// if (curr_sk_idx_gemm == autotuned_vals_gemm->dev_num -1) curr_sk_idx_gemm = 0;
+		// else curr_sk_idx_gemm++; // Fire all rounds in device order
+
 		__sync_lock_release(&Sk_select_lock_gemm);
 		curr->run_operation();
 #ifdef ENABLE_SEND_RECV_OVERLAP
@@ -333,7 +361,6 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 #endif
 
 	CoCoUpdateLinkSpeed2D(autotuned_vals_gemm, glob_model_gemm);
-
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer;
 	lprintf(lvl, "Initializing link values -> t_link_init = %lf ms\n", cpu_timer*1000);
@@ -405,6 +432,7 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 	SK_wrap->SubkernelListDev = Subkernel_list_gemm;
 	SK_wrap->SubkernelNumDev = Subkernel_num_gemm;
 	SK_wrap->dev_id = -42;
+	remaining_Subkernels = Subkernel_num_gemm;
 #ifdef DEBUG
 	lprintf(lvl, "Subkernel_num_gemm = %d {M,N,K}GridSz = {%d, %d, %d}, autotuned_vals_gemm->dev_num = %d\n\n",
 		Subkernel_num_gemm, MGridSz, NGridSz, KGridSz, autotuned_vals_gemm->dev_num);
@@ -416,6 +444,7 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 	cpu_timer = csecond();
 #endif
 
+//#ifndef RUNTIME_SCHEDULER_VERSION
 	autotuned_vals_gemm->Subkernel_dev_id_list = (int**) malloc(autotuned_vals_gemm->dev_num*sizeof(int*));
 	for (int devidx = 0; devidx < autotuned_vals_gemm->dev_num; devidx++)
 		autotuned_vals_gemm->Subkernel_dev_id_list[devidx] = (int*) malloc(Subkernel_num_gemm*sizeof(int));
@@ -430,6 +459,7 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 	else if (!strcmp(DISTRIBUTION, "2D-BLOCK-CYCLIC"))
 		CoCoDistributeSubkernels2DBlockCyclic(autotuned_vals_gemm, best_pred_p, MGridSz, NGridSz, KGridSz);
 	else error("CoCopeLiaDgemm: Unknown Subkernel Distribution %s\n", DISTRIBUTION);
+//#endif
 
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer;
@@ -478,13 +508,17 @@ if(!reuse_model_flag){
 		if(best_pred_p->rel_dev_score[d] == 0.0)
 			error("CoCopeLiaDgemm: best_pred_p->rel_dev_score[%d] == 0 in final used best_pred_p\n",d);
 
-		// Check/Enable peer access between participating GPUs
-		CoCoEnableLinks(d, autotuned_vals_gemm->dev_ids, autotuned_vals_gemm->dev_num);
+		// Check/Enable peer access between participating GPUs // Changed d-> autotuned_vals_gemm->dev_ids[d]
+		CoCoEnableLinks(autotuned_vals_gemm->dev_ids[d], autotuned_vals_gemm->dev_ids, autotuned_vals_gemm->dev_num);
 
 		thread_dev_data[d] = (kernel_pthread_wrap_p) malloc(sizeof(struct kernel_pthread_wrap));
 		thread_dev_data[d]->dev_id = autotuned_vals_gemm->dev_ids[d];
 
+#ifndef RUNTIME_SCHEDULER_VERSION
 		thread_dev_data[d]->SubkernelNumDev = autotuned_vals_gemm->Subkernels_per_dev[d];
+#else
+		thread_dev_data[d]->SubkernelNumDev = Subkernel_num_gemm;
+#endif
 		thread_dev_data[d]->SubkernelListDev = (Subkernel**) malloc(thread_dev_data[d]->SubkernelNumDev*sizeof(Subkernel*));
 #ifndef RUNTIME_SCHEDULER_VERSION
 		for(int skitt = 0; skitt < autotuned_vals_gemm->Subkernels_per_dev[d]; skitt++)

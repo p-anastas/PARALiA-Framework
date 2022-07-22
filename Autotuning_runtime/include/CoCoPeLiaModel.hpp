@@ -146,4 +146,19 @@ void CoCoDistributeSubkernelsRoundRobinChunkReverse(CoControl_p autotune_vals, t
 
 void CoCoDistributeSubkernels2DBlockCyclic(CoControl_p autotune_vals,
 	  tunableParams_p pred_p, int D1GridSz, int D2GridSz, int D3GridSz);
+
+extern double link_cost_1D[LOC_NUM][LOC_NUM];
+extern double link_cost_2D[LOC_NUM][LOC_NUM];
+extern double link_used_1D[LOC_NUM][LOC_NUM];
+extern double link_used_2D[LOC_NUM][LOC_NUM];
+
+#ifdef ENABLE_TRANSFER_HOPS
+#define MAX_ALLOWED_HOPS 2
+#define HOP_PENALTY 0.5
+extern short link_hop_num[LOC_NUM][LOC_NUM];
+extern short link_hop_route[LOC_NUM][LOC_NUM][MAX_ALLOWED_HOPS];
+extern double link_cost_hop_1D[LOC_NUM][LOC_NUM];
+extern double link_cost_hop_2D[LOC_NUM][LOC_NUM];
+#endif
+
 #endif

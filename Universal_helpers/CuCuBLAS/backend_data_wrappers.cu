@@ -198,8 +198,8 @@ void CoCoMemcpy2D(void* dest, size_t ldest, void* src, size_t ldsrc, size_t rows
 #endif
 	int count = 42;
 	massert(CUBLAS_STATUS_SUCCESS == cudaGetDeviceCount(&count), "CoCoMemcpy2D: cudaGetDeviceCount failed\n");
-	massert(-2 < loc_dest && loc_dest < count, "CoCoMemcpy2D: Invalid destination device: %d\n", loc_dest);
-	massert(-2 < loc_src && loc_src < count, "CoCoMemcpy2D: Invalid source device: %d\n", loc_src);
+	massert(-3 < loc_dest && loc_dest < count, "CoCoMemcpy2D: Invalid destination device: %d\n", loc_dest);
+	massert(-3 < loc_src && loc_src < count, "CoCoMemcpy2D: Invalid source device: %d\n", loc_src);
 
 	enum cudaMemcpyKind kind;
 	if (loc_src < 0 && loc_dest < 0) kind = cudaMemcpyHostToHost;
