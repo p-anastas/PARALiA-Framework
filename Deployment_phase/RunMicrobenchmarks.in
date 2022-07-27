@@ -7,7 +7,7 @@ BACKEND=@BACKEND@
 machine=@TESTBED_NAME@
 device=$1
 
-devices=@NUM_DEVICES@
+devices=@NUM_LOCATIONS@
 
 BIN_DIR=@DEPLOYMENT_DIR_BIN@
 RES_DIR=@DEPLOYMENT_DIR_DB@/Benchmark-Results
@@ -36,11 +36,11 @@ $micro_daxpy_exec $device &>> $daxpy_log
 
 echo "Done"
 
-exit 1
+#exit 1
 
 echo "Performing microbenchmarks for transfers..."
 rm $transfer_log
-for (( end_device = -1; end_device < $devices; end_device++ ))
+for (( end_device = -1; end_device < $devices -1; end_device++ ))
 do
 	echo "$micro_transfer_exec $device $end_device &>> $transfer_log"
 	$micro_transfer_exec $device $end_device &>> $transfer_log
@@ -48,6 +48,8 @@ do
 	$micro_transfer_exec $end_device $device &>> $transfer_log
 done
 echo "Done"
+
+exit 1
 
 # dgemm micro-benchmark Tile size
 rm $dgemm_log
@@ -61,6 +63,8 @@ do
 	done
 done
 echo "Done"
+
+exit 1
 
 # sgemm micro-benchmark Tile size
 rm $sgemm_log

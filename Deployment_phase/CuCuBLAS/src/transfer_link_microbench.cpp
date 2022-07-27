@@ -40,9 +40,9 @@ int main(const int argc, const char *argv[]) {
 	if (loc_src == loc_dest) error("Transfer benchmark@%s %d->%d: Same device\n",TESTBED, loc_src, loc_dest);
 
 	char *filename = (char *) malloc(1024 * sizeof(char));
-	sprintf(filename, "%s/Benchmark-Results/CuCuBLAS_link_benchmark_to-%d_loc_src-%d_%s.log", DEPLOYDB, loc_dest, loc_src, VERSION);
+	sprintf(filename, "%s/Benchmark-Results/CuCuBLAS_link_benchmark_loc_dest-%d_loc_src-%d_%s.log", DEPLOYDB, loc_dest, loc_src, VERSION);
 	char *filename_over = (char *) malloc(1024 * sizeof(char));
-	sprintf(filename_over, "%s/Benchmark-Results/CuCuBLAS_link_overlap_benchmark_to-%d_loc_src-%d_%s.log", DEPLOYDB, loc_dest, loc_src, VERSION);
+	sprintf(filename_over, "%s/Benchmark-Results/CuCuBLAS_link_overlap_benchmark_loc_dest-%d_loc_src-%d_%s.log", DEPLOYDB, loc_dest, loc_src, VERSION);
 	check_benchmark(filename);
 	check_benchmark(filename_over);
 
@@ -53,7 +53,6 @@ int main(const int argc, const char *argv[]) {
 
 
 	if (minDim < 1) error("Transfer Microbench: Bytes must be > 0");
-
   void* src, *dest, *rev_src, *rev_dest;
 
   //Only model pinned memory transfers loc_src host loc_dest dev and visa versa
@@ -109,14 +108,16 @@ int main(const int argc, const char *argv[]) {
 									loc_dest, loc_src, transfer_queue_list[idxize(loc_dest)][idxize(loc_src)]);
 	transfer_queue_list[idxize(loc_dest)][idxize(loc_src)]->sync_barrier();
 	CoCoSyncCheckErr();
+	size_t dim;
 #ifdef AUTO_BENCH_USE_BOOST
-	double cpu_timer, transfer_t_vals[MICRO_MAX_ITER], transfer_t_sum, transfer_t_mean, bench_t, error_margin;
+	double cpu_timer, transfer_t_vals[MICRO_MAX_ITER], transfer_t_sum, transfer_t_mean = 0, bench_t, error_margin;
 	double transfer_t_bid_sum, transfer_t_bid_mean, error_margin_bid;
 	size_t sample_sz, sample_sz_bid;
 	CoCoPeLiaSelectDevice(loc_dest);
 	Event_timer_p device_timer = new Event_timer(loc_dest);
-	for (size_t dim = minDim; dim < MAX_DIM_BLAS3; dim+=step){ // maxDim+1
+	for (dim = minDim; dim < MAX_DIM_BLAS3; dim+=step){ // maxDim+1
 		if (dim >= step * 8) step*=2;
+		if (dim > maxDim) break;
 		transfer_t_sum = transfer_t_mean = bench_t = error_margin = 0;
 		fprintf(stderr, "Cublas-chunk Link %d->%d (Chunk %dx%d):\n", loc_src, loc_dest, dim, dim);
 		sample_sz = 0;
@@ -151,11 +152,12 @@ int main(const int argc, const char *argv[]) {
 	}
 #else
 	/// Local Timers
-	double cpu_timer, transfer_t_mean, t_sq_min, t_sq_max, bench_t;
+	double cpu_timer, transfer_t_mean = 0, t_sq_min, t_sq_max, bench_t;
 	CoCoPeLiaSelectDevice(loc_dest);
 	Event_timer_p device_timer = new Event_timer(loc_dest);
-	for (size_t dim = minDim; dim < maxDim+1; dim+=step){
+	for (dim = minDim; dim < maxDim+1; dim+=step){
 		if (dim >= step * 8) step*=2;
+		if (dim > maxDim) break;
 		transfer_t_mean = t_sq_max = t_sq_bid_av = t_sq_bid_max = bench_t= 0;
 		t_sq_min = t_sq_bid_min = 1e9;
 		fprintf(stderr, "Cublas-chunk Link %d->%d (Chunk %dx%d):\n", loc_src, loc_dest, dim, dim);
@@ -188,13 +190,13 @@ int main(const int argc, const char *argv[]) {
 			bench_t = csecond();
 			for(int itt = 0 ; itt < MAX_ASSUMED_OTHER_LINK_TIMES_FASTER; itt++) CoCoMemcpy2DAsync(unit_buffs[2*dev_id_idx+1], ldest,
 										unit_buffs[2*dev_id_idy+1], ldsrc,
-										maxDim, maxDim, elemSize,
+										dim, dim, elemSize,
 										deidxize(dev_id_idx), deidxize(dev_id_idy), transfer_queue_list[dev_id_idx][dev_id_idy]);
 			device_timer->start_point(transfer_queue_list[idxize(loc_dest)][idxize(loc_src)]);
 
 			CoCoMemcpy2DAsync(unit_buffs[2*idxize(loc_dest)], ldest,
 										unit_buffs[2*idxize(loc_src)], ldsrc,
-										maxDim, maxDim, elemSize,
+										dim, dim, elemSize,
 										loc_dest, loc_src, transfer_queue_list[idxize(loc_dest)][idxize(loc_src)]);
 			device_timer->stop_point(transfer_queue_list[idxize(loc_dest)][idxize(loc_src)]);
 
@@ -209,7 +211,7 @@ int main(const int argc, const char *argv[]) {
 			if (transfer_t_mean < shared_timer*(1-NORMALIZE_NEAR_SPLIT_LIMIT)) fprintf(stderr, "Link(%2d->%2d) & Link(%2d->%2d) partially shared: Shared_BW: %1.2lf %\n\n",
 				loc_src, loc_dest, deidxize(dev_id_idy), deidxize(dev_id_idx), 100*transfer_t_mean/shared_timer);
 
-			report_run(filename_over, maxDim, maxDim, transfer_t_mean, shared_timer, MAX_ASSUMED_OTHER_LINK_TIMES_FASTER, bench_t);
+			report_run(filename_over, deidxize(dev_id_idx), deidxize(dev_id_idy), transfer_t_mean, shared_timer, MAX_ASSUMED_OTHER_LINK_TIMES_FASTER, bench_t);
 
 		}
 	}

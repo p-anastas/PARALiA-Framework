@@ -22,20 +22,33 @@ CoModel_p CoModel_init(short to, short from)
 #endif
 	CoModel_p out_model = (CoModel_p) malloc(sizeof(struct  comm_data));
 	char filename[256];
-	sprintf(filename, "%s/Processed/Linear-Model_to-%d_from-%d.log", DEPLOYDB, to, from);
+	sprintf(filename, "%s/Processed/Link-Stats_loc_dest-%d_loc_src-%d.log", DEPLOYDB, to, from);
 	FILE* fp = fopen(filename,"r");
-	if (!fp) error("CoModel_init: t_comm LogFile =%s not generated\n",filename);
+	if (!fp) error("CoModel_init(%d,%d): t_comm LogFile =%s not generated\n", to, from, filename);
 #ifdef PDEBUG
 	lprintf(lvl, "Reading Linear Model from %s\n", filename);
 #endif
-	int items = fscanf(fp, "%Le\n%Le\n%Lf", &(out_model->ti), &(out_model->tb), &(out_model->sl));
-	if (items != 3) error("CoModel_init: Problem in reading model\n");
+	int items = fscanf(fp, "Intercept: %Le\nCoefficient: %Le\n%Lf", &(out_model->ti), &(out_model->tb));
+	if (items != 2) error("CoModel_init: Problem in reading model Inter/Coef\n");
+	for(int d1 = 0; d1 < LOC_NUM; d1++) for(int d2 = 0; d2 < LOC_NUM; d2++) out_model->sl[d1][d2] = 1;
+	int loc_dest, loc_src;
+	long double sl;
+	while(!feof(fp)){
+		items = fscanf(fp, "Slowdown([%d]->[%d]): %Le\n", &(loc_src), &(loc_dest), &(sl));
+		if (items != 3) error("CoModel_init(%d,%d): Problem in reading model Slowdown\n", to, from);
+		if (sl < 1 ){
+#ifdef PDEBUG
+	warning("CoModel_init( %d -> %d): sl[%d][%d] = %Lf, check\n", out_model->from, out_model->to, loc_dest, loc_src, out_model->sl[loc_dest][loc_src]);
+#endif
+		}
+		if (!(abs(sl - 1) < NORMALIZE_NEAR_SPLIT_LIMIT)) out_model->sl[idxize(loc_dest)][idxize(loc_src)] = sl;
+	}
 	out_model->to = to;
 	out_model->from = from;
 	out_model->machine = (char*) malloc(256*sizeof(char));
 	strcpy(out_model->machine, TESTBED);
 #ifdef PDEBUG
-	lprintf(lvl, "t_comm( %d -> %d) model initialized for %s -> ti =%Le, tb=%Le, sl = %Lf\n", out_model->from, out_model->to, out_model->machine, out_model->ti, out_model->tb, out_model->sl);
+	lprintf(lvl, "t_comm( %d -> %d) model initialized for %s -> ti =%Le, tb=%Le\n", out_model->from, out_model->to, out_model->machine, out_model->ti, out_model->tb);
 #endif
 	fclose(fp);
 #ifdef TEST
@@ -66,9 +79,9 @@ CoModel_p CoModel_init_local(short dev_id)
 	strcpy(out_model->machine, TESTBED);
 	out_model->ti = 0.0;
 	out_model->tb = 0.0;
-	out_model->sl = 1.0;
+	for(int d1 = 0; d1 < LOC_NUM; d1++) for(int d2 = 0; d2 < LOC_NUM; d2++) out_model->sl[d1][d2] = 1;
 #ifdef PDEBUG
-	lprintf(lvl, "t_comm( %d -> %d) model initialized for %s -> ti =%Le, tb=%Le, sl = %Lf\n", out_model->from, out_model->to, out_model->machine, out_model->ti, out_model->tb, out_model->sl);
+	lprintf(lvl, "t_comm( %d -> %d) model initialized for %s -> ti =%Le, tb=%Le\n", out_model->from, out_model->to, out_model->machine, out_model->ti, out_model->tb);
 #endif
 #ifdef TEST
 	timer = csecond() - timer;
@@ -99,7 +112,7 @@ double t_com_sl(CoModel_p model, long double bytes)
 {
 	if (bytes < 0) return -1;
 	else if ( bytes == 0) return 0;
-	return model->ti + model->tb*bytes*model->sl;
+	return model->ti + model->tb*bytes*model->sl[idxize(model->from)][idxize(model->to)];
 }
 
 
@@ -111,6 +124,8 @@ double t_com_bid_predict(CoModel_p model1, CoModel_p model2, long double bytes1,
 	else if (bytes1 == 0) return t_com_predict(model2, bytes2);
 	else if (bytes2 == 0) return t_com_predict(model1, bytes1);
 	double t_sl1 = t_com_sl(model1,bytes1), t_sl2 = t_com_sl(model2,bytes2);
-	if (t_sl1 < t_sl2) return t_sl1*( 1.0 - 1/model2->sl) + bytes2 * model2->tb + model2->ti/model2->sl;
-	else return t_sl2*( 1.0 - 1/model1->sl) + bytes1 * model1->tb + model1->ti/model1->sl;
+	if (t_sl1 < t_sl2) return t_sl1*( 1.0 - 1/model2->sl[idxize(model2->from)][idxize(model2->to)]) +
+		bytes2 * model2->tb + model2->ti/model2->sl[idxize(model2->from)][idxize(model2->to)];
+	else return t_sl2*( 1.0 - 1/model1->sl[idxize(model1->from)][idxize(model1->to)]) +
+		bytes1 * model1->tb + model1->ti/model1->sl[idxize(model1->from)][idxize(model1->to)];
 }

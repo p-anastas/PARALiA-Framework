@@ -114,12 +114,11 @@ set(TESTBED_NAME "vulcanGPUs")  # TODO: Vulcan
 message("CoCopeLia-Framework - TESTBED_NAME: " ${TESTBED_NAME})
 add_definitions(-DTESTBED="${TESTBED_NAME}")
 
-
 ## Define the (max) number of devices for utilization (0-num_devices)
 #set(NUM_DEVICES 3) # TODO: silver1
-set(NUM_DEVICES 8) # TODO: Vulcan
+set(NUM_LOCATIONS 9) # TODO: Vulcan
 message("CoCopeLia-Framework - NUM_DEVICES: " ${NUM_DEVICES})
-add_definitions(-DDEV_NUM=${NUM_DEVICES})
+add_definitions(-DLOC_NUM=${NUM_LOCATIONS})
 
 ## Define the max GPU memory percentage (%) a problem can use ( not accounting for streams and other control structs; e.g. only the problem data ).
 set(PROBLEM_GPU_PERCENTAGE 80)

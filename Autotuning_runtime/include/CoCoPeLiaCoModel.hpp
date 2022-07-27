@@ -9,7 +9,7 @@
 typedef struct  comm_data{
 	long double ti;
 	long double tb;
-	long double sl;
+	long double sl[LOC_NUM][LOC_NUM];
 
 	short from, to;
 	char* machine;

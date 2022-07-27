@@ -60,6 +60,6 @@ target_link_libraries(RunCuCuBlasLinkBench ${INTERNAL_LINK_LIB} unihelpers)
 configure_file(${PROJECT_SOURCE_DIR}/RunMicrobenchmarks.in ${DEPLOYMENT_INSTALL_PREFIX}/RunMicrobenchmarks.sh @ONLY)
 configure_file(${PROJECT_SOURCE_DIR}/ProcessDatabase.in ${DEPLOYMENT_INSTALL_PREFIX}/ProcessDatabase.sh @ONLY)
 configure_file(${PROJECT_SOURCE_DIR}/Python-DataManage/BenchToLookupTables.py.in ${DEPLOYMENT_INSTALL_PREFIX}/BenchToLookupTables.py @ONLY)
-configure_file(${PROJECT_SOURCE_DIR}/R-statistics/transfer_models.r.in ${DEPLOYMENT_INSTALL_PREFIX}/transfer_models.r @ONLY)
+configure_file(${PROJECT_SOURCE_DIR}/Python-DataManage/LinkPreprocessing.py.in ${DEPLOYMENT_INSTALL_PREFIX}/LinkPreprocessing.py @ONLY)
 
 message( "------------------------------------------------------------------------------------------------")

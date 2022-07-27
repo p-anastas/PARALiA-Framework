@@ -37,7 +37,7 @@ double WerkhovenModelInternal(CoCoModel_p model, long long h2d_bytes, long long 
 		return -1.0;
 	}
 
-	CoModel_p h2d_model = model->link[DEV_NUM-1], d2h_model = model->revlink[DEV_NUM-1];
+	CoModel_p h2d_model = model->link[LOC_NUM-1], d2h_model = model->revlink[LOC_NUM-1];
 	h2d_time[0] = h2d_model->ti + h2d_model->tb*h2d_bytes + h2d_model->ti*(nStreams - 1);
 	h2d_time[1] = h2d_model->ti + h2d_model->tb*h2d_bytes/nStreams;
 	d2h_time[0] = d2h_model->ti + d2h_model->tb*d2h_bytes + d2h_model->ti*(nStreams - 1);

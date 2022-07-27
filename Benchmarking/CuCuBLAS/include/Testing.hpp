@@ -6,6 +6,9 @@
 #ifndef TESTING_H
 #define TESTING_H
 
+// The number of devices (e.g. CUDA GPUs) used by other GPU libraries that don't use the CPU
+#define DEV_NUM (LOC_NUM -1)
+
 void ParseInputLvl3(const int argc, const char *argv[], CoControl_p* predef_control_values, char* TransA, char* TransB,
 	double* alpha, double* beta, size_t* D1, size_t* D2, size_t* D3, short* loc1, short* loc2, short* loc3, short* outloc);
 void CheckLogLvl3(char* filename, CoControl_p predef_control_values, char TransA, char TransB,
