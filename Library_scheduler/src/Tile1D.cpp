@@ -8,6 +8,7 @@
 #include "unihelpers.hpp"
 
 int Tile1D_num = 0;
+double link_used_1D[LOC_NUM][LOC_NUM] = {0};
 
 template class Tile1D<double>;
 
@@ -96,10 +97,18 @@ template<typename dtype> short Tile1D<dtype>::getClosestReadLoc(short dev_id_in)
     state temp = StoreBlock[pos]->State;
     if (temp == AVAILABLE || temp == SHARABLE || temp == NATIVE){
       event_status block_status = StoreBlock[pos]->Available->query_status();
-      if(block_status == COMPLETE || block_status == CHECKED)
-      if (link_cost_1D[dev_id_in_idx][pos] < link_cost_1D_min){
-        link_cost_1D_min = link_cost_1D[dev_id_in_idx][pos];
-        pos_min = pos;
+      if(block_status == COMPLETE || block_status == CHECKED || block_status == RECORDED){
+        double current_link_cost = link_cost_1D[dev_id_in_idx][pos];
+        if (block_status == RECORDED) current_link_cost+=current_link_cost*FETCH_UNAVAILABLE_PENALTY;
+        if (current_link_cost < link_cost_1D_min){
+          link_cost_1D_min = current_link_cost;
+          pos_min = pos;
+        }
+        else if (current_link_cost == link_cost_1D_min &&
+        link_used_1D[dev_id_in_idx][pos] < link_used_1D[dev_id_in_idx][pos_min]){
+          link_cost_1D_min = current_link_cost;
+          pos_min = pos;
+        }
       }
     }
   }
@@ -115,13 +124,14 @@ template<typename dtype> short Tile1D<dtype>::getClosestReadLoc(short dev_id_in)
     state temp = temp_outblock->State;
     event_status block_status = temp_outblock->Available->query_status();
     if ((temp == AVAILABLE || temp == SHARABLE || temp == NATIVE) &&
-    (block_status == COMPLETE || block_status == CHECKED)){
+    (block_status == COMPLETE || block_status == CHECKED || block_status == RECORDED)){
       temp_outblock->add_reader(true);
       //Global_Cache[pos_min]->unlock();
       temp_outblock->unlock();
       #ifdef DDEBUG
         lprintf(lvl-1, "<-----|\n");
       #endif
+      link_used_1D[dev_id_in_idx][pos_min]++;
       return deidxize(pos_min);
     }
     else error("Tile1D(%d)::getClosestReadLoc(%d): pos_min = %d selected,\
@@ -142,9 +152,11 @@ template<typename dtype> double Tile1D<dtype>::getMinLinkCost(short dev_id_in){
     state temp = StoreBlock[pos]->State;
     if (temp == AVAILABLE || temp == SHARABLE || temp == NATIVE){
       event_status block_status = StoreBlock[pos]->Available->query_status();
-      if(block_status == COMPLETE || block_status == CHECKED)
-      if(link_cost_1D[dev_id_in_idx][pos] < link_cost_1D_min)
-        link_cost_1D_min = link_cost_1D[dev_id_in_idx][pos];
+      if(block_status == COMPLETE || block_status == CHECKED || block_status == RECORDED){
+        double current_link_cost = link_cost_1D[dev_id_in_idx][pos];
+        if (block_status == RECORDED) current_link_cost+=current_link_cost*FETCH_UNAVAILABLE_PENALTY;
+        if (current_link_cost < link_cost_1D_min) link_cost_1D_min = current_link_cost;
+      }
     }
   }
   return link_cost_1D_min;

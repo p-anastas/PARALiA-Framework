@@ -29,8 +29,9 @@ double axpy_entry_ts;
 
 Subkernel** Subkernel_list_axpy;
 int Subkernel_num_axpy;
+int remaining_Subkernels_axpy;
 
-int Sk_select_lock = 0;
+int Sk_select_lock_axpy = 0;
 
 Subkernel** CoCoAsignTilesToSubkernelsDaxpy(Asset1D<VALUE_TYPE>* x_asset, Asset1D<VALUE_TYPE>* y_asset,
 	int T, int* kernelNum){
@@ -131,35 +132,38 @@ void* CoCopeLiaAxpyAgentVoid(void* kernel_pthread_wrapped){
 #endif
 
 	Subkernel * curr = NULL, *prev = NULL;
-	int remaining_Subkernels_dev = axpy_subkernel_data->SubkernelNumDev;
 #ifndef RUNTIME_SCHEDULER_VERSION
 	/// Rename global vars, perfectly safe.
 	Subkernel** Subkernel_list_axpy = axpy_subkernel_data->SubkernelListDev;
 	int Subkernel_num_axpy = axpy_subkernel_data->SubkernelNumDev;
+	int remaining_Subkernels_axpy = Subkernel_num_axpy;
+#else
+	axpy_subkernel_data->SubkernelNumDev = 0 ;
 #endif
-	while (remaining_Subkernels_dev){
+	while (remaining_Subkernels_axpy){
 		prev = curr;
 		if(prev) prev->sync_request_data();
-		while(__sync_lock_test_and_set(&Sk_select_lock, 1));
+		while(__sync_lock_test_and_set(&Sk_select_lock_axpy, 1));
 		curr = SubkernelSelect(dev_id, Subkernel_list_axpy, Subkernel_num_axpy);
 		if (!curr){
 	//#ifdef DDEBUG
 	//		lprintf(lvl, "CoCoPeLiaAxpyAgentVoid(%d): Got curr = NULL, repeating search\n", dev_id);
 	//#endif
-			__sync_lock_release(&Sk_select_lock);
+			__sync_lock_release(&Sk_select_lock_axpy);
 			continue;
 		}
-		remaining_Subkernels_dev--;
+		remaining_Subkernels_axpy--;
 #ifdef RUNTIME_SCHEDULER_VERSION
-		axpy_subkernel_data->SubkernelListDev[axpy_subkernel_data->SubkernelNumDev - (remaining_Subkernels_dev + 1)] = curr;
+		axpy_subkernel_data->SubkernelListDev[axpy_subkernel_data->SubkernelNumDev] = curr;
+		axpy_subkernel_data->SubkernelNumDev++;
 #else
 		for (int keri = 0; keri < axpy_subkernel_data->SubkernelNumDev; keri++)
 			if (curr == axpy_subkernel_data->SubkernelListDev[keri]){
-				axpy_subkernel_data->SubkernelListDev[keri] = axpy_subkernel_data->SubkernelListDev[remaining_Subkernels_dev];
-				axpy_subkernel_data->SubkernelListDev[remaining_Subkernels_dev] = curr;
+				axpy_subkernel_data->SubkernelListDev[keri] = axpy_subkernel_data->SubkernelListDev[remaining_Subkernels_axpy];
+				axpy_subkernel_data->SubkernelListDev[remaining_Subkernels_axpy] = curr;
 				break;
 			}
-		Subkernel_num_axpy = remaining_Subkernels_dev;
+		Subkernel_num_axpy = remaining_Subkernels_axpy;
 #endif
 		curr->prev = prev;
 		if(prev) prev->next = curr;
@@ -167,7 +171,7 @@ void* CoCopeLiaAxpyAgentVoid(void* kernel_pthread_wrapped){
 		curr->init_events();
 		curr->request_data();
 		CoCoDaxpyUpdatePointers(curr);
-		__sync_lock_release(&Sk_select_lock);
+		__sync_lock_release(&Sk_select_lock_axpy);
 		curr->run_operation();
 #ifdef ENABLE_SEND_RECV_OVERLAP
 		curr->writeback_data();
@@ -285,7 +289,7 @@ CoControl_p CoCopeLiaDaxpy(size_t N, VALUE_TYPE alpha, VALUE_TYPE* x, size_t inc
 			lprintf(0, "CoCopeLiaAxpy: Input cache limit %lld forces problem to use %d blocks\
 			instead of %d needed for the full problem\n", autotuned_vals_axpy->cache_limit, max_block_num, Block_num);
 			// With Parallel backends unfortunately == SK_blocks + Max_Exclusive_Blocks - 1
-			int worst_case_ex_blocks = 1 + (y_asset->dim/T + ((y_asset->dim%T)? 1 : 0));
+			int worst_case_ex_blocks = 2;
 			if(max_block_num < worst_case_ex_blocks)
 				error("CoCopeLiaAxpy: Not able to run with < %d blocks per cache due to EX scheduling\n", worst_case_ex_blocks);
 				GPU_Block_num = max_block_num;
@@ -345,11 +349,11 @@ CoControl_p CoCopeLiaDaxpy(size_t N, VALUE_TYPE alpha, VALUE_TYPE* x, size_t inc
 	else if (!strcmp(DISTRIBUTION, "SPLIT-NAIVE"))
 		CoCoDistributeSubkernelsNaive(autotuned_vals_axpy, best_pred_p, Subkernel_num_axpy);
 	else if (!strcmp(DISTRIBUTION, "SPLIT-CHUNKS-ROBIN"))
-		CoCoDistributeSubkernelsRoundRobinChunk(autotuned_vals_axpy, best_pred_p, Subkernel_num_axpy, 0);
+		CoCoDistributeSubkernelsRoundRobinChunk(autotuned_vals_axpy, best_pred_p, Subkernel_num_axpy, 1);
 	else if (!strcmp(DISTRIBUTION, "SPLIT-CHUNKS-ROBIN-REVERSE"))
-		CoCoDistributeSubkernelsRoundRobinChunkReverse(autotuned_vals_axpy, best_pred_p, Subkernel_num_axpy, 0);
+		CoCoDistributeSubkernelsRoundRobinChunkReverse(autotuned_vals_axpy, best_pred_p, Subkernel_num_axpy, 1);
 	else if (!strcmp(DISTRIBUTION, "2D-BLOCK-CYCLIC"))
-		CoCoDistributeSubkernels2DBlockCyclic(autotuned_vals_axpy, best_pred_p, NGridSz_axpy, 0, 0);
+		CoCoDistributeSubkernelsRoundRobinChunk(autotuned_vals_axpy, best_pred_p, Subkernel_num_axpy, 1);
 	else error("CoCoPeLiaAxpy: Unknown Subkernel Distribution %s\n", DISTRIBUTION);
 
 #ifdef TEST
@@ -405,12 +409,16 @@ CoControl_p CoCopeLiaDaxpy(size_t N, VALUE_TYPE alpha, VALUE_TYPE* x, size_t inc
 		thread_dev_data[d] = (kernel_pthread_wrap_p) malloc(sizeof(struct kernel_pthread_wrap));
 		thread_dev_data[d]->dev_id = autotuned_vals_axpy->dev_ids[d];
 
+#ifndef RUNTIME_SCHEDULER_VERSION
 		thread_dev_data[d]->SubkernelNumDev = autotuned_vals_axpy->Subkernels_per_dev[d];
+#else
+		thread_dev_data[d]->SubkernelNumDev = Subkernel_num_axpy;
+#endif
 		thread_dev_data[d]->SubkernelListDev = (Subkernel**) malloc(thread_dev_data[d]->SubkernelNumDev*sizeof(Subkernel*));
-	#ifndef RUNTIME_SCHEDULER_VERSION
+#ifndef RUNTIME_SCHEDULER_VERSION
 		for(int skitt = 0; skitt < autotuned_vals_axpy->Subkernels_per_dev[d]; skitt++)
 			thread_dev_data[d]->SubkernelListDev[skitt] = Subkernel_list_axpy[autotuned_vals_axpy->Subkernel_dev_id_list[d][skitt]];
-	#endif
+#endif
 		s = pthread_create(&thread_id[d], &attr,
 																	&CoCopeLiaAxpyAgentVoid, thread_dev_data[d]);
 

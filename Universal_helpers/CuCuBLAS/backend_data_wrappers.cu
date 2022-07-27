@@ -307,7 +307,7 @@ void CoCoParallelVecInitHost(VALUETYPE *vec, long long length, int seed)
 template void CoCoParallelVecInitHost<double>(double *vec, long long length, int seed);
 template void CoCoParallelVecInitHost<float>(float *vec, long long length, int seed);
 
-void backend_enableGPUPeer(short target_dev_i, short dev_ids[], short num_devices){
+void CoCoEnableLinks(short target_dev_i, short dev_ids[], short num_devices){
 	short lvl = 2;
 #ifdef DEBUG
 	lprintf(lvl-1, "|-----> CoCoPeLiaEnableGPUPeer(%d,dev_ids,%d)\n", target_dev_i, num_devices);
@@ -347,8 +347,4 @@ void backend_enableGPUPeer(short target_dev_i, short dev_ids[], short num_device
 #ifdef DEBUG
 	lprintf(lvl-1, "<-----|\n");
 #endif
-}
-
-void CoCoEnableLinks(short target_dev_i, short dev_ids[], short num_devices){
-	backend_enableGPUPeer(target_dev_i, dev_ids, num_devices);
 }
