@@ -325,7 +325,7 @@ double CoCopeLiaPredictReuseBLAS3(CoCoModel_p model, long int T)
 		else if (dev_id_initlocs[idxize(mv_dev_id)] ==  dev_id_initlocs[idx]
 			&& t_recv_T3[idxize(mv_dev_id)] < t_recv_T3[idx]) mv_dev_id = deidxize(idx);
 
-#ifdef DPDEBUG
+#ifdef PDEBUG
 	lprintf(lvl, "Selecting  mv_dev_id =%d\n", mv_dev_id);
 #endif
 	double mv_t_recv_T3 = t_recv_T3[idxize(mv_dev_id)], mv_t_send_T3 = t_send_T3[idxize(mv_dev_id)];
@@ -475,6 +475,7 @@ double CoCopeLiaPipelineEmulateBLAS3(CoCoModel_p model, long int T){
 	t_d2h_T3*1000, Gval_per_s(T*T*model->V->dtype_sz,t_d2h_T3),
 	t_total*1000, Gval_per_s(gemm_flops(model->D1,model->D2,model->D3), t_total));
 	*/
+
 	return t_total;
 }
 

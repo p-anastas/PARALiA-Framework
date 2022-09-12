@@ -13,6 +13,8 @@ SCRIPT_DIR=@DEPLOYMENT_INSTALL_PREFIX@
 RES_DIR=@DEPLOYMENT_DIR_DB@/Benchmark-Results
 OUTDIR=@DEPLOYMENT_DIR_DB@/Processed
 
+mkdir -p $OUTDIR
+
 if [[ "$BACKEND" == *"CuCuBLAS"* ]];then
 	library_id=0
 fi

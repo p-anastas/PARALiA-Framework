@@ -25,7 +25,7 @@ CoModel_p CoModel_init(short to, short from)
 	sprintf(filename, "%s/Processed/Link-Stats_loc_dest-%d_loc_src-%d.log", DEPLOYDB, to, from);
 	FILE* fp = fopen(filename,"r");
 	if (!fp) error("CoModel_init(%d,%d): t_comm LogFile =%s not generated\n", to, from, filename);
-#ifdef PDEBUG
+#ifdef DPDEBUG
 	lprintf(lvl, "Reading Linear Model from %s\n", filename);
 #endif
 	int items = fscanf(fp, "Intercept: %Le\nCoefficient: %Le\n%Lf", &(out_model->ti), &(out_model->tb));

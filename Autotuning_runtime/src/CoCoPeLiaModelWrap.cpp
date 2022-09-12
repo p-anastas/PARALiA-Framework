@@ -303,7 +303,7 @@ tunableParams_p CoCoAutotuneParameters(const char* routine_name, void* initial_p
 #ifdef ENABLE_CPU_WORKLOAD
 		autotuned_vals->dev_num = LOC_NUM;
 #else
-		autotuned_vals->dev_num = DEV_NUM;
+		autotuned_vals->dev_num = LOC_NUM - 1;
 #endif
 		autotune_eval_devices = 1;
 		for (int i =0; i < autotuned_vals->dev_num; i++)
@@ -323,10 +323,57 @@ tunableParams_p CoCoAutotuneParameters(const char* routine_name, void* initial_p
 
 	short *dev_ids[autotuned_vals->dev_num], best_dev_num = 0;
 	tunableParams_p pred_p[autotuned_vals->dev_num], best_pred_p = NULL;
-  for (int used_devs = 0; used_devs < autotuned_vals->dev_num; used_devs++){
-    dev_ids[autotuned_vals->dev_num] = NULL;
-    pred_p[autotuned_vals->dev_num] = NULL;
+  for (int used_devs_0idx = 0; used_devs_0idx < autotuned_vals->dev_num; used_devs_0idx++){
+    dev_ids[used_devs_0idx] = NULL;
+    pred_p[used_devs_0idx] = NULL;
   }
+	for (int used_devs_0idx = 0; used_devs_0idx < autotuned_vals->dev_num; used_devs_0idx++){
+		if (autotune_eval_devices) dev_ids[used_devs_0idx] = CoCoPeLiaDeviceSelectBest(used_devs_0idx + 1, autotuned_vals->dev_num,
+						autotuned_vals->dev_ids, glob_model);
+		else {
+			used_devs_0idx = autotuned_vals->dev_num-1;
+			dev_ids[used_devs_0idx] = autotuned_vals->dev_ids;
+		}
+		if(predef_vals && predef_vals->T > 0) autotuned_vals->T = predef_vals->T;
+		else{
+			int inactive_device_idx[used_devs_0idx + 1] = {0};
+			pred_p[used_devs_0idx] = CoCoPeLiaModelMultidevOptimizeTile(used_devs_0idx + 1,
+			dev_ids[used_devs_0idx], inactive_device_idx, glob_model);
+			autotuned_vals->T = pred_p[used_devs_0idx]->T;
+			free(pred_p[used_devs_0idx]);
+			pred_p[used_devs_0idx] = NULL;
+		}
+		pred_p[used_devs_0idx] = CoCoPeLiaModelMultidevOptimizeSplit(used_devs_0idx + 1,
+			dev_ids[used_devs_0idx], glob_model, autotuned_vals->T);
+
+		int inactive_device_flag = 0, inactive_device_idx[used_devs_0idx + 1] = {0};
+		for (int i = 0; i < used_devs_0idx + 1; i ++) if(pred_p[used_devs_0idx]->rel_dev_score[i] == 0.0){
+			inactive_device_idx[i] = 1;
+			inactive_device_flag++;
+#ifdef PDEBUG
+				lprintf(lvl, "Found device %d with rel_dev_score 0\n", dev_ids[used_devs_0idx][i]);
+#endif
+		}
+		if(inactive_device_flag && !(predef_vals && predef_vals->T > 0)){
+#ifdef PDEBUG
+				lprintf(lvl, "Recallibrating T = %ld prediction according to %d inactive device(s)\n", autotuned_vals->T, inactive_device_flag);
+				tunableParams_p pred_p_loc = CoCoPeLiaModelMultidevOptimizeTile(used_devs_0idx + 1,
+				dev_ids[used_devs_0idx], inactive_device_idx, glob_model);
+				autotuned_vals->T = pred_p_loc->T;
+				lprintf(lvl, "New T=%ld\n", pred_p_loc->T);
+#endif
+		}
+
+		if (best_pred_p == NULL){
+			best_pred_p = pred_p[used_devs_0idx];
+			best_dev_num = used_devs_0idx + 1;
+		}
+		else if(best_pred_p->pred_t >= pred_p[used_devs_0idx]->pred_t){
+			best_pred_p = pred_p[used_devs_0idx];
+			best_dev_num = used_devs_0idx + 1;
+		}
+	}
+/*
 	if(predef_vals && predef_vals->T > 0 && !autotune_eval_devices){
 		autotuned_vals->T = predef_vals->T;
 		best_pred_p = CoCoPeLiaModelMultidevOptimizeSplit(autotuned_vals->dev_num,
@@ -341,22 +388,23 @@ tunableParams_p CoCoAutotuneParameters(const char* routine_name, void* initial_p
 	}
 	else if(predef_vals && predef_vals->T > 0 && autotune_eval_devices){
 		autotuned_vals->T = predef_vals->T;
-		for (int used_devs = 0; used_devs < autotuned_vals->dev_num; used_devs++){
-			dev_ids[used_devs] = CoCoPeLiaDeviceSelectBest(used_devs + 1, autotuned_vals->dev_num,
+		for (int used_devs_0idx = 0; used_devs_0idx < autotuned_vals->dev_num; used_devs_0idx++){
+			dev_ids[used_devs_0idx] = CoCoPeLiaDeviceSelectBest(used_devs_0idx + 1, autotuned_vals->dev_num,
 				autotuned_vals->dev_ids, glob_model);
-			pred_p[used_devs] = CoCoPeLiaModelMultidevOptimizeSplit(used_devs + 1,
-				dev_ids[used_devs], glob_model, autotuned_vals->T);
+			pred_p[used_devs_0idx] = CoCoPeLiaModelMultidevOptimizeSplit(used_devs_0idx + 1,
+				dev_ids[used_devs_0idx], glob_model, autotuned_vals->T);
 
 			if (best_pred_p == NULL){
-				best_pred_p = pred_p[used_devs];
-				best_dev_num = used_devs + 1;
+				best_pred_p = pred_p[used_devs_0idx];
+				best_dev_num = used_devs_0idx + 1;
 			}
-			else if(best_pred_p->pred_t >= pred_p[used_devs]->pred_t){
-				best_pred_p = pred_p[used_devs];
-				best_dev_num = used_devs + 1;
+			else if(best_pred_p->pred_t >= pred_p[used_devs_0idx]->pred_t){
+				best_pred_p = pred_p[used_devs_0idx];
+				best_dev_num = used_devs_0idx + 1;
 			}
 		}
 		autotuned_vals->T = best_pred_p->T;
+
 		autotuned_vals->dev_num = best_dev_num;
 		for (int idx = 0; idx < autotuned_vals->dev_num; idx++)
 			autotuned_vals->dev_ids[idx] = dev_ids[autotuned_vals->dev_num - 1][idx];
@@ -381,19 +429,19 @@ tunableParams_p CoCoAutotuneParameters(const char* routine_name, void* initial_p
 #endif
 	}
 	else if ((predef_vals && predef_vals->T <= 0 && autotune_eval_devices) || !predef_vals){
-		for (int used_devs = 0; used_devs < autotuned_vals->dev_num; used_devs++){
-			dev_ids[used_devs] = CoCoPeLiaDeviceSelectBest(used_devs + 1, autotuned_vals->dev_num,
+		for (int used_devs_0idx = 0; used_devs_0idx < autotuned_vals->dev_num; used_devs_0idx++){
+			dev_ids[used_devs_0idx] = CoCoPeLiaDeviceSelectBest(used_devs_0idx + 1, autotuned_vals->dev_num,
 				autotuned_vals->dev_ids, glob_model);
-			pred_p[used_devs] = CoCoPeLiaModelMultidevOptimizeTileAndSplit(used_devs + 1,
-				dev_ids[used_devs], glob_model);
+			pred_p[used_devs_0idx] = CoCoPeLiaModelMultidevOptimizeTileAndSplit(used_devs_0idx + 1,
+				dev_ids[used_devs_0idx], glob_model);
 
 			if (best_pred_p == NULL){
-				best_pred_p = pred_p[used_devs];
-				best_dev_num = used_devs + 1;
+				best_pred_p = pred_p[used_devs_0idx];
+				best_dev_num = used_devs_0idx + 1;
 			}
-			else if(best_pred_p->pred_t >= pred_p[used_devs]->pred_t){
-				best_pred_p = pred_p[used_devs];
-				best_dev_num = used_devs + 1;
+			else if(best_pred_p->pred_t >= pred_p[used_devs_0idx]->pred_t){ //FIXME: here we could add more complex selection heuristics, e.g. device num penalty
+				best_pred_p = pred_p[used_devs_0idx];
+				best_dev_num = used_devs_0idx + 1;
 			}
 		}
 		autotuned_vals->T = best_pred_p->T;
@@ -410,6 +458,7 @@ tunableParams_p CoCoAutotuneParameters(const char* routine_name, void* initial_p
 	}
 	else error("CoCoAutotuneParameters: Unknown predefined parameter combination\
 	(predef_vals = %p, predef_vals->T = %ld , autotune_eval_devices = %d)\n", (predef_vals) ? (predef_vals): NULL, (predef_vals) ? predef_vals->T : -42, autotune_eval_devices);
+*/
 	if (predef_vals && predef_vals->cache_limit > 0)
 		autotuned_vals->cache_limit = predef_vals->cache_limit;
 	else autotuned_vals->cache_limit = 0;
@@ -479,11 +528,11 @@ short* CoCoPeLiaDeviceSelectBest(short used_devs, short avail_devs, short* avail
 	return used_dev_ids;
 }
 
-tunableParams_p CoCoPeLiaModelMultidevOptimizeTileAndSplit(short used_devs, short* used_dev_ids,
-	CoCoModel_p* dev_model_list){
+tunableParams_p CoCoPeLiaModelMultidevOptimizeTile(short used_devs, short* used_dev_ids,
+	int* dev_idx_ignore, CoCoModel_p* dev_model_list){
 	short lvl = 3;
 #ifdef DEBUG
-	lprintf(lvl-1, "|-----> CoCoPeLiaModelMultidevOptimizeTileAndSplit(used_devs=%d, used_dev_ids= [ ", used_devs);
+	lprintf(lvl-1, "|-----> CoCoPeLiaModelMultidevOptimizeTile(used_devs=%d, used_dev_ids= [ ", used_devs);
 	for (int i =0; i < used_devs; i++) lprintf(0, "%d ", used_dev_ids[i]);
 	lprintf(0, "]\n");
 #endif
@@ -493,22 +542,9 @@ tunableParams_p CoCoPeLiaModelMultidevOptimizeTileAndSplit(short used_devs, shor
 	short first_model_idx = (used_dev_ids[0] == -1) ? LOC_NUM - 1 : used_dev_ids[0];
 	CoCoModel_p model = dev_model_list[first_model_idx];
 	tunableParams_p outparams = tunableParamsInit();
-	outparams->rel_dev_score = (double*) malloc(sizeof(double)*used_devs);
+	outparams->rel_dev_score = NULL;
 	int best_idx = -1;
 	double temp_score = 0;
-	for(int idx = 0; idx < used_devs; idx++){
-		outparams->rel_dev_score[idx] = CoCopeLiaPredictFullOverlap(dev_model_list[idx]);
-		if (outparams->rel_dev_score[idx] != 0) outparams->rel_dev_score[idx] = 1/outparams->rel_dev_score[idx];
-		else warning("CoCoPeLiaModelMultidevOptimizeTileAndSplit: rel_dev_score[%d] == 0\n", idx);
-		temp_score+= outparams->rel_dev_score[idx];
-	}
-	for(int idx = 0; idx < used_devs; idx++){
-		outparams->rel_dev_score[idx] /= temp_score;
-#ifdef PDEBUG
-			lprintf(lvl, "Calculating Relative score for dev_id = %d (idx = %d ): outparams->rel_dev_score = %e\n",
-				used_dev_ids[idx], idx, outparams->rel_dev_score[idx]);
-#endif
-	}
 
 	long int min_T = 0, max_allowed_T = 0, ctr = 0;
 	max_allowed_T = CoCopeLiaMaxT(model);
@@ -519,9 +555,8 @@ tunableParams_p CoCoPeLiaModelMultidevOptimizeTileAndSplit(short used_devs, shor
 #endif
 	if (min_T > max_allowed_T){
 		outparams->T = max_allowed_T;
-		// FIXME: Undefined performance for tiles < than the smaller microbenchmark
+		// FIXME: Undefined expected performance for tiles < than the smaller microbenchmark
 		outparams->pred_t = 0;
-		CoCoPeLiaNormalizeSplit(outparams->rel_dev_score, used_devs);
 #ifdef PDEBUG
 		lprintf(lvl, "min_T = %ld > max_allowed_T = %ld: returning T = %ld",
 			min_T, max_allowed_T, max_allowed_T);
@@ -536,51 +571,44 @@ tunableParams_p CoCoPeLiaModelMultidevOptimizeTileAndSplit(short used_devs, shor
 		long int trial_T = CoCoPeLiaGPUexecGetElem(model, ctr);
 		if (trial_T > max_allowed_T) break;
 		if (trial_T ==  prev_trial_T) continue;
-/*
-		temp_score = temp_t = 0;
-		double rel_dev_score[used_devs];
-		for(int idx = 0; idx < used_devs; idx++){
-			short cur_dev_id = used_dev_ids[idx], cur_dev_idx = (cur_dev_id == -1)? LOC_NUM - 1 : cur_dev_id;
-			model = dev_model_list[cur_dev_idx];
-			temp_t = CoCoPeLiaModelPredict(model, trial_T, COCOPELIA_REUSE);
-			if(temp_t > 0){
-				rel_dev_score[idx] = 1/temp_t;
-				temp_score += rel_dev_score[idx];
-			}
-			else error("CoCoPeLiaModelPredict(%p(dev_id = %d, (idx = %d )), trial_T = %d): negative prediction temp_t = %lf\n",
-				model, cur_dev_id, cur_dev_idx, trial_T, temp_t);
-#ifdef PDEBUG
-			lprintf(lvl, "CoCoPeLiaModelMultidevOptimizeTileAndSplit(%p) for dev_id = %d (idx = %d ) with trial_T = %d: dev_score = %e, temp_t = %e\n",
-				model, cur_dev_id, cur_dev_idx, trial_T, rel_dev_score[idx], temp_t);
-#endif
-		}
-		for(int idx = 0; idx < used_devs; idx++) rel_dev_score[idx] /= temp_score;
-*/
+
 		double temp_overlap_t = 0;
 		for(int idx = 0; idx < used_devs; idx++){
+			if(dev_idx_ignore[idx]) continue;
 			short cur_dev_id = used_dev_ids[idx], cur_dev_idx = (cur_dev_id == -1)? LOC_NUM - 1 : cur_dev_id;
 			model = dev_model_list[cur_dev_idx];
 			ModelType used_model;
 			switch(model->problem){
 				case BLAS1:
-					used_model = COCOPELIA_HETERO_BIDIRECTIONAL;
+					used_model = COCOPELIA_BIDIRECTIONAL;
 					break;
 				case BLAS2:
-					used_model = COCOPELIA_HETERO_BIDIRECTIONAL;
+					used_model = COCOPELIA_BIDIRECTIONAL;
 					break;
 				case BLAS3:
-					used_model = COCOPELIA_HETERO_REUSE;
+					used_model = COCOPELIA_REUSE;
 					break;
 				default:
-					error("CoCoPeLiaModelMultidevOptimizeTileAndSplit:\
+					error("CoCoPeLiaModelMultidevOptimizeTile:\
 					model->problem switch default reached\n");
 			}
-				temp_t = CoCoPeLiaModelPredictHetero(model, used_devs, used_dev_ids, outparams->rel_dev_score, trial_T, used_model);
+				temp_t = CoCoPeLiaModelPredict(model, trial_T, used_model);
+				double imb_time_multiplier = 1.0, reduce_time_multiplier = 1.0;
+#ifdef TILE_IMBALANCE_PENALTY
+					if (model->D1 != -1 && (model->D1%trial_T)) imb_time_multiplier+=TILE_IMBALANCE_PENALTY;
+					if (model->D2 != -1 && (model->D2%trial_T)) imb_time_multiplier+=TILE_IMBALANCE_PENALTY;
+					if (model->D3 != -1 && (model->D3%trial_T)) imb_time_multiplier+=TILE_IMBALANCE_PENALTY;
+#endif
+#ifdef REDUCE_PENALTY
+					if ((model->D1/trial_T + ((model->D1%trial_T)? 1 : 0))*(model->D2/trial_T + ((model->D2%trial_T)? 1 : 0))
+						*(model->D3/trial_T + ((model->D3%trial_T)? 1 : 0)) % used_devs) reduce_time_multiplier+=REDUCE_PENALTY;
+#endif
+			temp_t *= imb_time_multiplier *reduce_time_multiplier;
 			if(temp_t > 0) temp_overlap_t = fmax(temp_overlap_t, temp_t);
-			else error("CoCoPeLiaModelPredictHetero(%p(dev_id = %d, (idx = %d )), trial_T = %ld): negative prediction temp_t = %lf\n",
+			else error("CoCoPeLiaModelPredict(%p(dev_id = %d, (idx = %d )), trial_T = %ld): negative prediction temp_t = %lf\n",
 				model, cur_dev_id, cur_dev_idx, trial_T, temp_t);
 #ifdef PDEBUG
-			lprintf(lvl, "CoCoPeLiaModelPredictHetero(%p) for dev_id = %d (idx = %d ) with trial_T = %ld: temp_overlap_t = %lf, temp_t = %lf\n",
+			lprintf(lvl, "CoCoPeLiaModelPredict(%p) for dev_id = %d (idx = %d ) with trial_T = %ld: temp_overlap_t = %lf, temp_t = %lf\n",
 				model, cur_dev_id, cur_dev_idx, trial_T, temp_overlap_t, temp_t);
 #endif
 		}
@@ -592,17 +620,13 @@ tunableParams_p CoCoPeLiaModelMultidevOptimizeTileAndSplit(short used_devs, shor
 	}
 	outparams->T = min_T;
 	outparams->pred_t = min_overlap_t;
-	CoCoPeLiaNormalizeSplit(outparams->rel_dev_score, used_devs);
 #ifdef PDEBUG
 	lprintf(lvl, "====================================\n");
-	lprintf(lvl, "Best %d percentages : [ ", used_devs);
-	for (int i =0; i < used_devs; i++) fprintf(stderr, "%.3lf ", outparams->rel_dev_score[i]);
-	lprintf(0, "]\n");
 	lprintf(lvl, "Predict T=%ld : t_pred = %lf\n", outparams->T, outparams->pred_t);
 #endif
 #ifdef TEST
 	timer = csecond() - timer;
-	lprintf(lvl, "Optimization time:%lf ms\n", timer*1000);
+	lprintf(lvl, "Tile selection time:%lf ms\n", timer*1000);
 	lprintf(lvl-1, "<-----|\n");
 #endif
 #ifdef DEBUG
@@ -689,7 +713,6 @@ tunableParams_p CoCoPeLiaModelMultidevOptimizeSplit(short used_devs, short* used
 	lprintf(lvl, "Best %d percentages : [ ", used_devs);
 	for (int i =0; i < used_devs; i++) fprintf(stderr, "%.5lf ", outparams->rel_dev_score[i]);
 	lprintf(0, "]\n");
-	lprintf(lvl, "Predict T=%ld : t_pred = %lf\n", outparams->T, outparams->pred_t);
 #endif
 #ifdef TEST
 	timer = csecond() - timer;
