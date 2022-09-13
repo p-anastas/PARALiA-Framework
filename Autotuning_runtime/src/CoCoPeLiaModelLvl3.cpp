@@ -606,6 +606,12 @@ long int CoCopeLiaMaxAllowedTBLAS3(CoCoModel_p model){
 		return fmin(fmin(model->D1, model->D2),model->D3);
 }
 
+long int CoCopeLiaGetSKNumBLAS3(CoCoModel_p model, int T){
+		return (model->D1/T + ((model->D1%T)? 1:0))
+			*(model->D2/T + ((model->D2%T)? 1:0))
+			*(model->D3/T + ((model->D3%T)? 1:0));
+}
+
 ///  Initializes the model for gemm
 CoCoModel_p CoCoModelFuncInitBLAS3(CoCoModel_p out_model, short dev_id, const char* func, void* func_data){
 	if ( !strcmp(func, "Dgemm") || !strcmp(func, "Sgemm"))

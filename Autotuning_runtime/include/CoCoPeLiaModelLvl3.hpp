@@ -11,6 +11,7 @@
 
 CoCoModel_p CoCoModelFuncInitBLAS3(CoCoModel_p out_model, short dev_id, const char* func, void* func_data);
 
+long int CoCopeLiaGetSKNumBLAS3(CoCoModel_p model, int T);
 long int CoCopeLiaMinAllowedTBLAS3(CoCoModel_p model);
 long int CoCopeLiaMaxAllowedTBLAS3(CoCoModel_p model);
 

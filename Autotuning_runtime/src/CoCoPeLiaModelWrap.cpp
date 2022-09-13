@@ -229,6 +229,21 @@ long int CoCoPeLiaGPUexecGetElem(CoCoModel_p model, int idx){
 	return 0;
 }
 
+long int CoCopeLiaGetSKNum(CoCoModel_p model, int T){
+	switch(model->problem){
+		case BLAS1:
+			error("CoCopeLiaGetSKNum: BLAS 1 Not implemented\n");
+		case BLAS2:
+			error("CoCopeLiaGetSKNum: BLAS 2 Not implemented\n");
+			return 0;
+		case BLAS3:
+			return CoCopeLiaGetSKNumBLAS3(model, T);
+		default:
+			error("CoCopeLiaGetSKNum: Invalid Problem %s", printProblem(model->problem));
+	}
+	return 0;
+}
+
 void CoCoPeLiaNormalizeSplit(double* score_list, int list_len){
 	for (int i = 0; i < list_len; i++)
 	if(score_list[i] < NORMALIZE_NEAR_SPLIT_LIMIT){
@@ -539,6 +554,98 @@ tunableParams_p CoCoPeLiaModelMultidevOptimizeTile(short used_devs, short* used_
 #ifdef TEST
 	double timer = csecond();
 #endif
+
+	tunableParams_p outparams = tunableParamsInit();
+	outparams->rel_dev_score = NULL;
+	outparams->pred_t = 0;
+
+	int best_idx = -1;
+	double temp_score = 0;
+
+	short first_model_idx = (used_dev_ids[0] == -1) ? LOC_NUM - 1 : used_dev_ids[0];
+	CoCoModel_p model = dev_model_list[first_model_idx];
+	long int min_T = 0, max_allowed_T = 0, ctr = 0;
+	max_allowed_T = CoCopeLiaMaxT(model);
+	min_T = CoCopeLiaMinT(model);
+#ifdef PDEBUG
+	lprintf(lvl, "min_T = %ld, max_allowed_T = %ld\n",
+		min_T, max_allowed_T);
+#endif
+	if (min_T > max_allowed_T){
+		outparams->T = max_allowed_T;
+#ifdef PDEBUG
+		lprintf(lvl, "min_T = %ld > max_allowed_T = %ld: returning T = %ld",
+			min_T, max_allowed_T, max_allowed_T);
+#endif
+		return outparams;
+}
+
+/// TODO: Maybe define the lowest suggested Tile sizes?
+
+/// Not very sciency, but also not a priority currently
+#define MAX_DESIRED_SK_DEV 128
+#define MIN_DESIRED_SK_DEV 16
+	int actually_used_devices = used_devs;
+	for (int i = 0 ; i < used_devs; i++)  if (dev_idx_ignore[i]) actually_used_devices--;
+	long int max_sk = MAX_DESIRED_SK_DEV*actually_used_devices, min_sk = MIN_DESIRED_SK_DEV*actually_used_devices;
+#ifdef PDEBUG
+	lprintf(lvl, "Desired max_sk = %ld, min_sk = %ld\n",
+		max_sk, min_sk);
+#endif
+	long int max_T_sk = CoCopeLiaGetSKNum(model, max_allowed_T), min_T_sk = CoCopeLiaGetSKNum(model, min_T);
+#ifdef PDEBUG
+	lprintf(lvl, "max_T_sk = %ld, min_T_sk = %ld\n",
+		max_T_sk, min_T_sk);
+#endif
+	if (max_T_sk > min_sk) min_sk = max_T_sk;
+	if (min_T_sk < max_sk) max_sk = min_T_sk;
+#ifdef PDEBUG
+	lprintf(lvl, "min_sk = %ld, max_sk = %ld\n",
+		min_sk, max_sk);
+#endif
+
+/// Assume having no remainders in SK-spliting is the most important.
+/// TODO: For future could also take into account specific "good" tiles per device.
+
+	int D1_dummy = model->D1, D2_Dummy = (model->D2 == -1)? D1_dummy: model->D2, D3_Dummy = (model->D3 == -1)? D1_dummy: model->D3;
+	int candidate_T = gcd(D1_dummy, D2_Dummy, D3_Dummy);
+	if(candidate_T == 1) candidate_T = std::min(D1_dummy, std::min(D2_Dummy, D3_Dummy));
+	while(CoCopeLiaGetSKNum(model, candidate_T) < min_sk) candidate_T/=2;
+	while(CoCopeLiaGetSKNum(model, candidate_T) > max_sk) candidate_T++;
+	if (CoCopeLiaGetSKNum(model, candidate_T) < min_sk){
+		lprintf(lvl, "Default GCD method for obtaining T failed, resorting in secondary method - performance might degrade\n");
+			while(CoCopeLiaGetSKNum(model, candidate_T) < min_sk) candidate_T/=2;
+	}
+
+	outparams->T = candidate_T;
+#ifdef PDEBUG
+	lprintf(lvl, "====================================\n");
+	lprintf(lvl, "Predict T=%ld : No t_pred provided\n", outparams->T);
+#endif
+#ifdef TEST
+	timer = csecond() - timer;
+	lprintf(lvl, "Tile selection time:%lf ms\n", timer*1000);
+	lprintf(lvl-1, "<-----|\n");
+#endif
+#ifdef DEBUG
+	lprintf(lvl, "outparams->T = %ld\n : outparams->pred_t = %lf ms\n", outparams->T, outparams->pred_t);
+	lprintf(lvl-1, "<-----|\n");
+#endif
+	return outparams;
+}
+
+
+tunableParams_p CoCoPeLiaModelMultidevOptimizeTile_modelBased(short used_devs, short* used_dev_ids,
+	int* dev_idx_ignore, CoCoModel_p* dev_model_list){
+	short lvl = 3;
+#ifdef DEBUG
+	lprintf(lvl-1, "|-----> CoCoPeLiaModelMultidevOptimizeTile_modelBased(used_devs=%d, used_dev_ids= [ ", used_devs);
+	for (int i =0; i < used_devs; i++) lprintf(0, "%d ", used_dev_ids[i]);
+	lprintf(0, "]\n");
+#endif
+#ifdef TEST
+	double timer = csecond();
+#endif
 	short first_model_idx = (used_dev_ids[0] == -1) ? LOC_NUM - 1 : used_dev_ids[0];
 	CoCoModel_p model = dev_model_list[first_model_idx];
 	tunableParams_p outparams = tunableParamsInit();
@@ -589,7 +696,7 @@ tunableParams_p CoCoPeLiaModelMultidevOptimizeTile(short used_devs, short* used_
 					used_model = COCOPELIA_REUSE;
 					break;
 				default:
-					error("CoCoPeLiaModelMultidevOptimizeTile:\
+					error("CoCoPeLiaModelMultidevOptimizeTile_modelBased:\
 					model->problem switch default reached\n");
 			}
 				temp_t = CoCoPeLiaModelPredict(model, trial_T, used_model);

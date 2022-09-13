@@ -222,7 +222,7 @@ size_t count_lines(FILE* fp); // TODO: Where is this used?
 void check_benchmark(char *filename);
 
 /*****************************************************/
-
+int gcd (int a, int b, int c);
 inline short idxize(short num){ return (num == -1) ? LOC_NUM - 1: num;}
 inline short deidxize(short idx){ return (idx == LOC_NUM - 1) ? -1 : idx;}
 inline short remote(short loc, short other_loc){ return (loc == other_loc) ? 0 : 1;}

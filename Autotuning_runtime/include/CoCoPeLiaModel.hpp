@@ -34,8 +34,9 @@ enum ModelType{
 	COCOPELIA_BIDIRECTIONAL = 5,
 	COCOPELIA_REUSE = 6,
 	COCOPELIA_PIPELINE_EMULATE = 7,
-	COCOPELIA_HETERO_REUSE = 8,
-	COCOPELIA_HETERO_BIDIRECTIONAL = 9
+	// PARALia Model additions/modifications
+	COCOPELIA_HETERO_REUSE = 9,
+	COCOPELIA_HETERO_BIDIRECTIONAL = 10
 };
 const char* printModel(ModelType mode);
 
@@ -116,6 +117,8 @@ double CoCopeLiaPredictDataLoc(CoCoModel_p model, long int T);
 double CoCopeLiaPredictBidirectional(CoCoModel_p model, long int T);
 double CoCopeLiaPredictReuse(CoCoModel_p model, long int T);
 double CoCopeLiaPipelineEmulate(CoCoModel_p model, long int T);
+
+double PARALiaPredictReuseKernelOverBLAS3(CoCoModel_p model, long int T);
 
 long int CoCopeLiaMinT(CoCoModel_p model);
 long int CoCopeLiaMaxT(CoCoModel_p model);

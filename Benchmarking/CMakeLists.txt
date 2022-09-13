@@ -74,7 +74,7 @@ configure_file(${BENCH_DIR_INC}/BackenedLibsWrapped.hpp ${BENCH_INSTALL_INC}/Bac
 configure_file(${BENCH_DIR_INC}/BLASxWrapped.hpp ${BENCH_INSTALL_INC}/BLASxWrapped.hpp COPYONLY)
 
 #Enable results validation in "Runner" scripts (adds extra overhead, "Tester" scripts should be used for result validation)
-add_definitions(-DRUNVALIDATION)
+#add_definitions(-DRUNVALIDATION)
 #Enable checking the existing logs for each benchmark before executing it, to avoid running the same exact test multiple times.
 #add_definitions(-DCHECKLOG)
 

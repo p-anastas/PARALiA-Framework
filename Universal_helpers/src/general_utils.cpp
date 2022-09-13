@@ -30,6 +30,12 @@ double csecond(void) {
   return ((double)micros / 1000000.0);
 }
 
+int gcd (int a, int b, int c)
+{
+  for(int i = std::min(a, std::min(b, c)); i>1; i--) if(( a%i == 0 ) and ( b%i == 0 ) and ( c%i == 0 )) return i;
+  return 1;
+}
+
 void tab_print(int lvl){
 	for (int rep=0;rep<lvl;rep++) fprintf(stderr, "\t");
 }
