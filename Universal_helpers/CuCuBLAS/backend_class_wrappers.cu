@@ -403,7 +403,7 @@ event_status Event::query_status(){
 		else if (err == cudaSuccess && local_status == RECORDED) local_status = status = COMPLETE;
 		else if (err == cudaErrorNotReady && local_status == RECORDED);
 		else if (err == cudaErrorNotReady && local_status == UNRECORDED){
-#ifdef DEBUG
+#ifdef UDEBUG
 			// this should not happen in a healthy locked update scenario.
 			warning("Event::query_status(): cudaErrorNotReady with status == UNRECORDED should not happen\n");
 #endif
@@ -413,7 +413,7 @@ event_status Event::query_status(){
 			;
 			// TODO: This should not happen in a healthy locked update scenario.
 			// But it does since no locking yet. Not sure of its effects.
-#ifdef DEBUG
+#ifdef UDEBUG
 			warning("Event::query_status(): cudaSuccess with local_status == CHECKED should not happen\n");
 #endif
 		}

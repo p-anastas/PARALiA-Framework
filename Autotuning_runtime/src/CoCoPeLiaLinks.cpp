@@ -63,10 +63,10 @@ void InitHopMap(double link_cost [][LOC_NUM], double link_cost_out [][LOC_NUM]){
 void CoCoUpdateLinkSpeed1D(CoControl_p autotuned_vals, CoCoModel_p* glob_model){
   short lvl = 2;
   #ifdef DDEBUG
-    lprintf(lvl, "|-----> CoCoUpdateLinkSpeed2D(dev_num = %d, LOC_NUM = %d)\n", autotuned_vals->dev_num, LOC_NUM);
+    lprintf(lvl, "|-----> CoCoUpdateLinkSpeed2D(dev_num = %d, LOC_NUM = %d)\n", autotuned_vals->active_unit_num, LOC_NUM);
   #endif
-  for (int i = 0; i < autotuned_vals->dev_num; i++){
-		short dev_id_idi = idxize(autotuned_vals->dev_ids[i]);
+  for (int i = 0; i < autotuned_vals->active_unit_num; i++){
+		short dev_id_idi = idxize(autotuned_vals->active_unit_id_list[i]);
     for(int j = 0; j < LOC_NUM; j++){
       short dev_id_idj = idxize(j);
       if(dev_id_idi == dev_id_idj) link_cost_1D[dev_id_idi][dev_id_idj] = 0;
@@ -100,10 +100,10 @@ void CoCoUpdateLinkSpeed1D(CoControl_p autotuned_vals, CoCoModel_p* glob_model){
 void CoCoUpdateLinkSpeed2D(CoControl_p autotuned_vals, CoCoModel_p* glob_model){
   short lvl = 2;
   #ifdef DDEBUG
-    lprintf(lvl, "|-----> CoCoUpdateLinkSpeed2D(dev_num = %d, LOC_NUM = %d)\n", autotuned_vals->dev_num, LOC_NUM);
+    lprintf(lvl, "|-----> CoCoUpdateLinkSpeed2D(dev_num = %d, LOC_NUM = %d)\n", autotuned_vals->active_unit_num, LOC_NUM);
   #endif
-  for (int i = 0; i < autotuned_vals->dev_num; i++){
-		short dev_id_idi = idxize(autotuned_vals->dev_ids[i]);
+  for (int i = 0; i < autotuned_vals->active_unit_num; i++){
+		short dev_id_idi = idxize(autotuned_vals->active_unit_id_list[i]);
     for(int j = 0; j < LOC_NUM; j++){
       short dev_id_idj = idxize(j);
       if(dev_id_idi == dev_id_idj) link_cost_2D[dev_id_idi][dev_id_idj] = 0;

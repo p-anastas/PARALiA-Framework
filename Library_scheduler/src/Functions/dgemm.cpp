@@ -17,10 +17,9 @@ pthread_barrier_t  SoftCache_alloc_barrier_gemm;
 
 gemm_backend_in_p initial_gemm = NULL;
 
-CoCoModel_p glob_model_gemm[128] = {NULL};
-//Cache_p Global_Cache[LOC_NUM] = {NULL};
-CoControl_p predef_vals_gemm = NULL;
-CoControl_p autotuned_vals_gemm = NULL;
+CoCoModel_p glob_model_gemm[LOC_NUM] = {NULL};
+CoControl_p autotune_controller_gemm = NULL;
+int autotune_controller_limited = 0;
 int MGridSz = 0, NGridSz = 0, KGridSz = 0;
 
 #ifdef STEST
@@ -195,12 +194,12 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 		}
 		while(__sync_lock_test_and_set(&Sk_select_lock_gemm, 1));
 
-		// if(curr_sk_idx_gemm < autotuned_vals_gemm->dev_num && autotuned_vals_gemm->dev_ids[curr_sk_idx_gemm] != dev_id){
+		// if(curr_sk_idx_gemm < autotune_controller_gemm->active_unit_num && autotune_controller_gemm->active_unit_id_list[curr_sk_idx_gemm] != dev_id){
 		// 	__sync_lock_release(&Sk_select_lock_gemm);
 		// 	continue;
 		// } // Fire first round in device order
 
-		// if(autotuned_vals_gemm->dev_ids[curr_sk_idx_gemm] != dev_id){
+		// if(autotune_controller_gemm->active_unit_id_list[curr_sk_idx_gemm] != dev_id){
 		// 	__sync_lock_release(&Sk_select_lock_gemm);
 		// 	continue;
 		// } // Fire all rounds in device order
@@ -211,9 +210,9 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 //		lprintf(lvl, "CoCopeLiaDgemmAgentVoid(%d): Got curr = NULL, repeating search\n", dev_id);
 //#endif
 
-			// if (curr_sk_idx_gemm < autotuned_vals_gemm->dev_num) curr_sk_idx_gemm++; // Fire first round in device order
+			// if (curr_sk_idx_gemm < autotune_controller_gemm->active_unit_num) curr_sk_idx_gemm++; // Fire first round in device order
 
-			// if (curr_sk_idx_gemm == autotuned_vals_gemm->dev_num -1) curr_sk_idx_gemm = 0;
+			// if (curr_sk_idx_gemm == autotune_controller_gemm->active_unit_num -1) curr_sk_idx_gemm = 0;
 			// else curr_sk_idx_gemm++; // Fire all rounds in device order
 
 			__sync_lock_release(&Sk_select_lock_gemm);
@@ -239,9 +238,9 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 		curr->request_data();
 		CoCoGemmUpdatePointers(curr);
 
-		//if (curr_sk_idx_gemm < autotuned_vals_gemm->dev_num) curr_sk_idx_gemm++;  // Fire first round in device order
+		//if (curr_sk_idx_gemm < autotune_controller_gemm->active_unit_num) curr_sk_idx_gemm++;  // Fire first round in device order
 
-		// if (curr_sk_idx_gemm == autotuned_vals_gemm->dev_num -1) curr_sk_idx_gemm = 0;
+		// if (curr_sk_idx_gemm == autotune_controller_gemm->active_unit_num -1) curr_sk_idx_gemm = 0;
 		// else curr_sk_idx_gemm++; // Fire all rounds in device order
 
 		__sync_lock_release(&Sk_select_lock_gemm);
@@ -344,8 +343,8 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 	B_asset->prepareAsync(&asset_thread_id[1], attr);
 	C_asset->prepareAsync(&asset_thread_id[2], attr);
 
-	tunableParams_p best_pred_p = CoCoAutotuneParameters("Dgemm", initial_gemm,
-  &autotuned_vals_gemm, glob_model_gemm, predef_vals_gemm, reuse_model_flag);
+	double autotune_timer = CoCoAutotuneParameters(autotune_controller_gemm, "Dgemm",
+	initial_gemm, glob_model_gemm, reuse_model_flag);
 
 	void* res;
 	for(int i=0; i<3;i++){
@@ -360,27 +359,27 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 	cpu_timer = csecond();
 #endif
 
-	CoCoUpdateLinkSpeed2D(autotuned_vals_gemm, glob_model_gemm);
+	CoCoUpdateLinkSpeed2D(autotune_controller_gemm, glob_model_gemm);
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer;
 	lprintf(lvl, "Initializing link values -> t_link_init = %lf ms\n", cpu_timer*1000);
 	cpu_timer = csecond();
 #endif
 
-	size_t T = autotuned_vals_gemm->T;
+	size_t T = autotune_controller_gemm->T;
 
 	int GPU_Block_num, Block_num = 1 + (A_asset->dim1/T + ((A_asset->dim1%T)? 1 : 0))* (A_asset->dim2/T + ((A_asset->dim2%T)? 1 : 0)) +
 				(B_asset->dim1/T + ((B_asset->dim1%T)? 1 : 0))* (B_asset->dim2/T + ((B_asset->dim2%T)? 1 : 0)) +
 				(C_asset->dim1/T + ((C_asset->dim1%T)? 1 : 0))* (C_asset->dim2/T + ((C_asset->dim2%T)? 1 : 0));
 	long long Block_sz = 	T*T*sizeof(VALUE_TYPE);
 	GPU_Block_num = Block_num;
-	if(autotuned_vals_gemm->cache_limit > 0){
-		int max_block_num = autotuned_vals_gemm->cache_limit/Block_sz;
+	if(autotune_controller_gemm->cache_limit > 0){
+		int max_block_num = autotune_controller_gemm->cache_limit/Block_sz;
 		if(max_block_num < Block_num){
 			//#ifdef DEBUG
 			if(!reuse_model_flag){
 				lprintf(0, "CoCopeLiaDgemm: Input cache limit %lld forces problem to use %d blocks\
-					instead of %d needed for the full problem\n", autotuned_vals_gemm->cache_limit, max_block_num, Block_num);
+					instead of %d needed for the full problem\n", autotune_controller_gemm->cache_limit, max_block_num, Block_num);
 				lprintf(0, "====================================\n");
 			}
 			// With Parallel backends unfortunately == SK_blocks + Max_Exclusive_Blocks - 1
@@ -434,8 +433,8 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 	SK_wrap->dev_id = -42;
 	remaining_Subkernels_gemm = Subkernel_num_gemm;
 #ifdef DEBUG
-	lprintf(lvl, "Subkernel_num_gemm = %d {M,N,K}GridSz = {%d, %d, %d}, autotuned_vals_gemm->dev_num = %d\n\n",
-		Subkernel_num_gemm, MGridSz, NGridSz, KGridSz, autotuned_vals_gemm->dev_num);
+	lprintf(lvl, "Subkernel_num_gemm = %d {M,N,K}GridSz = {%d, %d, %d}, autotune_controller_gemm->active_unit_num = %d\n\n",
+		Subkernel_num_gemm, MGridSz, NGridSz, KGridSz, autotune_controller_gemm->active_unit_num);
 #endif
 
 #ifdef TEST
@@ -445,19 +444,16 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 #endif
 
 //#ifndef RUNTIME_SCHEDULER_VERSION
-	autotuned_vals_gemm->Subkernel_dev_id_list = (int**) malloc(autotuned_vals_gemm->dev_num*sizeof(int*));
-	for (int devidx = 0; devidx < autotuned_vals_gemm->dev_num; devidx++)
-		autotuned_vals_gemm->Subkernel_dev_id_list[devidx] = (int*) malloc(Subkernel_num_gemm*sizeof(int));
 	if (!strcmp(DISTRIBUTION, "ROUND-ROBIN"))
-		CoCoDistributeSubkernelsRoundRobin(autotuned_vals_gemm, best_pred_p, Subkernel_num_gemm);
+		CoCoDistributeSubkernelsRoundRobin(autotune_controller_gemm, Subkernel_num_gemm);
 	else if (!strcmp(DISTRIBUTION, "SPLIT-NAIVE"))
-		CoCoDistributeSubkernelsNaive(autotuned_vals_gemm, best_pred_p, Subkernel_num_gemm);
+		CoCoDistributeSubkernelsNaive(autotune_controller_gemm, Subkernel_num_gemm);
 	else if (!strcmp(DISTRIBUTION, "SPLIT-CHUNKS-ROBIN"))
-		CoCoDistributeSubkernelsRoundRobinChunk(autotuned_vals_gemm, best_pred_p, Subkernel_num_gemm, KGridSz);
+		CoCoDistributeSubkernelsRoundRobinChunk(autotune_controller_gemm, Subkernel_num_gemm, KGridSz);
 	else if (!strcmp(DISTRIBUTION, "SPLIT-CHUNKS-ROBIN-REVERSE"))
-		CoCoDistributeSubkernelsRoundRobinChunkReverse(autotuned_vals_gemm, best_pred_p, Subkernel_num_gemm, KGridSz);
+		CoCoDistributeSubkernelsRoundRobinChunkReverse(autotune_controller_gemm, Subkernel_num_gemm, KGridSz);
 	else if (!strcmp(DISTRIBUTION, "2D-BLOCK-CYCLIC"))
-		CoCoDistributeSubkernels2DBlockCyclic(autotuned_vals_gemm, best_pred_p, MGridSz, NGridSz, KGridSz);
+		CoCoDistributeSubkernels2DBlockCyclic(autotune_controller_gemm, MGridSz, NGridSz, KGridSz);
 	else error("CoCopeLiaDgemm: Unknown Subkernel Distribution %s\n", DISTRIBUTION);
 //#endif
 
@@ -468,66 +464,54 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 #endif
 
 	int used_devices = 0;
-	for (int d = 0 ; d < autotuned_vals_gemm->dev_num; d++)
-		if(autotuned_vals_gemm->Subkernels_per_dev[d] > 0 ) used_devices++;
-		else if(autotuned_vals_gemm->Subkernels_per_dev[d] < 0 )
-			error("CoCoPeLiaDgemm: autotuned_vals_gemm->Subkernels_per_dev[%d] = %d\n",
-				d, autotuned_vals_gemm->Subkernels_per_dev[d]);
-		else{
-			free(autotuned_vals_gemm->Subkernel_dev_id_list[d]);
-			for (int d_move = d; d_move < autotuned_vals_gemm->dev_num - 1; d_move++){
-				autotuned_vals_gemm->Subkernels_per_dev[d_move] = autotuned_vals_gemm->Subkernels_per_dev[d_move+1];
-				autotuned_vals_gemm->Subkernel_dev_id_list[d_move] = autotuned_vals_gemm->Subkernel_dev_id_list[d_move+1];
-				autotuned_vals_gemm->dev_ids[d_move] = autotuned_vals_gemm->dev_ids[d_move+1];
-			}
-		}
+	for (int d = 0 ; d < autotune_controller_gemm->active_unit_num; d++)
+		if(autotune_controller_gemm->Subkernels_per_dev[d] > 0 ) used_devices++;
+		else if(autotune_controller_gemm->Subkernels_per_dev[d] < 0 )
+			error("CoCoPeLiaDgemm: autotune_controller_gemm->Subkernels_per_dev[%d] = %d\n",
+				d, autotune_controller_gemm->Subkernels_per_dev[d]);
 //#ifdef DEBUG
 if(!reuse_model_flag){
-		lprintf(0, "used_devices=%d out of selected autotuned_vals_gemm->dev_num=%d\n", used_devices, autotuned_vals_gemm->dev_num);
+		lprintf(0, "used_devices=%d out of selected autotune_controller_gemm->active_unit_num=%d\n", used_devices, autotune_controller_gemm->active_unit_num);
 		lprintf(0, "====================================\n");
 }
 //#endif
-	autotuned_vals_gemm->dev_num = used_devices;
-
-#ifdef TEST
-	cpu_timer = csecond() - cpu_timer;
-	lprintf(lvl, "Subkernel Correct Split devices -> t_subkernel_split = %lf ms\n", cpu_timer*1000);
-	cpu_timer = csecond();
-#endif
+	//autotune_controller_gemm->active_unit_num = used_devices;
 
 	//s = pthread_attr_init(&attr);
 	//if (s != 0) error("CoCopeLiaDgemm: pthread_attr_init failed s=%d\n", s);
 
-	pthread_t thread_id[autotuned_vals_gemm->dev_num];
-	kernel_pthread_wrap_p thread_dev_data[autotuned_vals_gemm->dev_num];
+	pthread_t thread_id[autotune_controller_gemm->active_unit_num];
+	kernel_pthread_wrap_p thread_dev_data[autotune_controller_gemm->active_unit_num];
 
-	// create a barrier object with a count of autotuned_vals_gemm->dev_num + 1
-	pthread_barrier_init (&SoftCache_alloc_barrier_gemm, NULL, autotuned_vals_gemm->dev_num + 1);
+	// create a barrier object with a count of autotune_controller_gemm->active_unit_num + 1
+	pthread_barrier_init (&SoftCache_alloc_barrier_gemm, NULL, autotune_controller_gemm->active_unit_num + 1);
 
-	for(int d=0; d < autotuned_vals_gemm->dev_num; d++){
-		if(best_pred_p->rel_dev_score[d] == 0.0)
-			error("CoCopeLiaDgemm: best_pred_p->rel_dev_score[%d] == 0 in final used best_pred_p\n",d);
+	int used_dev_ctr = 0;
+	for(int d=0; d < autotune_controller_gemm->active_unit_num; d++){
+		if(autotune_controller_gemm->Subkernels_per_dev[d] == 0 ) 
+			error("CoCoPeLiaDgemm: Leftover autotune_controller_gemm->Subkernels_per_dev[%d] == 0", d);
 
-		// Check/Enable peer access between participating GPUs
-		CoCoEnableLinks(d, autotuned_vals_gemm->dev_ids, autotuned_vals_gemm->dev_num);
+		// Check/Enable peer access between all system units
+		CoCoEnableLinks(d, LOC_NUM);
 
-		thread_dev_data[d] = (kernel_pthread_wrap_p) malloc(sizeof(struct kernel_pthread_wrap));
-		thread_dev_data[d]->dev_id = autotuned_vals_gemm->dev_ids[d];
+		thread_dev_data[used_dev_ctr] = (kernel_pthread_wrap_p) malloc(sizeof(struct kernel_pthread_wrap));
+		thread_dev_data[used_dev_ctr]->dev_id = autotune_controller_gemm->active_unit_id_list[d];
 
 #ifndef RUNTIME_SCHEDULER_VERSION
-		thread_dev_data[d]->SubkernelNumDev = autotuned_vals_gemm->Subkernels_per_dev[d];
+		thread_dev_data[used_dev_ctr]->SubkernelNumDev = autotune_controller_gemm->Subkernels_per_dev[d];
 #else
-		thread_dev_data[d]->SubkernelNumDev = Subkernel_num_gemm;
+		thread_dev_data[used_dev_ctr]->SubkernelNumDev = Subkernel_num_gemm;
 #endif
-		thread_dev_data[d]->SubkernelListDev = (Subkernel**) malloc(thread_dev_data[d]->SubkernelNumDev*sizeof(Subkernel*));
+		thread_dev_data[used_dev_ctr]->SubkernelListDev = (Subkernel**) malloc(thread_dev_data[used_dev_ctr]->SubkernelNumDev*sizeof(Subkernel*));
 #ifndef RUNTIME_SCHEDULER_VERSION
-		for(int skitt = 0; skitt < autotuned_vals_gemm->Subkernels_per_dev[d]; skitt++)
-			thread_dev_data[d]->SubkernelListDev[skitt] = Subkernel_list_gemm[autotuned_vals_gemm->Subkernel_dev_id_list[d][skitt]];
+		for(int skitt = 0; skitt < autotune_controller_gemm->Subkernels_per_dev[d]; skitt++)
+			thread_dev_data[used_dev_ctr]->SubkernelListDev[skitt] = Subkernel_list_gemm[autotune_controller_gemm->Subkernel_dev_id_list[d][skitt]];
 #endif
 
-		s = pthread_create(&thread_id[d], &attr,
-                                  &CoCopeLiaDgemmAgentVoid, thread_dev_data[d]);
+		s = pthread_create(&thread_id[used_dev_ctr], &attr,
+                                  &CoCopeLiaDgemmAgentVoid, thread_dev_data[used_dev_ctr]);
 
+		used_dev_ctr++;
 	}
 	pthread_barrier_wait (&SoftCache_alloc_barrier_gemm);
 
@@ -535,8 +519,8 @@ if(!reuse_model_flag){
 	//B_asset->DrawTileMap();
 	//C_asset->DrawTileMap();
 
-	for(int d=0; d<autotuned_vals_gemm->dev_num;d++){
-		s = pthread_join(thread_id[d], &res);
+	for(used_dev_ctr=0; used_dev_ctr<used_devices;used_dev_ctr++){
+		s = pthread_join(thread_id[used_dev_ctr], &res);
 		if (s != 0) error("CoCopeLiaDgemm: pthread_join failed with exit value %d", s);
 		//free(res);      /* Free memory allocated by thread */
 	}
@@ -559,7 +543,7 @@ if(!reuse_model_flag){
 	#endif
 
 #ifdef STEST
-	STEST_print_SK(thread_dev_data, gemm_entry_ts, autotuned_vals_gemm->dev_num);
+	STEST_print_SK(thread_dev_data, gemm_entry_ts, autotune_controller_gemm->active_unit_num);
 #endif
 
 #ifdef DDEBUG
@@ -579,7 +563,7 @@ if(!reuse_model_flag){
 #endif
 
 #ifndef BACKEND_RES_REUSE_ENABLE
-	for(int i=0; i<autotuned_vals_gemm->dev_num;i++) CoCoPeLiaFreeResources(autotuned_vals_gemm->dev_ids[i]);
+	for(int i=0; i<autotune_controller_gemm->active_unit_num;i++) CoCoPeLiaFreeResources(autotune_controller_gemm->active_unit_id_list[i]);
 #endif
 
 #ifdef TEST
@@ -627,20 +611,22 @@ if(!reuse_model_flag){
 #ifdef TEST
 	lprintf(lvl-1, "<-----|\n");
 #endif
-	return autotuned_vals_gemm;
+	return autotune_controller_gemm;
 }
 
 /// A modification of CoCopeLiaDgemm but with given parameters (mainly for performance/debug purposes)
-CoControl_p CoCopeLiaDgemmControled(char TransA,  char TransB, size_t M, size_t N, size_t K, VALUE_TYPE alpha, VALUE_TYPE* A, size_t ldA, VALUE_TYPE* B, size_t ldB, VALUE_TYPE beta, VALUE_TYPE* C, size_t ldC, CoControl_p predef_control_values){
-	if (predef_control_values == NULL) return CoCopeLiaDgemm(TransA, TransB,  M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC);
-	if (predef_vals_gemm == NULL) predef_vals_gemm = (CoControl_p) malloc(sizeof(struct CoControl));
-	predef_vals_gemm->T = predef_control_values->T;
-	predef_vals_gemm->dev_num = predef_control_values->dev_num;
+CoControl_p CoCopeLiaDgemmControled(char TransA,  char TransB, size_t M, size_t N, size_t K, VALUE_TYPE alpha, VALUE_TYPE* A, size_t ldA, VALUE_TYPE* B, size_t ldB, VALUE_TYPE beta, VALUE_TYPE* C, size_t ldC, CoControl_p predef_controller){
+	if (predef_controller == NULL){
+		warning("Calling CoCopeLiaDgemmControled with empty controller -> falling back to full autotune version \'CoCopeLiaDgemm\'\n");
+		return CoCopeLiaDgemm(TransA, TransB,  M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC);
+	}
+	autotune_controller_limited = 1;
+	if (autotune_controller_gemm == NULL) autotune_controller_gemm = create_autotune_controller();
+	autotune_controller_gemm->T = predef_controller->T;
+	autotune_controller_gemm->active_unit_num = predef_controller->active_unit_num;
 	for(int idx =0; idx < LOC_NUM; idx++)
-		predef_vals_gemm->dev_ids[idx] = predef_control_values->dev_ids[idx];
-	predef_vals_gemm->cache_limit = predef_control_values->cache_limit;
+		autotune_controller_gemm->active_unit_id_list[idx] = predef_controller->active_unit_id_list[idx];
+	autotune_controller_gemm->cache_limit = predef_controller->cache_limit;
 	CoControl_p return_vals = CoCopeLiaDgemm(TransA, TransB,  M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC);
-	free(predef_vals_gemm);
-	predef_vals_gemm = NULL;
 	return return_vals;
 }

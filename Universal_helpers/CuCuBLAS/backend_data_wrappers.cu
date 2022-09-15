@@ -307,40 +307,41 @@ void CoCoParallelVecInitHost(VALUETYPE *vec, long long length, int seed)
 template void CoCoParallelVecInitHost<double>(double *vec, long long length, int seed);
 template void CoCoParallelVecInitHost<float>(float *vec, long long length, int seed);
 
-void CoCoEnableLinks(short target_dev_i, short dev_ids[], short num_devices){
+void CoCoEnableLinks(short target_dev_i, short num_devices){
 	short lvl = 2;
 #ifdef DEBUG
-	lprintf(lvl-1, "|-----> CoCoPeLiaEnableGPUPeer(%d,dev_ids,%d)\n", target_dev_i, num_devices);
+	lprintf(lvl-1, "|-----> CoCoPeLiaEnableGPUPeer(%d,%d)\n", target_dev_i, num_devices);
 #endif
-
 #ifdef TEST
 	lprintf(lvl-1, "|-----> CoCoPeLiaEnableGPUPeer\n");
 	double cpu_timer = csecond();
 #endif
-	CoCoPeLiaSelectDevice(dev_ids[target_dev_i]);
+	int dev_id_target = deidxize(target_dev_i);
+	CoCoPeLiaSelectDevice(dev_id_target);
 	for(int j=0; j<num_devices;j++){
-		if (dev_ids[target_dev_i] == dev_ids[j] || dev_ids[target_dev_i] == -1 || dev_ids[j] == -1) continue;
+		int dev_id_current = deidxize(j);
+		if (dev_id_target == dev_id_current || dev_id_target == -1 || dev_id_current == -1) continue;
 		int can_access_peer;
-		massert(cudaSuccess == cudaDeviceCanAccessPeer(&can_access_peer, dev_ids[target_dev_i], dev_ids[j]), "CoCopeLiaDgemm: cudaDeviceCanAccessPeer failed\n");
+		massert(cudaSuccess == cudaDeviceCanAccessPeer(&can_access_peer, dev_id_target, dev_id_current), "CoCopeLiaDgemm: cudaDeviceCanAccessPeer failed\n");
 		if(can_access_peer){
-			cudaError_t check_peer = cudaDeviceEnablePeerAccess(dev_ids[j], 0);
+			cudaError_t check_peer = cudaDeviceEnablePeerAccess(dev_id_current, 0);
 			if(check_peer == cudaSuccess){ ;
 #ifdef DEBUG
-				lprintf(lvl, "Enabled Peer access for dev %d to dev %d\n", dev_ids[target_dev_i], dev_ids[j]);
+				lprintf(lvl, "Enabled Peer access for dev %d to dev %d\n", dev_id_target, dev_id_current);
 #endif
 			}
 			else if (check_peer == cudaErrorPeerAccessAlreadyEnabled){
 				cudaGetLastError();
 #ifdef DEBUG
-				lprintf(lvl, "Peer access already enabled for dev %d to dev %d\n", dev_ids[target_dev_i], dev_ids[j]);
+				lprintf(lvl, "Peer access already enabled for dev %d to dev %d\n", dev_id_target, dev_id_current);
 #endif
 			}
-			else error("Enabling Peer access failed for %d to dev %d\n", dev_ids[target_dev_i], dev_ids[j]);
+			else error("Enabling Peer access failed for %d to dev %d\n", dev_id_target, dev_id_current);
 		}
 	}
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer;
-	lprintf(lvl, "Utiilizing Peer access for dev %d -> t_enable =%lf ms\n", dev_ids[target_dev_i], 1000*cpu_timer);
+	lprintf(lvl, "Utiilizing Peer access for dev %d -> t_enable =%lf ms\n", dev_id_target, 1000*cpu_timer);
 	cpu_timer = csecond();
 	lprintf(lvl-1, "<-----|\n");
 #endif

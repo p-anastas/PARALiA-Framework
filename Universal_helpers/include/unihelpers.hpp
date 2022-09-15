@@ -105,8 +105,8 @@ void CoCoSyncCheckErr();
 // Search for enchountered errors without synchronization.
 void CoCoASyncCheckErr();
 
-// Enable available links for target device with the provided list of (other) devices
-void CoCoEnableLinks(short target_dev_i, short dev_ids[], short num_devices);
+// Enable available links for target device with all other devices
+void CoCoEnableLinks(short target_dev_i, short num_devices);
 
 // Malloc in loc with error-checking
 void* CoCoMalloc(long long N_bytes, short loc);

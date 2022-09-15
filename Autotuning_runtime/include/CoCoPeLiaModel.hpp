@@ -50,20 +50,16 @@ const char* printProblem(ProblemType problem);
 #ifndef COCONTROL_H
 #define COCONTROL_H
 typedef struct CoControl{
-	long int T = 0;
-	short dev_num = -1;
-	short dev_ids[LOC_NUM];
-	int Subkernels_per_dev[LOC_NUM];
-	int** Subkernel_dev_id_list;
-	long long cache_limit = 0;
+	long int T = 0; /// The tiling size used for 1D/2D Data split to tiles.
+	int active_unit_num = -1; /// The number of units that will be used in the involving operation.
+	int* active_unit_id_list;	/// The list of ids of said units.
+	double* active_unit_score; /// The 'score' of each said units relative to the total task completion.
+	int* Subkernels_per_dev; /// The number of subkernels derived from this score that the unit will fire.
+	int** Subkernel_dev_id_list; /// The unit ids of said sub-kernels, IF they are predefined and not dynamic.
+	long long cache_limit = 0; /// The 'cache' size allocation limit for all devices in bytes, IF any.
+	double pred_t; /// The predicted seconds the whole operation will require using the above parameters.
 }* CoControl_p;
 #endif
-
-typedef struct tunableParams{
-	long int T;
-	double* rel_dev_score;
-	double pred_t;
-}* tunableParams_p;
 
 typedef struct flagParams{
 	char TransA;
@@ -86,17 +82,12 @@ typedef struct CoCo_model{
 
 }* CoCoModel_p;
 
-tunableParams_p CoCoAutotuneParameters(const char* routine_name, void* initial_problem_wrap,
-  CoControl_p* autotuned_vals_p, CoCoModel_p* glob_model, CoControl_p predef_vals, short reuse_model_flag);
+double CoCoAutotuneParameters(CoControl_p autotune_controller, const char* routine_name, void* initial_problem_wrap,
+  CoCoModel_p* glob_model, short reuse_model_flag);
 
-short* CoCoPeLiaDeviceSelectBest(short used_devs, short avail_devs, short* avail_dev_ids,
-	CoCoModel_p* avail_dev_model_list);
+double PARALiaMultidevOptimizeTile(CoControl_p autotune_controller, CoCoModel_p* dev_model_list);
 
-tunableParams_p CoCoPeLiaModelMultidevOptimizeTile(short used_devs, short* used_dev_ids,
-	int* dev_idx_ignore, CoCoModel_p* dev_model_list);
-
-tunableParams_p CoCoPeLiaModelMultidevOptimizeSplit(short used_devs, short* used_dev_ids,
-	CoCoModel_p* dev_model_list, long int T);
+double PARALiaMultidevOptimizeSplit(CoControl_p autotune_controller, CoCoModel_p* dev_model_list);
 
 /// A naive prediction of the full-overlap (~unreachable) performance of a modeled routine
 double CoCopeLiaPredictFullOverlap(CoCoModel_p model);
@@ -108,8 +99,8 @@ double CoCopeLiaPredictZeroOverlap(CoCoModel_p model);
 double CoCoPeLiaModelPredict(CoCoModel_p model, long int T, ModelType mode);
 
 /// Mode-Generalized prediction wrapper for heterogeneous
-double CoCoPeLiaModelPredictHetero(CoCo_model* model, short used_devs,
-	short* used_dev_ids, double* used_dev_relative_scores, long int T, ModelType mode);
+double CoCoPeLiaModelPredictHetero(CoCo_model* model, int used_devs,
+	int* used_dev_ids, double* used_dev_relative_scores, long int T, ModelType mode);
 
 double WerkhovenModelPredictWrapper(CoCo_model* model, long int T, short t_exec_method);
 double CoCopeLiaPredictBaseline(CoCoModel_p model, long int T);
@@ -125,30 +116,25 @@ long int CoCopeLiaMaxT(CoCoModel_p model);
 
 CoCoModel_p CoCoPeLiaTileModelInit(short dev_id, const char* func_name, void* func_data);
 ///  Predicts Best tile size for 3-way overlaped execution time for BLAS3 2-dim blocking.
-tunableParams_p CoCoPeLiaModelOptimizeTile(CoCoModel_p model, ModelType mode);
-
-tunableParams_p tunableParamsInit();
-const char* printTunableParams(tunableParams_p params);
+double CoCoPeLiaModelOptimizeTile(CoControl_p autotune_controller, CoCoModel_p model, ModelType mode);
 
 /// Each device gets 1/num_devices Subkernels without acounting for their size or location
-void CoCoDistributeSubkernelsNaive(CoControl_p autotune_vals, tunableParams_p best_pred_p,
-	int Subkernel_num);
+void CoCoDistributeSubkernelsNaive(CoControl_p autotune_controller, int Subkernel_num);
 
 /// A classic round-robin distribution without acounting for their size or location
-void CoCoDistributeSubkernelsRoundRobin(CoControl_p autotune_vals, tunableParams_p best_pred_p,
-	int Subkernel_num);
+void CoCoDistributeSubkernelsRoundRobin(CoControl_p autotune_controller, int Subkernel_num);
 
 /// A round-robin distribution of chunk_size subkernels each time (if possible)
-void CoCoDistributeSubkernelsRoundRobinChunk(CoControl_p autotune_vals, tunableParams_p best_pred_p,
+void CoCoDistributeSubkernelsRoundRobinChunk(CoControl_p autotune_controller,
 	int Subkernel_num, int Chunk_size);
 
 /// A round-robin distribution of chunk_size subkernels each time (if possible).
 /// Reverse subkernel order per device after distribution.
-void CoCoDistributeSubkernelsRoundRobinChunkReverse(CoControl_p autotune_vals, tunableParams_p best_pred_p,
+void CoCoDistributeSubkernelsRoundRobinChunkReverse(CoControl_p autotune_controller,
 	int Subkernel_num, int Chunk_size);
 
-void CoCoDistributeSubkernels2DBlockCyclic(CoControl_p autotune_vals,
-	  tunableParams_p pred_p, int D1GridSz, int D2GridSz, int D3GridSz);
+void CoCoDistributeSubkernels2DBlockCyclic(CoControl_p autotune_controller,
+	int D1GridSz, int D2GridSz, int D3GridSz);
 
 extern double link_cost_1D[LOC_NUM][LOC_NUM];
 extern double link_cost_2D[LOC_NUM][LOC_NUM];
