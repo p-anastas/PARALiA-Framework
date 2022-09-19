@@ -9,70 +9,13 @@
 #include "unihelpers.hpp"
 #include "CoCoPeLia.hpp"
 
-char* CoControlPrint(CoControl_p input){
-	char* outstring = (char*) malloc(256*sizeof(char));
-	int dev_ids_token = 0;
-	int ctr = 0, itter = 0;
-	if (input == NULL) sprintf(outstring,"-1,-1,-1,-1");
-	else{
-		if (input->dev_num > 0)for (int i = 0; i < input->dev_num; i++)dev_ids_token+=pow(10,idxize(input->dev_ids[i]));
-		sprintf(outstring, "%ld,%d,%d,%lld",  input->T, input->dev_num, dev_ids_token, input->cache_limit);
-	}
-	return outstring;
-}
-
-char* CoCoImplementationPrint(){
-	char* string_out = (char*) malloc (256*sizeof(char));
-#ifdef ENABLE_MUTEX_LOCKING
-#ifdef MULTIDEVICE_REDUCTION_ENABLE
-	sprintf(string_out, "ML-MR-BL%d", MAX_BUFFERING_L);
-#else
-	sprintf(string_out, "ML");
-#endif
-#elif ENABLE_PARALLEL_BACKEND
-	sprintf(string_out, "PB-L%d", MAX_BACKEND_L);
-#elif MULTIDEVICE_REDUCTION_ENABLE
-	sprintf(string_out, "MR-BL%d", MAX_BUFFERING_L);
-#elif UNIHELPER_LOCKFREE_ENABLE
-	sprintf(string_out, "UL");
-#elif BUFFER_REUSE_ENABLE
-	sprintf(string_out, "BR");
-#elif BACKEND_RES_REUSE_ENABLE
-	sprintf(string_out, "BRR");
-#elif ASYNC_ENABLE
-	sprintf(string_out, "ASYNC");
-#else
-	sprintf(string_out, "SYNC");
-#endif
-	return string_out;
-}
-
-char* CoCoDistributionPrint(){
-	char* string_out = (char*) malloc (256*sizeof(char));
-#ifdef RUNTIME_SCHEDULER_VERSION
-#ifdef DISTRIBUTION
-	sprintf(string_out, "RT-%s", DISTRIBUTION);
-#else
-#error
-#endif
-#else
-#ifdef DISTRIBUTION
-	sprintf(string_out, "ST-%s", DISTRIBUTION);
-#else
-#error
-#endif
-#endif
-	return string_out;
-}
-
-
 void ParseInputLvl1(const int argc, const char *argv[], CoControl_p* predef_control_values, double* alpha,
 	size_t* D1, size_t* inc1, size_t* inc2, short* loc1, short* loc2, short* outloc1, short* outloc2){
-	if(argc != 13) error("Incorrect input arguments. Usage: ./correct_run\n\tdev_num(auto if <0)\
-	\n\tdev_ids(form example: 0101 for devices 0,2 - ignore if dev_num < 0)\n\tT(auto if <=0)\
+	if(argc != 13) error("Incorrect input arguments. Usage: ./correct_run\n\tactive_unit_num(auto if <0)\
+	\n\tdev_ids(form example: 0101 for devices 0,2 - ignore if active_unit_num < 0)\n\tT(auto if <=0)\
 	\n\tcache_max_size(auto if <0)\n\t alpha D1 ic1 inc2 loc1 loc2 outloc1 outloc2\n");
 
-	int dev_num = atoi(argv[1]);
+	int active_unit_num = atoi(argv[1]);
 	size_t dev_ids_token = atoi(argv[2]);
 	int T = atoi(argv[3]);
 	long long cache_limit = atof(argv[4]);
@@ -80,25 +23,25 @@ void ParseInputLvl1(const int argc, const char *argv[], CoControl_p* predef_cont
 	CoControl_p temp_p;
 
 	//Tunning Parameters
-	if (dev_num < 0 && cache_limit <= 0 && T <=0 ) temp_p = *predef_control_values = NULL;
+	if (active_unit_num < 0 && cache_limit <= 0 && T <=0 ) temp_p = *predef_control_values = NULL;
 	else{
 		fprintf(stderr, "Using predefined control parameters from input\n");
 		*predef_control_values = (CoControl_p) malloc (sizeof(struct CoControl));
 		temp_p = *predef_control_values;
 		temp_p->cache_limit = cache_limit;
 		temp_p->T = T;
-		if (dev_num < 0){
-			temp_p->dev_num = -1;
+		if (active_unit_num < 0){
+			temp_p->active_unit_num = -1;
 		}
 		else{
-			temp_p->dev_num = dev_num;
+			temp_p->active_unit_num = active_unit_num;
 			int ctr = 0, itter = 0;
 			do {
-				if (dev_ids_token%10 == 1) temp_p->dev_ids[ctr++] = itter;
+				if (dev_ids_token%10 == 1) temp_p->active_unit_id_list[ctr++] = itter;
 				itter++;
 				dev_ids_token/=10;
 			} while ( dev_ids_token > 0);
-			if (ctr != dev_num) error("ParseInputLvl1: Read different device Ids in total (%d) than dev_num implied (%d)\n", ctr, dev_num);
+			if (ctr != active_unit_num) error("ParseInputLvl1: Read different device Ids in total (%d) than active_unit_num implied (%d)\n", ctr, active_unit_num);
 		}
 	}
 
@@ -124,10 +67,10 @@ void ParseInputLvl3(const int argc, const char *argv[], CoControl_p* predef_cont
 		char* TransA, char* TransB, double* alpha, double* beta, size_t* D1, size_t* D2, size_t* D3,
 		short* loc1, short* loc2, short* loc3, short* outloc){
 	if(argc != 16) error("Incorrect input arguments. Usage: ./correct_run\
-	\n\tdev_num(auto if <0)\n\tdev_ids(form example: 0101 for devices 0,2 - ignore if dev_num < 0)\n\tT(auto if <=0)\
+	\n\tactive_unit_num(auto if <0)\n\tdev_ids(form example: 0101 for devices 0,2 - ignore if active_unit_num < 0)\n\tT(auto if <=0)\
 	\n\tcache_max_size(auto if <0)\n\tTransA TransB alpha beta D1 D2 D3 loc1 loc2 loc3 outloc \n");
 
-	int dev_num = atoi(argv[1]);
+	int active_unit_num = atoi(argv[1]);
 	size_t dev_ids_token = atoi(argv[2]);
 	int T = atoi(argv[3]);
 	long long cache_limit = atof(argv[4]);
@@ -135,25 +78,25 @@ void ParseInputLvl3(const int argc, const char *argv[], CoControl_p* predef_cont
 	CoControl_p temp_p;
 
 	//Tunning Parameters
-	if (dev_num < 0 && cache_limit <= 0 && T <=0 ) temp_p = *predef_control_values = NULL;
+	if (active_unit_num < 0 && cache_limit <= 0 && T <=0 ) temp_p = *predef_control_values = NULL;
 	else{
 		fprintf(stderr, "Using predefined control parameters from input\n");
 		*predef_control_values = (CoControl_p) malloc (sizeof(struct CoControl));
 		temp_p = *predef_control_values;
 		temp_p->cache_limit = cache_limit;
 		temp_p->T = T;
-		if (dev_num < 0){
-			temp_p->dev_num = -1;
+		if (active_unit_num < 0){
+			temp_p->active_unit_num = -1;
 		}
 		else{
-			temp_p->dev_num = dev_num;
+			temp_p->active_unit_num = active_unit_num;
 			int ctr = 0, itter = 0;
 			do {
-				if (dev_ids_token%10 == 1) temp_p->dev_ids[ctr++] = deidxize(itter);
+				if (dev_ids_token%10 == 1) temp_p->active_unit_id_list[ctr++] = deidxize(itter);
 				itter++;
 				dev_ids_token/=10;
 			} while ( dev_ids_token > 0);
-			if (ctr != dev_num) error("ParseInputLvl3: Read different device Ids in total (%d) than dev_num implied (%d)\n", ctr, dev_num);
+			if (ctr != active_unit_num) error("ParseInputLvl3: Read different device Ids in total (%d) than active_unit_num implied (%d)\n", ctr, active_unit_num);
 		}
 	}
 

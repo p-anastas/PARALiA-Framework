@@ -7,7 +7,7 @@
 #define COCOPELIA_H
 
 #ifndef LOC_NUM
-#define LOC_NUM (DEV_NUM + 1)
+#define LOC_NUM DEV_NUM
 #endif
 
 #ifndef COCONTROL_H
@@ -18,7 +18,7 @@ typedef struct CoControl{
 	int* active_unit_id_list;	/// The list of ids of said units.
 	double* active_unit_score; /// The 'score' of each said units relative to the total task completion.
 	double pred_t; /// The predicted seconds the whole operation will require using the above parameters.
-		
+
 	long int subkernel_num; /// The number of subkernels.
 	int* Subkernels_per_dev; /// The number of subkernels derived from a unit's score that that unit unit will fire.
 	int** Subkernel_dev_id_list; /// The sk_id ids of said sub-kernels, IF they are predefined and not dynamic.
@@ -29,13 +29,13 @@ typedef struct CoControl{
 #endif
 
 /// create a new autotune controller (allocate/initialize it).
-CoControl_p create_autotune_controller();
+CoControl_p ATC_create();
 
 /// destroy an autotune controller.
-CoControl_p destroy_autotune_controller();
+CoControl_p ATC_destroy();
 
 /// Return a string represenation of the given CoControl
-char* CoControlPrint(CoControl_p input);
+char* ATC_print(CoControl_p input);
 
 /// Return a string with the active Cmake implemetation flag used
 char* CoCoImplementationPrint();

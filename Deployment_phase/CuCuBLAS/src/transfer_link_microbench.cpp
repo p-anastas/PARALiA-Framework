@@ -58,10 +58,10 @@ int main(const int argc, const char *argv[]) {
   //Only model pinned memory transfers loc_src host loc_dest dev and visa versa
  	if (loc_src < 0 && loc_dest < 0) error("Transfer Microbench: Both locations are in host");
   else if (loc_src == -2 || loc_dest == -2) error("Transfer Microbench: Not pinned memory (synchronous)");
-	short dev_ids[LOC_NUM] = {0,1,2,3,4,5,6,7,-1}, num_devices = LOC_NUM;
+	short num_devices = LOC_NUM;
 	for(int d=0; d < LOC_NUM; d++){
 		// Check/Enable peer access between participating GPUs
-		CoCoEnableLinks(d, dev_ids, num_devices);
+		CoCoEnableLinks(d, num_devices);
 	}
 
 	void* unit_buffs[2*LOC_NUM];

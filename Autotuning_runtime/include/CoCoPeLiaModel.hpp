@@ -54,10 +54,14 @@ typedef struct CoControl{
 	int active_unit_num = -1; /// The number of units that will be used in the involving operation.
 	int* active_unit_id_list;	/// The list of ids of said units.
 	double* active_unit_score; /// The 'score' of each said units relative to the total task completion.
-	int* Subkernels_per_dev; /// The number of subkernels derived from this score that the unit will fire.
-	int** Subkernel_dev_id_list; /// The unit ids of said sub-kernels, IF they are predefined and not dynamic.
-	long long cache_limit = 0; /// The 'cache' size allocation limit for all devices in bytes, IF any.
 	double pred_t; /// The predicted seconds the whole operation will require using the above parameters.
+
+	long int subkernel_num; /// The number of subkernels.
+	int* Subkernels_per_dev; /// The number of subkernels derived from a unit's score that that unit unit will fire.
+	int** Subkernel_dev_id_list; /// The sk_id ids of said sub-kernels, IF they are predefined and not dynamic.
+
+	long long cache_limit = 0; /// The 'cache' size allocation limit for all devices in bytes, IF any.
+
 }* CoControl_p;
 #endif
 

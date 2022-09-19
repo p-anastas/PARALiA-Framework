@@ -20,7 +20,8 @@ axpy_backend_in_p initial_daxpy = NULL;
 CoCoModel_p glob_model_axpy[128] = {NULL};
 //Cache_p Global_Cache[LOC_NUM] = {NULL};
 CoControl_p predef_vals_axpy = NULL;
-CoControl_p autotuned_vals_axpy = NULL;
+CoControl_p autotune_controller_axpy = NULL;
+int 	autotune_controller_axpy_limited = 1;
 int NGridSz_axpy = 0;
 
 #ifdef STEST
@@ -253,8 +254,8 @@ CoControl_p CoCopeLiaDaxpy(size_t N, VALUE_TYPE alpha, VALUE_TYPE* x, size_t inc
 	x_asset->prepareAsync(&asset_thread_id[0], attr);
 	y_asset->prepareAsync(&asset_thread_id[1], attr);
 
-	tunableParams_p best_pred_p = CoCoAutotuneParameters("Daxpy", initial_daxpy,
-  &autotuned_vals_axpy, glob_model_axpy, predef_vals_axpy, reuse_model_flag);
+	double autotune_timer = CoCoAutotuneParameters(autotune_controller_axpy, "Daxpy",
+	initial_daxpy, glob_model_axpy, reuse_model_flag);
 
 	void* res;
 	for(int i=0; i<2;i++){
@@ -269,7 +270,7 @@ CoControl_p CoCopeLiaDaxpy(size_t N, VALUE_TYPE alpha, VALUE_TYPE* x, size_t inc
 	cpu_timer = csecond();
 #endif
 
-	CoCoUpdateLinkSpeed1D(autotuned_vals_axpy, glob_model_axpy);
+	CoCoUpdateLinkSpeed1D(autotune_controller_axpy, glob_model_axpy);
 
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer;
@@ -277,17 +278,17 @@ CoControl_p CoCopeLiaDaxpy(size_t N, VALUE_TYPE alpha, VALUE_TYPE* x, size_t inc
 	cpu_timer = csecond();
 #endif
 
-	size_t T = autotuned_vals_axpy->T;
+	size_t T = autotune_controller_axpy->T;
 
 	int GPU_Block_num, Block_num = 1 + (x_asset->dim/T + ((x_asset->dim%T)? 1 : 0)) +
 		 (y_asset->dim/T + ((y_asset->dim%T)? 1 : 0));
 	long long Block_sz = 	T*sizeof(VALUE_TYPE);
 	GPU_Block_num = Block_num;
-	if(autotuned_vals_axpy->cache_limit > 0){
-		int max_block_num = autotuned_vals_axpy->cache_limit/Block_sz;
+	if(autotune_controller_axpy->cache_limit > 0){
+		int max_block_num = autotune_controller_axpy->cache_limit/Block_sz;
 		if(max_block_num < Block_num){
 			lprintf(0, "CoCopeLiaAxpy: Input cache limit %lld forces problem to use %d blocks\
-			instead of %d needed for the full problem\n", autotuned_vals_axpy->cache_limit, max_block_num, Block_num);
+			instead of %d needed for the full problem\n", autotune_controller_axpy->cache_limit, max_block_num, Block_num);
 			// With Parallel backends unfortunately == SK_blocks + Max_Exclusive_Blocks - 1
 			int worst_case_ex_blocks = 2;
 			if(max_block_num < worst_case_ex_blocks)
@@ -334,26 +335,26 @@ CoControl_p CoCopeLiaDaxpy(size_t N, VALUE_TYPE alpha, VALUE_TYPE* x, size_t inc
 		&Subkernel_num_axpy);
 #ifdef DEBUG
 	lprintf(lvl, "Subkernel_num_axpy = %d {N}GridSz = {%d}, num_devices = %d\n\n",
-		Subkernel_num_axpy, NGridSz_axpy, autotuned_vals_axpy->dev_num);
+		Subkernel_num_axpy, NGridSz_axpy, autotune_controller_axpy->active_unit_num);
 #endif
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer;
 	lprintf(lvl, "Subkernel init -> t_subkernel_init = %lf ms\n", cpu_timer*1000);
 	cpu_timer = csecond();
 #endif
-	autotuned_vals_axpy->Subkernel_dev_id_list = (int**) malloc(autotuned_vals_axpy->dev_num*sizeof(int*));
-	for (int devidx = 0; devidx < autotuned_vals_axpy->dev_num; devidx++)
-		autotuned_vals_axpy->Subkernel_dev_id_list[devidx] = (int*) malloc(Subkernel_num_axpy*sizeof(int));
+	autotune_controller_axpy->Subkernel_dev_id_list = (int**) malloc(autotune_controller_axpy->active_unit_num*sizeof(int*));
+	for (int devidx = 0; devidx < autotune_controller_axpy->active_unit_num; devidx++)
+		autotune_controller_axpy->Subkernel_dev_id_list[devidx] = (int*) malloc(Subkernel_num_axpy*sizeof(int));
 	if (!strcmp(DISTRIBUTION, "ROUND-ROBIN"))
-		CoCoDistributeSubkernelsRoundRobin(autotuned_vals_axpy, best_pred_p, Subkernel_num_axpy);
+		CoCoDistributeSubkernelsRoundRobin(autotune_controller_axpy, Subkernel_num_axpy);
 	else if (!strcmp(DISTRIBUTION, "SPLIT-NAIVE"))
-		CoCoDistributeSubkernelsNaive(autotuned_vals_axpy, best_pred_p, Subkernel_num_axpy);
+		CoCoDistributeSubkernelsNaive(autotune_controller_axpy, Subkernel_num_axpy);
 	else if (!strcmp(DISTRIBUTION, "SPLIT-CHUNKS-ROBIN"))
-		CoCoDistributeSubkernelsRoundRobinChunk(autotuned_vals_axpy, best_pred_p, Subkernel_num_axpy, 1);
+		CoCoDistributeSubkernelsRoundRobinChunk(autotune_controller_axpy, Subkernel_num_axpy, 1);
 	else if (!strcmp(DISTRIBUTION, "SPLIT-CHUNKS-ROBIN-REVERSE"))
-		CoCoDistributeSubkernelsRoundRobinChunkReverse(autotuned_vals_axpy, best_pred_p, Subkernel_num_axpy, 1);
+		CoCoDistributeSubkernelsRoundRobinChunkReverse(autotune_controller_axpy, Subkernel_num_axpy, 1);
 	else if (!strcmp(DISTRIBUTION, "2D-BLOCK-CYCLIC"))
-		CoCoDistributeSubkernelsRoundRobinChunk(autotuned_vals_axpy, best_pred_p, Subkernel_num_axpy, 1);
+		CoCoDistributeSubkernelsRoundRobinChunk(autotune_controller_axpy, Subkernel_num_axpy, 1);
 	else error("CoCoPeLiaAxpy: Unknown Subkernel Distribution %s\n", DISTRIBUTION);
 
 #ifdef TEST
@@ -362,62 +363,34 @@ CoControl_p CoCopeLiaDaxpy(size_t N, VALUE_TYPE alpha, VALUE_TYPE* x, size_t inc
 	cpu_timer = csecond();
 #endif
 
-	int used_devices = 0;
-	for (int d = 0 ; d < autotuned_vals_axpy->dev_num; d++)
-		if(autotuned_vals_axpy->Subkernels_per_dev[d] > 0 ) used_devices++;
-		else if(autotuned_vals_axpy->Subkernels_per_dev[d] < 0 )
-			error("CoCoPeLiaAxpy: autotuned_vals_axpy->Subkernels_per_dev[%d] = %d\n",
-				d, autotuned_vals_axpy->Subkernels_per_dev[d]);
-		else{
-			free(autotuned_vals_axpy->Subkernel_dev_id_list[d]);
-			for (int d_move = d; d_move < autotuned_vals_axpy->dev_num - 1; d_move++){
-				autotuned_vals_axpy->Subkernels_per_dev[d_move] = autotuned_vals_axpy->Subkernels_per_dev[d_move+1];
-				autotuned_vals_axpy->Subkernel_dev_id_list[d_move] = autotuned_vals_axpy->Subkernel_dev_id_list[d_move+1];
-				autotuned_vals_axpy->dev_ids[d_move] = autotuned_vals_axpy->dev_ids[d_move+1];
-			}
-		}
-	//#ifdef DEBUG
-	if(!reuse_model_flag){
-		lprintf(0, "used_devices=%d out of selected autotuned_vals_axpy->dev_num=%d\n", used_devices, autotuned_vals_axpy->dev_num);
-		lprintf(0, "====================================\n");
-	}
-	//#endif
-	autotuned_vals_axpy->dev_num = used_devices;
-
-#ifdef TEST
-	cpu_timer = csecond() - cpu_timer;
-	lprintf(lvl, "Subkernel Correct Split devices -> t_subkernel_split = %lf ms\n", cpu_timer*1000);
-	cpu_timer = csecond();
-#endif
-
 	//s = pthread_attr_init(&attr);
 	//if (s != 0) error("CoCopeLiaAxpy: pthread_attr_init failed s=%d\n", s);
 
-	pthread_t thread_id[used_devices];
-	kernel_pthread_wrap_p thread_dev_data[used_devices];
+	pthread_t thread_id[autotune_controller_axpy->active_unit_num];
+	kernel_pthread_wrap_p thread_dev_data[autotune_controller_axpy->active_unit_num];
 
-	// create a barrier object with a count of autotuned_vals_axpy->dev_num + 1
-	pthread_barrier_init (&SoftCache_alloc_barrier_axpy, NULL, autotuned_vals_axpy->dev_num + 1);
+	// create a barrier object with a count of autotune_controller_axpy->active_unit_num + 1
+	pthread_barrier_init (&SoftCache_alloc_barrier_axpy, NULL, autotune_controller_axpy->active_unit_num + 1);
 
-	for(int d=0; d < autotuned_vals_axpy->dev_num; d++){
-		if(best_pred_p->rel_dev_score[d] == 0.0)
-			error("CoCopeLiaAxpy: best_pred_p->rel_dev_score[%d] == 0 in final used best_pred_p\n",d);
+	for(int d=0; d < autotune_controller_axpy->active_unit_num; d++){
+		if(autotune_controller_axpy->Subkernels_per_dev[d] == 0 )
+			error("CoCoPeLiaDaxpy: Leftover autotune_controller_axpy->Subkernels_per_dev[%d] == 0", d);
 
-		// Check/Enable peer access between participating GPUs
-		CoCoEnableLinks(d, autotuned_vals_axpy->dev_ids, autotuned_vals_axpy->dev_num);
+		// Check/Enable peer access between all system units
+		CoCoEnableLinks(idxize(autotune_controller_axpy->active_unit_id_list[d]), LOC_NUM);
 
 		thread_dev_data[d] = (kernel_pthread_wrap_p) malloc(sizeof(struct kernel_pthread_wrap));
-		thread_dev_data[d]->dev_id = autotuned_vals_axpy->dev_ids[d];
+		thread_dev_data[d]->dev_id = autotune_controller_axpy->active_unit_id_list[d];
 
 #ifndef RUNTIME_SCHEDULER_VERSION
-		thread_dev_data[d]->SubkernelNumDev = autotuned_vals_axpy->Subkernels_per_dev[d];
+		thread_dev_data[d]->SubkernelNumDev = autotune_controller_axpy->Subkernels_per_dev[d];
 #else
 		thread_dev_data[d]->SubkernelNumDev = Subkernel_num_axpy;
 #endif
 		thread_dev_data[d]->SubkernelListDev = (Subkernel**) malloc(thread_dev_data[d]->SubkernelNumDev*sizeof(Subkernel*));
 #ifndef RUNTIME_SCHEDULER_VERSION
-		for(int skitt = 0; skitt < autotuned_vals_axpy->Subkernels_per_dev[d]; skitt++)
-			thread_dev_data[d]->SubkernelListDev[skitt] = Subkernel_list_axpy[autotuned_vals_axpy->Subkernel_dev_id_list[d][skitt]];
+		for(int skitt = 0; skitt < autotune_controller_axpy->Subkernels_per_dev[d]; skitt++)
+			thread_dev_data[d]->SubkernelListDev[skitt] = Subkernel_list_axpy[autotune_controller_axpy->Subkernel_dev_id_list[d][skitt]];
 #endif
 		s = pthread_create(&thread_id[d], &attr,
 																	&CoCopeLiaAxpyAgentVoid, thread_dev_data[d]);
@@ -428,7 +401,7 @@ CoControl_p CoCopeLiaDaxpy(size_t N, VALUE_TYPE alpha, VALUE_TYPE* x, size_t inc
 	//x_asset->DrawTileMap();
 	//y_asset->DrawTileMap();
 
-	for(int d=0; d<autotuned_vals_axpy->dev_num;d++){
+	for(int d=0; d<autotune_controller_axpy->active_unit_num;d++){
 		s = pthread_join(thread_id[d], &res);
 		if (s != 0) error("CoCopeLiaAxpy: pthread_join failed with exit value %d", s);
 		//free(res);      /* Free memory allocated by thread */
@@ -436,12 +409,12 @@ CoControl_p CoCopeLiaDaxpy(size_t N, VALUE_TYPE alpha, VALUE_TYPE* x, size_t inc
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer;
 	lprintf(lvl, "Fire and gather pthreads for all devices -> t_exec_full = %lf ms\n", cpu_timer*1000);
-	lprintf(lvl, "t_predicted for T=%zu was %.2lf ms : %lf percentile error\n", T, best_pred_p->pred_t*1000,
-	(best_pred_p->pred_t==0)? 0.0: (best_pred_p->pred_t - cpu_timer )/best_pred_p->pred_t*100);
+	lprintf(lvl, "t_predicted for T=%zu was %.2lf ms : %lf percentile error\n", autotune_controller_axpy->T, autotune_controller_axpy->pred_t*1000,
+	(autotune_controller_axpy->pred_t==0)? 0.0: (autotune_controller_axpy->pred_t - cpu_timer )/autotune_controller_axpy->pred_t*100);
 	cpu_timer = csecond();
 #endif
 #ifdef STEST
-	STEST_print_SK(thread_dev_data, axpy_entry_ts, autotuned_vals_axpy->dev_num);
+	STEST_print_SK(thread_dev_data, axpy_entry_ts, autotune_controller_axpy->active_unit_num);
 #endif
 
 #ifdef DDEBUG
@@ -460,7 +433,7 @@ CoControl_p CoCopeLiaDaxpy(size_t N, VALUE_TYPE alpha, VALUE_TYPE* x, size_t inc
 #endif
 
 #ifndef BACKEND_RES_REUSE_ENABLE
-	for(int i=0; i<autotuned_vals_axpy->dev_num;i++) CoCoPeLiaFreeResources(autotuned_vals_axpy->dev_ids[i]);
+	for(int i=0; i<autotune_controller_axpy->active_unit_num;i++) CoCoPeLiaFreeResources(autotune_controller_axpy->active_unit_id_list[i]);
 #endif
 
 #ifdef TEST
@@ -505,20 +478,22 @@ CoControl_p CoCopeLiaDaxpy(size_t N, VALUE_TYPE alpha, VALUE_TYPE* x, size_t inc
 #ifdef TEST
 	lprintf(lvl-1, "<-----|\n");
 #endif
-	return autotuned_vals_axpy;
+	return autotune_controller_axpy;
 }
 
 /// A modification of CoCopeLiaDaxpy but with given parameters (mainly for performance/debug purposes)
-CoControl_p CoCopeLiaDaxpyControled(size_t N, VALUE_TYPE alpha, VALUE_TYPE* x, size_t incx, VALUE_TYPE* y, size_t incy, CoControl_p predef_control_values){
-	if (!predef_control_values) return CoCopeLiaDaxpy(N, alpha, x, incx, y, incy);
-	if (predef_vals_axpy == NULL) predef_vals_axpy = (CoControl_p) malloc(sizeof(struct CoControl));
-	predef_vals_axpy->T = predef_control_values->T;
-	predef_vals_axpy->dev_num = predef_control_values->dev_num;
+CoControl_p CoCopeLiaDaxpyControled(size_t N, VALUE_TYPE alpha, VALUE_TYPE* x, size_t incx, VALUE_TYPE* y, size_t incy, CoControl_p predef_controller){
+	if (predef_controller == NULL){
+		warning("Calling CoCopeLiaDaxpyControled with empty controller -> falling back to full autotune version \'CoCopeLiaDaxpy\'\n");
+		return CoCopeLiaDaxpy(N, alpha, x, incx, y, incy);
+	}
+	autotune_controller_axpy_limited = 1;
+	if (autotune_controller_axpy == NULL) autotune_controller_axpy = create_autotune_controller();
+	autotune_controller_axpy->T = predef_controller->T;
+	autotune_controller_axpy->active_unit_num = predef_controller->active_unit_num;
 	for(int idx =0; idx < LOC_NUM; idx++)
-		predef_vals_axpy->dev_ids[idx] = predef_control_values->dev_ids[idx];
-	predef_vals_axpy->cache_limit = predef_control_values->cache_limit;
+		autotune_controller_axpy->active_unit_id_list[idx] = predef_controller->active_unit_id_list[idx];
+	autotune_controller_axpy->cache_limit = predef_controller->cache_limit;
 	CoControl_p return_vals = CoCopeLiaDaxpy(N, alpha, x, incx, y, incy);
-	free(predef_vals_axpy);
-	predef_vals_axpy = NULL;
 	return return_vals;
 }

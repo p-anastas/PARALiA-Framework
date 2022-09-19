@@ -64,9 +64,9 @@ int main(const int argc, const char *argv[]) {
 		dev_id[0] = from;
 		dev_id[1] = to;
 		// Check/Enable peer access between participating GPUs
-		CoCoEnableLinks(0, dev_id, num_devices);
+		CoCoEnableLinks(0, num_devices);
 		// Check/Enable peer access between participating GPUs
-		CoCoEnableLinks(1, dev_id, num_devices);
+		CoCoEnableLinks(1, num_devices);
 	}
 	else if(from >= 0) cudaSetDevice(from);
 	else if(to >= 0) cudaSetDevice(to);
