@@ -19,7 +19,7 @@ int main(const int argc, const char *argv[]) {
 	short x_loc, y_loc, x_out_loc, y_out_loc;
 	size_t incx, incy;
 
-	CoControl_p predef_control_values = NULL, return_values = NULL;
+	ATC_p predef_control_values = NULL, return_values = NULL;
 	ParseInputLvl1(argc, argv, &predef_control_values, &alpha, &N, &incx, &incy, &x_loc, &y_loc, &x_out_loc, &y_out_loc);
 
 	char *filename = (char *) malloc(256* sizeof(char));
@@ -144,7 +144,7 @@ int main(const int argc, const char *argv[]) {
 		}
 		avg_t/=bench_it;
 		fprintf(stderr, "CoCopeLia Daxpy(%s):\n\tfirst_it_t = %lf ms ( %lf Gflops/s )\n\tavg_t = %lf ms ( %lf Gflops/s )\n\tmin_t = %lf ms ( %lf Gflops/s )\n\tmax_t = %lf ms ( %lf Gflops/s )\n",
-		CoControlPrint(return_values),
+		ATC_print(return_values),
 		first_over_t  * 1000, Gval_per_s(axpy_flops(N),first_over_t),
 		avg_t  * 1000, Gval_per_s(axpy_flops(N),avg_t),
 		min_t  * 1000, Gval_per_s(axpy_flops(N),min_t),

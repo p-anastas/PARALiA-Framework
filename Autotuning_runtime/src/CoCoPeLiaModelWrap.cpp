@@ -135,7 +135,7 @@ double CoCopeLiaPipelineEmulate(CoCoModel_p model, long int T)
 }
 
 
-double CoCopeLiaPredictReuseHetero(CoCoModel_p model, short used_devs, short* used_dev_ids,
+double CoCopeLiaPredictReuseHetero(CoCoModel_p model, short used_devs, int* used_dev_ids,
 	double* used_dev_relative_scores, long int T)
 {
 	switch(model->problem){
@@ -154,7 +154,7 @@ double CoCopeLiaPredictReuseHetero(CoCoModel_p model, short used_devs, short* us
 	return 0;
 }
 
-double CoCopeLiaPredictBidirectionalHetero(CoCoModel_p model, short used_devs, short* used_dev_ids,
+double CoCopeLiaPredictBidirectionalHetero(CoCoModel_p model, short used_devs, int* used_dev_ids,
 	double* used_dev_relative_scores, long int T)
 {
 	switch(model->problem){
@@ -310,7 +310,7 @@ CoCoModel_p CoCoPeLiaTileModelInit(short dev_id, const char* func, void* func_da
 	}
 }
 
-double CoCoPeLiaModelPredictHetero(CoCo_model* model, short used_devs, short* used_dev_ids, double* used_dev_relative_scores, long int T, ModelType mode){
+double CoCoPeLiaModelPredictHetero(CoCo_model* model, int used_devs, int* used_dev_ids, double* used_dev_relative_scores, long int T, ModelType mode){
 	switch(mode){
 		case COCOPELIA_HETERO_BIDIRECTIONAL:
 			return CoCopeLiaPredictBidirectionalHetero(model, used_devs, used_dev_ids, used_dev_relative_scores, T);
@@ -346,7 +346,7 @@ double CoCoPeLiaModelPredict(CoCo_model* model, long int T, ModelType mode){
 }
 
 ///  Itterates through benchmarked values for T and chooses the Tbest that minimizes total time.
-double CoCoPeLiaModelOptimizeTile(CoControl_p autotune_controller, CoCoModel_p model, ModelType mode){
+double CoCoPeLiaModelOptimizeTile(ATC_p autotune_controller, CoCoModel_p model, ModelType mode){
 	short lvl = 3;
 	double timer = csecond();
 #ifdef DEBUG
@@ -435,7 +435,7 @@ const char* printProblem(ProblemType problem){
 	}
 }
 
-void CoCoPeLiaRemoveUselessDevices(CoControl_p autotune_controller){
+void CoCoPeLiaRemoveUselessDevices(ATC_p autotune_controller){
 	for (int i = 0; i < autotune_controller->active_unit_num; i++)
 	if(autotune_controller->active_unit_score[i] == 0.0 ) {
 		for (int i_move = i; i_move < autotune_controller->active_unit_num - 1; i_move++){
@@ -447,7 +447,7 @@ void CoCoPeLiaRemoveUselessDevices(CoControl_p autotune_controller){
 	}
 }
 
-double CoCoAutotuneParameters(CoControl_p autotune_controller, const char* routine_name, void* initial_problem_wrap,
+double CoCoAutotuneParameters(ATC_p autotune_controller, const char* routine_name, void* initial_problem_wrap,
   CoCoModel_p* glob_model, short reuse_model_flag){
 	short lvl = 3;
 	double cpu_timer = csecond();
@@ -590,7 +590,7 @@ short* CoCoPeLiaDeviceSelectBest(short used_devs, short avail_devs, short* avail
 	return used_dev_ids;
 }*/
 
-double PARALiaMultidevOptimizeTile(CoControl_p autotune_controller, CoCoModel_p* dev_model_list){
+double PARALiaMultidevOptimizeTile(ATC_p autotune_controller, CoCoModel_p* dev_model_list){
 	short lvl = 3;
 	double timer = csecond();
 #ifdef PDEBUG
@@ -675,7 +675,7 @@ lprintf(lvl, "PARALiaMultidevOptimizeTile( autotune_controller{ T=%ld, active_un
 	return timer;
 }
 
-double PARALiaMultidevOptimizeSplit(CoControl_p autotune_controller, CoCoModel_p* dev_model_list){
+double PARALiaMultidevOptimizeSplit(ATC_p autotune_controller, CoCoModel_p* dev_model_list){
 	short lvl = 3;
 	double timer = csecond();
 #ifdef PDEBUG
@@ -759,7 +759,7 @@ double PARALiaMultidevOptimizeSplit(CoControl_p autotune_controller, CoCoModel_p
 }
 
 /* FIXME: DEPRECATED - kept for future model-based T selection update if needed
-double PARALiaMultidevOptimizeTile_modelBased(CoControl_p autotune_controller, short used_devs, short* used_dev_ids,
+double PARALiaMultidevOptimizeTile_modelBased(ATC_p autotune_controller, short used_devs, short* used_dev_ids,
 	int* dev_idx_ignore, CoCoModel_p* dev_model_list){
 	short lvl = 3;
 #ifdef DEBUG

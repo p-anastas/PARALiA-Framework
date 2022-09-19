@@ -19,8 +19,8 @@ axpy_backend_in_p initial_daxpy = NULL;
 
 CoCoModel_p glob_model_axpy[128] = {NULL};
 //Cache_p Global_Cache[LOC_NUM] = {NULL};
-CoControl_p predef_vals_axpy = NULL;
-CoControl_p autotune_controller_axpy = NULL;
+ATC_p predef_vals_axpy = NULL;
+ATC_p autotune_controller_axpy = NULL;
 int 	autotune_controller_axpy_limited = 1;
 int NGridSz_axpy = 0;
 
@@ -199,7 +199,7 @@ void* CoCopeLiaAxpyAgentVoid(void* kernel_pthread_wrapped){
 }
 
 /// An axpy wrapper including auto-tuning of T and cache_size, as well as device management
-CoControl_p CoCopeLiaDaxpy(size_t N, VALUE_TYPE alpha, VALUE_TYPE* x, size_t incx, VALUE_TYPE* y, size_t incy)
+ATC_p CoCopeLiaDaxpy(size_t N, VALUE_TYPE alpha, VALUE_TYPE* x, size_t incx, VALUE_TYPE* y, size_t incy)
 {
 	short lvl = 1;
 #ifdef DEBUG
@@ -254,6 +254,7 @@ CoControl_p CoCopeLiaDaxpy(size_t N, VALUE_TYPE alpha, VALUE_TYPE* x, size_t inc
 	x_asset->prepareAsync(&asset_thread_id[0], attr);
 	y_asset->prepareAsync(&asset_thread_id[1], attr);
 
+	if (autotune_controller_axpy == NULL) autotune_controller_axpy = new ATC();
 	double autotune_timer = CoCoAutotuneParameters(autotune_controller_axpy, "Daxpy",
 	initial_daxpy, glob_model_axpy, reuse_model_flag);
 
@@ -333,6 +334,7 @@ CoControl_p CoCopeLiaDaxpy(size_t N, VALUE_TYPE alpha, VALUE_TYPE* x, size_t inc
 
 	Subkernel_list_axpy = CoCoAsignTilesToSubkernelsDaxpy(x_asset, y_asset, T,
 		&Subkernel_num_axpy);
+	autotune_controller_axpy->update_sk_num(Subkernel_num_axpy);
 #ifdef DEBUG
 	lprintf(lvl, "Subkernel_num_axpy = %d {N}GridSz = {%d}, num_devices = %d\n\n",
 		Subkernel_num_axpy, NGridSz_axpy, autotune_controller_axpy->active_unit_num);
@@ -342,9 +344,9 @@ CoControl_p CoCopeLiaDaxpy(size_t N, VALUE_TYPE alpha, VALUE_TYPE* x, size_t inc
 	lprintf(lvl, "Subkernel init -> t_subkernel_init = %lf ms\n", cpu_timer*1000);
 	cpu_timer = csecond();
 #endif
-	autotune_controller_axpy->Subkernel_dev_id_list = (int**) malloc(autotune_controller_axpy->active_unit_num*sizeof(int*));
+	autotune_controller_axpy->Subkernels_per_unit_list = (int**) malloc(autotune_controller_axpy->active_unit_num*sizeof(int*));
 	for (int devidx = 0; devidx < autotune_controller_axpy->active_unit_num; devidx++)
-		autotune_controller_axpy->Subkernel_dev_id_list[devidx] = (int*) malloc(Subkernel_num_axpy*sizeof(int));
+		autotune_controller_axpy->Subkernels_per_unit_list[devidx] = (int*) malloc(Subkernel_num_axpy*sizeof(int));
 	if (!strcmp(DISTRIBUTION, "ROUND-ROBIN"))
 		CoCoDistributeSubkernelsRoundRobin(autotune_controller_axpy, Subkernel_num_axpy);
 	else if (!strcmp(DISTRIBUTION, "SPLIT-NAIVE"))
@@ -373,8 +375,8 @@ CoControl_p CoCopeLiaDaxpy(size_t N, VALUE_TYPE alpha, VALUE_TYPE* x, size_t inc
 	pthread_barrier_init (&SoftCache_alloc_barrier_axpy, NULL, autotune_controller_axpy->active_unit_num + 1);
 
 	for(int d=0; d < autotune_controller_axpy->active_unit_num; d++){
-		if(autotune_controller_axpy->Subkernels_per_dev[d] == 0 )
-			error("CoCoPeLiaDaxpy: Leftover autotune_controller_axpy->Subkernels_per_dev[%d] == 0", d);
+		if(autotune_controller_axpy->Subkernels_per_unit_num[d] == 0 )
+			error("CoCoPeLiaDaxpy: Leftover autotune_controller_axpy->Subkernels_per_unit_num[%d] == 0", d);
 
 		// Check/Enable peer access between all system units
 		CoCoEnableLinks(idxize(autotune_controller_axpy->active_unit_id_list[d]), LOC_NUM);
@@ -383,14 +385,14 @@ CoControl_p CoCopeLiaDaxpy(size_t N, VALUE_TYPE alpha, VALUE_TYPE* x, size_t inc
 		thread_dev_data[d]->dev_id = autotune_controller_axpy->active_unit_id_list[d];
 
 #ifndef RUNTIME_SCHEDULER_VERSION
-		thread_dev_data[d]->SubkernelNumDev = autotune_controller_axpy->Subkernels_per_dev[d];
+		thread_dev_data[d]->SubkernelNumDev = autotune_controller_axpy->Subkernels_per_unit_num[d];
 #else
 		thread_dev_data[d]->SubkernelNumDev = Subkernel_num_axpy;
 #endif
 		thread_dev_data[d]->SubkernelListDev = (Subkernel**) malloc(thread_dev_data[d]->SubkernelNumDev*sizeof(Subkernel*));
 #ifndef RUNTIME_SCHEDULER_VERSION
-		for(int skitt = 0; skitt < autotune_controller_axpy->Subkernels_per_dev[d]; skitt++)
-			thread_dev_data[d]->SubkernelListDev[skitt] = Subkernel_list_axpy[autotune_controller_axpy->Subkernel_dev_id_list[d][skitt]];
+		for(int skitt = 0; skitt < autotune_controller_axpy->Subkernels_per_unit_num[d]; skitt++)
+			thread_dev_data[d]->SubkernelListDev[skitt] = Subkernel_list_axpy[autotune_controller_axpy->Subkernels_per_unit_list[d][skitt]];
 #endif
 		s = pthread_create(&thread_id[d], &attr,
 																	&CoCopeLiaAxpyAgentVoid, thread_dev_data[d]);
@@ -482,18 +484,18 @@ CoControl_p CoCopeLiaDaxpy(size_t N, VALUE_TYPE alpha, VALUE_TYPE* x, size_t inc
 }
 
 /// A modification of CoCopeLiaDaxpy but with given parameters (mainly for performance/debug purposes)
-CoControl_p CoCopeLiaDaxpyControled(size_t N, VALUE_TYPE alpha, VALUE_TYPE* x, size_t incx, VALUE_TYPE* y, size_t incy, CoControl_p predef_controller){
+ATC_p CoCopeLiaDaxpyControled(size_t N, VALUE_TYPE alpha, VALUE_TYPE* x, size_t incx, VALUE_TYPE* y, size_t incy, ATC_p predef_controller){
 	if (predef_controller == NULL){
 		warning("Calling CoCopeLiaDaxpyControled with empty controller -> falling back to full autotune version \'CoCopeLiaDaxpy\'\n");
 		return CoCopeLiaDaxpy(N, alpha, x, incx, y, incy);
 	}
 	autotune_controller_axpy_limited = 1;
-	if (autotune_controller_axpy == NULL) autotune_controller_axpy = create_autotune_controller();
+	if (autotune_controller_axpy == NULL) autotune_controller_axpy = new ATC();
 	autotune_controller_axpy->T = predef_controller->T;
 	autotune_controller_axpy->active_unit_num = predef_controller->active_unit_num;
 	for(int idx =0; idx < LOC_NUM; idx++)
 		autotune_controller_axpy->active_unit_id_list[idx] = predef_controller->active_unit_id_list[idx];
 	autotune_controller_axpy->cache_limit = predef_controller->cache_limit;
-	CoControl_p return_vals = CoCopeLiaDaxpy(N, alpha, x, incx, y, incy);
+	ATC_p return_vals = CoCopeLiaDaxpy(N, alpha, x, incx, y, incy);
 	return return_vals;
 }

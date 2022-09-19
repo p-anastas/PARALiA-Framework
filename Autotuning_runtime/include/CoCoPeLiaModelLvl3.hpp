@@ -9,7 +9,7 @@
 #include "CoCoPeLiaCoModel.hpp"
 #include "backend_wrappers.hpp"
 
-CoCoModel_p CoCoModelFuncInitBLAS3(CoCoModel_p out_model, short dev_id, const char* func, void* func_data);
+CoCoModel_p CoCoModelFuncInitBLAS3(CoCoModel_p out_model, int dev_id, const char* func, void* func_data);
 
 long int CoCopeLiaGetSKNumBLAS3(CoCoModel_p model, int T);
 long int CoCopeLiaMinAllowedTBLAS3(CoCoModel_p model);
@@ -26,7 +26,7 @@ double CoCopeLiaPredictDataLocBLAS3(CoCoModel_p model, long int T);
 double CoCopeLiaPredictBidirectionalBLAS3(CoCoModel_p model, long int T);
 double CoCopeLiaPredictReuseBLAS3(CoCoModel_p model, long int T);
 double CoCopeLiaPipelineEmulateBLAS3(CoCoModel_p model, long int T);
-double CoCopeLiaPredictReuseHeteroBLAS3(CoCoModel_p model, short used_devs, short* used_dev_ids,
+double CoCopeLiaPredictReuseHeteroBLAS3(CoCoModel_p model, int used_devs, int* used_dev_ids,
 	double* used_dev_relative_scores, long int T);
 
 #endif

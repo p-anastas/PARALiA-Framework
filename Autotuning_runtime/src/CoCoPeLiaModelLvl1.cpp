@@ -16,7 +16,7 @@
 
 
 ///  Initializes the model for gemm
-CoCoModel_p CoCoModel_axpy_init(CoCoModel_p out_model, short dev_id, const char* func, axpy_backend_in_p func_data){
+CoCoModel_p CoCoModel_axpy_init(CoCoModel_p out_model, int dev_id, const char* func, axpy_backend_in_p func_data){
 	long int N = func_data->N;
 	short x_loc, x_out_loc = x_loc = CoCoGetPtrLoc(*func_data->x),
 				y_loc, y_out_loc = y_loc = CoCoGetPtrLoc(*func_data->y);
@@ -73,7 +73,7 @@ long int CoCopeLiaMaxAllowedTBLAS1(CoCoModel_p model){
 }
 
 ///  Initializes the model for gemm
-CoCoModel_p CoCoModelFuncInitBLAS1(CoCoModel_p out_model, short dev_id, const char* func, void* func_data){
+CoCoModel_p CoCoModelFuncInitBLAS1(CoCoModel_p out_model, int dev_id, const char* func, void* func_data){
 	if ( !strcmp(func, "Daxpy") || !strcmp(func, "Saxpy"))
 		return CoCoModel_axpy_init(out_model, dev_id, func, (axpy_backend_in_p) func_data);
 	else error("CoCoModelFuncInitBLAS1: func %s not implemented\n", func);
@@ -193,7 +193,7 @@ double CoCopeLiaPredictBidirectionalBLAS1(CoCoModel_p model, long int T)
 		}
 	}
 
-	short mv_dev_id = -1, dev_id_initlocs[LOC_NUM] = {};
+	int mv_dev_id = -1, dev_id_initlocs[LOC_NUM] = {};
 	for (int i = 0; i < model->V->numT; i++) dev_id_initlocs[idxize(model->V->loc[i])] ++;
 	for (int idx = 0; idx < LOC_NUM; idx++)
 		if (dev_id_initlocs[idxize(mv_dev_id)] <  dev_id_initlocs[idx]) mv_dev_id = deidxize(idx);
@@ -240,7 +240,7 @@ double CoCopeLiaPredictBidirectionalBLAS1(CoCoModel_p model, long int T)
 
 }
 
-double CoCopeLiaPredictBidirectionalHeteroBLAS1(CoCo_model* model, short used_devs, short* used_dev_ids,
+double CoCopeLiaPredictBidirectionalHeteroBLAS1(CoCo_model* model, int used_devs, int* used_dev_ids,
 	double* used_dev_relative_scores, long int T){
 	short lvl = 4;
 	long int prob_dims = 0, reset_D1 = model->D1;

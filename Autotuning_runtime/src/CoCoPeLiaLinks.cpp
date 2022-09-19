@@ -60,7 +60,7 @@ void InitHopMap(double link_cost [][LOC_NUM], double link_cost_out [][LOC_NUM]){
 }
 #endif
 
-void CoCoUpdateLinkSpeed1D(CoControl_p autotuned_vals, CoCoModel_p* glob_model){
+void CoCoUpdateLinkSpeed1D(ATC_p autotuned_vals, CoCoModel_p* glob_model){
   short lvl = 2;
   #ifdef DDEBUG
     lprintf(lvl, "|-----> CoCoUpdateLinkSpeed2D(dev_num = %d, LOC_NUM = %d)\n", autotuned_vals->active_unit_num, LOC_NUM);
@@ -97,7 +97,7 @@ void CoCoUpdateLinkSpeed1D(CoControl_p autotuned_vals, CoCoModel_p* glob_model){
 #endif
 }
 
-void CoCoUpdateLinkSpeed2D(CoControl_p autotuned_vals, CoCoModel_p* glob_model){
+void CoCoUpdateLinkSpeed2D(ATC_p autotuned_vals, CoCoModel_p* glob_model){
   short lvl = 2;
   #ifdef DDEBUG
     lprintf(lvl, "|-----> CoCoUpdateLinkSpeed2D(dev_num = %d, LOC_NUM = %d)\n", autotuned_vals->active_unit_num, LOC_NUM);

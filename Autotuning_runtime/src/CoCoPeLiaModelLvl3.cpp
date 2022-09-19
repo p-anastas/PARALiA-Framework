@@ -479,7 +479,7 @@ double CoCopeLiaPipelineEmulateBLAS3(CoCoModel_p model, long int T){
 	return t_total;
 }
 
-double CoCopeLiaPredictReuseHeteroBLAS3(CoCo_model* model, short used_devs, short* used_dev_ids,
+double CoCopeLiaPredictReuseHeteroBLAS3(CoCo_model* model, int used_devs, int* used_dev_ids,
 	double* used_dev_relative_scores, long int T){
 	short lvl = 4;
 	long int prob_dims = 0, reset_D1 = model->D1, reset_D2 = model->D2, reset_D3 = model->D3;
@@ -539,7 +539,7 @@ double CoCopeLiaPredictReuseHeteroBLAS3(CoCo_model* model, short used_devs, shor
 }
 
 ///  Initializes the model for gemm
-CoCoModel_p CoCoModel_gemm_init(CoCoModel_p out_model, short dev_id, const char* func, gemm_backend_in_p func_data){
+CoCoModel_p CoCoModel_gemm_init(CoCoModel_p out_model, int dev_id, const char* func, gemm_backend_in_p func_data){
 	char TransA = func_data->TransA, TransB = func_data->TransB;
 	long int M = func_data->M, N = func_data->N, K = func_data->K;
 	short A_loc, A_out_loc = A_loc = CoCoGetPtrLoc(*func_data->A),
@@ -613,7 +613,7 @@ long int CoCopeLiaGetSKNumBLAS3(CoCoModel_p model, int T){
 }
 
 ///  Initializes the model for gemm
-CoCoModel_p CoCoModelFuncInitBLAS3(CoCoModel_p out_model, short dev_id, const char* func, void* func_data){
+CoCoModel_p CoCoModelFuncInitBLAS3(CoCoModel_p out_model, int dev_id, const char* func, void* func_data){
 	if ( !strcmp(func, "Dgemm") || !strcmp(func, "Sgemm"))
 		return CoCoModel_gemm_init(out_model, dev_id, func, (gemm_backend_in_p) func_data);
 	else error("CoCoModelFuncInitBLAS1: func %s not implemented\n", func);

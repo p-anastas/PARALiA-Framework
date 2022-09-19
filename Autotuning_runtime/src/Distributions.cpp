@@ -7,26 +7,26 @@
 #include "unihelpers.hpp"
 #include "CoCoPeLiaModel.hpp"
 
-void CoCoDistributeSubkernelsRoundRobin(CoControl_p autotune_controller, int Subkernel_num){
+void CoCoDistributeSubkernelsRoundRobin(ATC_p autotune_controller, int Subkernel_num){
   int lvl = 6;
   if (Subkernel_num <= autotune_controller->active_unit_num){
     autotune_controller->active_unit_num = Subkernel_num;
     for (int d = 0 ; d < autotune_controller->active_unit_num; d++){
-      autotune_controller->Subkernels_per_dev[d] = 1;
-      autotune_controller->Subkernel_dev_id_list[d][0] = d;
+      autotune_controller->Subkernels_per_unit_num[d] = 1;
+      autotune_controller->Subkernels_per_unit_list[d][0] = d;
     }
   }
   else{
   int rem_dev = Subkernel_num;
   for (int d = 0 ; d < autotune_controller->active_unit_num; d++){
-     autotune_controller->Subkernels_per_dev[d] =
+     autotune_controller->Subkernels_per_unit_num[d] =
       (int) (1.0* autotune_controller->active_unit_score[d]* Subkernel_num);
-     rem_dev-= autotune_controller->Subkernels_per_dev[d];
+     rem_dev-= autotune_controller->Subkernels_per_unit_num[d];
   }
   while(rem_dev!= 0){
     for (int d = 0 ; d < autotune_controller->active_unit_num; d++){
        if(rem_dev!= 0){
-         autotune_controller->Subkernels_per_dev[d] += 1;
+         autotune_controller->Subkernels_per_unit_num[d] += 1;
          rem_dev--;
        }
        else break;
@@ -38,9 +38,9 @@ void CoCoDistributeSubkernelsRoundRobin(CoControl_p autotune_controller, int Sub
   while(total_sk_ctr<Subkernel_num){
     for(int devidx = 0; devidx < autotune_controller->active_unit_num; devidx++){
       if(total_sk_ctr == Subkernel_num) break;
-      else if(dev_sk_ctr_list[devidx] == autotune_controller->Subkernels_per_dev[devidx]) continue;
+      else if(dev_sk_ctr_list[devidx] == autotune_controller->Subkernels_per_unit_num[devidx]) continue;
       else{
-        autotune_controller->Subkernel_dev_id_list[devidx][dev_sk_ctr_list[devidx]] = total_sk_ctr;
+        autotune_controller->Subkernels_per_unit_list[devidx][dev_sk_ctr_list[devidx]] = total_sk_ctr;
         dev_sk_ctr_list[devidx]++;
         total_sk_ctr++;
       }
@@ -54,25 +54,25 @@ void CoCoDistributeSubkernelsRoundRobin(CoControl_p autotune_controller, int Sub
     lprintf(0, "]\n");
     lprintf(lvl, "Subker Num : [ ");
     for (int i =0; i < autotune_controller->active_unit_num; i++) fprintf(stderr, "%d ",
-      autotune_controller->Subkernels_per_dev[i]);
+      autotune_controller->Subkernels_per_unit_num[i]);
     lprintf(0, "]\n");
     for (int i =0; i < autotune_controller->active_unit_num; i++){
       lprintf(lvl, "Subker Id list for dev_id = %d: [ ", autotune_controller->active_unit_id_list[i]);
-      for (int j =0; j < autotune_controller->Subkernels_per_dev[i]; j++) fprintf(stderr, "%d ",
-        autotune_controller->Subkernel_dev_id_list[i][j]);
+      for (int j =0; j < autotune_controller->Subkernels_per_unit_num[i]; j++) fprintf(stderr, "%d ",
+        autotune_controller->Subkernels_per_unit_list[i][j]);
       lprintf(0, "]\n");
     }
 #endif
   }
 }
 
-void CoCoDistributeSubkernelsNaive(CoControl_p autotune_controller, int Subkernel_num){
+void CoCoDistributeSubkernelsNaive(ATC_p autotune_controller, int Subkernel_num){
   int lvl = 6;
   if (Subkernel_num <= autotune_controller->active_unit_num){
     autotune_controller->active_unit_num = Subkernel_num;
     for (int d = 0 ; d < autotune_controller->active_unit_num; d++){
-      autotune_controller->Subkernels_per_dev[d] = 1;
-      autotune_controller->Subkernel_dev_id_list[d][0] = d;
+      autotune_controller->Subkernels_per_unit_num[d] = 1;
+      autotune_controller->Subkernels_per_unit_list[d][0] = d;
     }
   }
   else{
@@ -80,14 +80,14 @@ void CoCoDistributeSubkernelsNaive(CoControl_p autotune_controller, int Subkerne
     int dev_offset;
     int rem_dev = Subkernel_num;
     for (int d = 0 ; d < autotune_controller->active_unit_num; d++){
-       autotune_controller->Subkernels_per_dev[d] =
+       autotune_controller->Subkernels_per_unit_num[d] =
         (int) (1.0* autotune_controller->active_unit_score[d]* Subkernel_num);
-       rem_dev-= autotune_controller->Subkernels_per_dev[d];
+       rem_dev-= autotune_controller->Subkernels_per_unit_num[d];
     }
     while(rem_dev!= 0){
       for (int d = 0 ; d < autotune_controller->active_unit_num; d++){
          if(rem_dev!= 0){
-           autotune_controller->Subkernels_per_dev[d] += 1;
+           autotune_controller->Subkernels_per_unit_num[d] += 1;
            rem_dev--;
          }
          else break;
@@ -98,11 +98,11 @@ void CoCoDistributeSubkernelsNaive(CoControl_p autotune_controller, int Subkerne
 #endif
     short dev_sk_ctr = 0, cur_dev_id_ctr = 0;
     while(total_sk_ctr<Subkernel_num && cur_dev_id_ctr < autotune_controller->active_unit_num){
-      while(dev_sk_ctr == autotune_controller->Subkernels_per_dev[cur_dev_id_ctr]){
+      while(dev_sk_ctr == autotune_controller->Subkernels_per_unit_num[cur_dev_id_ctr]){
         dev_sk_ctr = 0;
         cur_dev_id_ctr++;
       }
-      autotune_controller->Subkernel_dev_id_list[cur_dev_id_ctr][dev_sk_ctr] = total_sk_ctr;
+      autotune_controller->Subkernels_per_unit_list[cur_dev_id_ctr][dev_sk_ctr] = total_sk_ctr;
       dev_sk_ctr++;
       total_sk_ctr++;
     }
@@ -115,37 +115,37 @@ void CoCoDistributeSubkernelsNaive(CoControl_p autotune_controller, int Subkerne
     lprintf(0, "]\n");
     lprintf(lvl, "Subker Num : [ ");
     for (int i =0; i < autotune_controller->active_unit_num; i++) fprintf(stderr, "%d ",
-      autotune_controller->Subkernels_per_dev[i]);
+      autotune_controller->Subkernels_per_unit_num[i]);
     lprintf(0, "]\n");
     for (int i =0; i < autotune_controller->active_unit_num; i++){
       lprintf(lvl, "Subker Id list for dev_id = %d: [ ", autotune_controller->active_unit_id_list[i]);
-      for (int j =0; j < autotune_controller->Subkernels_per_dev[i]; j++) fprintf(stderr, "%d ",
-        autotune_controller->Subkernel_dev_id_list[i][j]);
+      for (int j =0; j < autotune_controller->Subkernels_per_unit_num[i]; j++) fprintf(stderr, "%d ",
+        autotune_controller->Subkernels_per_unit_list[i][j]);
       lprintf(0, "]\n");
     }
 #endif
 }
 
-void CoCoDistributeSubkernelsRoundRobinChunk(CoControl_p autotune_controller, int Subkernel_num, int Chunk_size){
+void CoCoDistributeSubkernelsRoundRobinChunk(ATC_p autotune_controller, int Subkernel_num, int Chunk_size){
   int lvl = 6;
   if (Subkernel_num <= autotune_controller->active_unit_num){
     autotune_controller->active_unit_num = Subkernel_num;
     for (int d = 0 ; d < autotune_controller->active_unit_num; d++){
-      autotune_controller->Subkernels_per_dev[d] = 1;
-      autotune_controller->Subkernel_dev_id_list[d][0] = d;
+      autotune_controller->Subkernels_per_unit_num[d] = 1;
+      autotune_controller->Subkernels_per_unit_list[d][0] = d;
     }
   }
   else{
   int rem_dev = Subkernel_num;
   for (int d = 0 ; d < autotune_controller->active_unit_num; d++){
-     autotune_controller->Subkernels_per_dev[d] =
+     autotune_controller->Subkernels_per_unit_num[d] =
       (int) (1.0* autotune_controller->active_unit_score[d]* Subkernel_num);
-     rem_dev-= autotune_controller->Subkernels_per_dev[d];
+     rem_dev-= autotune_controller->Subkernels_per_unit_num[d];
   }
   while(rem_dev!= 0){
     for (int d = 0 ; d < autotune_controller->active_unit_num; d++){
        if(rem_dev!= 0){
-         autotune_controller->Subkernels_per_dev[d] += 1;
+         autotune_controller->Subkernels_per_unit_num[d] += 1;
          rem_dev--;
        }
        else break;
@@ -157,17 +157,17 @@ void CoCoDistributeSubkernelsRoundRobinChunk(CoControl_p autotune_controller, in
   while(total_sk_ctr<Subkernel_num){
     for(int devidx = 0; devidx < autotune_controller->active_unit_num; devidx++){
       if(total_sk_ctr == Subkernel_num) break;
-      else if(dev_sk_ctr_list[devidx] == autotune_controller->Subkernels_per_dev[devidx]) continue;
+      else if(dev_sk_ctr_list[devidx] == autotune_controller->Subkernels_per_unit_num[devidx]) continue;
       else{
-        autotune_controller->Subkernel_dev_id_list[devidx][dev_sk_ctr_list[devidx]] = total_sk_ctr;
+        autotune_controller->Subkernels_per_unit_list[devidx][dev_sk_ctr_list[devidx]] = total_sk_ctr;
         dev_sk_ctr_list[devidx]++;
         total_sk_ctr++;
       }
       while(total_sk_ctr%Chunk_size!=0){
         if(total_sk_ctr == Subkernel_num) break;
-        else if(dev_sk_ctr_list[devidx] == autotune_controller->Subkernels_per_dev[devidx]) break;
+        else if(dev_sk_ctr_list[devidx] == autotune_controller->Subkernels_per_unit_num[devidx]) break;
         else{
-          autotune_controller->Subkernel_dev_id_list[devidx][dev_sk_ctr_list[devidx]] = total_sk_ctr;
+          autotune_controller->Subkernels_per_unit_list[devidx][dev_sk_ctr_list[devidx]] = total_sk_ctr;
           dev_sk_ctr_list[devidx]++;
           total_sk_ctr++;
         }
@@ -183,38 +183,38 @@ void CoCoDistributeSubkernelsRoundRobinChunk(CoControl_p autotune_controller, in
     lprintf(0, "]\n");
     lprintf(lvl, "Subker Num : [ ");
     for (int i =0; i < autotune_controller->active_unit_num; i++) fprintf(stderr, "%d ",
-      autotune_controller->Subkernels_per_dev[i]);
+      autotune_controller->Subkernels_per_unit_num[i]);
     lprintf(0, "]\n");
     for (int i =0; i < autotune_controller->active_unit_num; i++){
       lprintf(lvl, "Subker Id list for dev_id = %d: [ ", autotune_controller->active_unit_id_list[i]);
-      for (int j =0; j < autotune_controller->Subkernels_per_dev[i]; j++) fprintf(stderr, "%d ",
-        autotune_controller->Subkernel_dev_id_list[i][j]);
+      for (int j =0; j < autotune_controller->Subkernels_per_unit_num[i]; j++) fprintf(stderr, "%d ",
+        autotune_controller->Subkernels_per_unit_list[i][j]);
       lprintf(0, "]\n");
     }
 #endif
   }
 }
 
-void CoCoDistributeSubkernelsRoundRobinChunkReverse(CoControl_p autotune_controller, int Subkernel_num, int Chunk_size){
+void CoCoDistributeSubkernelsRoundRobinChunkReverse(ATC_p autotune_controller, int Subkernel_num, int Chunk_size){
   int lvl = 6;
   if (Subkernel_num <= autotune_controller->active_unit_num){
     autotune_controller->active_unit_num = Subkernel_num;
     for (int d = 0 ; d < autotune_controller->active_unit_num; d++){
-      autotune_controller->Subkernels_per_dev[d] = 1;
-      autotune_controller->Subkernel_dev_id_list[d][0] = d;
+      autotune_controller->Subkernels_per_unit_num[d] = 1;
+      autotune_controller->Subkernels_per_unit_list[d][0] = d;
     }
   }
   else{
   int rem_dev = Subkernel_num;
   for (int d = 0 ; d < autotune_controller->active_unit_num; d++){
-     autotune_controller->Subkernels_per_dev[d] =
+     autotune_controller->Subkernels_per_unit_num[d] =
       (int) (1.0* autotune_controller->active_unit_score[d]* Subkernel_num);
-     rem_dev-= autotune_controller->Subkernels_per_dev[d];
+     rem_dev-= autotune_controller->Subkernels_per_unit_num[d];
   }
   while(rem_dev!= 0){
     for (int d = 0 ; d < autotune_controller->active_unit_num; d++){
        if(rem_dev!= 0){
-         autotune_controller->Subkernels_per_dev[d] += 1;
+         autotune_controller->Subkernels_per_unit_num[d] += 1;
          rem_dev--;
        }
        else break;
@@ -228,17 +228,17 @@ void CoCoDistributeSubkernelsRoundRobinChunkReverse(CoControl_p autotune_control
     for(int devidx = 0; devidx < autotune_controller->active_unit_num; devidx++){
       total_sk_prev = total_sk_ctr;
       if(total_sk_ctr == Subkernel_num) break;
-      else if(dev_sk_ctr_list[devidx] == autotune_controller->Subkernels_per_dev[devidx]) continue;
+      else if(dev_sk_ctr_list[devidx] == autotune_controller->Subkernels_per_unit_num[devidx]) continue;
       else{
-        autotune_controller->Subkernel_dev_id_list[devidx][dev_sk_ctr_list[devidx]] = total_sk_ctr;
+        autotune_controller->Subkernels_per_unit_list[devidx][dev_sk_ctr_list[devidx]] = total_sk_ctr;
         dev_sk_ctr_list[devidx]++;
         total_sk_ctr++;
       }
       while(total_sk_ctr%Chunk_size!=0){
         if(total_sk_ctr == Subkernel_num) break;
-        else if(dev_sk_ctr_list[devidx] == autotune_controller->Subkernels_per_dev[devidx]) break;
+        else if(dev_sk_ctr_list[devidx] == autotune_controller->Subkernels_per_unit_num[devidx]) break;
         else{
-          autotune_controller->Subkernel_dev_id_list[devidx][dev_sk_ctr_list[devidx]] = total_sk_ctr;
+          autotune_controller->Subkernels_per_unit_list[devidx][dev_sk_ctr_list[devidx]] = total_sk_ctr;
           dev_sk_ctr_list[devidx]++;
           total_sk_ctr++;
         }
@@ -246,11 +246,11 @@ void CoCoDistributeSubkernelsRoundRobinChunkReverse(CoControl_p autotune_control
       if (devidx%2 == 0){
         for(int local_ctr = dev_sk_ctr_list[devidx] - total_sk_ctr + total_sk_prev; local_ctr < dev_sk_ctr_list[devidx]; local_ctr++){
           if (local_ctr < dev_sk_ctr_list[devidx] - local_ctr - 1){
-            int temp_sk_id = autotune_controller->Subkernel_dev_id_list[devidx][local_ctr];
-            autotune_controller->Subkernel_dev_id_list[devidx][local_ctr] =
-              autotune_controller->Subkernel_dev_id_list[devidx]
+            int temp_sk_id = autotune_controller->Subkernels_per_unit_list[devidx][local_ctr];
+            autotune_controller->Subkernels_per_unit_list[devidx][local_ctr] =
+              autotune_controller->Subkernels_per_unit_list[devidx]
                 [dev_sk_ctr_list[devidx] - local_ctr - 1];
-            autotune_controller->Subkernel_dev_id_list[devidx]
+            autotune_controller->Subkernels_per_unit_list[devidx]
               [dev_sk_ctr_list[devidx] - local_ctr - 1] = temp_sk_id;
           }
           else break;
@@ -260,14 +260,14 @@ void CoCoDistributeSubkernelsRoundRobinChunkReverse(CoControl_p autotune_control
     }
   }
 /*  for(int devidx = 0; devidx < autotune_controller->active_unit_num; devidx++){
-    for(int local_ctr = 0; local_ctr < autotune_controller->Subkernels_per_dev[devidx]; local_ctr++){
-      if (local_ctr < autotune_controller->Subkernels_per_dev[devidx] - local_ctr - 1){
-        int temp_sk_id = autotune_controller->Subkernel_dev_id_list[devidx][local_ctr];
-        autotune_controller->Subkernel_dev_id_list[devidx][local_ctr] =
-          autotune_controller->Subkernel_dev_id_list[devidx]
-            [autotune_controller->Subkernels_per_dev[devidx] - local_ctr - 1];
-        autotune_controller->Subkernel_dev_id_list[devidx]
-          [autotune_controller->Subkernels_per_dev[devidx] - local_ctr - 1] = temp_sk_id;
+    for(int local_ctr = 0; local_ctr < autotune_controller->Subkernels_per_unit_num[devidx]; local_ctr++){
+      if (local_ctr < autotune_controller->Subkernels_per_unit_num[devidx] - local_ctr - 1){
+        int temp_sk_id = autotune_controller->Subkernels_per_unit_list[devidx][local_ctr];
+        autotune_controller->Subkernels_per_unit_list[devidx][local_ctr] =
+          autotune_controller->Subkernels_per_unit_list[devidx]
+            [autotune_controller->Subkernels_per_unit_num[devidx] - local_ctr - 1];
+        autotune_controller->Subkernels_per_unit_list[devidx]
+          [autotune_controller->Subkernels_per_unit_num[devidx] - local_ctr - 1] = temp_sk_id;
       }
       else break;
     }
@@ -281,39 +281,39 @@ void CoCoDistributeSubkernelsRoundRobinChunkReverse(CoControl_p autotune_control
     lprintf(0, "]\n");
     lprintf(lvl, "Subker Num : [ ");
     for (int i =0; i < autotune_controller->active_unit_num; i++) fprintf(stderr, "%d ",
-      autotune_controller->Subkernels_per_dev[i]);
+      autotune_controller->Subkernels_per_unit_num[i]);
     lprintf(0, "]\n");
     for (int i =0; i < autotune_controller->active_unit_num; i++){
       lprintf(lvl, "Subker Id list for dev_id = %d: [ ", autotune_controller->active_unit_id_list[i]);
-      for (int j =0; j < autotune_controller->Subkernels_per_dev[i]; j++) fprintf(stderr, "%d ",
-        autotune_controller->Subkernel_dev_id_list[i][j]);
+      for (int j =0; j < autotune_controller->Subkernels_per_unit_num[i]; j++) fprintf(stderr, "%d ",
+        autotune_controller->Subkernels_per_unit_list[i][j]);
       lprintf(0, "]\n");
     }
 #endif
   }
 }
 
-void CoCoDistributeSubkernels2DBlockCyclic(CoControl_p autotune_controller, int D1GridSz, int D2GridSz, int D3GridSz){
+void CoCoDistributeSubkernels2DBlockCyclic(ATC_p autotune_controller, int D1GridSz, int D2GridSz, int D3GridSz){
   int lvl = 6;
   long Subkernel_num = D1GridSz* D2GridSz* D3GridSz;
   if (Subkernel_num <= autotune_controller->active_unit_num){
     autotune_controller->active_unit_num = Subkernel_num;
     for (int d = 0 ; d < autotune_controller->active_unit_num; d++){
-      autotune_controller->Subkernels_per_dev[d] = 1;
-      autotune_controller->Subkernel_dev_id_list[d][0] = d;
+      autotune_controller->Subkernels_per_unit_num[d] = 1;
+      autotune_controller->Subkernels_per_unit_list[d][0] = d;
     }
   }
   else{
   int rem_dev = Subkernel_num;
   for (int d = 0 ; d < autotune_controller->active_unit_num; d++){
-     autotune_controller->Subkernels_per_dev[d] =
+     autotune_controller->Subkernels_per_unit_num[d] =
       (int) (1.0* autotune_controller->active_unit_score[d]* Subkernel_num);
-     rem_dev-= autotune_controller->Subkernels_per_dev[d];
+     rem_dev-= autotune_controller->Subkernels_per_unit_num[d];
   }
   while(rem_dev!= 0){
     for (int d = 0 ; d < autotune_controller->active_unit_num; d++){
        if(rem_dev!= 0){
-         autotune_controller->Subkernels_per_dev[d] += 1;
+         autotune_controller->Subkernels_per_unit_num[d] += 1;
          rem_dev--;
        }
        else break;
@@ -355,11 +355,11 @@ lprintf(lvl, "CoCoDistributeSubkernels2DBlockCyclic: Devices = %d, D1_parts = %d
           lprintf(lvl, "CoCoDistributeSubkernels2DBlockCyclic: sk_ctr[%d,%d,%d] = %d, devidx = %d\n",
             D1,D2,D3, sk_ctr, devidx);
 #endif
-          while(dev_sk_ctr_list[devidx] == autotune_controller->Subkernels_per_dev[devidx]){
+          while(dev_sk_ctr_list[devidx] == autotune_controller->Subkernels_per_unit_num[devidx]){
             if(devidx == autotune_controller->active_unit_num - 1) devidx = 0;
             else devidx++;
           }
-          autotune_controller->Subkernel_dev_id_list[devidx][dev_sk_ctr_list[devidx]] = sk_ctr;
+          autotune_controller->Subkernels_per_unit_list[devidx][dev_sk_ctr_list[devidx]] = sk_ctr;
           dev_sk_ctr_list[devidx]++;
         }
 
@@ -373,11 +373,11 @@ lprintf(lvl, "CoCoDistributeSubkernels2DBlockCyclic: Devices = %d, D1_parts = %d
         lprintf(lvl, "CoCoDistributeSubkernels2DBlockCyclic:\nsk_ctr[%d,%d,%d] = %d, devidx = %d\n",
           D1,D2,D3, sk_ctr, devidx);
 #endif
-        while(dev_sk_ctr_list[devidx] == autotune_controller->Subkernels_per_dev[devidx]){
+        while(dev_sk_ctr_list[devidx] == autotune_controller->Subkernels_per_unit_num[devidx]){
           if(devidx == autotune_controller->active_unit_num - 1) devidx = 0;
           else devidx++;
         }
-        autotune_controller->Subkernel_dev_id_list[devidx][dev_sk_ctr_list[devidx]] = sk_ctr;
+        autotune_controller->Subkernels_per_unit_list[devidx][dev_sk_ctr_list[devidx]] = sk_ctr;
         dev_sk_ctr_list[devidx]++;
       }
       if(devidx == autotune_controller->active_unit_num - 1) devidx = 0;
@@ -392,11 +392,11 @@ lprintf(lvl, "CoCoDistributeSubkernels2DBlockCyclic: Devices = %d, D1_parts = %d
         lprintf(lvl, "CoCoDistributeSubkernels2DBlockCyclic:\nsk_ctr[%d,%d,%d] = %d, devidx = %d\n",
           D1,D2,D3, sk_ctr, devidx);
 #endif
-        while(dev_sk_ctr_list[devidx] == autotune_controller->Subkernels_per_dev[devidx]){
+        while(dev_sk_ctr_list[devidx] == autotune_controller->Subkernels_per_unit_num[devidx]){
           if(devidx == autotune_controller->active_unit_num - 1) devidx = 0;
           else devidx++;
         }
-        autotune_controller->Subkernel_dev_id_list[devidx][dev_sk_ctr_list[devidx]] = sk_ctr;
+        autotune_controller->Subkernels_per_unit_list[devidx][dev_sk_ctr_list[devidx]] = sk_ctr;
         dev_sk_ctr_list[devidx]++;
       }
       if(devidx == autotune_controller->active_unit_num - 1) devidx = 0;
@@ -411,11 +411,11 @@ lprintf(lvl, "CoCoDistributeSubkernels2DBlockCyclic: Devices = %d, D1_parts = %d
           lprintf(lvl, "CoCoDistributeSubkernels2DBlockCyclic:\nsk_ctr[%d,%d,%d] = %d, devidx = %d\n",
             D1,D2,D3, sk_ctr, devidx);
 #endif
-          while(dev_sk_ctr_list[devidx] == autotune_controller->Subkernels_per_dev[devidx]){
+          while(dev_sk_ctr_list[devidx] == autotune_controller->Subkernels_per_unit_num[devidx]){
             if(devidx == autotune_controller->active_unit_num - 1) devidx = 0;
             else devidx++;
           }
-          autotune_controller->Subkernel_dev_id_list[devidx][dev_sk_ctr_list[devidx]] = sk_ctr;
+          autotune_controller->Subkernels_per_unit_list[devidx][dev_sk_ctr_list[devidx]] = sk_ctr;
           dev_sk_ctr_list[devidx]++;
         }
         if(devidx == autotune_controller->active_unit_num - 1) devidx = 0;
@@ -429,12 +429,12 @@ lprintf(lvl, "CoCoDistributeSubkernels2DBlockCyclic: Devices = %d, D1_parts = %d
     lprintf(0, "]\n");
     lprintf(lvl, "Subker Num : [ ");
     for (int i =0; i < autotune_controller->active_unit_num; i++) fprintf(stderr, "%d ",
-      autotune_controller->Subkernels_per_dev[i]);
+      autotune_controller->Subkernels_per_unit_num[i]);
     lprintf(0, "]\n");
     for (int i =0; i < autotune_controller->active_unit_num; i++){
       lprintf(lvl, "Subker Id list for dev_id = %d: [ ", autotune_controller->active_unit_id_list[i]);
-      for (int j =0; j < autotune_controller->Subkernels_per_dev[i]; j++) fprintf(stderr, "%d ",
-        autotune_controller->Subkernel_dev_id_list[i][j]);
+      for (int j =0; j < autotune_controller->Subkernels_per_unit_num[i]; j++) fprintf(stderr, "%d ",
+        autotune_controller->Subkernels_per_unit_list[i][j]);
       lprintf(0, "]\n");
     }
 #endif

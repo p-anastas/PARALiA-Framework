@@ -18,7 +18,7 @@ pthread_barrier_t  SoftCache_alloc_barrier_gemm;
 gemm_backend_in_p initial_gemm = NULL;
 
 CoCoModel_p glob_model_gemm[LOC_NUM] = {NULL};
-CoControl_p autotune_controller_gemm = NULL;
+ATC_p autotune_controller_gemm = NULL;
 int autotune_controller_dgemm_limited = 0;
 int MGridSz = 0, NGridSz = 0, KGridSz = 0;
 
@@ -270,7 +270,7 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 }
 
 /// A dgemm wrapper including auto-tuning of T and cache_size, as well as device management
-CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t K, VALUE_TYPE alpha, VALUE_TYPE* A, size_t ldA, VALUE_TYPE* B, size_t ldB, VALUE_TYPE beta, VALUE_TYPE* C, size_t ldC)
+ATC_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t K, VALUE_TYPE alpha, VALUE_TYPE* A, size_t ldA, VALUE_TYPE* B, size_t ldB, VALUE_TYPE beta, VALUE_TYPE* C, size_t ldC)
 {
 	short lvl = 1;
 #ifdef DEBUG
@@ -343,6 +343,7 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 	B_asset->prepareAsync(&asset_thread_id[1], attr);
 	C_asset->prepareAsync(&asset_thread_id[2], attr);
 
+	if (autotune_controller_gemm == NULL) autotune_controller_gemm = new ATC();
 	double autotune_timer = CoCoAutotuneParameters(autotune_controller_gemm, "Dgemm",
 	initial_gemm, glob_model_gemm, reuse_model_flag);
 
@@ -432,6 +433,9 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 	SK_wrap->SubkernelNumDev = Subkernel_num_gemm;
 	SK_wrap->dev_id = -42;
 	remaining_Subkernels_gemm = Subkernel_num_gemm;
+
+
+	autotune_controller_gemm->update_sk_num(Subkernel_num_gemm);
 #ifdef DEBUG
 	lprintf(lvl, "Subkernel_num_gemm = %d {M,N,K}GridSz = {%d, %d, %d}, autotune_controller_gemm->active_unit_num = %d\n\n",
 		Subkernel_num_gemm, MGridSz, NGridSz, KGridSz, autotune_controller_gemm->active_unit_num);
@@ -476,8 +480,8 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 	pthread_barrier_init (&SoftCache_alloc_barrier_gemm, NULL, autotune_controller_gemm->active_unit_num + 1);
 
 	for(int d=0; d < autotune_controller_gemm->active_unit_num; d++){
-		if(autotune_controller_gemm->Subkernels_per_dev[d] == 0 )
-			error("CoCoPeLiaDgemm: Leftover autotune_controller_gemm->Subkernels_per_dev[%d] == 0", d);
+		if(autotune_controller_gemm->Subkernels_per_unit_num[d] == 0 )
+			error("CoCoPeLiaDgemm: Leftover autotune_controller_gemm->Subkernels_per_unit_num[%d] == 0", d);
 
 		// Check/Enable peer access between all system units
 		CoCoEnableLinks(idxize(autotune_controller_gemm->active_unit_id_list[d]), LOC_NUM);
@@ -486,14 +490,14 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 		thread_dev_data[d]->dev_id = autotune_controller_gemm->active_unit_id_list[d];
 
 #ifndef RUNTIME_SCHEDULER_VERSION
-		thread_dev_data[d]->SubkernelNumDev = autotune_controller_gemm->Subkernels_per_dev[d];
+		thread_dev_data[d]->SubkernelNumDev = autotune_controller_gemm->Subkernels_per_unit_num[d];
 #else
 		thread_dev_data[d]->SubkernelNumDev = Subkernel_num_gemm;
 #endif
 		thread_dev_data[d]->SubkernelListDev = (Subkernel**) malloc(thread_dev_data[d]->SubkernelNumDev*sizeof(Subkernel*));
 #ifndef RUNTIME_SCHEDULER_VERSION
-		for(int skitt = 0; skitt < autotune_controller_gemm->Subkernels_per_dev[d]; skitt++)
-			thread_dev_data[d]->SubkernelListDev[skitt] = Subkernel_list_gemm[autotune_controller_gemm->Subkernel_dev_id_list[d][skitt]];
+		for(int skitt = 0; skitt < autotune_controller_gemm->Subkernels_per_unit_num[d]; skitt++)
+			thread_dev_data[d]->SubkernelListDev[skitt] = Subkernel_list_gemm[autotune_controller_gemm->Subkernels_per_unit_list[d][skitt]];
 #endif
 
 		s = pthread_create(&thread_id[d], &attr,
@@ -602,18 +606,18 @@ CoControl_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t
 }
 
 /// A modification of CoCopeLiaDgemm but with given parameters (mainly for performance/debug purposes)
-CoControl_p CoCopeLiaDgemmControled(char TransA,  char TransB, size_t M, size_t N, size_t K, VALUE_TYPE alpha, VALUE_TYPE* A, size_t ldA, VALUE_TYPE* B, size_t ldB, VALUE_TYPE beta, VALUE_TYPE* C, size_t ldC, CoControl_p predef_controller){
+ATC_p CoCopeLiaDgemmControled(char TransA,  char TransB, size_t M, size_t N, size_t K, VALUE_TYPE alpha, VALUE_TYPE* A, size_t ldA, VALUE_TYPE* B, size_t ldB, VALUE_TYPE beta, VALUE_TYPE* C, size_t ldC, ATC_p predef_controller){
 	if (predef_controller == NULL){
 		warning("Calling CoCopeLiaDgemmControled with empty controller -> falling back to full autotune version \'CoCopeLiaDgemm\'\n");
 		return CoCopeLiaDgemm(TransA, TransB,  M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC);
 	}
 	autotune_controller_dgemm_limited = 1;
-	if (autotune_controller_gemm == NULL) autotune_controller_gemm = create_autotune_controller();
+	if (autotune_controller_gemm == NULL) autotune_controller_gemm = new ATC();
 	autotune_controller_gemm->T = predef_controller->T;
 	autotune_controller_gemm->active_unit_num = predef_controller->active_unit_num;
 	for(int idx =0; idx < LOC_NUM; idx++)
 		autotune_controller_gemm->active_unit_id_list[idx] = predef_controller->active_unit_id_list[idx];
 	autotune_controller_gemm->cache_limit = predef_controller->cache_limit;
-	CoControl_p return_vals = CoCopeLiaDgemm(TransA, TransB,  M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC);
+	ATC_p return_vals = CoCopeLiaDgemm(TransA, TransB,  M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC);
 	return return_vals;
 }

@@ -158,7 +158,7 @@ class Asset1D
 	void resetProperties();
 };
 
-void CoCoUpdateLinkSpeed2D(CoControl_p autotuned_vals_p, CoCoModel_p* glob_model);
-void CoCoUpdateLinkSpeed1D(CoControl_p autotuned_vals_p, CoCoModel_p* glob_model);
+void CoCoUpdateLinkSpeed2D(ATC_p autotuned_vals_p, CoCoModel_p* glob_model);
+void CoCoUpdateLinkSpeed1D(ATC_p autotuned_vals_p, CoCoModel_p* glob_model);
 
 #endif

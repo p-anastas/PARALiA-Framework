@@ -9,7 +9,50 @@
 #include "unihelpers.hpp"
 #include "CoCoPeLia.hpp"
 
-void ParseInputLvl1(const int argc, const char *argv[], CoControl_p* predef_control_values, double* alpha,
+char* CoCoImplementationPrint(){
+	char* string_out = (char*) malloc (256*sizeof(char));
+#ifdef ENABLE_MUTEX_LOCKING
+#ifdef MULTIDEVICE_REDUCTION_ENABLE
+	sprintf(string_out, "ML-MR-BL%d", MAX_BUFFERING_L);
+#else
+	sprintf(string_out, "ML");
+#endif
+#elif ENABLE_PARALLEL_BACKEND
+	sprintf(string_out, "PB-L%d", MAX_BACKEND_L);
+#elif MULTIDEVICE_REDUCTION_ENABLE
+	sprintf(string_out, "MR-BL%d", MAX_BUFFERING_L);
+#elif UNIHELPER_LOCKFREE_ENABLE
+	sprintf(string_out, "UL");
+#elif BUFFER_REUSE_ENABLE
+	sprintf(string_out, "BR");
+#elif BACKEND_RES_REUSE_ENABLE
+	sprintf(string_out, "BRR");
+#elif ASYNC_ENABLE
+	sprintf(string_out, "ASYNC");
+#else
+	sprintf(string_out, "SYNC");
+#endif
+	return string_out;
+}
+
+char* CoCoDistributionPrint(){
+	char* string_out = (char*) malloc (256*sizeof(char));
+#ifdef RUNTIME_SCHEDULER_VERSION
+#ifdef DISTRIBUTION
+	sprintf(string_out, "RT-%s", DISTRIBUTION);
+#else
+#error
+#endif
+#else
+#ifdef DISTRIBUTION
+	sprintf(string_out, "ST-%s", DISTRIBUTION);
+#else
+#error
+#endif
+#endif
+	return string_out;
+}
+void ParseInputLvl1(const int argc, const char *argv[], ATC_p* predef_control_values, double* alpha,
 	size_t* D1, size_t* inc1, size_t* inc2, short* loc1, short* loc2, short* outloc1, short* outloc2){
 	if(argc != 13) error("Incorrect input arguments. Usage: ./correct_run\n\tactive_unit_num(auto if <0)\
 	\n\tdev_ids(form example: 0101 for devices 0,2 - ignore if active_unit_num < 0)\n\tT(auto if <=0)\
@@ -20,13 +63,13 @@ void ParseInputLvl1(const int argc, const char *argv[], CoControl_p* predef_cont
 	int T = atoi(argv[3]);
 	long long cache_limit = atof(argv[4]);
 
-	CoControl_p temp_p;
+	ATC_p temp_p;
 
 	//Tunning Parameters
 	if (active_unit_num < 0 && cache_limit <= 0 && T <=0 ) temp_p = *predef_control_values = NULL;
 	else{
 		fprintf(stderr, "Using predefined control parameters from input\n");
-		*predef_control_values = (CoControl_p) malloc (sizeof(struct CoControl));
+		*predef_control_values = new ATC();
 		temp_p = *predef_control_values;
 		temp_p->cache_limit = cache_limit;
 		temp_p->T = T;
@@ -55,15 +98,15 @@ void ParseInputLvl1(const int argc, const char *argv[], CoControl_p* predef_cont
 	*outloc1 = atoi(argv[11]);
 	*outloc2 = atoi(argv[12]);
 
-	char* control_str = CoControlPrint(temp_p);
+	const char* control_str = (temp_p) ? temp_p->print() : "-1,-1,-1,-1";
 	fprintf(stderr, "ParseInputLvl1: Parsed configuration:\n\tControl: %s\n\talpha: %lf\
 	\n\tD1: %zu, inc1: %zu, inc2: %zu\n\tloc1: %d, loc2: %d, outloc1: %d, outloc2: %d\n",
 	control_str, *alpha, *D1, *inc1, *inc2, *loc1, *loc2, *outloc1, *outloc2);
-	free(control_str);
+
 	return;
 }
 
-void ParseInputLvl3(const int argc, const char *argv[], CoControl_p* predef_control_values,
+void ParseInputLvl3(const int argc, const char *argv[], ATC_p* predef_control_values,
 		char* TransA, char* TransB, double* alpha, double* beta, size_t* D1, size_t* D2, size_t* D3,
 		short* loc1, short* loc2, short* loc3, short* outloc){
 	if(argc != 16) error("Incorrect input arguments. Usage: ./correct_run\
@@ -75,13 +118,13 @@ void ParseInputLvl3(const int argc, const char *argv[], CoControl_p* predef_cont
 	int T = atoi(argv[3]);
 	long long cache_limit = atof(argv[4]);
 
-	CoControl_p temp_p;
+	ATC_p temp_p;
 
 	//Tunning Parameters
 	if (active_unit_num < 0 && cache_limit <= 0 && T <=0 ) temp_p = *predef_control_values = NULL;
 	else{
 		fprintf(stderr, "Using predefined control parameters from input\n");
-		*predef_control_values = (CoControl_p) malloc (sizeof(struct CoControl));
+		*predef_control_values = new ATC();
 		temp_p = *predef_control_values;
 		temp_p->cache_limit = cache_limit;
 		temp_p->T = T;
@@ -113,14 +156,14 @@ void ParseInputLvl3(const int argc, const char *argv[], CoControl_p* predef_cont
 	*loc3 = atoi(argv[14]);
 	*outloc = atoi(argv[15]);
 
-	char* control_str = CoControlPrint(temp_p);
+	const char* control_str = (temp_p) ? temp_p->print() : "-1,-1,-1,-1";
 	fprintf(stderr, "ParseInputLvl3: Parsed configuration:\n\tControl: %s\n\tTransA: %c, TransB: %c\n\talpha: %lf, beta: %lf\n\tD1: %zu, D2: %zu, D3: %zu\n\tloc1: %d, loc2: %d, loc3: %d, outloc: %d\n",
 	control_str, *TransA, *TransB, *alpha, *beta, *D1, *D2, *D3, *loc1, *loc2, *loc3, *outloc);
-	free(control_str);
+
 	return;
 }
 
-void CheckLogLvl1(char* filename, CoControl_p predef_control_values,
+void CheckLogLvl1(char* filename, ATC_p predef_control_values,
 	double alpha, size_t D1, size_t inc1, size_t inc2, short loc1, short loc2, short outloc1, short outloc2){
 	FILE* fp = fopen(filename,"r");
 	if (!fp) {
@@ -129,7 +172,7 @@ void CheckLogLvl1(char* filename, CoControl_p predef_control_values,
 		else warning("CheckLogLvl1: Generating Logfile %s...\n", filename);
 	}
 	char buffer[256], search_string[256];
-	char* control_str = CoControlPrint(predef_control_values);
+	const char* control_str = (predef_control_values) ? predef_control_values->print() : "-1,-1,-1,-1";
 	sprintf(search_string, "%s, %.5lf,%zu,%zu,%zu,%d,%d,%d,%d", control_str, alpha, D1, inc1, inc2, loc1, loc2, outloc1, outloc2);
 	while (fgets(buffer, sizeof(buffer), fp) != NULL){
 		if(strstr(buffer, search_string) != NULL){
@@ -139,12 +182,12 @@ void CheckLogLvl1(char* filename, CoControl_p predef_control_values,
 			exit(1);
 		}
 	}
-	free(control_str);
+
     	fclose(fp);
 	return;
 }
 
-void CheckLogLvl3(char* filename, CoControl_p predef_control_values, char TransA, char TransB, double alpha, double beta, size_t D1, size_t D2, size_t D3, short loc1, short loc2, short loc3, short outloc){
+void CheckLogLvl3(char* filename, ATC_p predef_control_values, char TransA, char TransB, double alpha, double beta, size_t D1, size_t D2, size_t D3, short loc1, short loc2, short loc3, short outloc){
 	FILE* fp = fopen(filename,"r");
 	if (!fp) {
 		fp = fopen(filename,"w+");
@@ -152,7 +195,7 @@ void CheckLogLvl3(char* filename, CoControl_p predef_control_values, char TransA
 		else warning("CheckLogLvl3: Generating Logfile %s...\n", filename);
 	}
 	char buffer[256], search_string[256];
-	char* control_str = CoControlPrint(predef_control_values);
+	const char* control_str = (predef_control_values) ? predef_control_values->print() : "-1,-1,-1,-1";
 	sprintf(search_string, "%s, %c,%c,%.5lf,%.5lf,%zu,%zu,%zu,%d,%d,%d,%d", control_str, TransA, TransB, alpha, beta, D1, D2, D3, loc1, loc2, loc3, outloc);
 	while (fgets(buffer, sizeof(buffer), fp) != NULL){
 		if(strstr(buffer, search_string) != NULL){
@@ -161,28 +204,28 @@ void CheckLogLvl3(char* filename, CoControl_p predef_control_values, char TransA
 			exit(1);
 		}
 	}
-	free(control_str);
+
     	fclose(fp);
 	return;
 }
 
-void StoreLogLvl1(char* filename, CoControl_p predef_control_values, double alpha, size_t D1,
+void StoreLogLvl1(char* filename, ATC_p predef_control_values, double alpha, size_t D1,
 	size_t inc1, size_t inc2, short loc1, short loc2, short outloc1, short outloc2, double timer){
 	FILE* fp = fopen(filename,"a");
 	if (!fp) error("report_results: LogFile failed to open");
-	char* control_str = CoControlPrint(predef_control_values);
+	const char* control_str = (predef_control_values) ? predef_control_values->print() : "-1,-1,-1,-1";
    	fprintf(fp,"%s, %.5lf,%zu,%zu,%zu,%d,%d,%d,%d", control_str, alpha, D1, inc1, inc2, loc1, loc2, outloc1, outloc2);
-	free(control_str);
+
         fclose(fp);
 	return;
 }
 
-void StoreLogLvl3(char* filename, CoControl_p predef_control_values, char TransA, char TransB, double alpha, double beta, size_t D1, size_t D2, size_t D3, short loc1, short loc2, short loc3, short outloc, double timer){
+void StoreLogLvl3(char* filename, ATC_p predef_control_values, char TransA, char TransB, double alpha, double beta, size_t D1, size_t D2, size_t D3, short loc1, short loc2, short loc3, short outloc, double timer){
 	FILE* fp = fopen(filename,"a");
 	if (!fp) error("report_results: LogFile failed to open");
-	char* control_str = CoControlPrint(predef_control_values);
+	const char* control_str = (predef_control_values) ? predef_control_values->print() : "-1,-1,-1,-1";
    	fprintf(fp,"%s, %c,%c,%.5lf,%.5lf,%zu,%zu,%zu,%d,%d,%d,%d, %e\n",  control_str, TransA, TransB, alpha, beta, D1, D2, D3, loc1, loc2, loc3, outloc, timer);
-	free(control_str);
+
         fclose(fp);
 	return;
 }
