@@ -7,6 +7,9 @@
 #include <stdlib.h>
 #include <math.h>
 
+// for DBL_MAX
+#include <float.h>
+
 #include "CoCoPeLiaCoModel.hpp"
 #include "CoCoPeLiaGPUexec.hpp"
 #include "CoCoPeLiaModel.hpp"
@@ -435,7 +438,7 @@ const char* printProblem(ProblemType problem){
 	}
 }
 
-void CoCoPeLiaRemoveUselessDevices(ATC_p autotune_controller){
+void PARALiaRemoveUselessDevices(ATC_p autotune_controller){
 	for (int i = 0; i < autotune_controller->active_unit_num; i++)
 	if(autotune_controller->active_unit_score[i] == 0.0 ) {
 		for (int i_move = i; i_move < autotune_controller->active_unit_num - 1; i_move++){
@@ -447,14 +450,47 @@ void CoCoPeLiaRemoveUselessDevices(ATC_p autotune_controller){
 	}
 }
 
-double CoCoAutotuneParameters(ATC_p autotune_controller, const char* routine_name, void* initial_problem_wrap,
-  CoCoModel_p* glob_model, short reuse_model_flag){
+void PARALIA_translate_unit_ids(int case_id, int* active_unit_num_p, int* active_unit_id_list){
+	int mask;
+	*active_unit_num_p = 0;
+	for (int mask_offset = 0; mask_offset < LOC_NUM; mask_offset++){
+		mask =  1 << mask_offset;
+		if (case_id & mask){
+			active_unit_id_list[*active_unit_num_p] = deidxize(mask_offset);
+			(*active_unit_num_p)++;
+			//lprintf(0, "PARALIA_translate_unit_ids(case_id = %d): mask = %d -> Adding unit %d to available\n",
+			//	case_id, mask, deidxize(mask_offset));
+		}
+	}
+}
+
+double PARALiaAutotuneParameters(ATC_p autotune_controller, const char* routine_name, void* initial_problem_wrap,
+  CoCoModel_p* glob_model, short reuse_model_flag, short autotune_controller_is_limited){
 	short lvl = 3;
 	double cpu_timer = csecond();
 #ifdef PDEBUG
 	lprintf(lvl, "CoCoAutotuneParameters(%p, %s, &%p, %p, %d)", autotune_controller, routine_name,
 		initial_problem_wrap, glob_model, reuse_model_flag);
 #endif
+
+for (int dev_id_idx =0; dev_id_idx < LOC_NUM; dev_id_idx++){
+	if(!reuse_model_flag){
+		free(glob_model[dev_id_idx]);
+		glob_model[dev_id_idx] = NULL;
+		if(!autotune_controller_is_limited) autotune_controller->reset();
+		else warning("PARALiaAutotuneParameters: Called with reuse_model_flag = 0 and \
+			autotune_controller_is_limited = 1, controller will not be reset.");
+	}
+	else{
+//#ifdef PDEBUG
+		lprintf(lvl, "CoCoAutotuneParameters() reuse_model_flag = 1, Reusing Previous autotune_controller\n");
+//#endif
+		return  csecond() - cpu_timer;
+	}
+	if(glob_model[dev_id_idx] == NULL){
+		glob_model[dev_id_idx] = CoCoPeLiaTileModelInit(deidxize(dev_id_idx), routine_name, initial_problem_wrap);
+	}
+}
 
 	int autotune_eval_devices = 0;
 	if (autotune_controller->active_unit_num > 0){
@@ -466,6 +502,7 @@ double CoCoAutotuneParameters(ATC_p autotune_controller, const char* routine_nam
 //#endif
 		}
 		else{
+			autotune_eval_devices = 1;
 //#ifdef DEBUG
 		lprintf(lvl, "Running on %d devices with tunable dev_ids\n", autotune_controller->active_unit_num);
 //#endif
@@ -482,20 +519,39 @@ double CoCoAutotuneParameters(ATC_p autotune_controller, const char* routine_nam
 			autotune_controller->active_unit_id_list[i] = deidxize(i);
 	}
 
-	for (int dev_id_idx =0; dev_id_idx < LOC_NUM; dev_id_idx++){
-		if(!reuse_model_flag){
-			free(glob_model[dev_id_idx]);
-			glob_model[dev_id_idx] = NULL;
-		}
-		if(glob_model[dev_id_idx] == NULL){
-			glob_model[dev_id_idx] = CoCoPeLiaTileModelInit(deidxize(dev_id_idx), routine_name, initial_problem_wrap);
-		}
-	}
-
-
 	if (autotune_eval_devices){
+		ATC_p temp_controller = new ATC();
+		temp_controller->mimic_ATC(autotune_controller);
+		int explored_cases = pow(2,LOC_NUM);
+		autotune_controller->pred_t = DBL_MAX;
+		int max_unit_num = autotune_controller->active_unit_num, initial_T = autotune_controller->T;
+		double tile_selection_t = 0, split_selection_t = 0;
+		for (int case_id = 1; case_id < explored_cases; case_id++){
+				PARALIA_translate_unit_ids(case_id, &temp_controller->active_unit_num, temp_controller->active_unit_id_list);
+				if(temp_controller->active_unit_num > max_unit_num) continue;
+				if(initial_T <= 0) tile_selection_t += PARALiaMultidevOptimizeTile(temp_controller, glob_model);
+				split_selection_t += PARALiaMultidevOptimizeSplit(temp_controller, glob_model);
+#ifdef PDEBUG
+				lprintf(lvl, "Recallibrating T = %ld prediction (2nd pass)\n", temp_controller->T);
+#endif
+				tile_selection_t += PARALiaMultidevOptimizeTile(temp_controller, glob_model);
+#ifdef PDEBUG
+				lprintf(lvl, "Recallibrating Split = [ ");
+				for (int i =0; i < temp_controller->active_unit_num; i++) lprintf(0, "%.5lf ", temp_controller->active_unit_score[i]);
+				lprintf(0, "] prediction (2nd pass)\n");
+#endif
+				split_selection_t += PARALiaMultidevOptimizeSplit(temp_controller, glob_model);
+
+				if (temp_controller->pred_t < autotune_controller->pred_t) autotune_controller->mimic_ATC(temp_controller);
+#ifdef PDEBUG
+						lprintf(0, "==============================================\n");
+						lprintf(0, "Autotune devices (iter %d): Tuning for active_unit_id_list = [ ", case_id);
+						for (int i =0; i < temp_controller->active_unit_num; i++) lprintf(0, "%d ", temp_controller->active_unit_id_list[i]);
+						lprintf(0, "] -> pred_t = %lf, best_pred_t = %lf\n", temp_controller->pred_t,  autotune_controller->pred_t);
+						lprintf(0, "==============================================\n");
+#endif
+		}
 	/// try all device combinations and their potential performance (possibly considerable preproc)
-		error("Not implemeted dummy\n");
 	/*int candidate_unit_id_list_of_lists[autotune_controller->active_unit_num][autotune_controller->active_unit_num], best_dev_num = 0;
 	double candidate_pred_t[autotune_controller->active_unit_num],
 		candidate_unit_id_score_of_lists[autotune_controller->active_unit_num][autotune_controller->active_unit_num];
@@ -507,27 +563,22 @@ double CoCoAutotuneParameters(ATC_p autotune_controller, const char* routine_nam
 		}*/
 	}
 	else{
-
 		double tile_selection_t = 0, split_selection_t = 0;
 		if(autotune_controller->T <= 0) tile_selection_t = PARALiaMultidevOptimizeTile(autotune_controller, glob_model);
 		split_selection_t = PARALiaMultidevOptimizeSplit(autotune_controller, glob_model);
-		if(autotune_controller->T <= 0){
 #ifdef PDEBUG
-				lprintf(lvl, "Recallibrating T = %ld prediction (2nd pass)\n", autotune_controller->T);
+		lprintf(lvl, "Recallibrating T = %ld prediction (2nd pass)\n", autotune_controller->T);
 #endif
-			tile_selection_t += PARALiaMultidevOptimizeTile(autotune_controller, glob_model);
-		}
+		tile_selection_t += PARALiaMultidevOptimizeTile(autotune_controller, glob_model);
 #ifdef PDEBUG
 		lprintf(lvl, "Recallibrating Split = [ ");
 		for (int i =0; i < autotune_controller->active_unit_num; i++) fprintf(stderr, "%.5lf ", autotune_controller->active_unit_score[i]);
 		lprintf(0, "] prediction (2nd pass)\n");
 #endif
 		split_selection_t += PARALiaMultidevOptimizeSplit(autotune_controller, glob_model);
-
-
 	}
 
-	CoCoPeLiaRemoveUselessDevices(autotune_controller);
+	PARALiaRemoveUselessDevices(autotune_controller);
 
 	cpu_timer = csecond() - cpu_timer;
 
@@ -601,6 +652,8 @@ lprintf(lvl, "PARALiaMultidevOptimizeTile( autotune_controller{ T=%ld, active_un
 	int best_idx = -1;
 	double temp_score = 0;
 
+	if (autotune_controller->active_unit_num <= 0)
+	error("PARALiaMultidevOptimizeTile: Called with active_unit_num = %d\n", autotune_controller->active_unit_num);
 	// All models are created for the same initial problem, therefore min_T, max_T and dimension related values are the same.
 	short first_model_idx = idxize(autotune_controller->active_unit_id_list[0]);
 	CoCoModel_p model = dev_model_list[first_model_idx];
@@ -684,6 +737,8 @@ double PARALiaMultidevOptimizeSplit(ATC_p autotune_controller, CoCoModel_p* dev_
 		printlist<double>(autotune_controller->active_unit_score, autotune_controller->active_unit_num), autotune_controller->pred_t*1000, dev_model_list);
 #endif
 
+	if (autotune_controller->active_unit_num <= 0)
+	error("PARALiaMultidevOptimizeSplit: Called with active_unit_num = %d\n", autotune_controller->active_unit_num);
 	// All models are created for the same initial problem, therefore min_T, max_T and dimension related values are the same.
 	short first_model_idx = idxize(autotune_controller->active_unit_id_list[0]);
 	CoCoModel_p model = dev_model_list[first_model_idx];

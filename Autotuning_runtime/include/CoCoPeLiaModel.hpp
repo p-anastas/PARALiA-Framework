@@ -66,10 +66,19 @@ typedef class ATC{
 
 	ATC();
 	~ATC();
-	
+
 	void update_sk_num(long long int subkernel_num_in);
+	/// Print the basic characteristics of the autotune controller to a string
 	char* print();
+
+	/// Print the basic characteristics of the autotune controller to a string in csv-friendly format (X,Y,...)
 	char* print_csv();
+
+	/// Copy all characteristics of another utotune controller
+	void mimic_ATC(class ATC* other_ATC);
+
+	/// Resets controller to default parameters (untuned).
+	void reset();
 
 }* ATC_p;
 #endif
@@ -95,8 +104,8 @@ typedef struct CoCo_model{
 
 }* CoCoModel_p;
 
-double CoCoAutotuneParameters(ATC_p autotune_controller, const char* routine_name, void* initial_problem_wrap,
-  CoCoModel_p* glob_model, short reuse_model_flag);
+double PARALiaAutotuneParameters(ATC_p autotune_controller, const char* routine_name, void* initial_problem_wrap,
+  CoCoModel_p* glob_model, short reuse_model_flag, short autotune_controller_is_limited);
 
 double PARALiaMultidevOptimizeTile(ATC_p autotune_controller, CoCoModel_p* dev_model_list);
 
@@ -132,19 +141,19 @@ CoCoModel_p CoCoPeLiaTileModelInit(short dev_id, const char* func_name, void* fu
 double CoCoPeLiaModelOptimizeTile(ATC_p autotune_controller, CoCoModel_p model, ModelType mode);
 
 /// Each device gets 1/num_devices Subkernels without acounting for their size or location
-void CoCoDistributeSubkernelsNaive(ATC_p autotune_controller, int Subkernel_num);
+void CoCoDistributeSubkernelsNaive(ATC_p autotune_controller);
 
 /// A classic round-robin distribution without acounting for their size or location
-void CoCoDistributeSubkernelsRoundRobin(ATC_p autotune_controller, int Subkernel_num);
+void CoCoDistributeSubkernelsRoundRobin(ATC_p autotune_controller);
 
 /// A round-robin distribution of chunk_size subkernels each time (if possible)
 void CoCoDistributeSubkernelsRoundRobinChunk(ATC_p autotune_controller,
-	int Subkernel_num, int Chunk_size);
+	 int Chunk_size);
 
 /// A round-robin distribution of chunk_size subkernels each time (if possible).
 /// Reverse subkernel order per device after distribution.
 void CoCoDistributeSubkernelsRoundRobinChunkReverse(ATC_p autotune_controller,
-	int Subkernel_num, int Chunk_size);
+	 int Chunk_size);
 
 void CoCoDistributeSubkernels2DBlockCyclic(ATC_p autotune_controller,
 	int D1GridSz, int D2GridSz, int D3GridSz);

@@ -344,8 +344,8 @@ ATC_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t K, VA
 	C_asset->prepareAsync(&asset_thread_id[2], attr);
 
 	if (autotune_controller_gemm == NULL) autotune_controller_gemm = new ATC();
-	double autotune_timer = CoCoAutotuneParameters(autotune_controller_gemm, "Dgemm",
-	initial_gemm, glob_model_gemm, reuse_model_flag);
+	double autotune_timer = PARALiaAutotuneParameters(autotune_controller_gemm, "Dgemm",
+	initial_gemm, glob_model_gemm, reuse_model_flag, autotune_controller_dgemm_limited);
 
 	void* res;
 	for(int i=0; i<3;i++){
@@ -449,13 +449,13 @@ ATC_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t K, VA
 
 //#ifndef RUNTIME_SCHEDULER_VERSION
 	if (!strcmp(DISTRIBUTION, "ROUND-ROBIN"))
-		CoCoDistributeSubkernelsRoundRobin(autotune_controller_gemm, Subkernel_num_gemm);
+		CoCoDistributeSubkernelsRoundRobin(autotune_controller_gemm);
 	else if (!strcmp(DISTRIBUTION, "SPLIT-NAIVE"))
-		CoCoDistributeSubkernelsNaive(autotune_controller_gemm, Subkernel_num_gemm);
+		CoCoDistributeSubkernelsNaive(autotune_controller_gemm);
 	else if (!strcmp(DISTRIBUTION, "SPLIT-CHUNKS-ROBIN"))
-		CoCoDistributeSubkernelsRoundRobinChunk(autotune_controller_gemm, Subkernel_num_gemm, KGridSz);
+		CoCoDistributeSubkernelsRoundRobinChunk(autotune_controller_gemm, KGridSz);
 	else if (!strcmp(DISTRIBUTION, "SPLIT-CHUNKS-ROBIN-REVERSE"))
-		CoCoDistributeSubkernelsRoundRobinChunkReverse(autotune_controller_gemm, Subkernel_num_gemm, KGridSz);
+		CoCoDistributeSubkernelsRoundRobinChunkReverse(autotune_controller_gemm, KGridSz);
 	else if (!strcmp(DISTRIBUTION, "2D-BLOCK-CYCLIC"))
 		CoCoDistributeSubkernels2DBlockCyclic(autotune_controller_gemm, MGridSz, NGridSz, KGridSz);
 	else error("CoCopeLiaDgemm: Unknown Subkernel Distribution %s\n", DISTRIBUTION);
@@ -602,7 +602,11 @@ ATC_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t K, VA
 #ifdef TEST
 	lprintf(lvl-1, "<-----|\n");
 #endif
-	return autotune_controller_gemm;
+
+	// Better not return our global to the user, he can accidentally do stuff to it.
+	ATC_p result = new ATC();
+	result->mimic_ATC(autotune_controller_gemm);
+	return result;
 }
 
 /// A modification of CoCopeLiaDgemm but with given parameters (mainly for performance/debug purposes)

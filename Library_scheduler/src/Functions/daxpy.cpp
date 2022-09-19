@@ -255,8 +255,8 @@ ATC_p CoCopeLiaDaxpy(size_t N, VALUE_TYPE alpha, VALUE_TYPE* x, size_t incx, VAL
 	y_asset->prepareAsync(&asset_thread_id[1], attr);
 
 	if (autotune_controller_axpy == NULL) autotune_controller_axpy = new ATC();
-	double autotune_timer = CoCoAutotuneParameters(autotune_controller_axpy, "Daxpy",
-	initial_daxpy, glob_model_axpy, reuse_model_flag);
+	double autotune_timer = PARALiaAutotuneParameters(autotune_controller_axpy, "Daxpy",
+	initial_daxpy, glob_model_axpy, reuse_model_flag, autotune_controller_axpy_limited);
 
 	void* res;
 	for(int i=0; i<2;i++){
@@ -348,15 +348,15 @@ ATC_p CoCopeLiaDaxpy(size_t N, VALUE_TYPE alpha, VALUE_TYPE* x, size_t incx, VAL
 	for (int devidx = 0; devidx < autotune_controller_axpy->active_unit_num; devidx++)
 		autotune_controller_axpy->Subkernels_per_unit_list[devidx] = (int*) malloc(Subkernel_num_axpy*sizeof(int));
 	if (!strcmp(DISTRIBUTION, "ROUND-ROBIN"))
-		CoCoDistributeSubkernelsRoundRobin(autotune_controller_axpy, Subkernel_num_axpy);
+		CoCoDistributeSubkernelsRoundRobin(autotune_controller_axpy);
 	else if (!strcmp(DISTRIBUTION, "SPLIT-NAIVE"))
-		CoCoDistributeSubkernelsNaive(autotune_controller_axpy, Subkernel_num_axpy);
+		CoCoDistributeSubkernelsNaive(autotune_controller_axpy);
 	else if (!strcmp(DISTRIBUTION, "SPLIT-CHUNKS-ROBIN"))
-		CoCoDistributeSubkernelsRoundRobinChunk(autotune_controller_axpy, Subkernel_num_axpy, 1);
+		CoCoDistributeSubkernelsRoundRobinChunk(autotune_controller_axpy, 1);
 	else if (!strcmp(DISTRIBUTION, "SPLIT-CHUNKS-ROBIN-REVERSE"))
-		CoCoDistributeSubkernelsRoundRobinChunkReverse(autotune_controller_axpy, Subkernel_num_axpy, 1);
+		CoCoDistributeSubkernelsRoundRobinChunkReverse(autotune_controller_axpy, 1);
 	else if (!strcmp(DISTRIBUTION, "2D-BLOCK-CYCLIC"))
-		CoCoDistributeSubkernelsRoundRobinChunk(autotune_controller_axpy, Subkernel_num_axpy, 1);
+		CoCoDistributeSubkernelsRoundRobinChunk(autotune_controller_axpy, 1);
 	else error("CoCoPeLiaAxpy: Unknown Subkernel Distribution %s\n", DISTRIBUTION);
 
 #ifdef TEST

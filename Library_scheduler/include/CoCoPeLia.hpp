@@ -26,8 +26,14 @@ typedef class ATC{
 	~ATC();
 
 	void update_sk_num(long long int subkernel_num_in);
+	/// Print the basic characteristics of the autotune controller to a string
 	char* print();
+
+	/// Print the basic characteristics of the autotune controller to a string in csv-friendly format (X,Y,...)
 	char* print_csv();
+
+	/// Copy all characteristics of another utotune controller
+	void mimic_ATC(class ATC* other_ATC);
 
 }* ATC_p;
 #endif
