@@ -9,7 +9,7 @@
 
 #include "CoCoPeLiaCoModel.hpp"
 #include "CoCoPeLiaGPUexec.hpp"
-#include "CoCoPeLiaModel.hpp"
+#include "Autotuning_runtime.hpp"
 #include "CoCoPeLiaModelLvl1.hpp"
 #include "unihelpers.hpp"
 #include "Werkhoven.hpp"

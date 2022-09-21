@@ -6,7 +6,7 @@
 
 //#include <cblas.h>
 
-#include "CoCoPeLiaModel.hpp"
+#include "Autotuning_runtime.hpp"
 //#include "unihelpers.hpp"
 
 
@@ -32,16 +32,24 @@ ATC::~ATC(){
 	free(Subkernels_per_unit_list);
 }
 
-char* ATC::print(){
-	char* outstring = (char*) malloc(256*sizeof(char));
-	int dev_ids_token = 0;
-	int ctr = 0, itter = 0;
-	if (active_unit_num > 0) for (int i = 0; i < active_unit_num; i++) dev_ids_token+=pow(10,idxize(active_unit_id_list[i]));
-	sprintf(outstring, "%ld,%d,%d,%lld",  T, active_unit_num, dev_ids_token, cache_limit);
-	return outstring;
+void ATC::print(){
+	//int dev_ids_token = 0;
+	//int ctr = 0, itter = 0;
+	//if (active_unit_num > 0) for (int i = 0; i < active_unit_num; i++) dev_ids_token+=pow(10,idxize(active_unit_id_list[i]));
+	fprintf(stderr, "Autotune controller:\n->T = %ld\n->active_unit_num = %d\n->active_unit_id_list = %s\n->active_unit_score = %s\
+	\n->pred_t = %lf\n->subkernel_num = %d\n->Subkernels_per_unit_num = %s\n", T, active_unit_num,
+	printlist<int>(active_unit_id_list, active_unit_num),
+	printlist<double>(active_unit_score, active_unit_num),
+	pred_t, subkernel_num,
+	printlist<int>(Subkernels_per_unit_num, active_unit_num));
+ 	if(subkernel_num != -1)
+	for (int d = 0; d < active_unit_num; d++) fprintf(stderr, "Subkernels_per_unit_list[%d] = %s\n", d,
+		printlist<int>(Subkernels_per_unit_list[d], subkernel_num));
+	fprintf(stderr, "\n");	
+	return;
 }
 
-char* ATC::print_csv(){
+const char* ATC::print_csv(){
 	char* outstring = (char*) malloc(256*sizeof(char));
 	int dev_ids_token = 0;
 	int ctr = 0, itter = 0;
@@ -53,10 +61,14 @@ char* ATC::print_csv(){
 void ATC::update_sk_num(long long int subkernel_num_in){
 	int prev_sk_num = subkernel_num;
 	subkernel_num = subkernel_num_in;
-	if (prev_sk_num == -1)  for (int d = 0; d < LOC_NUM; d++) Subkernels_per_unit_list[d] = (int*) malloc(subkernel_num*sizeof(int));
+	if (prev_sk_num == -1)  for (int d = 0; d < LOC_NUM; d++){
+		Subkernels_per_unit_list[d] = (int*) malloc(subkernel_num*sizeof(int));
+		for (int sk = 0; sk < subkernel_num; sk++) Subkernels_per_unit_list[d][sk] = -1;
+	}
 	else if (prev_sk_num < subkernel_num) for (int d = 0; d < LOC_NUM; d++){
 		free(Subkernels_per_unit_list[d]);
 		Subkernels_per_unit_list[d] = (int*) malloc(subkernel_num*sizeof(int));
+		for (int sk = 0; sk < subkernel_num; sk++) Subkernels_per_unit_list[d][sk] = -1;
 	}
 }
 

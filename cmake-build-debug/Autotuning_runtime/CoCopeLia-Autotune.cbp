@@ -181,7 +181,7 @@
 		<Unit filename="/tmp/tmp.YXAEzsRmOZ/Autotuning_runtime/include/CoCoPeLiaCoModel.hpp">
 			<Option virtualFolder="CMake Files\Autotuning_runtime\include\"/>
 		</Unit>
-		<Unit filename="/tmp/tmp.YXAEzsRmOZ/Autotuning_runtime/include/CoCoPeLiaModel.hpp">
+		<Unit filename="/tmp/tmp.YXAEzsRmOZ/Autotuning_runtime/include/Autotuning_runtime.hpp">
 			<Option virtualFolder="CMake Files\Autotuning_runtime\include\"/>
 		</Unit>
 		<Unit filename="/tmp/tmp.YXAEzsRmOZ/Benchmarking/CMakeLists.txt">

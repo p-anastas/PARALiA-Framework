@@ -129,7 +129,7 @@ int main(const int argc, const char *argv[]) {
 	}
 	avg_t/=bench_it;
 	fprintf(stderr, "CoCopeLia (%s):\n\tfirst_it_t = %lf ms ( %lf Gflops/s )\n\tavg_t = %lf ms ( %lf Gflops/s )\n\tmin_t = %lf ms ( %lf Gflops/s )\n\tmax_t = %lf ms ( %lf Gflops/s )\n",
-	return_values->print(),
+	return_values->print_csv(),
 	first_over_t  * 1000, Gval_per_s(gemm_flops(M,N,K),first_over_t),
 	avg_t  * 1000, Gval_per_s(gemm_flops(M,N,K),avg_t),
 	min_t  * 1000, Gval_per_s(gemm_flops(M,N,K),min_t),

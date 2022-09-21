@@ -88,7 +88,7 @@ int main(const int argc, const char *argv[]) {
 			CoCoSyncCheckErr();
 			cpu_timer  = csecond() - cpu_timer;
 			fprintf(stderr, "cuBLASXT: %.1lf\n", Gval_per_s(gemm_flops(dim,dim,dim),cpu_timer));
-			fprintf(stderr, "%s\n", ret_autotune_val->print());
+			fprintf(stderr, "%s\n", ret_autotune_val->print_csv());
 			if (comp_flops < Gval_per_s(gemm_flops(dim,dim,dim),cpu_timer)) warning("Inferior Perf to cublasXt\n");
 			Dtest_equality(C_comp, C, dim * dim);
 			CoCoMemcpy(C, C_comp, M * N *sizeof(double), C_loc, C_loc);
@@ -116,7 +116,7 @@ int main(const int argc, const char *argv[]) {
 			CoCoSyncCheckErr();
 			cpu_timer  = csecond() - cpu_timer;
 			fprintf(stderr, "cuBLASXT: %.1lf\n", Gval_per_s(gemm_flops(dim1,dim2,dim3),cpu_timer));
-			fprintf(stderr, "%s\n", ret_autotune_val->print());
+			fprintf(stderr, "%s\n", ret_autotune_val->print_csv());
 			if (comp_flops < Gval_per_s(gemm_flops(dim1,dim2,dim3),cpu_timer)) warning("Inferior Perf to cublasXt\n");
 			Dtest_equality(C_comp, C, dim1 * dim2);
 			CoCoMemcpy(C, C_comp, M * N *sizeof(double), C_loc, C_loc);
@@ -144,7 +144,7 @@ int main(const int argc, const char *argv[]) {
 			CoCoSyncCheckErr();
 			cpu_timer  = csecond() - cpu_timer;
 			fprintf(stderr, "cuBLASXT: %.1lf\n", Gval_per_s(gemm_flops(dim1,dim2,dim3),cpu_timer));
-			fprintf(stderr, "%s\n", ret_autotune_val->print());
+			fprintf(stderr, "%s\n", ret_autotune_val->print_csv());
 			if (comp_flops < Gval_per_s(gemm_flops(dim1,dim2,dim3),cpu_timer)) warning("Inferior Perf to cublasXt\n");
 			Dtest_equality(C_comp, C, dim1 * dim2);
 			CoCoMemcpy(C, C_comp, M * N *sizeof(double), C_loc, C_loc);
@@ -173,7 +173,7 @@ int main(const int argc, const char *argv[]) {
 			CoCoSyncCheckErr();
 			cpu_timer  = csecond() - cpu_timer;
 			fprintf(stderr, "cuBLASXT: %.1lf\n", Gval_per_s(gemm_flops(dim1,dim2,dim3),cpu_timer));
-			fprintf(stderr, "%s\n", ret_autotune_val->print());
+			fprintf(stderr, "%s\n", ret_autotune_val->print_csv());
 			if (comp_flops < Gval_per_s(gemm_flops(dim1,dim2,dim3),cpu_timer)) warning("Inferior Perf to cublasXt\n");
 			Dtest_equality(C_comp, C, dim1 * dim2);
 			CoCoMemcpy(C, C_comp, M * N *sizeof(double), C_loc, C_loc);
@@ -236,7 +236,7 @@ int main(const int argc, const char *argv[]) {
 				CoCoSyncCheckErr();
 				cpu_timer  = csecond() - cpu_timer;
 				fprintf(stderr, "cuBLASXT: %.1lf\n", Gval_per_s(gemm_flops(dim1,dim2,dim3),cpu_timer));
-				fprintf(stderr, "%s\n", ret_autotune_val->print());
+				fprintf(stderr, "%s\n", ret_autotune_val->print_csv());
 				if (comp_flops < Gval_per_s(gemm_flops(dim1,dim2,dim3),cpu_timer)) warning("Inferior Perf to cublasXt\n");
 				CoCoMemcpy(C_host_buf, C,  dim1 * dim2 *sizeof(double), -2, C_loc);
 				CoCoMemcpy(C_host_comp_buf, C_comp,  dim1 * dim2 *sizeof(double), -2, C_loc);
@@ -264,7 +264,7 @@ int main(const int argc, const char *argv[]) {
 				CoCoSyncCheckErr();
 				cpu_timer  = csecond() - cpu_timer;
 				fprintf(stderr, "cuBLASXT: %.1lf\n", Gval_per_s(gemm_flops(dim1,dim2,dim3),cpu_timer));
-				fprintf(stderr, "%s\n", ret_autotune_val->print());
+				fprintf(stderr, "%s\n", ret_autotune_val->print_csv());
 				if (comp_flops < Gval_per_s(gemm_flops(dim1,dim2,dim3),cpu_timer)) warning("Inferior Perf to cublasXt\n");
 				CoCoMemcpy(C_host_buf, C,  dim1 * dim2 *sizeof(double), -2, C_loc);
 				CoCoMemcpy(C_host_comp_buf, C_comp,  dim1 * dim2 *sizeof(double), -2, C_loc);
@@ -329,7 +329,7 @@ int main(const int argc, const char *argv[]) {
 		CoCoSyncCheckErr();
 		cpu_timer  = csecond() - cpu_timer;
 		fprintf(stderr, "cuBLASXT: %.1lf\n", Gval_per_s(gemm_flops(M,N,K),cpu_timer));
-		fprintf(stderr, "%s\n", ret_autotune_val->print());
+		fprintf(stderr, "%s\n", ret_autotune_val->print_csv());
 		if (comp_flops < Gval_per_s(gemm_flops(M,N,K),cpu_timer)) warning("Inferior Perf to cublasXt\n");
 		Dtest_equality(C_comp, C, M * N);
 		CoCoMemcpy(C, C_comp, M * N *sizeof(double), C_loc, C_loc);
@@ -360,7 +360,7 @@ int main(const int argc, const char *argv[]) {
 		CoCoSyncCheckErr();
 		cpu_timer  = csecond() - cpu_timer;
 		fprintf(stderr, "cuBLASXT: %.1lf\n", Gval_per_s(gemm_flops(M,N,K),cpu_timer));
-		fprintf(stderr, "%s\n", ret_autotune_val->print());
+		fprintf(stderr, "%s\n", ret_autotune_val->print_csv());
 		if (comp_flops < Gval_per_s(gemm_flops(M,N,K),cpu_timer)) warning("Inferior Perf to cublasXt\n");
 		Dtest_equality(C_comp, C, M * N);
 		CoCoMemcpy(C, C_comp, M * N *sizeof(double), C_loc, C_loc);
@@ -389,7 +389,7 @@ int main(const int argc, const char *argv[]) {
 		CoCoSyncCheckErr();
 		cpu_timer  = csecond() - cpu_timer;
 		fprintf(stderr, "cuBLASXT: %.1lf\n", Gval_per_s(gemm_flops(M,N,K),cpu_timer));
-		fprintf(stderr, "%s\n", ret_autotune_val->print());
+		fprintf(stderr, "%s\n", ret_autotune_val->print_csv());
 		if (comp_flops < Gval_per_s(gemm_flops(M,N,K),cpu_timer)) warning("Inferior Perf to cublasXt\n");
 		Dtest_equality(C_comp, C, M * N);
 		CoCoMemcpy(C, C_comp, M * N *sizeof(double), C_loc, C_loc);
@@ -465,7 +465,7 @@ int main(const int argc, const char *argv[]) {
 		CoCoSyncCheckErr();
 		cpu_timer  = csecond() - cpu_timer;
 		fprintf(stderr, "cuBLASXT: %.1lf\n", Gval_per_s(gemm_flops(M, N, K),cpu_timer));
-		fprintf(stderr, "%s\n", ret_autotune_val->print());
+		fprintf(stderr, "%s\n", ret_autotune_val->print_csv());
 		if (comp_flops < Gval_per_s(gemm_flops(M, N, K),cpu_timer)) warning("Inferior Perf to cublasXt\n");
 		CoCoMemcpy(C_host_buf, C,  M * N *sizeof(double), -2, C_loc);
 		CoCoMemcpy(C_host_comp_buf, C_comp,  M * N  *sizeof(double), -2, C_loc);
@@ -493,7 +493,7 @@ int main(const int argc, const char *argv[]) {
 		CoCoSyncCheckErr();
 		cpu_timer  = csecond() - cpu_timer;
 		fprintf(stderr, "cuBLASXT: %.1lf\n", Gval_per_s(gemm_flops(M, N, K),cpu_timer));
-		fprintf(stderr, "%s\n", ret_autotune_val->print());
+		fprintf(stderr, "%s\n", ret_autotune_val->print_csv());
 		if (comp_flops < Gval_per_s(gemm_flops(M, N, K),cpu_timer)) warning("Inferior Perf to cublasXt\n");
 		CoCoMemcpy(C_host_buf, C,  M * N *sizeof(double), -2, C_loc);
 		CoCoMemcpy(C_host_comp_buf, C_comp,  M * N  *sizeof(double), -2, C_loc);

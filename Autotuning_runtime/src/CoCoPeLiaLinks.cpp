@@ -1,7 +1,7 @@
 
 #include <iostream>
 
-#include "CoCoPeLiaModel.hpp"
+#include "Autotuning_runtime.hpp"
 #include "unihelpers.hpp"
 
 double link_cost_1D[LOC_NUM][LOC_NUM];
@@ -60,32 +60,29 @@ void InitHopMap(double link_cost [][LOC_NUM], double link_cost_out [][LOC_NUM]){
 }
 #endif
 
-void CoCoUpdateLinkSpeed1D(ATC_p autotuned_vals, CoCoModel_p* glob_model){
+void CoCoUpdateLinkSpeed1D(ATC_p autotune_controller, CoCoModel_p* glob_model){
   short lvl = 2;
   #ifdef DDEBUG
-    lprintf(lvl, "|-----> CoCoUpdateLinkSpeed2D(dev_num = %d, LOC_NUM = %d)\n", autotuned_vals->active_unit_num, LOC_NUM);
+    lprintf(lvl, "|-----> CoCoUpdateLinkSpeed2D(LOC_NUM = %d)\n", LOC_NUM);
   #endif
-  for (int i = 0; i < autotuned_vals->active_unit_num; i++){
-		short dev_id_idi = idxize(autotuned_vals->active_unit_id_list[i]);
+  for (int i = 0; i < LOC_NUM; i++){
     for(int j = 0; j < LOC_NUM; j++){
-      short dev_id_idj = idxize(j);
-      if(dev_id_idi == dev_id_idj) link_cost_1D[dev_id_idi][dev_id_idj] = 0;
-      else link_cost_1D[dev_id_idi][dev_id_idj] = t_com_predict(glob_model[dev_id_idi]->revlink[dev_id_idj], autotuned_vals->T*sizeof(VALUE_TYPE));
+      if(i == j) link_cost_1D[i][j] = 0;
+      else link_cost_1D[i][j] = t_com_predict(glob_model[i]->revlink[j], autotune_controller->T*sizeof(VALUE_TYPE));
     }
     for(int j = 0; j < LOC_NUM; j++){
-      short dev_id_idj = idxize(j);
-      if(dev_id_idi == dev_id_idj) continue;
+      if(i == j) continue;
       int flag_normalize[LOC_NUM] = {0}, normalize_num = 1;
-      double normalize_sum = link_cost_1D[dev_id_idi][dev_id_idj];
+      double normalize_sum = link_cost_1D[i][j];
       flag_normalize[j] = 1;
       for (int k = j + 1; k < LOC_NUM; k++)
-        if(abs(link_cost_1D[dev_id_idi][dev_id_idj] - link_cost_1D[dev_id_idi][idxize(k)])
-          /link_cost_1D[dev_id_idi][dev_id_idj] < NORMALIZE_NEAR_SPLIT_LIMIT){
+        if(abs(link_cost_1D[i][j] - link_cost_1D[i][k])
+          /link_cost_1D[i][j] < NORMALIZE_NEAR_SPLIT_LIMIT){
           flag_normalize[k] = 1;
-          normalize_sum+=link_cost_1D[dev_id_idi][idxize(k)];
+          normalize_sum+=link_cost_1D[i][k];
           normalize_num++;
         }
-      for (int k = j ; k < LOC_NUM; k++) if(flag_normalize[k]) link_cost_1D[dev_id_idi][idxize(k)] = normalize_sum/normalize_num;
+      for (int k = j ; k < LOC_NUM; k++) if(flag_normalize[k]) link_cost_1D[i][k] = normalize_sum/normalize_num;
     }
   }
 #ifdef ENABLE_TRANSFER_HOPS
@@ -97,32 +94,31 @@ void CoCoUpdateLinkSpeed1D(ATC_p autotuned_vals, CoCoModel_p* glob_model){
 #endif
 }
 
-void CoCoUpdateLinkSpeed2D(ATC_p autotuned_vals, CoCoModel_p* glob_model){
+void CoCoUpdateLinkSpeed2D(ATC_p autotune_controller, CoCoModel_p* glob_model){
   short lvl = 2;
-  #ifdef DDEBUG
-    lprintf(lvl, "|-----> CoCoUpdateLinkSpeed2D(dev_num = %d, LOC_NUM = %d)\n", autotuned_vals->active_unit_num, LOC_NUM);
-  #endif
-  for (int i = 0; i < autotuned_vals->active_unit_num; i++){
-		short dev_id_idi = idxize(autotuned_vals->active_unit_id_list[i]);
+#ifdef DDEBUG
+    lprintf(lvl, "|-----> CoCoUpdateLinkSpeed2D(LOC_NUM = %d)\n", LOC_NUM);
+    autotune_controller->print();
+
+#endif
+  for (int i = 0; i < LOC_NUM; i++){
     for(int j = 0; j < LOC_NUM; j++){
-      short dev_id_idj = idxize(j);
-      if(dev_id_idi == dev_id_idj) link_cost_2D[dev_id_idi][dev_id_idj] = 0;
-      else link_cost_2D[dev_id_idi][dev_id_idj] = t_com_predict(glob_model[dev_id_idi]->revlink[dev_id_idj], autotuned_vals->T*autotuned_vals->T*sizeof(VALUE_TYPE));
+      if(i == j) link_cost_2D[i][j] = 0;
+      else link_cost_2D[i][j] = t_com_predict(glob_model[i]->revlink[j], autotune_controller->T*autotune_controller->T*sizeof(VALUE_TYPE));
     }
     for(int j = 0; j < LOC_NUM; j++){
-      short dev_id_idj = idxize(j);
-      if(dev_id_idi == dev_id_idj) continue;
+      if(i == j) continue;
       int flag_normalize[LOC_NUM] = {0}, normalize_num = 1;
-      double normalize_sum = link_cost_2D[dev_id_idi][dev_id_idj];
+      double normalize_sum = link_cost_2D[i][j];
       flag_normalize[j] = 1;
       for (int k = j + 1; k < LOC_NUM; k++)
-        if(abs(link_cost_2D[dev_id_idi][dev_id_idj] - link_cost_2D[dev_id_idi][idxize(k)])
-          /link_cost_2D[dev_id_idi][dev_id_idj] < NORMALIZE_NEAR_SPLIT_LIMIT){
+        if(abs(link_cost_2D[i][j] - link_cost_2D[i][k])
+          /link_cost_2D[i][j] < NORMALIZE_NEAR_SPLIT_LIMIT){
           flag_normalize[k] = 1;
-          normalize_sum+=link_cost_2D[dev_id_idi][idxize(k)];
+          normalize_sum+=link_cost_2D[i][k];
           normalize_num++;
         }
-      for (int k = j ; k < LOC_NUM; k++) if(flag_normalize[k]) link_cost_2D[dev_id_idi][idxize(k)] = normalize_sum/normalize_num;
+      for (int k = j ; k < LOC_NUM; k++) if(flag_normalize[k]) link_cost_2D[i][k] = normalize_sum/normalize_num;
     }
   }
 #ifdef ENABLE_TRANSFER_HOPS

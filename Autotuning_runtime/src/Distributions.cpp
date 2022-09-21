@@ -5,7 +5,7 @@
 ///
 
 #include "unihelpers.hpp"
-#include "CoCoPeLiaModel.hpp"
+#include "Autotuning_runtime.hpp"
 
 void CoCoDistributeSubkernelsRoundRobin(ATC_p autotune_controller){
   int lvl = 6;

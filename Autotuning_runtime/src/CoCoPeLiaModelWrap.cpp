@@ -12,7 +12,7 @@
 
 #include "CoCoPeLiaCoModel.hpp"
 #include "CoCoPeLiaGPUexec.hpp"
-#include "CoCoPeLiaModel.hpp"
+#include "Autotuning_runtime.hpp"
 #include "CoCoPeLiaModelLvl3.hpp"
 #include "CoCoPeLiaModelLvl1.hpp"
 #include "unihelpers.hpp"
@@ -278,7 +278,7 @@ CoCoModel_p CoCoPeLiaTileModelInit(short dev_id, const char* func, void* func_da
 #endif
 	CoCoModel_p out_model = (CoCoModel_p) malloc(sizeof(struct CoCo_model));
 	for(int idx = 0; idx < LOC_NUM; idx++){
-		short dev_idx_id = (idx == LOC_NUM - 1)? -1 : idx;
+		short dev_idx_id = deidxize(idx);
 		if(dev_idx_id!= dev_id){
 			out_model->link[idx] = CoModel_init(dev_id, dev_idx_id);
 			out_model->revlink[idx] = CoModel_init(dev_idx_id, dev_id);
@@ -479,16 +479,21 @@ for (int dev_id_idx =0; dev_id_idx < LOC_NUM; dev_id_idx++){
 		glob_model[dev_id_idx] = NULL;
 		if(!autotune_controller_is_limited) autotune_controller->reset();
 		else warning("PARALiaAutotuneParameters: Called with reuse_model_flag = 0 and \
-			autotune_controller_is_limited = 1, controller will not be reset.");
+			autotune_controller_is_limited = 1, controller will not be reset.\n");
 	}
 	else{
 //#ifdef PDEBUG
-		lprintf(lvl, "CoCoAutotuneParameters() reuse_model_flag = 1, Reusing Previous autotune_controller\n");
+		lprintf(0, "CoCoAutotuneParameters() reuse_model_flag = 1, Reusing Previous autotune_controller:\n");
+		autotune_controller->print();
+		CoCoModel_print(glob_model[LOC_NUM-1]);
 //#endif
 		return  csecond() - cpu_timer;
 	}
 	if(glob_model[dev_id_idx] == NULL){
 		glob_model[dev_id_idx] = CoCoPeLiaTileModelInit(deidxize(dev_id_idx), routine_name, initial_problem_wrap);
+//#ifdef PDEBUG
+		CoCoModel_print(glob_model[dev_id_idx]);
+//#endif
 	}
 }
 
@@ -579,6 +584,8 @@ for (int dev_id_idx =0; dev_id_idx < LOC_NUM; dev_id_idx++){
 	}
 
 	PARALiaRemoveUselessDevices(autotune_controller);
+
+	CoCoUpdateLinkSpeed2D(autotune_controller, glob_model);
 
 	cpu_timer = csecond() - cpu_timer;
 
@@ -813,6 +820,22 @@ double PARALiaMultidevOptimizeSplit(ATC_p autotune_controller, CoCoModel_p* dev_
 	return timer;
 }
 
+void CoCoModel_print(CoCoModel_p model){
+	if(!model){
+		fprintf(stderr,"Comm-comp Overlap Model: NULL model pointer\n");
+		return;
+	}
+	else fprintf(stderr, "Comm-comp Overlap Model(%p)\n", model);
+	fprintf(stderr, "->V = %p\n->link = [ ", model->V );
+	for (int i = 0 ; i < LOC_NUM; i++) fprintf(stderr, "%p ", model->link[i]);
+	fprintf(stderr, "]\n->revlink = [ ");
+	for (int i = 0 ; i < LOC_NUM; i++) fprintf(stderr, "%p ", model->revlink[i]);
+	fprintf(stderr, "] \n->func = %s\
+	\n->problem = %s\n->D2, D2, D3  = %ld, %ld, %ld\n->flags = Not printed\n->GPUexec_model_ptr = %p\n->dev_id = %d\n\n",
+	model->func, printProblem(model->problem),
+	model->D1, model->D2, model->D3, model->GPUexec_model_ptr, model->dev_id);
+	return;
+}
 /* FIXME: DEPRECATED - kept for future model-based T selection update if needed
 double PARALiaMultidevOptimizeTile_modelBased(ATC_p autotune_controller, short used_devs, short* used_dev_ids,
 	int* dev_idx_ignore, CoCoModel_p* dev_model_list){

@@ -360,7 +360,6 @@ ATC_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t K, VA
 	cpu_timer = csecond();
 #endif
 
-	CoCoUpdateLinkSpeed2D(autotune_controller_gemm, glob_model_gemm);
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer;
 	lprintf(lvl, "Initializing link values -> t_link_init = %lf ms\n", cpu_timer*1000);
@@ -541,6 +540,9 @@ ATC_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t K, VA
   A_asset->DrawTileMap();
   B_asset->DrawTileMap();
 	C_asset->DrawTileMap();
+#endif
+
+#ifdef CDEBUG
 	for(int i=0; i<LOC_NUM;i++) Global_Cache[i]->draw_cache(true,true,true);
 #endif
 

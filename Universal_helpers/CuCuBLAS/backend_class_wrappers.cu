@@ -301,8 +301,8 @@ void Event::sync_barrier()
 	//get_lock();
 	if (status != CHECKED){
 		if (status == UNRECORDED){;
-#ifdef DDEBUG
-			warning("Event::sync_barrier(): Tried to sync unrecorded event\n");
+#ifdef UDEBUG
+			warning("[dev_id=%3d] |-----> Event(%d)::sync_barrier() - Tried to sync unrecorded event\n", dev_id, id);
 #endif
 		}
 		else{
@@ -414,10 +414,10 @@ event_status Event::query_status(){
 			// TODO: This should not happen in a healthy locked update scenario.
 			// But it does since no locking yet. Not sure of its effects.
 #ifdef UDEBUG
-			warning("Event::query_status(): cudaSuccess with local_status == CHECKED should not happen\n");
+			warning("[dev_id=%3d] |-----> Event(%d)::query_status(): cudaSuccess with local_status == CHECKED should not happen\n", dev_id, id);
 #endif
 		}
-		else error("Event::query_status() - %s, local_status=%s, status = %s\n",
+		else error("[dev_id=%3d] |-----> Event(%d)::query_status() - %s, local_status=%s, status = %s\n", dev_id, id,
 		cudaGetErrorString(err), print_event_status(local_status), print_event_status(status));
 	}
 	release_lock();

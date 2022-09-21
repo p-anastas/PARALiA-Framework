@@ -98,7 +98,7 @@ void ParseInputLvl1(const int argc, const char *argv[], ATC_p* predef_control_va
 	*outloc1 = atoi(argv[11]);
 	*outloc2 = atoi(argv[12]);
 
-	const char* control_str = (temp_p) ? temp_p->print() : "-1,-1,-1,-1";
+	const char* control_str = (temp_p) ? temp_p->print_csv() : "-1,-1,-1,-1";
 	fprintf(stderr, "ParseInputLvl1: Parsed configuration:\n\tControl: %s\n\talpha: %lf\
 	\n\tD1: %zu, inc1: %zu, inc2: %zu\n\tloc1: %d, loc2: %d, outloc1: %d, outloc2: %d\n",
 	control_str, *alpha, *D1, *inc1, *inc2, *loc1, *loc2, *outloc1, *outloc2);
@@ -156,7 +156,7 @@ void ParseInputLvl3(const int argc, const char *argv[], ATC_p* predef_control_va
 	*loc3 = atoi(argv[14]);
 	*outloc = atoi(argv[15]);
 
-	const char* control_str = (temp_p) ? temp_p->print() : "-1,-1,-1,-1";
+	const char* control_str = (temp_p) ? temp_p->print_csv() : "-1,-1,-1,-1";
 	fprintf(stderr, "ParseInputLvl3: Parsed configuration:\n\tControl: %s\n\tTransA: %c, TransB: %c\n\talpha: %lf, beta: %lf\n\tD1: %zu, D2: %zu, D3: %zu\n\tloc1: %d, loc2: %d, loc3: %d, outloc: %d\n",
 	control_str, *TransA, *TransB, *alpha, *beta, *D1, *D2, *D3, *loc1, *loc2, *loc3, *outloc);
 
@@ -172,7 +172,7 @@ void CheckLogLvl1(char* filename, ATC_p predef_control_values,
 		else warning("CheckLogLvl1: Generating Logfile %s...\n", filename);
 	}
 	char buffer[256], search_string[256];
-	const char* control_str = (predef_control_values) ? predef_control_values->print() : "-1,-1,-1,-1";
+	const char* control_str = (predef_control_values) ? predef_control_values->print_csv() : "-1,-1,-1,-1";
 	sprintf(search_string, "%s, %.5lf,%zu,%zu,%zu,%d,%d,%d,%d", control_str, alpha, D1, inc1, inc2, loc1, loc2, outloc1, outloc2);
 	while (fgets(buffer, sizeof(buffer), fp) != NULL){
 		if(strstr(buffer, search_string) != NULL){
@@ -195,7 +195,7 @@ void CheckLogLvl3(char* filename, ATC_p predef_control_values, char TransA, char
 		else warning("CheckLogLvl3: Generating Logfile %s...\n", filename);
 	}
 	char buffer[256], search_string[256];
-	const char* control_str = (predef_control_values) ? predef_control_values->print() : "-1,-1,-1,-1";
+	const char* control_str = (predef_control_values) ? predef_control_values->print_csv() : "-1,-1,-1,-1";
 	sprintf(search_string, "%s, %c,%c,%.5lf,%.5lf,%zu,%zu,%zu,%d,%d,%d,%d", control_str, TransA, TransB, alpha, beta, D1, D2, D3, loc1, loc2, loc3, outloc);
 	while (fgets(buffer, sizeof(buffer), fp) != NULL){
 		if(strstr(buffer, search_string) != NULL){
@@ -213,7 +213,7 @@ void StoreLogLvl1(char* filename, ATC_p predef_control_values, double alpha, siz
 	size_t inc1, size_t inc2, short loc1, short loc2, short outloc1, short outloc2, double timer){
 	FILE* fp = fopen(filename,"a");
 	if (!fp) error("report_results: LogFile failed to open");
-	const char* control_str = (predef_control_values) ? predef_control_values->print() : "-1,-1,-1,-1";
+	const char* control_str = (predef_control_values) ? predef_control_values->print_csv() : "-1,-1,-1,-1";
    	fprintf(fp,"%s, %.5lf,%zu,%zu,%zu,%d,%d,%d,%d", control_str, alpha, D1, inc1, inc2, loc1, loc2, outloc1, outloc2);
 
         fclose(fp);
@@ -223,7 +223,7 @@ void StoreLogLvl1(char* filename, ATC_p predef_control_values, double alpha, siz
 void StoreLogLvl3(char* filename, ATC_p predef_control_values, char TransA, char TransB, double alpha, double beta, size_t D1, size_t D2, size_t D3, short loc1, short loc2, short loc3, short outloc, double timer){
 	FILE* fp = fopen(filename,"a");
 	if (!fp) error("report_results: LogFile failed to open");
-	const char* control_str = (predef_control_values) ? predef_control_values->print() : "-1,-1,-1,-1";
+	const char* control_str = (predef_control_values) ? predef_control_values->print_csv() : "-1,-1,-1,-1";
    	fprintf(fp,"%s, %c,%c,%.5lf,%.5lf,%zu,%zu,%zu,%d,%d,%d,%d, %e\n",  control_str, TransA, TransB, alpha, beta, D1, D2, D3, loc1, loc2, loc3, outloc, timer);
 
         fclose(fp);

@@ -10,7 +10,7 @@
 #include "CoCoPeLia.hpp"
 #include "BackenedLibsWrapped.hpp"
 #include "Testing.hpp"
-#include "CoCoPeLiaModel.hpp"
+#include "Autotuning_runtime.hpp"
 
 #define CBLASXT_MAX_SAFE_TILE 10000
 

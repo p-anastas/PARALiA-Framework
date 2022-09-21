@@ -10,7 +10,7 @@
 #include <string>
 #include <mutex> // std::mutex
 
-#include "CoCoPeLiaModel.hpp"
+#include "Autotuning_runtime.hpp"
 #include "DataCaching.hpp"
 #include <atomic>
 
@@ -157,8 +157,5 @@ class Asset1D
 		pthread_attr_t attr);
 	void resetProperties();
 };
-
-void CoCoUpdateLinkSpeed2D(ATC_p autotuned_vals_p, CoCoModel_p* glob_model);
-void CoCoUpdateLinkSpeed1D(ATC_p autotuned_vals_p, CoCoModel_p* glob_model);
 
 #endif
