@@ -64,14 +64,16 @@ int main(const int argc, const char *argv[]) {
 	size_t M, N, K;
 	short A_loc, B_loc, C_loc, C_out_loc;
 
-	CoControl_p predef_control_values = NULL, return_values = (CoControl_p) malloc(sizeof(struct CoControl)) ;
+	ATC_p predef_control_values = NULL, return_values = NULL;
 	ParseInputLvl3(argc, argv, &predef_control_values, &TransA, &TransB, &alpha, &beta, &M, &N, &K, &A_loc, &B_loc, &C_loc, &C_out_loc);
 
 	char *filename = (char *) malloc(256* sizeof(char));
 	if (predef_control_values!= NULL){
 		if(predef_control_values->T > 0) {
-			if (predef_control_values->T > M || predef_control_values->T > N || predef_control_values->T > K) error("Given Tin=%d bigger than problem dim\n", predef_control_values->T);
-			else if (predef_control_values->T > M/1.5 && predef_control_values->T > N/1.5 && predef_control_values->T > K/1.5) error("Given Tin=%d bigger than all problem dims/1.5\n", predef_control_values->T);
+			if (predef_control_values->T > M || predef_control_values->T > N || predef_control_values->T > K)
+				error("Given Tin=%ld bigger than problem dim\n", predef_control_values->T);
+			else if (predef_control_values->T > M/1.5 && predef_control_values->T > N/1.5 && predef_control_values->T > K/1.5)
+				error("Given Tin=%ld bigger than all problem dims/1.5\n", predef_control_values->T);
 		}
 			sprintf(filename, "%s/XKBLASDgemmRunner_predefined_vals_%s_%s_%s.log",
 				TESTLIBDIR, CoCoDistributionPrint(), CoCoImplementationPrint(), VERSION);
@@ -80,17 +82,20 @@ int main(const int argc, const char *argv[]) {
 		TESTLIBDIR, CoCoDistributionPrint(), CoCoImplementationPrint(), VERSION);
 
 	size_t XKBLAS_tile;
-	if (predef_control_values!= NULL && predef_control_values->T > 0) error("XKBLASDgemmRunner: XKBLAS not modified to accept T\n");
+	if (predef_control_values!= NULL && predef_control_values->T > 0)
+		error("XKBLASDgemmRunner: XKBLAS not modified to accept T\n");
 	else return_values->T = XKBLAS_tile = -1; // The best performing static tile for our machine
 	double cache_limit;
-	if (predef_control_values!= NULL && predef_control_values->cache_limit > 0) error("XKBLASDgemmRunner: XKBLAS not modified to accept cache_limit\n");
+	if (predef_control_values!= NULL && predef_control_values->cache_limit > 0)
+		error("XKBLASDgemmRunner: XKBLAS not modified to accept cache_limit\n");
 	else return_values->cache_limit = cache_limit = -1;
 	int dev_num, *dev_ids;
-	if (predef_control_values!= NULL && predef_control_values->dev_num > 0) error("XKBLASDgemmRunner: XKBLAS not modified to accept devices from within script\n");
+	if (predef_control_values!= NULL && predef_control_values->active_unit_num > 0)
+		error("XKBLASDgemmRunner: XKBLAS not modified to accept devices from within script\n");
 	else{
-		return_values->dev_num = dev_num = DEV_NUM;
+		return_values->active_unit_num = dev_num = DEV_NUM;
 		dev_ids = (int*) malloc(dev_num*sizeof(int));
-		for (int i = 0; i < dev_num; i++) return_values->dev_ids[i] = dev_ids[i] = i;
+		for (int i = 0; i < dev_num; i++) return_values->active_unit_id_list[i] = dev_ids[i] = i;
 	}
 #ifdef CHECKLOG
 	CheckLogLvl3(filename, return_values, TransA, TransB, alpha, beta, M, N, K, A_loc, B_loc, C_loc, C_out_loc);
@@ -188,7 +193,7 @@ int main(const int argc, const char *argv[]) {
 	}
 	avg_t/=bench_it;
 	fprintf(stderr, "XKBLAS (%s):\n\tfirst_it_t = %lf ms ( %lf Gflops/s )\n\tavg_t = %lf ms ( %lf Gflops/s )\n\tmin_t = %lf ms ( %lf Gflops/s )\n\tmax_t = %lf ms ( %lf Gflops/s )\n",
-	CoControlPrint(return_values),
+	return_values->print_csv(),
 	first_over_t  * 1000, Gval_per_s(gemm_flops(M,N,K),first_over_t),
 	avg_t  * 1000, Gval_per_s(gemm_flops(M,N,K),avg_t),
 	min_t  * 1000, Gval_per_s(gemm_flops(M,N,K),min_t),

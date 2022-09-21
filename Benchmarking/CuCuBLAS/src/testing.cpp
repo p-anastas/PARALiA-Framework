@@ -56,7 +56,7 @@ void ParseInputLvl1(const int argc, const char *argv[], ATC_p* predef_control_va
 	size_t* D1, size_t* inc1, size_t* inc2, short* loc1, short* loc2, short* outloc1, short* outloc2){
 	if(argc != 13) error("Incorrect input arguments. Usage: ./correct_run\n\tactive_unit_num(auto if <0)\
 	\n\tdev_ids(form example: 0101 for devices 0,2 - ignore if active_unit_num < 0)\n\tT(auto if <=0)\
-	\n\tcache_max_size(auto if <0)\n\t alpha D1 ic1 inc2 loc1 loc2 outloc1 outloc2\n");
+	\n\tcache_max_size(auto if <0)\n\t alpha D1 inc1 inc2 loc1 loc2 outloc1 outloc2\n");
 
 	int active_unit_num = atoi(argv[1]);
 	size_t dev_ids_token = atoi(argv[2]);

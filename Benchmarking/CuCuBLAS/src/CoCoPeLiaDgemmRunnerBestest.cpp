@@ -72,9 +72,9 @@ int main(const int argc, const char *argv[]) {
 #endif
 
 	size_t best_T = (size_t) fmin(fmin(fmin(M/LOC_NUM,N/LOC_NUM),K),CBLASXT_MAX_SAFE_TILE);
-	predef_control_values-> cache_limit = 0;
-	predef_control_values-> dev_num = -1;
-	predef_control_values-> T = best_T;
+	predef_control_values->cache_limit = 0;
+	predef_control_values->active_unit_num = -1;
+	predef_control_values->T = best_T;
 	// Warmup
 	for(int it = 0; it < 10; it++){
 		return_values = CoCopeLiaDgemmControled(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC, predef_control_values);
@@ -114,10 +114,10 @@ int main(const int argc, const char *argv[]) {
 	short max_dev_ids[max_dev], *temp_dev_ids;
 	for (int dev_idx = 1; dev_idx < max_dev; dev_idx++) max_dev_ids[dev_idx] = deidxize(dev_idx);
 
-	CoCoModel_p models_gemm[128];
+	MD_p models_gemm[128];
 	for (int i =0; i < max_dev; i++){
 		short dev_id_idx = idxize(max_dev_ids[i]);
-			models_gemm[dev_id_idx] = CoCoPeLiaTileModelInit(max_dev_ids[i], "Dgemm", initial_gemm);
+			models_gemm[dev_id_idx] = new Modeler(max_dev_ids[i], "Dgemm", initial_gemm);
 	}
 	int best_D = 1;
 	short* best_dev_ids = max_dev_ids;

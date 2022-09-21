@@ -70,7 +70,7 @@ int main(const int argc, const char *argv[]) {
 
 	size_t best_T = (size_t) fmin(fmin(fmin(M/LOC_NUM,N/LOC_NUM),K),CBLASXT_MAX_SAFE_TILE);
 	predef_control_values-> cache_limit = 0;
-	predef_control_values-> dev_num = -1;
+	predef_control_values->active_unit_num = -1;
 	predef_control_values-> T = best_T;
 	// Warmup
 	for(int it = 0; it < 10; it++){
@@ -165,7 +165,7 @@ int main(const int argc, const char *argv[]) {
 	}
 	avg_t/=bench_it;
 	fprintf(stderr, "CoCopeLia (%s):\n\tfirst_it_t = %lf ms ( %lf Gflops/s )\n\tavg_t = %lf ms ( %lf Gflops/s )\n\tmin_t = %lf ms ( %lf Gflops/s )\n\tmax_t = %lf ms ( %lf Gflops/s )\n",
-	ATC_print(return_values),
+	return_values->print_csv(),
 	first_over_t  * 1000, Gval_per_s(gemm_flops(M,N,K),first_over_t),
 	avg_t  * 1000, Gval_per_s(gemm_flops(M,N,K),avg_t),
 	min_t  * 1000, Gval_per_s(gemm_flops(M,N,K),min_t),

@@ -39,7 +39,7 @@ int main(const int argc, const char *argv[]) {
 
   if (loc_src == loc_dest) error("Transfer benchmark@%s %d->%d: Same device\n",TESTBED, loc_src, loc_dest);
 
-  fprintf(stderr,"\nTransfer benchmark@%s %d->%d : (%d,%d)\n", TESTBED, loc_src, loc_dest, TileDim, TileDim);
+  fprintf(stderr,"\nTransfer benchmark@%s %d->%d : (%ld,%ld)\n", TESTBED, loc_src, loc_dest, TileDim, TileDim);
 
   cudaGetDeviceCount(&dev_count);
 
@@ -52,10 +52,11 @@ int main(const int argc, const char *argv[]) {
   //Only model pinned memory transfers loc_src host loc_dest dev and visa versa
  	if (loc_src < 0 && loc_dest < 0) error("Transfer Microbench: Both locations are in host");
   else if (loc_src == -2 || loc_dest == -2) error("Transfer Microbench: Not pinned memory (synchronous)");
-	short dev_ids[LOC_NUM] = {0,1,2,3,4,5,6,7,-1}, num_devices = LOC_NUM;
+	short dev_ids[LOC_NUM], num_devices = LOC_NUM;
 	for(int d=0; d < LOC_NUM; d++){
+		dev_ids[d] = deidxize(d);
 		// Check/Enable peer access between participating GPUs
-		CoCoEnableLinks(d, dev_ids, num_devices);
+		CoCoEnableLinks(d, num_devices);
 	}
 
 	void* unit_buffs[LOC_NUM];
@@ -116,7 +117,7 @@ int main(const int argc, const char *argv[]) {
 	Dtest_equality(cpu_buff, cpu_buff_comp, TileDim*(TileDim+1));
 	memset(cpu_buff_comp, 0, TileDim*(TileDim+1)*elemSize);
 	fprintf(stderr, "Direct Link transfer complete:\t transfer_timer=%lf ms  ( %lf Gb/s)\n\n",
-	 	TileDim, transfer_timer  * 1000, Gval_per_s(TileDim*TileDim*elemSize, transfer_timer));
+	 	transfer_timer  * 1000, Gval_per_s(TileDim*TileDim*elemSize, transfer_timer));
 
 	for(short dev_id_idx = 0 ; dev_id_idx < LOC_NUM; dev_id_idx++) if (dev_id_idx != idxize(loc_src) && dev_id_idx != idxize(loc_dest)){
 		link_road_p test_road = (link_road_p) malloc(sizeof(struct link_road));

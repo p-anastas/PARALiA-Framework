@@ -61,9 +61,9 @@ int main(const int argc, const char *argv[]) {
 #endif
 
 	size_t best_T = (size_t) fmin(N/DEV_NUM,DAXPY_MAX_SAFE_TILE);
-	predef_control_values-> cache_limit = 0;
-	predef_control_values-> dev_num = -1;
-	predef_control_values-> T = best_T;
+	predef_control_values->cache_limit = 0;
+	predef_control_values->active_unit_num = -1;
+	predef_control_values->T = best_T;
 	// Warmup
 	for(int it = 0; it < 10; it++){
 		return_values = CoCopeLiaDaxpyControled(N, alpha, x, incx, y, incy, predef_control_values);
@@ -174,7 +174,7 @@ int main(const int argc, const char *argv[]) {
 	}
 	avg_t/=bench_it;
 	fprintf(stderr, "CoCopeLia Daxpy(%s):\n\tfirst_it_t = %lf ms ( %lf Gflops/s )\n\tavg_t = %lf ms ( %lf Gflops/s )\n\tmin_t = %lf ms ( %lf Gflops/s )\n\tmax_t = %lf ms ( %lf Gflops/s )\n",
-	ATC_print(return_values),
+	return_values->print_csv(),
 	first_over_t  * 1000, Gval_per_s(axpy_flops(N),first_over_t),
 	avg_t  * 1000, Gval_per_s(axpy_flops(N),avg_t),
 	min_t  * 1000, Gval_per_s(axpy_flops(N),min_t),

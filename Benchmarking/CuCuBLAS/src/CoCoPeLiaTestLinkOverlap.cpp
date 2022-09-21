@@ -37,7 +37,7 @@ int main(const int argc, const char *argv[]) {
 
   if (loc_src == loc_dest) error("Transfer benchmark@%s %d->%d: Same device\n",TESTBED, loc_src, loc_dest);
 
-  fprintf(stderr,"\nTransfer benchmark@%s %d->%d : (%d,%d)\n", TESTBED, loc_src, loc_dest, TileDim, TileDim);
+  fprintf(stderr,"\nTransfer benchmark@%s %d->%d : (%ld,%ld)\n", TESTBED, loc_src, loc_dest, TileDim, TileDim);
 
   cudaGetDeviceCount(&dev_count);
 
@@ -50,10 +50,11 @@ int main(const int argc, const char *argv[]) {
   //Only model pinned memory transfers loc_src host loc_dest dev and visa versa
  	if (loc_src < 0 && loc_dest < 0) error("Transfer Microbench: Both locations are in host");
   else if (loc_src == -2 || loc_dest == -2) error("Transfer Microbench: Not pinned memory (synchronous)");
-	short dev_ids[LOC_NUM] = {0,1,2,3,4,5,6,7,-1}, num_devices = LOC_NUM;
+	short dev_ids[LOC_NUM], num_devices = LOC_NUM;
 	for(int d=0; d < LOC_NUM; d++){
+		dev_ids[d] = deidxize(d);
 		// Check/Enable peer access between participating GPUs
-		CoCoEnableLinks(d, dev_ids, num_devices);
+		CoCoEnableLinks(d, num_devices);
 	}
 
 	void* unit_buffs[3*LOC_NUM];
@@ -112,7 +113,7 @@ int main(const int argc, const char *argv[]) {
 
 	transfer_timer = device_timer->sync_get_time()/1000;
 	fprintf(stderr, "Non-shared Link transfer complete:\t transfer_timer=%lf ms  ( %lf Gb/s)\n\n",
-	 	TileDim, transfer_timer  * 1000, Gval_per_s(TileDim*TileDim*elemSize, transfer_timer));
+	 	transfer_timer  * 1000, Gval_per_s(TileDim*TileDim*elemSize, transfer_timer));
 
 	for(short dev_id_idx = 0 ; dev_id_idx < LOC_NUM; dev_id_idx++){
 		for(short dev_id_idy = 0 ; dev_id_idy < LOC_NUM; dev_id_idy++){
@@ -136,7 +137,7 @@ int main(const int argc, const char *argv[]) {
 			//fprintf(stderr, "Shared Link (%d->%d) transfer complete:\t shared_timer=%lf ms  ( %lf Gb/s)\n\n",
 			//	deidxize(dev_id_idy), deidxize(dev_id_idx), shared_timer  * 1000, Gval_per_s(TileDim*TileDim*elemSize, shared_timer));
 
-			if (transfer_timer < shared_timer*(1-NORMALIZE_NEAR_SPLIT_LIMIT)) fprintf(stderr, "Link(%2d->%2d) & Link(%2d->%2d) partially shared: Shared_BW: %1.2lf %\n\n",
+			if (transfer_timer < shared_timer*(1-NORMALIZE_NEAR_SPLIT_LIMIT)) fprintf(stderr, "Link(%2d->%2d) & Link(%2d->%2d) partially shared: Shared_BW: %1.2lf %%\n\n",
 				loc_src, loc_dest, deidxize(dev_id_idy), deidxize(dev_id_idx), 100*transfer_timer/shared_timer);
 		}
 	}
@@ -173,7 +174,7 @@ int main(const int argc, const char *argv[]) {
 			//fprintf(stderr, "Shared Link (%d->%d) transfer complete:\t shared_timer=%lf ms  ( %lf Gb/s)\n\n",
 			//	deidxize(dev_id_idy), deidxize(dev_id_idx), shared_timer  * 1000, Gval_per_s(TileDim*TileDim*elemSize, shared_timer));
 
-			if (transfer_timer < shared_timer*(1-NORMALIZE_NEAR_SPLIT_LIMIT)) fprintf(stderr, "Link(%2d->%2d) & Link(%2d->%2d) & Link(%2d->%2d) partially shared: Shared_BW: %1.2lf %\n\n",
+			if (transfer_timer < shared_timer*(1-NORMALIZE_NEAR_SPLIT_LIMIT)) fprintf(stderr, "Link(%2d->%2d) & Link(%2d->%2d) & Link(%2d->%2d) partially shared: Shared_BW: %1.2lf %%\n\n",
 				loc_src, loc_dest, deidxize(dev_id_idy), deidxize(dev_id_idx), deidxize(dev_id_idk), deidxize(dev_id_idz), 100*transfer_timer/shared_timer);
 		}
 

@@ -144,7 +144,7 @@ int main(const int argc, const char *argv[]) {
 		}
 		avg_t/=bench_it;
 		fprintf(stderr, "CoCopeLia Daxpy(%s):\n\tfirst_it_t = %lf ms ( %lf Gflops/s )\n\tavg_t = %lf ms ( %lf Gflops/s )\n\tmin_t = %lf ms ( %lf Gflops/s )\n\tmax_t = %lf ms ( %lf Gflops/s )\n",
-		ATC_print(return_values),
+		return_values->print_csv(),
 		first_over_t  * 1000, Gval_per_s(axpy_flops(N),first_over_t),
 		avg_t  * 1000, Gval_per_s(axpy_flops(N),avg_t),
 		min_t  * 1000, Gval_per_s(axpy_flops(N),min_t),
