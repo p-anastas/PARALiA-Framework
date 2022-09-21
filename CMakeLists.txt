@@ -46,7 +46,7 @@ add_definitions(-DENABLE_CPU_WORKLOAD)
 #add_definitions(-DENABLE_TRANSFER_HOPS)
 
 ## Enable sharing of bandwidth between links that utilize the same underlying hardware communication resources
-#add_definitions(-DENABLE_LINK_BW_SHARING) # by putting them on different queues
+add_definitions(-DENABLE_LINK_BW_SHARING) # by putting them on different queues
 
 set(SCHEDULE_TYPE 0) # 0 = static, 1 = runtime selection
 

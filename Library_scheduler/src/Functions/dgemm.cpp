@@ -5,7 +5,7 @@
 ///
 
 #include "backend_wrappers.hpp"
-#include "CoCoPeLiaModel.hpp"
+#include "Autotuning_runtime.hpp"
 #include "CoCoPeLia.hpp"
 #include "unihelpers.hpp"
 #include "Asset.hpp"
@@ -16,10 +16,7 @@
 pthread_barrier_t  SoftCache_alloc_barrier_gemm;
 
 gemm_backend_in_p initial_gemm = NULL;
-
-CoCoModel_p glob_model_gemm[LOC_NUM] = {NULL};
 ATC_p autotune_controller_gemm = NULL;
-int autotune_controller_dgemm_limited = 0;
 int MGridSz = 0, NGridSz = 0, KGridSz = 0;
 
 #ifdef STEST
@@ -343,10 +340,12 @@ ATC_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t K, VA
 	B_asset->prepareAsync(&asset_thread_id[1], attr);
 	C_asset->prepareAsync(&asset_thread_id[2], attr);
 
-	if (autotune_controller_gemm == NULL) autotune_controller_gemm = new ATC();
-	double autotune_timer = PARALiaAutotuneParameters(autotune_controller_gemm, "Dgemm",
-	initial_gemm, glob_model_gemm, reuse_model_flag, autotune_controller_dgemm_limited);
-
+	double autotune_timer = 0;
+	if(!reuse_model_flag){
+		if (autotune_controller_gemm != NULL) delete autotune_controller_gemm;
+		autotune_controller_gemm = new ATC();
+		autotune_timer = autotune_controller_gemm->autotune_problem("Dgemm", initial_gemm);
+	}
 	void* res;
 	for(int i=0; i<3;i++){
 		s = pthread_join(asset_thread_id[i], &res);
@@ -357,12 +356,6 @@ ATC_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t K, VA
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer;
 	lprintf(lvl, "Preparing assets (parallel with pthreads) -> t_prep = %lf ms\n", cpu_timer*1000);
-	cpu_timer = csecond();
-#endif
-
-#ifdef TEST
-	cpu_timer = csecond() - cpu_timer;
-	lprintf(lvl, "Initializing link values -> t_link_init = %lf ms\n", cpu_timer*1000);
 	cpu_timer = csecond();
 #endif
 
@@ -434,7 +427,7 @@ ATC_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t K, VA
 	remaining_Subkernels_gemm = Subkernel_num_gemm;
 
 
-	autotune_controller_gemm->update_sk_num(Subkernel_num_gemm);
+	if(!reuse_model_flag) autotune_controller_gemm->update_sk_num(Subkernel_num_gemm);
 #ifdef DEBUG
 	lprintf(lvl, "Subkernel_num_gemm = %d {M,N,K}GridSz = {%d, %d, %d}, autotune_controller_gemm->active_unit_num = %d\n\n",
 		Subkernel_num_gemm, MGridSz, NGridSz, KGridSz, autotune_controller_gemm->active_unit_num);
@@ -446,19 +439,7 @@ ATC_p CoCopeLiaDgemm(char TransA,  char TransB, size_t M, size_t N, size_t K, VA
 	cpu_timer = csecond();
 #endif
 
-//#ifndef RUNTIME_SCHEDULER_VERSION
-	if (!strcmp(DISTRIBUTION, "ROUND-ROBIN"))
-		CoCoDistributeSubkernelsRoundRobin(autotune_controller_gemm);
-	else if (!strcmp(DISTRIBUTION, "SPLIT-NAIVE"))
-		CoCoDistributeSubkernelsNaive(autotune_controller_gemm);
-	else if (!strcmp(DISTRIBUTION, "SPLIT-CHUNKS-ROBIN"))
-		CoCoDistributeSubkernelsRoundRobinChunk(autotune_controller_gemm, KGridSz);
-	else if (!strcmp(DISTRIBUTION, "SPLIT-CHUNKS-ROBIN-REVERSE"))
-		CoCoDistributeSubkernelsRoundRobinChunkReverse(autotune_controller_gemm, KGridSz);
-	else if (!strcmp(DISTRIBUTION, "2D-BLOCK-CYCLIC"))
-		CoCoDistributeSubkernels2DBlockCyclic(autotune_controller_gemm, MGridSz, NGridSz, KGridSz);
-	else error("CoCopeLiaDgemm: Unknown Subkernel Distribution %s\n", DISTRIBUTION);
-//#endif
+	if(!reuse_model_flag) autotune_controller_gemm->distribute_subkernels(MGridSz, NGridSz, KGridSz);
 
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer;
@@ -617,7 +598,6 @@ ATC_p CoCopeLiaDgemmControled(char TransA,  char TransB, size_t M, size_t N, siz
 		warning("Calling CoCopeLiaDgemmControled with empty controller -> falling back to full autotune version \'CoCopeLiaDgemm\'\n");
 		return CoCopeLiaDgemm(TransA, TransB,  M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC);
 	}
-	autotune_controller_dgemm_limited = 1;
 	if (autotune_controller_gemm == NULL) autotune_controller_gemm = new ATC();
 	autotune_controller_gemm->T = predef_controller->T;
 	autotune_controller_gemm->active_unit_num = predef_controller->active_unit_num;

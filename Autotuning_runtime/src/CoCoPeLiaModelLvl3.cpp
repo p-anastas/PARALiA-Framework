@@ -15,7 +15,7 @@
 #include "Werkhoven.hpp"
 
 
-double CoCopeLiaPredictFullOverlapBLAS3(CoCoModel_p model)
+double PredictFullOverlapBLAS3(MD_p model)
 {
 	short lvl = 4;
 	double t_recv_full = 0, t_send_full = 0, t_exec_full = 0, t_total = 0;
@@ -62,7 +62,7 @@ double CoCopeLiaPredictFullOverlapBLAS3(CoCoModel_p model)
 	return t_total;
 }
 
-double CoCopeLiaPredictZeroOverlapBLAS3(CoCoModel_p model)
+double PredictZeroOverlapBLAS3(MD_p model)
 {
 	short lvl = 4;
 	double t_recv_full = 0, t_send_full = 0, t_exec_full = 0, t_total = 0;
@@ -110,7 +110,7 @@ double CoCopeLiaPredictZeroOverlapBLAS3(CoCoModel_p model)
 	return t_total;
 }
 
-double CoCopeLiaPredictBaselineBLAS3(CoCoModel_p model, long int T)
+double CoCopeLiaPredictBaselineBLAS3(MD_p model, long int T)
 {
 	short lvl = 4;
 	double t_recv_T3[LOC_NUM] = {0}, t_send_T3[LOC_NUM] = {0}, t_exec_T3 = 0, t_total = 0;
@@ -171,7 +171,7 @@ double CoCopeLiaPredictBaselineBLAS3(CoCoModel_p model, long int T)
 	return t_total;
 }
 
-double CoCopeLiaPredictDataLocBLAS3(CoCoModel_p model, long int T)
+double CoCopeLiaPredictDataLocBLAS3(MD_p model, long int T)
 {
 	short lvl = 4;
 	double t_recv_T3[LOC_NUM] = {0}, t_send_T3[LOC_NUM] = {0}, t_exec_T3 = 0, t_total = 0;
@@ -208,8 +208,8 @@ double CoCopeLiaPredictDataLocBLAS3(CoCoModel_p model, long int T)
 	double ker_over =  (1.0*model->D1/T)*(1.0*model->D2/T)*(1.0*model->D3/T) - 1;
 	for (int i = 0; i < model->V->numT; i++){
 		if (*model->V->Dim1[i] < 1 || *model->V->Dim2[i] < 1) error("CoCopeLiaPredictDataLoc: Invalid data struct dims");
-		numTin += model->V->in[i] * remote(model->V->loc[i], model->dev_id);
-		numTout += model->V->out[i] * remote(model->V->loc[i], model->dev_id);
+		numTin += model->V->in[i] * remote(model->V->loc[i], model->unit_id);
+		numTout += model->V->out[i] * remote(model->V->loc[i], model->unit_id);
 	}
 	t_over_T3 = fmax(numTin*mv_t_recv_T3, mv_t_send_T3*numTout);
 	t_total = fmax(t_exec_T3, t_over_T3)* ker_over +
@@ -233,7 +233,7 @@ double CoCopeLiaPredictDataLocBLAS3(CoCoModel_p model, long int T)
 }
 
 ///  Predicts 3-way overlaped execution time for BLAS3 Square tilling blocking without data reuse.
-double CoCopeLiaPredictBidirectionalBLAS3(CoCoModel_p model, long int T)
+double CoCopeLiaPredictBidirectionalBLAS3(MD_p model, long int T)
 {
 	short lvl = 4;
 	double t_recv_T3[LOC_NUM] = {0}, t_send_T3[LOC_NUM] = {0}, t_exec_T3 = 0, t_total = 0;
@@ -270,8 +270,8 @@ double CoCopeLiaPredictBidirectionalBLAS3(CoCoModel_p model, long int T)
 	double ker_over =  (1.0*model->D1/T)*(1.0*model->D2/T)*(1.0*model->D3/T) - 1;
 	for (int i = 0; i < model->V->numT; i++){
 		if (*model->V->Dim1[i] < 1 || *model->V->Dim2[i] < 1) error("CoCopeLiaPredictBidirectional: Invalid data struct dims");
-		numTin += model->V->in[i] * remote(model->V->loc[i], model->dev_id);
-		numTout += model->V->out[i] * remote(model->V->loc[i], model->dev_id);
+		numTin += model->V->in[i] * remote(model->V->loc[i], model->unit_id);
+		numTout += model->V->out[i] * remote(model->V->loc[i], model->unit_id);
 	}
 	// Use bidirectional magic here if needed
 	t_over_T3 = t_com_bid_predict(model->revlink[idxize(mv_dev_id)], model->link[idxize(mv_dev_id)],
@@ -299,7 +299,7 @@ double CoCopeLiaPredictBidirectionalBLAS3(CoCoModel_p model, long int T)
 
 }
 
-double CoCopeLiaPredictReuseBLAS3(CoCoModel_p model, long int T)
+double CoCopeLiaPredictReuseBLAS3(MD_p model, long int T)
 {
 	short lvl = 4;
 	double t_recv_T3[LOC_NUM] = {0}, t_send_T3[LOC_NUM] = {0}, t_exec_T3 = 0, t_total = 0;
@@ -336,14 +336,14 @@ double CoCopeLiaPredictReuseBLAS3(CoCoModel_p model, long int T)
 	zero_over =  (1.0*model->D1/T)*(1.0*model->D2/T)*(1.0*model->D3/T) - 1;
 	for (int i = 0; i < model->V->numT; i++){
 		if (*model->V->Dim1[i] < 1 || *model->V->Dim2[i] < 1) error("CoCopeLiaPredictReuse: Invalid data struct dims");
-		numTin += model->V->in[i] * remote(model->V->loc[i], model->dev_id);
-		numTout += model->V->out[i] * remote(model->V->out_loc[i], model->dev_id);
-		one_over+= model->V->in[i] * remote(model->V->loc[i], model->dev_id)*((1.0*(*model->V->Dim1[i]))/T)*((1.0*(*model->V->Dim2[i]))/T); // - 1 The -1 only if two_over is ommited
+		numTin += model->V->in[i] * remote(model->V->loc[i], model->unit_id);
+		numTout += model->V->out[i] * remote(model->V->out_loc[i], model->unit_id);
+		one_over+= model->V->in[i] * remote(model->V->loc[i], model->unit_id)*((1.0*(*model->V->Dim1[i]))/T)*((1.0*(*model->V->Dim2[i]))/T); // - 1 The -1 only if two_over is ommited
 
 		if (mv_t_recv_T3 > t_exec_T3) {
 		// two_over kernels calculated
 			for (int j = i + 1; j < model->V->numT; j++)
-				if (model->V->in[i] * remote(model->V->loc[i], model->dev_id) && model->V->in[j] * remote(model->V->loc[j], model->dev_id)){
+				if (model->V->in[i] * remote(model->V->loc[i], model->unit_id) && model->V->in[j] * remote(model->V->loc[j], model->unit_id)){
 					if ( model->V->Dim1[i] == model->V->Dim1[j] || model->V->Dim1[i] == model->V->Dim2[j]) two_over += ((1.0*(*model->V->Dim1[i]))/T) - 1;
 					else if ( model->V->Dim2[i] == model->V->Dim1[j] || model->V->Dim2[i] == model->V->Dim2[j]) two_over += ((1.0*(*model->V->Dim2[i]))/T) - 1;
 					else error("CoCopeLiaPredictReuse: something is wrong with my brilliant pointer comparisson idea");
@@ -377,7 +377,7 @@ double CoCopeLiaPredictReuseBLAS3(CoCoModel_p model, long int T)
 }
 
 /// TODO: currently d2h overlap is ignored
-double CoCopeLiaPipelineEmulateBLAS3(CoCoModel_p model, long int T){
+double CoCopeLiaPipelineEmulateBLAS3(MD_p model, long int T){
 	CoModel_p h2d_model = model->revlink[LOC_NUM-1], d2h_model = model->link[LOC_NUM-1];
 	double t_h2d_T3 = 0, t_d2h_T3 = 0, t_exec_T3 = 0, t_total = 0;
 	t_exec_T3 = GPUexec3Model_predict((GPUexec3Model_p) model->GPUexec_model_ptr, T, model->flags->TransA, model->flags->TransB);
@@ -417,7 +417,7 @@ double CoCopeLiaPipelineEmulateBLAS3(CoCoModel_p model, long int T){
 		if (model->V->loc[i]) for (int j = 0; j < Dim1_num*Dim2_num; j++) idx_matrix[i][j] = model->V->loc[i];
 		//printf("Dim1_num=%ld,Dim2_num=%ld\n", Dim1_num, Dim2_num);
 		//matrix_visualize(idx_matrix[i], Dim1_num, Dim2_num);
-		numTin += model->V->in[i] * remote(model->V->loc[i], model->dev_id);
+		numTin += model->V->in[i] * remote(model->V->loc[i], model->unit_id);
 		numTout += model->V->out[i] * model->V->out_loc[i];
 	}
 
@@ -479,7 +479,7 @@ double CoCopeLiaPipelineEmulateBLAS3(CoCoModel_p model, long int T){
 	return t_total;
 }
 
-double CoCopeLiaPredictReuseHeteroBLAS3(CoCo_model* model, int used_devs, int* used_dev_ids,
+double PredictReuseHeteroBLAS3(MD_p model, int used_devs, int* used_dev_ids,
 	double* used_dev_relative_scores, long int T){
 	short lvl = 4;
 	long int prob_dims = 0, reset_D1 = model->D1, reset_D2 = model->D2, reset_D3 = model->D3;
@@ -509,13 +509,13 @@ double CoCopeLiaPredictReuseHeteroBLAS3(CoCo_model* model, int used_devs, int* u
 	}
 	short iloc = -1;
 	for (int idx = 0; idx < used_devs; idx++)
-		if (used_dev_ids[idx] == model->dev_id){ iloc = idx; break; }
-	if (iloc == -1) error("CoCopeLiaPredictReuseHeteroBLAS3:  model->dev_id = %d not found in used_dev_ids[%d]\n",
-		model->dev_id, used_devs);
+		if (used_dev_ids[idx] == model->unit_id){ iloc = idx; break; }
+	if (iloc == -1) error("CoCopeLiaPredictReuseHeteroBLAS3:  model->unit_id = %d not found for used_devs = %d\n",
+		model->unit_id, used_devs);
 	double problem_percentage = used_dev_relative_scores[iloc];
 #ifdef PDEBUG
 	lprintf(lvl, "CoCopeLiaPredictReuseHeteroBLAS3(dev_id=%d) prob_dims = %ld, problem_percentage = %lf\n",
-		model->dev_id, prob_dims, problem_percentage);
+		model->unit_id, prob_dims, problem_percentage);
 #endif
 	if (!strcmp(REL_PERF_MODE, "ROOT-PROBLEM")){
 		if (reset_D1 != -1) model->D1 = (long int) reset_D1* 1.0* pow(problem_percentage, 1.0/prob_dims);
@@ -524,7 +524,7 @@ double CoCopeLiaPredictReuseHeteroBLAS3(CoCo_model* model, int used_devs, int* u
 	}
 #ifdef PDEBUG
 	lprintf(lvl, "CoCopeLiaPredictReuseHeteroBLAS3(dev_id=%d) Modified Dims D1 = %ld, D2 = %ld, D3 = %ld, imb_time_multiplier = %lf, reduce_time_multiplier = %lf\n",
-		model->dev_id, model->D1, model->D2, model->D3, imb_time_multiplier, reduce_time_multiplier);
+		model->unit_id, model->D1, model->D2, model->D3, imb_time_multiplier, reduce_time_multiplier);
 #endif
 #endif
 	double result = imb_time_multiplier* reduce_time_multiplier* CoCopeLiaPredictReuseBLAS3(model, T);
@@ -539,7 +539,7 @@ double CoCopeLiaPredictReuseHeteroBLAS3(CoCo_model* model, int used_devs, int* u
 }
 
 ///  Initializes the model for gemm
-CoCoModel_p CoCoModel_gemm_init(CoCoModel_p out_model, int dev_id, const char* func, gemm_backend_in_p func_data){
+void CoCoModel_gemm_init(MD_p out_model, int dev_id, const char* func, gemm_backend_in_p func_data){
 	char TransA = func_data->TransA, TransB = func_data->TransB;
 	long int M = func_data->M, N = func_data->N, K = func_data->K;
 	short A_loc, A_out_loc = A_loc = CoCoGetPtrLoc(*func_data->A),
@@ -595,26 +595,25 @@ CoCoModel_p CoCoModel_gemm_init(CoCoModel_p out_model, int dev_id, const char* f
 	func, out_model->D1, out_model->D2, out_model->D3, out_model->D1, out_model->D3, out_model->D3, out_model->D2, out_model->D1, out_model->D2, out_model->V->out_loc[0], out_model->V->out_loc[1], out_model->V->out_loc[2]);
 	lprintf(lvl-1, "<-----|\n");
 #endif
-	return out_model;
 }
 
-long int CoCopeLiaMinAllowedTBLAS3(CoCoModel_p model){
+long int CoCopeLiaMinAllowedTBLAS3(MD_p model){
 		return GPUexec3MinT((GPUexec3Model_p)model->GPUexec_model_ptr);
 }
 
-long int CoCopeLiaMaxAllowedTBLAS3(CoCoModel_p model){
+long int CoCopeLiaMaxAllowedTBLAS3(MD_p model){
 		return fmin(fmin(model->D1, model->D2),model->D3);
 }
 
-long int CoCopeLiaGetSKNumBLAS3(CoCoModel_p model, int T){
+long int CoCopeLiaGetSKNumBLAS3(MD_p model, int T){
 		return (model->D1/T + ((model->D1%T)? 1:0))
 			*(model->D2/T + ((model->D2%T)? 1:0))
 			*(model->D3/T + ((model->D3%T)? 1:0));
 }
 
 ///  Initializes the model for gemm
-CoCoModel_p CoCoModelFuncInitBLAS3(CoCoModel_p out_model, int dev_id, const char* func, void* func_data){
+void CoCoModelFuncInitBLAS3(MD_p out_model, int dev_id, const char* func, void* func_data){
 	if ( !strcmp(func, "Dgemm") || !strcmp(func, "Sgemm"))
 		return CoCoModel_gemm_init(out_model, dev_id, func, (gemm_backend_in_p) func_data);
-	else error("CoCoModelFuncInitBLAS1: func %s not implemented\n", func);
+	else error("CoCoModelFuncInitBLAS3: func %s not implemented\n", func);
 }

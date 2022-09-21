@@ -54,15 +54,16 @@ file(MAKE_DIRECTORY ${AUTOTUNE_INSTALL}/testLogs)
 add_definitions(-DTESTDIR="${AUTOTUNE_INSTALL}/testLogs")
 
 add_library(autotuning_runtime SHARED
-${AUTOTUNE_DIR_SRC}/CoCoPeLiaLinks.cpp
+${AUTOTUNE_DIR_SRC}/TransferLinks.cpp
 ${AUTOTUNE_DIR_SRC}/CoCoPeLiaCoModel.cpp
 ${AUTOTUNE_DIR_SRC}/CoCoPeLiaGPUexec.cpp
 ${AUTOTUNE_DIR_SRC}/CoCoPeLiaModelWrap.cpp
 ${AUTOTUNE_DIR_SRC}/CoCoPeLiaModelLvl1.cpp
 ${AUTOTUNE_DIR_SRC}/CoCoPeLiaModelLvl3.cpp
 ${AUTOTUNE_DIR_SRC}/WerkhovenModel.cpp
-${AUTOTUNE_DIR_SRC}/Distributions.cpp
+${AUTOTUNE_DIR_SRC}/Subkernel_distributions.cpp
 ${AUTOTUNE_DIR_SRC}/Autotune_controller.cpp
+${AUTOTUNE_DIR_SRC}/Modeler.cpp
 )
 target_link_libraries(autotuning_runtime ${INTERNAL_LINK_LIB} unihelpers)
 configure_file(${AUTOTUNE_DIR_INC}/CoCoPeLiaCoModel.hpp ${AUTOTUNE_INSTALL_INC}/CoCoPeLiaCoModel.hpp COPYONLY)

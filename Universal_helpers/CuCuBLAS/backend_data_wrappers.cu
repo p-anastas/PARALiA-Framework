@@ -159,8 +159,10 @@ void CoCoMemcpy(void* dest, void* src, long long bytes, short loc_dest, short lo
 	else if (loc_src < 0) kind = cudaMemcpyHostToDevice;
 	else kind = cudaMemcpyDeviceToDevice;
 
+#ifdef DEBUG
 	if (loc_src == loc_dest) warning("CoCoMemcpy(dest=%p, src=%p, bytes=%lld, loc_dest=%d, loc_src=%d): Source location matches destination\n",
 	dest, src, bytes, loc_dest, loc_src);
+#endif	
 	massert(CUBLAS_STATUS_SUCCESS == cudaMemcpy(dest, src, bytes, kind), "CoCoMemcpy: cudaMemcpy from device src=%d to dest=%d failed\n", loc_src, loc_dest);
 	cudaCheckErrors();
 }

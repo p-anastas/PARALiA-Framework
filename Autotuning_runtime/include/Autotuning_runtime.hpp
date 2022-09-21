@@ -3,8 +3,8 @@
 ///
 /// \brief Some CUDA function calls with added error-checking
 ///
-#ifndef COCOPELIA_MODEL_H
-#define COCOPELIA_MODEL_H
+#ifndef AUTOTUNING_RUNTIME_H
+#define AUTOTUNING_RUNTIME_H
 
 #include <cstdio>
 #include "CoCoPeLiaCoModel.hpp"
@@ -36,8 +36,10 @@ enum ModelType{
 	COCOPELIA_REUSE = 6,
 	COCOPELIA_PIPELINE_EMULATE = 7,
 	// PARALia Model additions/modifications
-	COCOPELIA_HETERO_REUSE = 9,
-	COCOPELIA_HETERO_BIDIRECTIONAL = 10
+	HETERO_REUSE = 9,
+	HETERO_BIDIRECTIONAL = 10,
+	FULL_OVERLAP = 11,
+	NO_OVERLAP = 12
 };
 const char* printModel(ModelType mode);
 
@@ -58,38 +60,32 @@ typedef struct flagParams{
 
 typedef class Modeler{
 	public:
-		Vdata_p V;
-		CoModel_p link[LOC_NUM], revlink[LOC_NUM];
-		const char* func;
-		ProblemType problem;
+		Vdata_p V; /// The CoCoPeLia Modeling data struct.
+		CoModel_p link[LOC_NUM], revlink[LOC_NUM];  /// All Transfer Links from and to the modeler's unit_id.
+		const char* func; /// The BLAS function name string, used for any routine-specific calls/initalizations.
+		ProblemType problem; /// The BLAS function level, used for translating GPUexec_model_ptr and get-ers.
+		void* GPUexec_model_ptr;
+
 		//double Ker_pot;
 		long int D1, D2, D3;
 		flagParams_p flags;
-		void* GPUexec_model_ptr;
-		int dev_id;
+		int unit_id;
 
 /********************** Initialization/Modification ***************************/
-		Modeler(short dev_id, const char* func_name, void* func_data);
+		Modeler(int dev_id, const char* func_name, void* func_data);
 		~Modeler();
 /******************************************************************************/
 /**************************** Helper Fuctions *********************************/
 		void print(); /// print the characteristics of a modeler to stderr
 		long int getMinT();
 		long int getMaxT();
+		long int getSKNum(int T);
+		long int getGPUexecLines();
+		long int getGPUexecElem(int idx);
 /******************************************************************************/
 /************************ Prediction Functions ********************************/
-		double predict(ModelType mode, long int T);	///  Mode-Generalized prediction wrapper
-		/// A naive prediction of the full-overlap (~unreachable) performance of a modeled routine
-		//double PredictFullOverlap();
-		/// A naive prediction of the zero-overlap (~worst case) performance of a modeled routine
-		//double PredictZeroOverlap();
-		//double WerkhovenModelPredictWrapper(CoCo_model* model, long int T, short t_exec_method);
-		//double CoCopeLiaPredictBaseline(CoCoModel_p model, long int T);
-		//double CoCopeLiaPredictDataLoc(CoCoModel_p model, long int T);
-		//double CoCopeLiaPredictBidirectional(CoCoModel_p model, long int T);
-		//double CoCopeLiaPredictReuse(CoCoModel_p model, long int T);
-		//double CoCopeLiaPipelineEmulate(CoCoModel_p model, long int T);
-		//double PARALiaPredictReuseKernelOverBLAS3(CoCoModel_p model, long int T);
+		double predict(ModelType mode, long int T = -1, int used_devs = -1, int* used_dev_ids = NULL,
+			double* used_dev_relative_scores = NULL);	///  Mode-Generalized prediction wrapper
 /******************************************************************************/
 
 }* MD_p;
@@ -112,7 +108,6 @@ typedef class ATC{
 /********************** Initialization/Modification ***************************/
 	ATC();	/// Constructor
 	~ATC(); /// Destructor
-	void init_modelers();
 	void reset(); /// Resets controller to default parameters (untuned).
 	void mimic_ATC(class ATC* other_ATC); /// Copy all characteristics of another autotune controller, using its modelers.
 	void update_sk_num(long long int subkernel_num_in); /// Updates the autotuner for a given number of subkernels.
@@ -124,11 +119,13 @@ typedef class ATC{
 	void distribute_subkernels(int D1GridSz, int D2GridSz, int D3GridSz);
 /******************************************************************************/
 /****************************** Autotuning ************************************/
-	double optimize_tile(); ///  Predicts the best tile for a problem using CoCoPeLia models
-	double optimize_tile_model_based(ModelType mode); ///  Predicts the best tile for a problem using CoCoPeLia models
-	double optimize_split();
-	void update_link_weights();
 	double autotune_problem(const char* routine_name, void* initial_problem_wrap); 	/// Fire the autotuner for a given problem.
+	void init_modelers(const char* routine_name, void* initial_problem_wrap);
+	double optimize_tile(); ///  Predicts the best tile T for a multi-unit problem
+	double optimize_tile_CoCoPeLia(int model_idx, ModelType mode); /// Predicts T using CoCoPeLia models for a single unit, defined at CoCoPeLiaModelWrap.cpp
+	double optimize_split();
+	void normalize_split();
+	void update_link_weights(); /// Update link weights. Function defined at TransferLinks.cpp for wholeness.
 /******************************************************************************/
 /**************************** Helper Fuctions *********************************/
 	void print(); /// Print the characteristics of the autotune controller to stderr
@@ -137,18 +134,16 @@ typedef class ATC{
 
 }* ATC_p;
 
-extern double link_cost_1D[LOC_NUM][LOC_NUM];
-extern double link_cost_2D[LOC_NUM][LOC_NUM];
-extern double link_used_1D[LOC_NUM][LOC_NUM];
-extern double link_used_2D[LOC_NUM][LOC_NUM];
+extern double link_cost[LOC_NUM][LOC_NUM];
+extern double link_used[LOC_NUM][LOC_NUM];
+
 
 #ifdef ENABLE_TRANSFER_HOPS
 #define MAX_ALLOWED_HOPS 2
 #define HOP_PENALTY 0.5
 extern short link_hop_num[LOC_NUM][LOC_NUM];
 extern short link_hop_route[LOC_NUM][LOC_NUM][MAX_ALLOWED_HOPS];
-extern double link_cost_hop_1D[LOC_NUM][LOC_NUM];
-extern double link_cost_hop_2D[LOC_NUM][LOC_NUM];
+extern double link_cost_hop[LOC_NUM][LOC_NUM];
 #endif
 
 #endif

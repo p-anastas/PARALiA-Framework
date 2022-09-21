@@ -9,23 +9,24 @@
 #include "CoCoPeLiaCoModel.hpp"
 #include "backend_wrappers.hpp"
 
-CoCoModel_p CoCoModelFuncInitBLAS1(CoCoModel_p out_model, int dev_id, const char* func, void* func_data);
+void CoCoModelFuncInitBLAS1(MD_p out_model, int dev_id, const char* func, void* func_data);
 
-long int CoCopeLiaMinAllowedTBLAS1(CoCoModel_p model);
-long int CoCopeLiaMaxAllowedTBLAS1(CoCoModel_p model);
+long int CoCopeLiaMinAllowedTBLAS1(MD_p model);
+long int CoCopeLiaMaxAllowedTBLAS1(MD_p model);
 
 /// A naive prediction of the full-overlap (~unreachable) performance of a modeled routine
-double CoCopeLiaPredictFullOverlapBLAS1(CoCoModel_p model);
+double PredictFullOverlapBLAS1(MD_p model);
 /// A naive prediction of the zero-overlap (~worst case) performance of a modeled routine
-double CoCopeLiaPredictZeroOverlapBLAS1(CoCoModel_p model);
+double PredictZeroOverlapBLAS1(MD_p model);
 
-double WerkhovenModelPredictWrapperBLAS1(CoCo_model* model, long int T, short t_exec_method);
-double CoCopeLiaPredictBaselineBLAS1(CoCoModel_p model, long int T);
-double CoCopeLiaPredictDataLocBLAS1(CoCoModel_p model, long int T);
-double CoCopeLiaPredictBidirectionalBLAS1(CoCoModel_p model, long int T);
-double CoCopeLiaPredictReuseBLAS1(CoCoModel_p model, long int T);
-double CoCopeLiaPipelineEmulateBLAS1(CoCoModel_p model, long int T);
-double CoCopeLiaPredictBidirectionalHeteroBLAS1(CoCoModel_p model, int used_devs, int* used_dev_ids,
+double WerkhovenModelPredictWrapperBLAS1(MD_p model, long int T, short t_exec_method);
+double CoCopeLiaPredictBaselineBLAS1(MD_p model, long int T);
+double CoCopeLiaPredictDataLocBLAS1(MD_p model, long int T);
+double CoCopeLiaPredictBidirectionalBLAS1(MD_p model, long int T);
+double CoCopeLiaPredictReuseBLAS1(MD_p model, long int T);
+double CoCopeLiaPipelineEmulateBLAS1(MD_p model, long int T);
+
+double PredictBidirectionalHeteroBLAS1(MD_p model, int used_devs, int* used_dev_ids,
 	double* used_dev_relative_scores, long int T);
 
 #endif

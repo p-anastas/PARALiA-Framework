@@ -16,12 +16,8 @@
 pthread_barrier_t  SoftCache_alloc_barrier_axpy;
 
 axpy_backend_in_p initial_daxpy = NULL;
-
-CoCoModel_p glob_model_axpy[128] = {NULL};
-//Cache_p Global_Cache[LOC_NUM] = {NULL};
 ATC_p predef_vals_axpy = NULL;
 ATC_p autotune_controller_axpy = NULL;
-int 	autotune_controller_axpy_limited = 1;
 int NGridSz_axpy = 0;
 
 #ifdef STEST
@@ -255,8 +251,8 @@ ATC_p CoCopeLiaDaxpy(size_t N, VALUE_TYPE alpha, VALUE_TYPE* x, size_t incx, VAL
 	y_asset->prepareAsync(&asset_thread_id[1], attr);
 
 	if (autotune_controller_axpy == NULL) autotune_controller_axpy = new ATC();
-	double autotune_timer = PARALiaAutotuneParameters(autotune_controller_axpy, "Daxpy",
-	initial_daxpy, glob_model_axpy, reuse_model_flag, autotune_controller_axpy_limited);
+	double autotune_timer = 0;
+	if(!reuse_model_flag) autotune_timer = autotune_controller_axpy->autotune_problem("Daxpy", initial_daxpy);
 
 	void* res;
 	for(int i=0; i<2;i++){
@@ -268,14 +264,6 @@ ATC_p CoCopeLiaDaxpy(size_t N, VALUE_TYPE alpha, VALUE_TYPE* x, size_t incx, VAL
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer;
 	lprintf(lvl, "Preparing assets (parallel with pthreads) -> t_prep = %lf ms\n", cpu_timer*1000);
-	cpu_timer = csecond();
-#endif
-
-	CoCoUpdateLinkSpeed1D(autotune_controller_axpy, glob_model_axpy);
-
-#ifdef TEST
-	cpu_timer = csecond() - cpu_timer;
-	lprintf(lvl, "Initializing link values -> t_link_init = %lf ms\n", cpu_timer*1000);
 	cpu_timer = csecond();
 #endif
 
@@ -334,7 +322,9 @@ ATC_p CoCopeLiaDaxpy(size_t N, VALUE_TYPE alpha, VALUE_TYPE* x, size_t incx, VAL
 
 	Subkernel_list_axpy = CoCoAsignTilesToSubkernelsDaxpy(x_asset, y_asset, T,
 		&Subkernel_num_axpy);
-	autotune_controller_axpy->update_sk_num(Subkernel_num_axpy);
+
+	if(!reuse_model_flag) autotune_controller_axpy->update_sk_num(Subkernel_num_axpy);
+	
 #ifdef DEBUG
 	lprintf(lvl, "Subkernel_num_axpy = %d {N}GridSz = {%d}, num_devices = %d\n\n",
 		Subkernel_num_axpy, NGridSz_axpy, autotune_controller_axpy->active_unit_num);
@@ -344,20 +334,8 @@ ATC_p CoCopeLiaDaxpy(size_t N, VALUE_TYPE alpha, VALUE_TYPE* x, size_t incx, VAL
 	lprintf(lvl, "Subkernel init -> t_subkernel_init = %lf ms\n", cpu_timer*1000);
 	cpu_timer = csecond();
 #endif
-	autotune_controller_axpy->Subkernels_per_unit_list = (int**) malloc(autotune_controller_axpy->active_unit_num*sizeof(int*));
-	for (int devidx = 0; devidx < autotune_controller_axpy->active_unit_num; devidx++)
-		autotune_controller_axpy->Subkernels_per_unit_list[devidx] = (int*) malloc(Subkernel_num_axpy*sizeof(int));
-	if (!strcmp(DISTRIBUTION, "ROUND-ROBIN"))
-		CoCoDistributeSubkernelsRoundRobin(autotune_controller_axpy);
-	else if (!strcmp(DISTRIBUTION, "SPLIT-NAIVE"))
-		CoCoDistributeSubkernelsNaive(autotune_controller_axpy);
-	else if (!strcmp(DISTRIBUTION, "SPLIT-CHUNKS-ROBIN"))
-		CoCoDistributeSubkernelsRoundRobinChunk(autotune_controller_axpy, 1);
-	else if (!strcmp(DISTRIBUTION, "SPLIT-CHUNKS-ROBIN-REVERSE"))
-		CoCoDistributeSubkernelsRoundRobinChunkReverse(autotune_controller_axpy, 1);
-	else if (!strcmp(DISTRIBUTION, "2D-BLOCK-CYCLIC"))
-		CoCoDistributeSubkernelsRoundRobinChunk(autotune_controller_axpy, 1);
-	else error("CoCoPeLiaAxpy: Unknown Subkernel Distribution %s\n", DISTRIBUTION);
+
+	if(!reuse_model_flag)  autotune_controller_axpy->distribute_subkernels(NGridSz_axpy, 1, 1);
 
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer;
@@ -489,7 +467,6 @@ ATC_p CoCopeLiaDaxpyControled(size_t N, VALUE_TYPE alpha, VALUE_TYPE* x, size_t 
 		warning("Calling CoCopeLiaDaxpyControled with empty controller -> falling back to full autotune version \'CoCopeLiaDaxpy\'\n");
 		return CoCopeLiaDaxpy(N, alpha, x, incx, y, incy);
 	}
-	autotune_controller_axpy_limited = 1;
 	if (autotune_controller_axpy == NULL) autotune_controller_axpy = new ATC();
 	autotune_controller_axpy->T = predef_controller->T;
 	autotune_controller_axpy->active_unit_num = predef_controller->active_unit_num;

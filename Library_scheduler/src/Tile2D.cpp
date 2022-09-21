@@ -84,7 +84,7 @@ template<typename dtype> short Tile2D<dtype>::getClosestReadLoc(short dev_id_in)
 #endif
   int dev_id_in_idx = idxize(dev_id_in);
   int pos_min = LOC_NUM;
-  double link_cost_2D_min = 10000000;
+  double link_cost_min = 10000000;
   for (int pos =0; pos < LOC_NUM; pos++){
     if (pos == dev_id_in_idx || StoreBlock[pos] == NULL) {
       //if (StoreBlock[pos]!= NULL)
@@ -99,16 +99,16 @@ template<typename dtype> short Tile2D<dtype>::getClosestReadLoc(short dev_id_in)
 #ifdef ENABLE_TRANSFER_HOPS
         double current_link_cost = link_cost_hop_2D[dev_id_in_idx][pos];
 #else
-        double current_link_cost = link_cost_2D[dev_id_in_idx][pos];
+        double current_link_cost = link_cost[dev_id_in_idx][pos];
 #endif
         if (block_status == RECORDED) current_link_cost+=current_link_cost*FETCH_UNAVAILABLE_PENALTY;
-        if (current_link_cost < link_cost_2D_min){
-          link_cost_2D_min = current_link_cost;
+        if (current_link_cost < link_cost_min){
+          link_cost_min = current_link_cost;
           pos_min = pos;
         }
-        else if (current_link_cost == link_cost_2D_min &&
+        else if (current_link_cost == link_cost_min &&
         link_used_2D[dev_id_in_idx][pos] < link_used_2D[dev_id_in_idx][pos_min]){
-          link_cost_2D_min = current_link_cost;
+          link_cost_min = current_link_cost;
           pos_min = pos;
         }
       }
@@ -147,7 +147,7 @@ template<typename dtype> short Tile2D<dtype>::getClosestReadLoc(short dev_id_in)
 template<typename dtype> double Tile2D<dtype>::getMinLinkCost(short dev_id_in){
   short lvl = 5;
   int dev_id_in_idx = idxize(dev_id_in);
-  double link_cost_2D_min = 10000000;
+  double link_cost_min = 10000000;
   for (int pos =0; pos < LOC_NUM; pos++){
     CBlock_p temp_outblock = StoreBlock[pos];
     if(temp_outblock == NULL) continue;
@@ -159,12 +159,12 @@ template<typename dtype> double Tile2D<dtype>::getMinLinkCost(short dev_id_in){
 #ifdef ENABLE_TRANSFER_HOPS
         double current_link_cost = link_cost_hop_2D[dev_id_in_idx][pos];
 #else
-        double current_link_cost = link_cost_2D[dev_id_in_idx][pos];
+        double current_link_cost = link_cost[dev_id_in_idx][pos];
 #endif
         if (block_status == RECORDED) current_link_cost+=current_link_cost*FETCH_UNAVAILABLE_PENALTY;
-        if (current_link_cost < link_cost_2D_min) link_cost_2D_min = current_link_cost;
+        if (current_link_cost < link_cost_min) link_cost_min = current_link_cost;
       }
     }
   }
-  return link_cost_2D_min;
+  return link_cost_min;
 }
