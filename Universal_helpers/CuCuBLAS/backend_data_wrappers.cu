@@ -11,7 +11,7 @@
 
 #include "backend_wrappers.hpp"
 
-size_t CoCoGetMaxDimSqAsset2D(short Asset2DNum, short dsize, size_t step, short loc){
+long int CoCoGetMaxDimSqAsset2D(short Asset2DNum, short dsize, long int step, short loc){
 	size_t free_cuda_mem, max_cuda_mem;
 	int prev_loc; cudaGetDevice(&prev_loc);
     /// TODO: Can this ever happen in a healthy scenario?
@@ -20,12 +20,12 @@ size_t CoCoGetMaxDimSqAsset2D(short Asset2DNum, short dsize, size_t step, short 
 	massert(cudaSuccess == cudaMemGetInfo(&free_cuda_mem, &max_cuda_mem), "backend_get_max_dim_sq_Asset2D: cudaMemGetInfo failed");
 
 	// Define the max size of a benchmark kernel to run on this machine.
-	size_t maxDim = (( (size_t) sqrt((free_cuda_mem*PROBLEM_GPU_PERCENTAGE/100.0)/(Asset2DNum*dsize))) / step) * step;
+	long int maxDim = (( (long int) sqrt((free_cuda_mem*PROBLEM_GPU_PERCENTAGE/100.0)/(Asset2DNum*dsize))) / step) * step;
 	cudaSetDevice(prev_loc);
 	return maxDim;
 }
 
-size_t CoCoGetMaxDimAsset1D(short Asset1DNum, short dsize, size_t step, short loc){
+long int CoCoGetMaxDimAsset1D(short Asset1DNum, short dsize, long int step, short loc){
 	size_t free_cuda_mem, max_cuda_mem;
 	int prev_loc; cudaGetDevice(&prev_loc);
     /// TODO: Can this ever happen in a healthy scenario?
@@ -33,7 +33,7 @@ size_t CoCoGetMaxDimAsset1D(short Asset1DNum, short dsize, size_t step, short lo
     cudaSetDevice(loc);
 	massert(cudaSuccess == cudaMemGetInfo(&free_cuda_mem, &max_cuda_mem), "backend_get_max_dim_Asset1D: cudaMemGetInfo failed");
 
-	size_t maxDim = (( (size_t) (free_cuda_mem*PROBLEM_GPU_PERCENTAGE/100.0)/(Asset1DNum*dsize)) / step) * step;
+	long int maxDim = (( (long int) (free_cuda_mem*PROBLEM_GPU_PERCENTAGE/100.0)/(Asset1DNum*dsize)) / step) * step;
 	cudaSetDevice(prev_loc);
 	return maxDim;
 }
@@ -162,7 +162,7 @@ void CoCoMemcpy(void* dest, void* src, long long bytes, short loc_dest, short lo
 #ifdef DEBUG
 	if (loc_src == loc_dest) warning("CoCoMemcpy(dest=%p, src=%p, bytes=%lld, loc_dest=%d, loc_src=%d): Source location matches destination\n",
 	dest, src, bytes, loc_dest, loc_src);
-#endif	
+#endif
 	massert(CUBLAS_STATUS_SUCCESS == cudaMemcpy(dest, src, bytes, kind), "CoCoMemcpy: cudaMemcpy from device src=%d to dest=%d failed\n", loc_src, loc_dest);
 	cudaCheckErrors();
 }
@@ -192,7 +192,7 @@ void CoCoMemcpyAsync(void* dest, void* src, long long bytes, short loc_dest, sho
 	//cudaCheckErrors();
 }
 
-void CoCoMemcpy2D(void* dest, size_t ldest, void* src, size_t ldsrc, size_t rows, size_t cols, short elemSize, short loc_dest, short loc_src){
+void CoCoMemcpy2D(void* dest, long int ldest, void* src, long int ldsrc, long int rows, long int cols, short elemSize, short loc_dest, short loc_src){
 	short lvl = 6;
 #ifdef DDEBUG
 	lprintf(lvl, "CoCoMemcpy2D(dest=%p, ldest =%zu, src=%p, ldsrc = %zu, rows = %zu, cols = %zu, elemsize = %d, loc_dest = %d, loc_src = %d)\n",
@@ -217,7 +217,7 @@ void CoCoMemcpy2D(void* dest, size_t ldest, void* src, size_t ldsrc, size_t rows
 	//else if (loc_src >=0 && loc_dest == -1) massert(CUBLAS_STATUS_SUCCESS == cublasGetMatrix(rows, cols, elemSize, src, ldsrc, dest, ldest),  "CoCoMemcpy2DAsync: cublasGetMatrix failed");
 
 }
-void CoCMempy2DAsyncWrap3D(void* dest, size_t ldest, void* src, size_t ldsrc, size_t rows, size_t cols, short elemSize, short loc_dest, short loc_src, CQueue_p transfer_queue){
+void CoCMempy2DAsyncWrap3D(void* dest, long int ldest, void* src, long int ldsrc, long int rows, long int cols, short elemSize, short loc_dest, short loc_src, CQueue_p transfer_queue){
 	// Convert 2d input (as CoCoMemcpy2DAsync) to 3D for ...reasons.
 	enum cudaMemcpyKind kind = cudaMemcpyDefault;
 	cudaStream_t stream = *((cudaStream_t*)transfer_queue->cqueue_backend_ptr);
@@ -228,7 +228,7 @@ void CoCMempy2DAsyncWrap3D(void* dest, size_t ldest, void* src, size_t ldsrc, si
 	massert(cudaSuccess == cudaMemcpy3DAsync ( cudaMemcpy3DParms_p, stream) , "cudaMemcpy3DAsync failed\n");
 }
 
-void CoCoMemcpy2DAsync(void* dest, size_t ldest, void* src, size_t ldsrc, size_t rows, size_t cols, short elemSize, short loc_dest, short loc_src, CQueue_p transfer_queue){
+void CoCoMemcpy2DAsync(void* dest, long int ldest, void* src, long int ldsrc, long int rows, long int cols, short elemSize, short loc_dest, short loc_src, CQueue_p transfer_queue){
 	short lvl = 6;
 #ifdef DDEBUG
 	lprintf(lvl, "CoCoMemcpy2DAsync(dest=%p, ldest =%zu, src=%p, ldsrc = %zu, rows = %zu, cols = %zu, elemsize = %d, loc_dest = %d, loc_src = %d)\n",

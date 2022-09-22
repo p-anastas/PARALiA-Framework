@@ -17,7 +17,7 @@ int main(const int argc, const char *argv[]) {
 
 	char TransA, TransB;
   	double alpha, beta;
-	size_t M, N, K;
+	long int M, N, K;
 	short A_loc, B_loc, C_loc, C_out_loc;
 
 	ATC_p predef_control_values = NULL, return_values = NULL;
@@ -37,7 +37,7 @@ int main(const int argc, const char *argv[]) {
 		else sprintf(filename, "%s/BLASxDgemmRunner_%s_%s_%s.log",
 			TESTLIBDIR, CoCoDistributionPrint(), CoCoImplementationPrint(), VERSION);
 
-	size_t BLASx_tile;
+	long int BLASx_tile;
 	if (predef_control_values!= NULL && predef_control_values->T > 0) return_values->T = BLASx_tile = predef_control_values->T;
 	else return_values->T = BLASx_tile = 4096; // The best performing static tile for our machine
 	double cache_limit;
@@ -61,7 +61,7 @@ int main(const int argc, const char *argv[]) {
 	CBLAS_TRANSPOSE cpu_op_A, cpu_op_B;    // CblasNoTrans, CblasTrans
 	cublasOperation_t gpu_op_A, gpu_op_B; // CUBLAS_OP_N, CUBLAS_OP_T
 
-	size_t ldA, ldB, ldC = M;
+	long int ldA, ldB, ldC = M;
 	TransposeTranslate(TransA, &cpu_op_A, &gpu_op_A, &ldA, M, K);
 	TransposeTranslate(TransB, &cpu_op_B, &gpu_op_B, &ldB, K, N);
 
@@ -109,7 +109,7 @@ int main(const int argc, const char *argv[]) {
 	{
 	int dev_ids[DEV_NUM];
 	for (int i = 0; i < DEV_NUM; i++) dev_ids[i] = i;
-	cuBLASXtDgemmWrap(TransA,  TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC,  (size_t) fmin(fmin(fmin(M,N),K)/2,CBLASXT_MAX_SAFE_TILE), 0, DEV_NUM, dev_ids);
+	cuBLASXtDgemmWrap(TransA,  TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC,  (long int) fmin(fmin(fmin(M,N),K)/2,CBLASXT_MAX_SAFE_TILE), 0, DEV_NUM, dev_ids);
 	}
 	CoCoMemcpy(C_out1, C,  M * N *sizeof(double), -2, C_loc);
  	if(Dtest_equality(C_out1, C_out, M * N) < 9) error("Insufficient accuracy for benchmarks\n");

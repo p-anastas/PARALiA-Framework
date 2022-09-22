@@ -16,7 +16,7 @@ int main(const int argc, const char *argv[]) {
 
 	char TransA, TransB;
   	double alpha, beta;
-	size_t M, N, K;
+	long int M, N, K;
 	short A_loc, B_loc, C_loc, C_out_loc;
 
 	ATC_p predef_control_values = NULL, return_values = NULL;
@@ -36,9 +36,9 @@ int main(const int argc, const char *argv[]) {
 	else sprintf(filename, "%s/cuBLASXtDgemmRunner_%s_%s_%s.log",
 		TESTLIBDIR, CoCoDistributionPrint(), CoCoImplementationPrint(), VERSION);
 
-	size_t cublasXt_tile;
+	long int cublasXt_tile;
 	if (predef_control_values!= NULL && predef_control_values->T > 0) return_values->T = cublasXt_tile = predef_control_values->T;
-	else return_values->T = cublasXt_tile = (size_t) fmin(fmin(fmin(M,N),K)/2,CBLASXT_MAX_SAFE_TILE);
+	else return_values->T = cublasXt_tile = (long int) fmin(fmin(fmin(M,N),K)/2,CBLASXT_MAX_SAFE_TILE);
 	double cache_limit;
 	if (predef_control_values!= NULL && predef_control_values->cache_limit > 0) return_values->cache_limit = cache_limit = predef_control_values->cache_limit;
 	else return_values->cache_limit = cache_limit = 0;
@@ -60,7 +60,7 @@ int main(const int argc, const char *argv[]) {
 	CBLAS_TRANSPOSE cpu_op_A, cpu_op_B;    // CblasNoTrans, CblasTrans
 	cublasOperation_t gpu_op_A, gpu_op_B; // CUBLAS_OP_N, CUBLAS_OP_T
 
-	size_t ldA, ldB, ldC = M;
+	long int ldA, ldB, ldC = M;
 	TransposeTranslate(TransA, &cpu_op_A, &gpu_op_A, &ldA, M, K);
 	TransposeTranslate(TransB, &cpu_op_B, &gpu_op_B, &ldB, K, N);
 
@@ -96,7 +96,7 @@ int main(const int argc, const char *argv[]) {
 
 	if (!(predef_control_values!= NULL && predef_control_values->T > 0)){
 		// Second call with T set to smaller problem dim ( can be better for small problems with fat/thin matrices)
-		size_t cublasXt_min_dim = (size_t) fmin(fmin(fmin(M,N),K),CBLASXT_MAX_SAFE_TILE);
+		long int cublasXt_min_dim = (long int) fmin(fmin(fmin(M,N),K),CBLASXT_MAX_SAFE_TILE);
 		cpu_timer = csecond();
 		cuBLASXtDgemmWrap(TransA,  TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC,  cublasXt_min_dim, cache_limit, dev_num, dev_ids);
 		CoCoSyncCheckErr();
@@ -121,7 +121,7 @@ int main(const int argc, const char *argv[]) {
 		if (cublasXt_t > cpu_timer) cublasXt_t = cpu_timer;
 	}
 	else {
-		for (size_t T_trial = (((size_t)fmax(fmin(fmin(M/8,N/8),K/8),1024))/1024)*1024; T_trial <= fmin(fmin(fmin(M,N),K),CBLASXT_MAX_SAFE_TILE); T_trial+=1024) if (M >= T_trial*1.5 || N >= T_trial*1.5 || K >= T_trial*1.5){
+		for (long int T_trial = (((long int)fmax(fmin(fmin(M/8,N/8),K/8),1024))/1024)*1024; T_trial <= fmin(fmin(fmin(M,N),K),CBLASXT_MAX_SAFE_TILE); T_trial+=1024) if (M >= T_trial*1.5 || N >= T_trial*1.5 || K >= T_trial*1.5){
 			fprintf(stderr,"Running CUBLASXT DGEMM-> M = %zu, N = %zu, K = %zu, T = %zu\n", M, N, K, T_trial);
 			cpu_timer  = csecond();
 			cuBLASXtDgemmWrap(TransA,  TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC,  T_trial, cache_limit, dev_num, dev_ids);

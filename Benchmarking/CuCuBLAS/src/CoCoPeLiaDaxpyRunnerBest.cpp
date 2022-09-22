@@ -15,9 +15,9 @@
 
 int main(const int argc, const char *argv[]) {
   double alpha;
-	size_t N;
+	long int N;
 	short x_loc, y_loc, x_out_loc, y_out_loc;
-	size_t incx, incy;
+	long int incx, incy;
 
 	ATC_p predef_control_values = NULL, return_values = NULL;
 	ParseInputLvl1(argc, argv, &predef_control_values, &alpha, &N, &incx, &incy, &x_loc, &y_loc, &x_out_loc, &y_out_loc);
@@ -60,7 +60,7 @@ int main(const int argc, const char *argv[]) {
 	CoCoMemcpy(y_buf, y,  N * incy *sizeof(double), -2, y_loc);
 #endif
 
-	size_t best_T = (size_t) fmin(N/DEV_NUM,DAXPY_MAX_SAFE_TILE);
+	long int best_T = (long int) fmin(N/DEV_NUM,DAXPY_MAX_SAFE_TILE);
 	predef_control_values->cache_limit = 0;
 	predef_control_values->active_unit_num = -1;
 	predef_control_values->T = best_T;
@@ -77,8 +77,8 @@ int main(const int argc, const char *argv[]) {
 
 	short bench_it = 10;
 	double best_t = 10e9;//cpu_timer;
-	for (size_t T_trial = (((size_t)fmax(N/(32*32),512*512))/(512*512))*(512*512);
-		T_trial <= (size_t) fmin(N/DEV_NUM,DAXPY_MAX_SAFE_TILE); T_trial+=(512*512)){
+	for (long int T_trial = (((long int)fmax(N/(32*32),512*512))/(512*512))*(512*512);
+		T_trial <= (long int) fmin(N/DEV_NUM,DAXPY_MAX_SAFE_TILE); T_trial+=(512*512)){
 			fprintf(stderr,"Running CoCopeLia DAXPY-> N = %zu, T = %zu\n", N, T_trial);
 			predef_control_values->T = T_trial;
 			cpu_timer  = csecond();

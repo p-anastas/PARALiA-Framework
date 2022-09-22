@@ -118,13 +118,13 @@ void CoCoFree(void * ptr, short loc);
 void CoCoMemcpy(void* dest, void* src, long long N_bytes, short loc_dest, short loc_src);
 
 // Memcpy between two locations with errorchecking
-void CoCoMemcpy2D(void* dest, size_t ldest, void* src, size_t lsrc, size_t rows, size_t cols, short elemSize, short loc_dest, short loc_src);
+void CoCoMemcpy2D(void* dest, long int ldest, void* src, long int lsrc, long int rows, long int cols, short elemSize, short loc_dest, short loc_src);
 
 // Asunchronous Memcpy between two locations WITHOUT synchronous errorchecking. Use with caution.
 void CoCoMemcpyAsync(void* dest, void* src, long long N_bytes, short loc_dest, short loc_src, CQueue_p transfer_medium);
 
 // Asunchronous Memcpy between two locations WITHOUT synchronous errorchecking. Use with caution.
-void CoCoMemcpy2DAsync(void* dest, size_t ldest, void* src, size_t lsrc, size_t rows, size_t cols,
+void CoCoMemcpy2DAsync(void* dest, long int ldest, void* src, long int lsrc, long int rows, long int cols,
 	short elemSize, short loc_dest, short loc_src, CQueue_p transfer_medium);
 
 // Initalize vector in loc with error-checking
@@ -135,10 +135,10 @@ template<typename VALUETYPE>
 extern void CoCoParallelVecInitHost(VALUETYPE *vec, long long length, int seed);
 
 // Return the max dim size (which is a multiple of 'step') for 'Asset2DNum' square assets on 'loc'
-size_t CoCoGetMaxDimSqAsset2D(short Asset2DNum, short dsize, size_t step, short loc);
+long int CoCoGetMaxDimSqAsset2D(short Asset2DNum, short dsize, long int step, short loc);
 
 // Return the max dim size (which is a multiple of 'step') for 'Asset1DNum' assets on 'loc'
-size_t CoCoGetMaxDimAsset1D(short Asset1DNum, short dsize, size_t step, short loc);
+long int CoCoGetMaxDimAsset1D(short Asset1DNum, short dsize, long int step, short loc);
 
 short CoCoGetPtrLoc(const void * in_ptr);
 
@@ -154,7 +154,7 @@ typedef struct link_road{
 }* link_road_p;
 
 // A memcpy implementation using multiple units as intermendiate hops for a better transfer bandwidth
-void FasTCoCoMemcpy2DAsync(link_road_p roadMap, size_t rows, size_t cols, short elemSize);
+void FasTCoCoMemcpy2DAsync(link_road_p roadMap, long int rows, long int cols, short elemSize);
 
 /*****************************************************/
 /// Timers for benchmarks
@@ -212,13 +212,13 @@ short Dtest_equality(double* C_comp, double* C, long long size);
 short Stest_equality(float* C_comp, float* C, long long size);
 
 double Gval_per_s(long long value, double time);
-long long gemm_flops(size_t M, size_t N, size_t K);
-long long gemm_memory(size_t M, size_t N, size_t K, size_t A_loc, size_t B_loc, size_t C_loc, short dsize);
+long long gemm_flops(long int M, long int N, long int K);
+long long gemm_memory(long int M, long int N, long int K, long int A_loc, long int B_loc, long int C_loc, short dsize);
 
 long long axpy_flops(long int  N);
-long long axpy_memory(long int N, size_t x_loc, size_t y_loc, short dsize);
+long long axpy_memory(long int N, long int x_loc, long int y_loc, short dsize);
 
-size_t count_lines(FILE* fp); // TODO: Where is this used?
+long int count_lines(FILE* fp); // TODO: Where is this used?
 void check_benchmark(char *filename);
 
 /*****************************************************/
@@ -226,5 +226,6 @@ int gcd (int a, int b, int c);
 inline short idxize(short num){ return (num == -1) ? LOC_NUM - 1: num;}
 inline short deidxize(short idx){ return (idx == LOC_NUM - 1) ? -1 : idx;}
 inline short remote(short loc, short other_loc){ return (loc == other_loc) ? 0 : 1;}
+void translate_binary_to_unit_list(int case_id, int* active_unit_num_p, int* active_unit_id_list);
 
 #endif

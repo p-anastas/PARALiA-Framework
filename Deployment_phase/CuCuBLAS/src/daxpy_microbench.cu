@@ -10,7 +10,7 @@
 //TODO: This should at some point be removed (some fuctions require wrapping)
 #include "backend_wrappers.hpp"
 
-void report_run(char* filename, size_t N, double mean_t, double margin_err, size_t sample_sz, double bench_t){
+void report_run(char* filename, long int N, double mean_t, double margin_err, long int sample_sz, double bench_t){
 
 	FILE* fp = fopen(filename,"a");
 	if (!fp) error("report_run: LogFile failed to open");
@@ -25,7 +25,7 @@ int main(const int argc, const char *argv[]) {
 
   	int ctr = 1, dev_id;
 
-	size_t incx = 1, incy = 1;
+	long int incx = 1, incy = 1;
 
 	switch (argc) {
 	case (2):
@@ -44,7 +44,7 @@ int main(const int argc, const char *argv[]) {
 	if (free_cuda_mem*1.2 < 1.0*max_cuda_mem) error("dgemm_microbench_gpu: Free memory is much less than max ( Free: %d, Max: %d ), device under utilization", free_cuda_mem, max_cuda_mem);
 
 	// Define the max size of a benchmark kernel to run on this machine.
-	size_t maxDim = CoCoGetMaxDimAsset1D(2, sizeof(double), STEP_BLAS1, dev_id);
+	long int maxDim = CoCoGetMaxDimAsset1D(2, sizeof(double), STEP_BLAS1, dev_id);
 
 	/// Set device
 	cudaSetDevice(dev_id);
@@ -94,8 +94,8 @@ int main(const int argc, const char *argv[]) {
 	CoCoSyncCheckErr();
 #ifdef AUTO_BENCH_USE_BOOST
 	double cublas_t_vals[MICRO_MAX_ITER], cublas_t_sum, cublas_t_mean, bench_t, error_margin;
-	size_t bench_ctr = 0, sample_sz, step = STEP_BLAS1;
-	for (size_t T = MIN_DIM_BLAS1; T < maxDim + 1; T+=step){
+	long int bench_ctr = 0, sample_sz, step = STEP_BLAS1;
+	for (long int T = MIN_DIM_BLAS1; T < maxDim + 1; T+=step){
 		if (T >= step * 16) step *=2;
 		fprintf(stderr,"Running cublasDaxpy-> T = %d:\n", T);
 		cublas_t_mean = cublas_t_sum = error_margin = 0;
@@ -132,8 +132,8 @@ int main(const int argc, const char *argv[]) {
 	}
 #else
 	double  bench_t, cublas_t_av, cublas_t_min , cublas_t_max;
-	size_t bench_ctr = 0, step = STEP_BLAS1;
-	for (size_t T = MIN_DIM_BLAS1; T < maxDim + 1; T+=step){
+	long int bench_ctr = 0, step = STEP_BLAS1;
+	for (long int T = MIN_DIM_BLAS1; T < maxDim + 1; T+=step){
 		if (T >= step * 16) step *=2;
 		fprintf(stderr,"Running cublasDaxpy-> T = %d:\n", T);
 		cublas_t_av = cublas_t_max = 0;

@@ -53,13 +53,13 @@ char* CoCoDistributionPrint(){
 	return string_out;
 }
 void ParseInputLvl1(const int argc, const char *argv[], ATC_p* predef_control_values, double* alpha,
-	size_t* D1, size_t* inc1, size_t* inc2, short* loc1, short* loc2, short* outloc1, short* outloc2){
+	long int* D1, long int* inc1, long int* inc2, short* loc1, short* loc2, short* outloc1, short* outloc2){
 	if(argc != 13) error("Incorrect input arguments. Usage: ./correct_run\n\tactive_unit_num(auto if <0)\
 	\n\tdev_ids(form example: 0101 for devices 0,2 - ignore if active_unit_num < 0)\n\tT(auto if <=0)\
 	\n\tcache_max_size(auto if <0)\n\t alpha D1 inc1 inc2 loc1 loc2 outloc1 outloc2\n");
 
 	int active_unit_num = atoi(argv[1]);
-	size_t dev_ids_token = atoi(argv[2]);
+	long int dev_ids_token = atoi(argv[2]);
 	int T = atoi(argv[3]);
 	long long cache_limit = atof(argv[4]);
 
@@ -98,23 +98,24 @@ void ParseInputLvl1(const int argc, const char *argv[], ATC_p* predef_control_va
 	*outloc1 = atoi(argv[11]);
 	*outloc2 = atoi(argv[12]);
 
-	const char* control_str = (temp_p) ? temp_p->print_csv() : "-1,-1,-1,-1";
-	fprintf(stderr, "ParseInputLvl1: Parsed configuration:\n\tControl: %s\n\talpha: %lf\
-	\n\tD1: %zu, inc1: %zu, inc2: %zu\n\tloc1: %d, loc2: %d, outloc1: %d, outloc2: %d\n",
-	control_str, *alpha, *D1, *inc1, *inc2, *loc1, *loc2, *outloc1, *outloc2);
+	fprintf(stderr, "ParseInputLvl1: ");
+	if (*predef_control_values) (*predef_control_values)->print();
+	fprintf(stderr, "Routine values:\talpha: %lf\n\tD1: %zu, inc1: %zu, inc2: %zu\
+	\n\tloc1: %d, loc2: %d, outloc1: %d, outloc2: %d\n",
+	*alpha, *D1, *inc1, *inc2, *loc1, *loc2, *outloc1, *outloc2);
 
 	return;
 }
 
 void ParseInputLvl3(const int argc, const char *argv[], ATC_p* predef_control_values,
-		char* TransA, char* TransB, double* alpha, double* beta, size_t* D1, size_t* D2, size_t* D3,
+		char* TransA, char* TransB, double* alpha, double* beta, long int* D1, long int* D2, long int* D3,
 		short* loc1, short* loc2, short* loc3, short* outloc){
 	if(argc != 16) error("Incorrect input arguments. Usage: ./correct_run\
 	\n\tactive_unit_num(auto if <0)\n\tdev_ids(form example: 0101 for devices 0,2 - ignore if active_unit_num < 0)\n\tT(auto if <=0)\
 	\n\tcache_max_size(auto if <0)\n\tTransA TransB alpha beta D1 D2 D3 loc1 loc2 loc3 outloc \n");
 
 	int active_unit_num = atoi(argv[1]);
-	size_t dev_ids_token = atoi(argv[2]);
+	long int dev_ids_token = atoi(argv[2]);
 	int T = atoi(argv[3]);
 	long long cache_limit = atof(argv[4]);
 
@@ -156,15 +157,16 @@ void ParseInputLvl3(const int argc, const char *argv[], ATC_p* predef_control_va
 	*loc3 = atoi(argv[14]);
 	*outloc = atoi(argv[15]);
 
-	const char* control_str = (temp_p) ? temp_p->print_csv() : "-1,-1,-1,-1";
-	fprintf(stderr, "ParseInputLvl3: Parsed configuration:\n\tControl: %s\n\tTransA: %c, TransB: %c\n\talpha: %lf, beta: %lf\n\tD1: %zu, D2: %zu, D3: %zu\n\tloc1: %d, loc2: %d, loc3: %d, outloc: %d\n",
-	control_str, *TransA, *TransB, *alpha, *beta, *D1, *D2, *D3, *loc1, *loc2, *loc3, *outloc);
+	fprintf(stderr, "ParseInputLvl3: ");
+	if (*predef_control_values) (*predef_control_values)->print();
+	fprintf(stderr, "Routine values:\n\tTransA: %c, TransB: %c\n\talpha: %lf, beta: %lf\n\tD1: %zu, D2: %zu, D3: %zu\n\tloc1: %d, loc2: %d, loc3: %d, outloc: %d\n",
+	*TransA, *TransB, *alpha, *beta, *D1, *D2, *D3, *loc1, *loc2, *loc3, *outloc);
 
 	return;
 }
 
 void CheckLogLvl1(char* filename, ATC_p predef_control_values,
-	double alpha, size_t D1, size_t inc1, size_t inc2, short loc1, short loc2, short outloc1, short outloc2){
+	double alpha, long int D1, long int inc1, long int inc2, short loc1, short loc2, short outloc1, short outloc2){
 	FILE* fp = fopen(filename,"r");
 	if (!fp) {
 		fp = fopen(filename,"w+");
@@ -187,7 +189,7 @@ void CheckLogLvl1(char* filename, ATC_p predef_control_values,
 	return;
 }
 
-void CheckLogLvl3(char* filename, ATC_p predef_control_values, char TransA, char TransB, double alpha, double beta, size_t D1, size_t D2, size_t D3, short loc1, short loc2, short loc3, short outloc){
+void CheckLogLvl3(char* filename, ATC_p predef_control_values, char TransA, char TransB, double alpha, double beta, long int D1, long int D2, long int D3, short loc1, short loc2, short loc3, short outloc){
 	FILE* fp = fopen(filename,"r");
 	if (!fp) {
 		fp = fopen(filename,"w+");
@@ -209,8 +211,8 @@ void CheckLogLvl3(char* filename, ATC_p predef_control_values, char TransA, char
 	return;
 }
 
-void StoreLogLvl1(char* filename, ATC_p predef_control_values, double alpha, size_t D1,
-	size_t inc1, size_t inc2, short loc1, short loc2, short outloc1, short outloc2, double timer){
+void StoreLogLvl1(char* filename, ATC_p predef_control_values, double alpha, long int D1,
+	long int inc1, long int inc2, short loc1, short loc2, short outloc1, short outloc2, double timer){
 	FILE* fp = fopen(filename,"a");
 	if (!fp) error("report_results: LogFile failed to open");
 	const char* control_str = (predef_control_values) ? predef_control_values->print_csv() : "-1,-1,-1,-1";
@@ -220,7 +222,7 @@ void StoreLogLvl1(char* filename, ATC_p predef_control_values, double alpha, siz
 	return;
 }
 
-void StoreLogLvl3(char* filename, ATC_p predef_control_values, char TransA, char TransB, double alpha, double beta, size_t D1, size_t D2, size_t D3, short loc1, short loc2, short loc3, short outloc, double timer){
+void StoreLogLvl3(char* filename, ATC_p predef_control_values, char TransA, char TransB, double alpha, double beta, long int D1, long int D2, long int D3, short loc1, short loc2, short loc3, short outloc, double timer){
 	FILE* fp = fopen(filename,"a");
 	if (!fp) error("report_results: LogFile failed to open");
 	const char* control_str = (predef_control_values) ? predef_control_values->print_csv() : "-1,-1,-1,-1";

@@ -87,7 +87,7 @@ void CoCoPeLiaDevGetMemInfo(long long* free_dev_mem, long long* max_dev_mem){
     *max_dev_mem = (long long) max_dev_mem_tmp;
 }
 
-void TransposeTranslate(char TransChar, CBLAS_TRANSPOSE* cblasFlag, cublasOperation_t* cuBLASFlag, size_t* ldim, size_t dim1, size_t dim2){
+void TransposeTranslate(char TransChar, CBLAS_TRANSPOSE* cblasFlag, cublasOperation_t* cuBLASFlag, long int* ldim, long int dim1, long int dim2){
 	if (TransChar == 'N'){
  		*cblasFlag = CblasNoTrans;
  		*cuBLASFlag = CUBLAS_OP_N;

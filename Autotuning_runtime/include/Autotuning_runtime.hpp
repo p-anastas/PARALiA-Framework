@@ -109,6 +109,7 @@ typedef class ATC{
 	ATC();	/// Constructor
 	~ATC(); /// Destructor
 	void reset(); /// Resets controller to default parameters (untuned).
+	int diff_intialized_params_ATC(class ATC* other_ATC); /// Rerurns the number of parameters defined in other_ATC that defer from caller.
 	void mimic_ATC(class ATC* other_ATC); /// Copy all characteristics of another autotune controller, using its modelers.
 	void update_sk_num(long long int subkernel_num_in); /// Updates the autotuner for a given number of subkernels.
 	/// Each device gets 1/num_devices Subkernels without acounting for their size or location

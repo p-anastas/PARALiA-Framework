@@ -4,19 +4,19 @@
 /// \brief The start of Zawarudo
 ///
 
-#include "backend_wrappers.hpp"
-
 #include "unihelpers.hpp"
 #include "CoCoPeLia.hpp"
 #include "BackenedLibsWrapped.hpp"
 #include "Testing.hpp"
+
+#include "backend_wrappers.hpp"
 
 #define CBLASXT_MAX_SAFE_TILE 10000
 
 int main(const int argc, const char *argv[]) {
 	char TransA, TransB;
   	double alpha, beta;
-	size_t M, N, K;
+	long int M, N, K;
 	short A_loc, B_loc, C_loc, C_out_loc;
 	ATC_p predef_control_values = NULL, return_values = NULL;
 	ParseInputLvl3(argc, argv, &predef_control_values, &TransA, &TransB, &alpha, &beta, &M, &N, &K, &A_loc, &B_loc, &C_loc, &C_out_loc);
@@ -30,12 +30,12 @@ int main(const int argc, const char *argv[]) {
 #ifdef CHECKLOG
 	CheckLogLvl3(filename, predef_control_values, TransA, TransB, alpha, beta, M, N, K, A_loc, B_loc, C_loc, C_out_loc);
 #endif
-	predef_control_values = (ATC_p) malloc(sizeof(ATC_p*));
+	predef_control_values = new ATC();
 	/// Matrix Layouts for CPU GEMM
 	CBLAS_TRANSPOSE cpu_op_A, cpu_op_B;    // CblasNoTrans, CblasTrans
 	cublasOperation_t gpu_op_A, gpu_op_B; // CUBLAS_OP_N, CUBLAS_OP_T
 
-	size_t ldA, ldB, ldC = M;
+	long int ldA, ldB, ldC = M;
 	TransposeTranslate(TransA, &cpu_op_A, &gpu_op_A, &ldA, M, K);
 	TransposeTranslate(TransB, &cpu_op_B, &gpu_op_B, &ldB, K, N);
 
@@ -68,7 +68,7 @@ int main(const int argc, const char *argv[]) {
 	CoCoMemcpy(C_buf, C,  M * N *sizeof(double), -2, C_loc);
 #endif
 
-	size_t best_T = (size_t) fmin(fmin(fmin(M/LOC_NUM,N/LOC_NUM),K),CBLASXT_MAX_SAFE_TILE);
+	long int best_T = (long int) fmin(fmin(fmin(M/LOC_NUM,N/LOC_NUM),K),CBLASXT_MAX_SAFE_TILE);
 	predef_control_values-> cache_limit = 0;
 	predef_control_values->active_unit_num = -1;
 	predef_control_values-> T = best_T;
@@ -85,7 +85,7 @@ int main(const int argc, const char *argv[]) {
 
 	short bench_it = 10;
 	double best_t = cpu_timer;
-	for (size_t T_trial = (((size_t)fmax(fmin(fmin(M/32,N/32),K/32),512))/512)*512; T_trial <= (size_t) fmin(fmin(fmin(M/sqrt(DEV_NUM),N/sqrt(DEV_NUM)),K),CBLASXT_MAX_SAFE_TILE); T_trial+=512){
+	for (long int T_trial = (((long int)fmax(fmin(fmin(M/32,N/32),K/32),512))/512)*512; T_trial <= (long int) fmin(fmin(fmin(M/sqrt(DEV_NUM),N/sqrt(DEV_NUM)),K),CBLASXT_MAX_SAFE_TILE); T_trial+=512){
 			fprintf(stderr,"Running CoCopeLia DGEMM-> M = %zu, N = %zu, K = %zu, T = %zu\n", M, N, K, T_trial);
 			predef_control_values-> T = T_trial;
 			cpu_timer  = csecond();
@@ -123,7 +123,7 @@ int main(const int argc, const char *argv[]) {
 	// Validate with cuBLASXt (questionable but CPU validation can be slower by at least a factor)
 	int dev_ids[DEV_NUM];
 	for (int i = 0; i < DEV_NUM; i++) dev_ids[i] = i;
-	cuBLASXtDgemmWrap(TransA,  TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC,  (size_t) fmin(fmin(fmin(M,N),K)/2,CBLASXT_MAX_SAFE_TILE), 0, DEV_NUM, dev_ids);
+	cuBLASXtDgemmWrap(TransA,  TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC,  (long int) fmin(fmin(fmin(M,N),K)/2,CBLASXT_MAX_SAFE_TILE), 0, DEV_NUM, dev_ids);
 	CoCoMemcpy(C_out1, C,  M * N *sizeof(double), -2, C_loc);
  	if(Dtest_equality(C_out1, C_out, M * N) < 9) error("Insufficient accuracy for benchmarks\n");
 

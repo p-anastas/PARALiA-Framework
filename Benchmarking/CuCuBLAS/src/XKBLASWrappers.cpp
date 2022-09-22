@@ -11,7 +11,7 @@
 #include "xkblas.h" // Must be put after unihelpers cause of cblas def clashes...
 
 
-double XKBLASDgemmWrap(char TransA,  char TransB, size_t M, size_t N, size_t K, double alpha, double* A, size_t ldA, double* B, size_t ldB, double beta, double* C, size_t ldC, size_t T, double cpu_ratio, short dev_num, int dev_ids[]){
+double XKBLASDgemmWrap(char TransA,  char TransB, long int M, long int N, long int K, double alpha, double* A, long int ldA, double* B, long int ldB, double beta, double* C, long int ldC, long int T, double cpu_ratio, short dev_num, int dev_ids[]){
 	short lvl = 1;
 	double total_t = csecond();
 #ifdef DEBUG

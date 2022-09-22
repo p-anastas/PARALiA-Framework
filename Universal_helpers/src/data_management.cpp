@@ -13,16 +13,16 @@
 //#include "backend_wrappers.hpp"
 
 //#define SPLIT_2D_ROWISE
-void FasTCoCoMemcpy2DAsync(link_road_p roadMap, size_t rows, size_t cols, short elemSize){
+void FasTCoCoMemcpy2DAsync(link_road_p roadMap, long int rows, long int cols, short elemSize){
 	if(roadMap->hop_num < 2) error("FasTCoCoMemcpy2DAsync: Cannot copy with less than 2 locations\n");
 
 	int buffer_bw_overlap = 8;
 	Event_p step_events[roadMap->hop_num][buffer_bw_overlap];
 	for(int uid_ctr = 0; uid_ctr < roadMap->hop_num - 1; uid_ctr++){
 #ifdef SPLIT_2D_ROWISE
-		size_t local_rows = rows/buffer_bw_overlap;
+		long int local_rows = rows/buffer_bw_overlap;
 #else
-		size_t local_cols = cols/buffer_bw_overlap;
+		long int local_cols = cols/buffer_bw_overlap;
 #endif
 		for(int steps = 0; steps < buffer_bw_overlap; steps++){
 			step_events[uid_ctr][steps] = new Event(roadMap->hop_uid_list[uid_ctr+1]);

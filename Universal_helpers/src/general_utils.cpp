@@ -95,7 +95,7 @@ const char *print_mem(mem_layout mem) {
 template<typename VALUETYPE>
 const char *printlist(VALUETYPE *list, int length)
 {
-  char* outstring = (char*) malloc(length*10*sizeof(char));
+  char* outstring = (char*) malloc(abs(length)*10*sizeof(char));
   std::string printfCmd(" ");
   sprintf(outstring, "[");
   if (std::is_same<VALUETYPE, short>::value) printfCmd += "%hd";
@@ -127,8 +127,8 @@ inline double Derror(double a, double b) {
   return dabs(a - b)/a;
 }
 
-size_t Dvec_diff(double* a, double* b, long long size, double eps) {
-	size_t failed = 0;
+long int Dvec_diff(double* a, double* b, long long size, double eps) {
+	long int failed = 0;
 	//#pragma omp parallel for
 	for (long long i = 0; i < size; i++)
 		if (Derror(a[i], b[i]) > eps){
@@ -138,8 +138,8 @@ size_t Dvec_diff(double* a, double* b, long long size, double eps) {
 	return failed;
 }
 
-size_t Svec_diff(float* a, float* b, long long size, float eps) {
-  	size_t failed = 0;
+long int Svec_diff(float* a, float* b, long long size, float eps) {
+  	long int failed = 0;
 	//#pragma omp parallel for
   	for (long long i = 0; i < size; i++)
 		if (Serror(a[i], b[i]) > eps){
@@ -150,7 +150,7 @@ size_t Svec_diff(float* a, float* b, long long size, float eps) {
 }
 
 short Stest_equality(float* C_comp, float* C, long long size) {
-  size_t acc = 4, failed;
+  long int acc = 4, failed;
   float eps = 1e-4;
   failed = Svec_diff(C_comp, C, size, eps);
   while (eps > FLT_MIN && !failed && acc < 30) {
@@ -176,7 +176,7 @@ short Stest_equality(float* C_comp, float* C, long long size) {
 }
 
 short Dtest_equality(double* C_comp, double* C, long long size) {
-  size_t acc = 8, failed;
+  long int acc = 8, failed;
   double eps = 1e-8;
   failed = Dvec_diff(C_comp, C, size, eps);
   while (eps > DBL_MIN && !failed && acc < 30) {
@@ -203,7 +203,7 @@ short Dtest_equality(double* C_comp, double* C, long long size) {
   return (short) acc;
 }
 
-size_t count_lines(FILE* fp){
+long int count_lines(FILE* fp){
 	if (!fp) error("count_lines: fp = 0 ");
 	int ctr = 0;
 	char chr = getc(fp);
@@ -237,11 +237,11 @@ double Gval_per_s(long long value, double time){
   return value / (time * 1e9);
 }
 
-long long gemm_flops(size_t M, size_t N, size_t K){
+long long gemm_flops(long int M, long int N, long int K){
 	return (long long) M * N * (2 * K + 1);
 }
 
-long long gemm_memory(size_t M, size_t N, size_t K, size_t A_loc, size_t B_loc, size_t C_loc, short dsize){
+long long gemm_memory(long int M, long int N, long int K, long int A_loc, long int B_loc, long int C_loc, short dsize){
 	return (M * K * A_loc + K * N * B_loc + M * N * C_loc)*dsize;
 }
 
@@ -249,25 +249,38 @@ long long axpy_flops(long int  N){
 	return (long long) 2* N;
 }
 
-long long axpy_memory(long int  N, size_t x_loc, size_t y_loc, short dsize){
+long long axpy_memory(long int  N, long int x_loc, long int y_loc, short dsize){
 	return (long long) N*(x_loc + y_loc)*dsize;
 }
 
+void translate_binary_to_unit_list(int case_id, int* active_unit_num_p, int* active_unit_id_list){
+	int mask;
+	*active_unit_num_p = 0;
+	for (int mask_offset = 0; mask_offset < LOC_NUM; mask_offset++){
+		mask =  1 << mask_offset;
+		if (case_id & mask){
+			active_unit_id_list[*active_unit_num_p] = deidxize(mask_offset);
+			(*active_unit_num_p)++;
+			//lprintf(0, "PARALIA_translate_unit_ids(case_id = %d): mask = %d -> Adding unit %d to available\n",
+			//	case_id, mask, deidxize(mask_offset));
+		}
+	}
+}
 /*
-long long dgemv_flops(size_t M, size_t N){
+long long dgemv_flops(long int M, long int N){
 	return (long long) M * (2 * N + 1);
 }
 
-long long dgemv_bytes(size_t M, size_t N){
+long long dgemv_bytes(long int M, long int N){
 	return (M * N + N + M * 2)*sizeof(double) ;
 }
 
 
-long long dgemm_bytes(size_t M, size_t N, size_t K){
+long long dgemm_bytes(long int M, long int N, long int K){
 	return (M * K + K * N + M * N * 2)*sizeof(double) ;
 }
 
-long long sgemm_bytes(size_t M, size_t N, size_t K){
+long long sgemm_bytes(long int M, long int N, long int K){
 	return (M * K + K * N + M * N * 2)*sizeof(float) ;
 }
 */

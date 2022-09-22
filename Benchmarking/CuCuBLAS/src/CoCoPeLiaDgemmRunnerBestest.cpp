@@ -4,22 +4,19 @@
 /// \brief The start of Zawarudo
 ///
 
-#include "backend_wrappers.hpp"
-
 #include "unihelpers.hpp"
 #include "CoCoPeLia.hpp"
 #include "BackenedLibsWrapped.hpp"
 #include "Testing.hpp"
-#include "Autotuning_runtime.hpp"
+
+#include "backend_wrappers.hpp"
 
 #define CBLASXT_MAX_SAFE_TILE 10000
 
 int main(const int argc, const char *argv[]) {
-
-
 	char TransA, TransB;
   	double alpha, beta;
-	size_t M, N, K;
+	long int M, N, K;
 	short A_loc, B_loc, C_loc, C_out_loc;
 	ATC_p predef_control_values = NULL, return_values = NULL;
 	ParseInputLvl3(argc, argv, &predef_control_values, &TransA, &TransB, &alpha, &beta, &M, &N, &K, &A_loc, &B_loc, &C_loc, &C_out_loc);
@@ -28,17 +25,17 @@ int main(const int argc, const char *argv[]) {
 	if (predef_control_values!= NULL){
 		error("CoCoPeLiaDgemmRunnerBest: I am not supposed to be used with specific inputs. You probably need CoCoPeLiaDgemmRunner\n");
 	}
-	else sprintf(filename, "%s/CoCoPeLiaDgemmRunnerBestest_%s_%s_%s.log",
+	else sprintf(filename, "%s/CoCoPeLiaDgemmRunnerBest_%s_%s_%s.log",
 		TESTLIBDIR, CoCoDistributionPrint(), CoCoImplementationPrint(), VERSION);
 #ifdef CHECKLOG
 	CheckLogLvl3(filename, predef_control_values, TransA, TransB, alpha, beta, M, N, K, A_loc, B_loc, C_loc, C_out_loc);
 #endif
-	predef_control_values = (ATC_p) malloc(sizeof(ATC_p*));
+	predef_control_values = new ATC();
 	/// Matrix Layouts for CPU GEMM
 	CBLAS_TRANSPOSE cpu_op_A, cpu_op_B;    // CblasNoTrans, CblasTrans
 	cublasOperation_t gpu_op_A, gpu_op_B; // CUBLAS_OP_N, CUBLAS_OP_T
 
-	size_t ldA, ldB, ldC = M;
+	long int ldA, ldB, ldC = M;
 	TransposeTranslate(TransA, &cpu_op_A, &gpu_op_A, &ldA, M, K);
 	TransposeTranslate(TransB, &cpu_op_B, &gpu_op_B, &ldB, K, N);
 
@@ -71,10 +68,10 @@ int main(const int argc, const char *argv[]) {
 	CoCoMemcpy(C_buf, C,  M * N *sizeof(double), -2, C_loc);
 #endif
 
-	size_t best_T = (size_t) fmin(fmin(fmin(M/LOC_NUM,N/LOC_NUM),K),CBLASXT_MAX_SAFE_TILE);
-	predef_control_values->cache_limit = 0;
+	long int best_T = (long int) fmin(fmin(fmin(M/LOC_NUM,N/LOC_NUM),K),CBLASXT_MAX_SAFE_TILE);
+	predef_control_values-> cache_limit = 0;
 	predef_control_values->active_unit_num = -1;
-	predef_control_values->T = best_T;
+	predef_control_values-> T = best_T;
 	// Warmup
 	for(int it = 0; it < 10; it++){
 		return_values = CoCopeLiaDgemmControled(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC, predef_control_values);
@@ -87,51 +84,20 @@ int main(const int argc, const char *argv[]) {
 	cpu_timer  = csecond() - cpu_timer;
 
 	short bench_it = 10;
-	double best_t = 10000000;
-
-	gemm_backend_in_p initial_gemm = (gemm_backend_in_p) malloc(sizeof(struct gemm_backend_in));
-	initial_gemm->TransA = TransA;
-	initial_gemm->TransB = TransB;
-	initial_gemm->M = M;
-	initial_gemm->N = N;
-	initial_gemm->K = K;
-	initial_gemm->A = (void**) &A;
-	initial_gemm->B = (void**) &B;
-	initial_gemm->C = (void**) &C;
-	initial_gemm->alpha = alpha;
-	initial_gemm->beta = beta;
-	initial_gemm->ldA = ldA;
-	initial_gemm->ldB = ldB;
-	initial_gemm->ldC = ldC;
-	initial_gemm->dev_id = -1;
-
-	int max_dev;
-	#ifdef ENABLE_CPU_WORKLOAD
-		max_dev = LOC_NUM;
-	#else
-		max_dev = DEV_NUM;
-	#endif
-	short max_dev_ids[max_dev], *temp_dev_ids;
-	for (int dev_idx = 1; dev_idx < max_dev; dev_idx++) max_dev_ids[dev_idx] = deidxize(dev_idx);
-
-	MD_p models_gemm[128];
-	for (int i =0; i < max_dev; i++){
-		short dev_id_idx = idxize(max_dev_ids[i]);
-			models_gemm[dev_id_idx] = new Modeler(max_dev_ids[i], "Dgemm", initial_gemm);
-	}
-	int best_D = 1;
-	short* best_dev_ids = max_dev_ids;
-
-	for (int dev_trial = 1; dev_trial <= max_dev; dev_trial++){
-		predef_control_values->dev_num = dev_trial;
-		temp_dev_ids = CoCoPeLiaDeviceSelectBest(dev_trial, max_dev,
-			max_dev_ids, models_gemm);
-		for (int i =0; i < predef_control_values->dev_num; i++) predef_control_values->dev_ids[i] = temp_dev_ids[i];
-		for (size_t T_trial = (((size_t)fmax(fmin(fmin(M/32,N/32),K/32),512))/512)*512;
-			T_trial <= (size_t) fmin(fmin(fmin(M/sqrt(DEV_NUM),N/sqrt(DEV_NUM)),K),CBLASXT_MAX_SAFE_TILE); T_trial+=512){
-				fprintf(stderr,"Running CoCopeLia DGEMM-> M = %zu, N = %zu, K = %zu, Dev_num = %d %s, T = %zu\n",
-					M, N, K, dev_trial, printlist(predef_control_values->dev_ids, dev_trial), T_trial);
-				predef_control_values-> T = T_trial;
+	double best_t = cpu_timer;
+	int explored_cases = pow(2,LOC_NUM);
+	int max_unit_num = LOC_NUM, best_unit_num = LOC_NUM, curr_unit_num;
+	int best_unit_id_list[LOC_NUM], curr_unit_id_list[LOC_NUM];
+	translate_binary_to_unit_list(explored_cases-1, &best_unit_num, best_unit_id_list);
+	double tile_selection_t = 0, split_selection_t = 0;
+	for (int case_id = 1; case_id < explored_cases; case_id++){
+		translate_binary_to_unit_list(case_id, &curr_unit_num, curr_unit_id_list);
+		predef_control_values->active_unit_num = curr_unit_num;
+		predef_control_values->active_unit_id_list = curr_unit_id_list;
+		for (long int T_trial = (((long int)fmax(fmin(fmin(M/32,N/32),K/32),512))/512)*512;
+			T_trial <= (long int) fmin(fmin(fmin(M/sqrt(DEV_NUM),N/sqrt(DEV_NUM)),K),CBLASXT_MAX_SAFE_TILE); T_trial+=512){
+				fprintf(stderr,"Running CoCopeLia DGEMM-> M = %zu, N = %zu, K = %zu, T = %zu\n", M, N, K, T_trial);
+				predef_control_values->T = T_trial;
 				cpu_timer  = csecond();
 				for(int it = 0; it < bench_it; it++){
 					return_values = CoCopeLiaDgemmControled(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC, predef_control_values);
@@ -142,18 +108,15 @@ int main(const int argc, const char *argv[]) {
 				if (cpu_timer < best_t){
 					best_t = cpu_timer;
 					best_T = T_trial;
-					best_D = dev_trial;
-					best_dev_ids = temp_dev_ids;
+					best_unit_num = curr_unit_num;
+					for(int ctr =0; ctr < best_unit_num; ctr++) best_unit_id_list[ctr] = curr_unit_id_list[ctr];
 				}
 		}
 	}
-	fprintf(stderr, "\nCoCopeLia DGEMM T_best = %zu, Dev_num_best = %d %s: t = %lf ms ( %lf Gflops/s )\n\n",
-		best_T, best_D, printlist(best_dev_ids, best_D), best_t  * 1000, Gval_per_s(gemm_flops(M,N,K),best_t));
-	predef_control_values->T = best_T;
-	predef_control_values->dev_num = best_D;
-	for (int i = 0; i< predef_control_values->dev_num; i++)
-		predef_control_values->dev_ids[i] = best_dev_ids[i];
-
+	fprintf(stderr, "\nCoCopeLia DGEMM T_best = %zu : t = %lf ms ( %lf Gflops/s )\n\n", best_T, best_t  * 1000, Gval_per_s(gemm_flops(M,N,K),best_t));
+	predef_control_values-> T = best_T;
+	predef_control_values->active_unit_num = best_unit_num;
+	predef_control_values->active_unit_id_list = best_unit_id_list;
 	for (int i = 0; i< LOC_NUM; i++) CoCopeLiaDevCacheFree(deidxize(i));
 
 #ifdef RUNVALIDATION
@@ -175,7 +138,7 @@ int main(const int argc, const char *argv[]) {
 	// Validate with cuBLASXt (questionable but CPU validation can be slower by at least a factor)
 	int dev_ids[DEV_NUM];
 	for (int i = 0; i < DEV_NUM; i++) dev_ids[i] = i;
-	cuBLASXtDgemmWrap(TransA,  TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC,  (size_t) fmin(fmin(fmin(M,N),K)/2,CBLASXT_MAX_SAFE_TILE), 0, DEV_NUM, dev_ids);
+	cuBLASXtDgemmWrap(TransA,  TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC,  (long int) fmin(fmin(fmin(M,N),K)/2,CBLASXT_MAX_SAFE_TILE), 0, DEV_NUM, dev_ids);
 	CoCoMemcpy(C_out1, C,  M * N *sizeof(double), -2, C_loc);
  	if(Dtest_equality(C_out1, C_out, M * N) < 9) error("Insufficient accuracy for benchmarks\n");
 
@@ -217,7 +180,7 @@ int main(const int argc, const char *argv[]) {
 	}
 	avg_t/=bench_it;
 	fprintf(stderr, "CoCopeLia (%s):\n\tfirst_it_t = %lf ms ( %lf Gflops/s )\n\tavg_t = %lf ms ( %lf Gflops/s )\n\tmin_t = %lf ms ( %lf Gflops/s )\n\tmax_t = %lf ms ( %lf Gflops/s )\n",
-	ATC_print(return_values),
+	return_values->print_csv(),
 	first_over_t  * 1000, Gval_per_s(gemm_flops(M,N,K),first_over_t),
 	avg_t  * 1000, Gval_per_s(gemm_flops(M,N,K),avg_t),
 	min_t  * 1000, Gval_per_s(gemm_flops(M,N,K),min_t),

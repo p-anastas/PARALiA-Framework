@@ -15,9 +15,9 @@
 
 int main(const int argc, const char *argv[]) {
 	double alpha;
-	size_t N;
+	long int N;
 	short x_loc, y_loc, x_out_loc, y_out_loc;
-	size_t incx, incy;
+	long int incx, incy;
 
 	ATC_p predef_control_values = NULL, return_values = NULL;
 	ParseInputLvl1(argc, argv, &predef_control_values, &alpha, &N, &incx, &incy, &x_loc, &y_loc, &x_out_loc, &y_out_loc);

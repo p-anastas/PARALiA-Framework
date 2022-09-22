@@ -16,17 +16,17 @@ char* CoCoImplementationPrint();
 char* CoCoDistributionPrint();
 
 void ParseInputLvl3(const int argc, const char *argv[], ATC_p* predef_control_values, char* TransA, char* TransB,
-	double* alpha, double* beta, size_t* D1, size_t* D2, size_t* D3, short* loc1, short* loc2, short* loc3, short* outloc);
+	double* alpha, double* beta, long int* D1, long int* D2, long int* D3, short* loc1, short* loc2, short* loc3, short* outloc);
 void CheckLogLvl3(char* filename, ATC_p predef_control_values, char TransA, char TransB,
-	double alpha, double beta, size_t D1, size_t D2, size_t D3, short loc1, short loc2, short loc3, short outloc);
+	double alpha, double beta, long int D1, long int D2, long int D3, short loc1, short loc2, short loc3, short outloc);
 void StoreLogLvl3(char* filename, ATC_p predef_control_values, char TransA, char TransB,
-	double alpha, double beta, size_t D1, size_t D2, size_t D3, short loc1, short loc2, short loc3, short outloc, double timer);
+	double alpha, double beta, long int D1, long int D2, long int D3, short loc1, short loc2, short loc3, short outloc, double timer);
 
 void ParseInputLvl1(const int argc, const char *argv[], ATC_p* predef_control_values, double* alpha,
-	size_t* D1, size_t* inc1, size_t* inc2, short* loc1, short* loc2, short* outloc1, short* outloc2);
+	long int* D1, long int* inc1, long int* inc2, short* loc1, short* loc2, short* outloc1, short* outloc2);
 void CheckLogLvl1(char* filename, ATC_p predef_control_values,
-	double alpha, size_t D1, size_t inc1, size_t inc2, short loc1, short loc2, short outloc1, short outloc2);
+	double alpha, long int D1, long int inc1, long int inc2, short loc1, short loc2, short outloc1, short outloc2);
 void StoreLogLvl1(char* filename, ATC_p predef_control_values,
-	double alpha, size_t D1, size_t inc1, size_t inc2, short loc1, short loc2, short outloc1, short outloc2, double timer);
+	double alpha, long int D1, long int inc1, long int inc2, short loc1, short loc2, short outloc1, short outloc2, double timer);
 
 #endif

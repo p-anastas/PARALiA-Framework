@@ -11,7 +11,7 @@
 #include "unihelpers.hpp"
 #include "backend_wrappers.hpp"
 
-double cuBLASDaxpyWrap(size_t N, double alpha, double* x, size_t incx, double* y, size_t incy, double cpu_ratio, short dev_num, int dev_ids[] ){
+double cuBLASDaxpyWrap(long int N, double alpha, double* x, long int incx, double* y, long int incy, double cpu_ratio, short dev_num, int dev_ids[] ){
 	short lvl = 1;
 	double total_t = csecond();
 #ifdef DEBUG
@@ -27,7 +27,7 @@ double cuBLASDaxpyWrap(size_t N, double alpha, double* x, size_t incx, double* y
   if (dev_num > 1) error("cuBLASDaxpyWrap: Not implemented for multiple devices\n");
   else if (cpu_ratio > 0) error("cuBLASDaxpyWrap: Not implemented for cpu-assisted execution\n");
   cudaSetDevice(dev_ids[0]);
-  
+
 	cublasStatus_t stat;
 	cublasHandle_t handle0;
 

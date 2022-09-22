@@ -22,7 +22,7 @@ extern "C"{
 
 #define CBLASXT_MAX_SAFE_TILE 10000
 
-double XKBLASDgemmWrap(char TransA,  char TransB, size_t M, size_t N, size_t K, double alpha, double* A, size_t ldA, double* B, size_t ldB, double beta, double* C, size_t ldC, size_t T, double cache_limit, short dev_num, int dev_ids[]){
+double XKBLASDgemmWrap(char TransA,  char TransB, long int M, long int N, long int K, double alpha, double* A, long int ldA, double* B, long int ldB, double beta, double* C, long int ldC, long int T, double cache_limit, short dev_num, int dev_ids[]){
 	short lvl = 1;
 	double total_t = csecond();
 #ifdef DEBUG
@@ -61,7 +61,7 @@ int main(const int argc, const char *argv[]) {
 
 	char TransA, TransB;
   	double alpha, beta;
-	size_t M, N, K;
+	long int M, N, K;
 	short A_loc, B_loc, C_loc, C_out_loc;
 
 	ATC_p predef_control_values = NULL, return_values = NULL;
@@ -81,7 +81,7 @@ int main(const int argc, const char *argv[]) {
 	else sprintf(filename, "%s/XKBLASDgemmRunner_%s_%s_%s.log",
 		TESTLIBDIR, CoCoDistributionPrint(), CoCoImplementationPrint(), VERSION);
 
-	size_t XKBLAS_tile;
+	long int XKBLAS_tile;
 	if (predef_control_values!= NULL && predef_control_values->T > 0)
 		error("XKBLASDgemmRunner: XKBLAS not modified to accept T\n");
 	else return_values->T = XKBLAS_tile = -1; // The best performing static tile for our machine
@@ -104,7 +104,7 @@ int main(const int argc, const char *argv[]) {
 	CBLAS_TRANSPOSE cpu_op_A, cpu_op_B;    // CblasNoTrans, CblasTrans
 	cublasOperation_t gpu_op_A, gpu_op_B; // CUBLAS_OP_N, CUBLAS_OP_T
 
-	size_t ldA, ldB, ldC = M;
+	long int ldA, ldB, ldC = M;
 	TransposeTranslate(TransA, &cpu_op_A, &gpu_op_A, &ldA, M, K);
 	TransposeTranslate(TransB, &cpu_op_B, &gpu_op_B, &ldB, K, N);
 
@@ -143,7 +143,7 @@ int main(const int argc, const char *argv[]) {
 	{
 	int dev_ids[DEV_NUM];
 	for (int i = 0; i < DEV_NUM; i++) dev_ids[i] = i;
-	cuBLASXtDgemmWrap(TransA,  TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC,  (size_t) fmin(fmin(fmin(M,N),K)/2,CBLASXT_MAX_SAFE_TILE), 0, DEV_NUM, dev_ids);
+	cuBLASXtDgemmWrap(TransA,  TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC,  (long int) fmin(fmin(fmin(M,N),K)/2,CBLASXT_MAX_SAFE_TILE), 0, DEV_NUM, dev_ids);
 	}
 	CoCoMemcpy(C_out1, C,  M * N *sizeof(double), -2, C_loc);
  	CoCoMemcpy(C, C_buf,  M * N *sizeof(double), C_loc, -2);

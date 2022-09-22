@@ -40,7 +40,7 @@ void backend_run_operation(void* backend_data, const char* opname, CQueue_p run_
 #ifdef MULTIDEVICE_REDUCTION_ENABLE
 
 // Asunchronous 2D Memcpy in internal buffer AND reduce to dest between two locations WITHOUT synchronous errorchecking. Use with caution.
-void CoCoMemcpyReduce2DAsync(void* reduce_buffer, short reduce_buf_it, void* dest, size_t ldest, void* src, size_t lsrc, size_t rows, size_t cols,
+void CoCoMemcpyReduce2DAsync(void* reduce_buffer, short reduce_buf_it, void* dest, long int ldest, void* src, long int lsrc, long int rows, long int cols,
 	short elemSize, short loc_dest, short loc_src, void* Tile_lock, CQueue_p src_reduce_queue, CQueue_p dest_reduce_queue);
 
 // Asunchronous Memcpy in internal buffer AND reduce to dest between two locations WITHOUT synchronous errorchecking. Use with caution.
@@ -52,12 +52,12 @@ void CoCoReduceSyncThreads();
 
 /// Asunchronous add 2D (for block reduce)
 template<typename VALUETYPE>
-void CoCoAdd2Dc(VALUETYPE* dest, size_t ldest, VALUETYPE* src, size_t lsrc,
-	size_t rows, size_t cols, short loc, CQueue_p add_queue);
+void CoCoAdd2Dc(VALUETYPE* dest, long int ldest, VALUETYPE* src, long int lsrc,
+	long int rows, long int cols, short loc, CQueue_p add_queue);
 
 #endif
 
-void TransposeTranslate(char TransChar, CBLAS_TRANSPOSE* cblasFlag, cublasOperation_t* cuBLASFlag, size_t* ldim, size_t dim1, size_t dim2);
+void TransposeTranslate(char TransChar, CBLAS_TRANSPOSE* cblasFlag, cublasOperation_t* cuBLASFlag, long int* ldim, long int dim1, long int dim2);
 
 cublasOperation_t OpCblasToCublas(CBLAS_TRANSPOSE src);
 CBLAS_TRANSPOSE OpCublasToCblas(cublasOperation_t src);

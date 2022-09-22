@@ -18,10 +18,10 @@ int main(const int argc, const char *argv[]) {
 
 	char TransA, TransB;
   	double alpha, beta;
-	size_t M, N, K, T;
+	long int M, N, K, T;
 	short A_loc, B_loc, C_loc, C_out_loc;
 	double cache_limit = 0;
-	size_t ldA, ldB, ldC;
+	long int ldA, ldB, ldC;
 
 	if(argc != 4) error("Incorrect input arguments. Usage: ./correct_run run_cpu_mem run_gpu_mem run_large\n");
 	// Control Parameters
@@ -282,7 +282,7 @@ int main(const int argc, const char *argv[]) {
 		}
 	}
 	if (run_cpu_mem && run_large){
-		ldA = ldB = ldC = M = N = K = (size_t) 1.5*CoCoGetMaxDimSqAsset2D(3, sizeof(double), 256, 0);
+		ldA = ldB = ldC = M = N = K = (long int) 1.5*CoCoGetMaxDimSqAsset2D(3, sizeof(double), 256, 0);
 		fprintf(stderr, "\n==============================================================================================================================\n");
 		fprintf(stderr, "CoCoPeLiaDgemmTester: Allocating CPU buffers...-> %.3lf GB:", gemm_memory(M,N,K,1,1,2, sizeof(double))/1e9);
 		cpu_timer = csecond();
@@ -339,9 +339,9 @@ int main(const int argc, const char *argv[]) {
 		CoCoMemcpy(C_comp, C,  M * N *sizeof(double), -2, -2);
 
 		fprintf(stderr, "\n==============================================================================================================================\n");
-		M = (size_t) M/1.24223;
-		N = (size_t) N/1.34645;
-		K = (size_t) K/2.18321;
+		M = (long int) M/1.24223;
+		N = (long int) N/1.34645;
+		K = (long int) K/2.18321;
 		fprintf(stderr, "CoCoPeLiaDgemmTester: Testing Weird Non-Square Problem: %.3lf GB:\n\n", gemm_memory(M,N,K,1,1,1, sizeof(double))/1e9);
 		alpha = 1.23;
 		beta = 0.9876;
@@ -405,17 +405,17 @@ int main(const int argc, const char *argv[]) {
 		A_loc = 0;
 		if (DEV_NUM == 1){
 			B_loc = C_loc = 0;
-			ldA = ldB = ldC = M = N = K = (size_t) CoCoGetMaxDimSqAsset2D(4, sizeof(double), 256, 0);
+			ldA = ldB = ldC = M = N = K = (long int) CoCoGetMaxDimSqAsset2D(4, sizeof(double), 256, 0);
 		}
 		else if (DEV_NUM == 2){
 			B_loc = 0;
 			C_loc = 1;
-			ldA = ldB = ldC = M = N = K = (size_t) CoCoGetMaxDimSqAsset2D(2, sizeof(double), 256, 0);
+			ldA = ldB = ldC = M = N = K = (long int) CoCoGetMaxDimSqAsset2D(2, sizeof(double), 256, 0);
 		}
 		else if (DEV_NUM > 2){
 			B_loc = 1;
 			C_loc = 2;
-			ldA = ldB = ldC = M = N = K = (size_t) CoCoGetMaxDimSqAsset2D(2, sizeof(double), 256, 0);
+			ldA = ldB = ldC = M = N = K = (long int) CoCoGetMaxDimSqAsset2D(2, sizeof(double), 256, 0);
 		}
 
 		fprintf(stderr, "\n==============================================================================================================================\n");

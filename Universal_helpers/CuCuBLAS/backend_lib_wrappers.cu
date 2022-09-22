@@ -82,8 +82,8 @@ void backend_run_operation(void* backend_data, const char* opname, CQueue_p run_
 #ifdef MULTIDEVICE_REDUCTION_ENABLE
 
 template<typename VALUETYPE>
-void CoCoAdd2D(VALUETYPE* dest, size_t ldest, VALUETYPE* src, size_t lsrc,
-	size_t rows, size_t cols, short loc, CQueue_p add_queue){
+void CoCoAdd2D(VALUETYPE* dest, long int ldest, VALUETYPE* src, long int lsrc,
+	long int rows, long int cols, short loc, CQueue_p add_queue){
 	short lvl = 7;
 #ifdef DDEBUG
 	lprintf(lvl, "CoCoAdd2DAsync(dest = %p, ldest =%zu, src=%p, lsrc = %zu, rows = %zu, cols = %zu, loc = %d)\n",
@@ -134,15 +134,15 @@ void CoCoAdd2D(VALUETYPE* dest, size_t ldest, VALUETYPE* src, size_t lsrc,
 #endif
 }
 
-template void CoCoAdd2D<double>(double* dest, size_t ldest, double* src, size_t lsrc,
-	size_t rows, size_t cols, short loc, CQueue_p add_queue);
+template void CoCoAdd2D<double>(double* dest, long int ldest, double* src, long int lsrc,
+	long int rows, long int cols, short loc, CQueue_p add_queue);
 
 typedef struct CoCoMemcpyReduce2D_pthread_wrap{
   void* reduce_buffer;
   void* dest;
-  size_t ldest;
+  long int ldest;
   void* src;
-  size_t lsrc, rows, cols;
+  long int lsrc, rows, cols;
   short elemSize, loc_dest, loc_src, reduce_buf_it;
   void* Tile_lock;
   CQueue_p src_reduce_queue, dest_reduce_queue;
@@ -153,9 +153,9 @@ void* CoCoMemcpyReduce2DWrapped(void* wrapped_data){
   void* reduce_buffer = unwrap->reduce_buffer;
   short reduce_buf_it = unwrap->reduce_buf_it;
   void* dest = unwrap->dest;
-  size_t ldest = unwrap->ldest;
+  long int ldest = unwrap->ldest;
   void* src = unwrap->src;
-  size_t lsrc = unwrap->lsrc, rows = unwrap->rows, cols = unwrap->cols;
+  long int lsrc = unwrap->lsrc, rows = unwrap->rows, cols = unwrap->cols;
   short elemSize = unwrap->elemSize, loc_dest = unwrap->loc_dest, loc_src = unwrap->loc_src;
   void* Tile_lock = unwrap->Tile_lock;
   CQueue_p src_reduce_queue = unwrap->src_reduce_queue,
@@ -210,8 +210,8 @@ void* CoCoMemcpyReduce2DWrapped(void* wrapped_data){
 }
 
 // Asunchronous Memcpy in internal buffer AND reduce to dest between two locations WITHOUT synchronous errorchecking. Use with caution.
-void CoCoMemcpyReduce2DAsync(void* reduce_buffer, short reduce_buf_it, void* dest, size_t ldest, void* src, size_t lsrc,
-	size_t rows, size_t cols, short elemSize, short loc_dest, short loc_src, void* Tile_lock, CQueue_p src_reduce_queue, CQueue_p dest_reduce_queue){
+void CoCoMemcpyReduce2DAsync(void* reduce_buffer, short reduce_buf_it, void* dest, long int ldest, void* src, long int lsrc,
+	long int rows, long int cols, short elemSize, short loc_dest, short loc_src, void* Tile_lock, CQueue_p src_reduce_queue, CQueue_p dest_reduce_queue){
     int s;
     void* res;
     while(__sync_lock_test_and_set (&thread_lock, 1));

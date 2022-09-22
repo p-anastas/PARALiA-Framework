@@ -15,9 +15,10 @@
 #include <pthread.h>
 pthread_barrier_t  SoftCache_alloc_barrier_axpy;
 
-axpy_backend_in_p initial_daxpy = NULL;
-ATC_p predef_vals_axpy = NULL;
+axpy_backend_in_p initial_axpy = NULL;
 ATC_p autotune_controller_axpy = NULL;
+ATC_p predef_controller_axpy = NULL;
+
 int NGridSz_axpy = 0;
 
 #ifdef STEST
@@ -62,9 +63,9 @@ int current_ctr = 0;
 			ptr_ker_translate->N = ((Tile1D<VALUE_TYPE>*) kernels[current_ctr]->TileList[0])->dim;
 			ptr_ker_translate->x = NULL;
 			ptr_ker_translate->y = NULL;
-			ptr_ker_translate->alpha = initial_daxpy->alpha;
-			ptr_ker_translate->incx = initial_daxpy->incx;
-			ptr_ker_translate->incy = initial_daxpy->incy;
+			ptr_ker_translate->alpha = initial_axpy->alpha;
+			ptr_ker_translate->incx = initial_axpy->incx;
+			ptr_ker_translate->incy = initial_axpy->incy;
 			// No interal dims for axpy to reduce
 			kernels[current_ctr]->WR_first = 0;
 			kernels[current_ctr]->WR_last = (short*) calloc (2, sizeof(short));
@@ -195,7 +196,7 @@ void* CoCopeLiaAxpyAgentVoid(void* kernel_pthread_wrapped){
 }
 
 /// An axpy wrapper including auto-tuning of T and cache_size, as well as device management
-ATC_p CoCopeLiaDaxpy(size_t N, VALUE_TYPE alpha, VALUE_TYPE* x, size_t incx, VALUE_TYPE* y, size_t incy)
+ATC_p CoCopeLiaDaxpy(long int N, VALUE_TYPE alpha, VALUE_TYPE* x, long int incx, VALUE_TYPE* y, long int incy)
 {
 	short lvl = 1;
 #ifdef DEBUG
@@ -213,28 +214,28 @@ ATC_p CoCopeLiaDaxpy(size_t N, VALUE_TYPE alpha, VALUE_TYPE* x, size_t incx, VAL
 	int prev_dev_id = CoCoPeLiaGetDevice();
 
 	short reuse_model_flag = 1;
-	if(!initial_daxpy){
-		initial_daxpy = (axpy_backend_in_p) malloc(sizeof(struct axpy_backend_in));
+	if(!initial_axpy){
+		initial_axpy = (axpy_backend_in_p) malloc(sizeof(struct axpy_backend_in));
 		reuse_model_flag = 0;
 	}
 
-	if(reuse_model_flag && initial_daxpy->N != N)
+	if(reuse_model_flag && initial_axpy->N != N)
 		reuse_model_flag = 0;
-	initial_daxpy->N = N;
+	initial_axpy->N = N;
 
-	if(reuse_model_flag && initial_daxpy->x!= NULL && *initial_daxpy->x != x)
+	if(reuse_model_flag && initial_axpy->x!= NULL && *initial_axpy->x != x)
 		reuse_model_flag = 0;
-	initial_daxpy->x = (void**) &x;
+	initial_axpy->x = (void**) &x;
 
-	if(reuse_model_flag && initial_daxpy->y!= NULL && *initial_daxpy->y != y)
+	if(reuse_model_flag && initial_axpy->y!= NULL && *initial_axpy->y != y)
 		reuse_model_flag = 0;
-	initial_daxpy->y = (void**) &y;
+	initial_axpy->y = (void**) &y;
 
 
-	initial_daxpy->alpha = alpha;
-	initial_daxpy->incx = incx;
-	initial_daxpy->incy = incy;
-	initial_daxpy->dev_id = -1;
+	initial_axpy->alpha = alpha;
+	initial_axpy->incx = incx;
+	initial_axpy->incy = incy;
+	initial_axpy->dev_id = -1;
 
 	Asset1D<VALUE_TYPE>* x_asset, *y_asset;
 	/// Prepare Assets in parallel( e.g. initialize asset classes, pin memory with pthreads)
@@ -250,9 +251,17 @@ ATC_p CoCopeLiaDaxpy(size_t N, VALUE_TYPE alpha, VALUE_TYPE* x, size_t incx, VAL
 	x_asset->prepareAsync(&asset_thread_id[0], attr);
 	y_asset->prepareAsync(&asset_thread_id[1], attr);
 
+	if (!reuse_model_flag){
+		delete autotune_controller_axpy;
+		autotune_controller_axpy = NULL;
+	}
 	if (autotune_controller_axpy == NULL) autotune_controller_axpy = new ATC();
+	if (predef_controller_axpy && autotune_controller_axpy->diff_intialized_params_ATC(predef_controller_axpy)){
+		 autotune_controller_axpy->mimic_ATC(predef_controller_axpy);
+		 reuse_model_flag = 0;
+	}
 	double autotune_timer = 0;
-	if(!reuse_model_flag) autotune_timer = autotune_controller_axpy->autotune_problem("Daxpy", initial_daxpy);
+	if(!reuse_model_flag) autotune_timer = autotune_controller_axpy->autotune_problem("Daxpy", initial_axpy);
 
 	void* res;
 	for(int i=0; i<2;i++){
@@ -267,7 +276,7 @@ ATC_p CoCopeLiaDaxpy(size_t N, VALUE_TYPE alpha, VALUE_TYPE* x, size_t incx, VAL
 	cpu_timer = csecond();
 #endif
 
-	size_t T = autotune_controller_axpy->T;
+	long int T = autotune_controller_axpy->T;
 
 	int GPU_Block_num, Block_num = 1 + (x_asset->dim/T + ((x_asset->dim%T)? 1 : 0)) +
 		 (y_asset->dim/T + ((y_asset->dim%T)? 1 : 0));
@@ -324,7 +333,7 @@ ATC_p CoCopeLiaDaxpy(size_t N, VALUE_TYPE alpha, VALUE_TYPE* x, size_t incx, VAL
 		&Subkernel_num_axpy);
 
 	if(!reuse_model_flag) autotune_controller_axpy->update_sk_num(Subkernel_num_axpy);
-	
+
 #ifdef DEBUG
 	lprintf(lvl, "Subkernel_num_axpy = %d {N}GridSz = {%d}, num_devices = %d\n\n",
 		Subkernel_num_axpy, NGridSz_axpy, autotune_controller_axpy->active_unit_num);
@@ -462,17 +471,12 @@ ATC_p CoCopeLiaDaxpy(size_t N, VALUE_TYPE alpha, VALUE_TYPE* x, size_t incx, VAL
 }
 
 /// A modification of CoCopeLiaDaxpy but with given parameters (mainly for performance/debug purposes)
-ATC_p CoCopeLiaDaxpyControled(size_t N, VALUE_TYPE alpha, VALUE_TYPE* x, size_t incx, VALUE_TYPE* y, size_t incy, ATC_p predef_controller){
+ATC_p CoCopeLiaDaxpyControled(long int N, VALUE_TYPE alpha, VALUE_TYPE* x, long int incx, VALUE_TYPE* y, long int incy, ATC_p predef_controller){
 	if (predef_controller == NULL){
 		warning("Calling CoCopeLiaDaxpyControled with empty controller -> falling back to full autotune version \'CoCopeLiaDaxpy\'\n");
 		return CoCopeLiaDaxpy(N, alpha, x, incx, y, incy);
 	}
-	if (autotune_controller_axpy == NULL) autotune_controller_axpy = new ATC();
-	autotune_controller_axpy->T = predef_controller->T;
-	autotune_controller_axpy->active_unit_num = predef_controller->active_unit_num;
-	for(int idx =0; idx < LOC_NUM; idx++)
-		autotune_controller_axpy->active_unit_id_list[idx] = predef_controller->active_unit_id_list[idx];
-	autotune_controller_axpy->cache_limit = predef_controller->cache_limit;
-	ATC_p return_vals = CoCopeLiaDaxpy(N, alpha, x, incx, y, incy);
-	return return_vals;
+
+	predef_controller_axpy = predef_controller;
+	return CoCopeLiaDaxpy(N, alpha, x, incx, y, incy);
 }

@@ -26,7 +26,7 @@ int main(const int argc, const char *argv[]) {
 	int ctr = 1, samples, dev_id, dev_count;
 
   short loc_src = -2, loc_dest = -2;
-  size_t TileDim = 2048;
+  long int TileDim = 2048;
 
   switch (argc) {
   case (3):
@@ -60,7 +60,7 @@ int main(const int argc, const char *argv[]) {
 	}
 
 	void* unit_buffs[LOC_NUM];
-  size_t ldsrc, ldest = ldsrc = TileDim + 1;
+  long int ldsrc, ldest = ldsrc = TileDim + 1;
 	short elemSize = sizeof(double);
 
 	for(short dev_id_idx = 0 ; dev_id_idx < LOC_NUM; dev_id_idx++){

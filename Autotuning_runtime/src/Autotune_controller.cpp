@@ -69,10 +69,52 @@ void ATC::reset(){
 #endif
 }
 
+int ATC::diff_intialized_params_ATC(ATC_p other_ATC){
+	short lvl = 3;
+	#ifdef DEBUG
+		lprintf(lvl, "|-----> ATC::diff_intialized_params_ATC(other_ATC = %p)\n", other_ATC);
+	#endif
+	int result = 0;
+	if(other_ATC->T != -1 && other_ATC->T != T){
+		result++;
+#ifdef PDEBUG
+		lprintf(lvl, "ATC::diff_intialized_params_ATC(): other_ATC->T = %ld, T = %ld\n", other_ATC->T, T);
+#endif
+		}
+	if(other_ATC->active_unit_num != -1 && other_ATC->active_unit_num != active_unit_num){
+		result++;
+#ifdef PDEBUG
+		lprintf(lvl, "ATC::diff_intialized_params_ATC(): other_ATC->active_unit_num = %d, active_unit_num = %d\n",
+			other_ATC->active_unit_num, active_unit_num);
+#endif
+	}
+	else if(other_ATC->active_unit_num != -1 && other_ATC->active_unit_num == active_unit_num){
+		for (int ctr = 0; ctr < active_unit_num; ctr++) if(other_ATC->active_unit_id_list[ctr] != active_unit_id_list[ctr]){
+			result++;
+#ifdef PDEBUG
+		lprintf(lvl, "ATC::diff_intialized_params_ATC(): other_ATC->active_unit_id_list[%d] = %d, active_unit_id_list[%d] = %d\n",
+			ctr, other_ATC->active_unit_id_list[ctr], ctr, active_unit_id_list[ctr]);
+#endif
+			break;
+		}
+	}
+	if(other_ATC->cache_limit != 0 && other_ATC->cache_limit != cache_limit){
+		result++;
+#ifdef PDEBUG
+		lprintf(lvl, "ATC::diff_intialized_params_ATC(): other_ATC->cache_limit = %lld, cache_limit = %lld\n",
+			other_ATC->cache_limit, cache_limit);
+#endif
+	}
+#ifdef DEBUG
+	lprintf(lvl, "<-----|\n");
+#endif
+	return result;
+}
+
 void ATC::mimic_ATC(ATC_p other_ATC){
 	short lvl = 3;
 	#ifdef DEBUG
-		lprintf(lvl, "|-----> ATC::update_sk_num\n");
+		lprintf(lvl, "|-----> ATC::mimic_ATC(other_ATC = %p)\n", other_ATC);
 	#endif
 	T = other_ATC->T;
 	active_unit_num = other_ATC->active_unit_num;
@@ -83,16 +125,19 @@ void ATC::mimic_ATC(ATC_p other_ATC){
 
 	if(subkernel_num != -1){
 		for (int d = 0; d < LOC_NUM; d++){
-			free(Subkernels_per_unit_list[d]);
-			Subkernels_per_unit_num[d] = 0;
-			Subkernels_per_unit_list[d] = NULL;
-		}
+			//fprintf(stderr,"Subkernels_per_unit_list[%d] = %p\n", d, Subkernels_per_unit_list[d]);
+			//free(Subkernels_per_unit_list[d]);
+			//Subkernels_per_unit_num[d] = 0;
+			;//Subkernels_per_unit_list[d] = NULL;
+		} /// TODO: Got some "double free 2cache" error when used in many different mimicked ATCs ->
+			/// potential problem here  ATC::update_sk_num resizing Subkernels_per_unit_list[d] might be solution and/or relevant.  
 		subkernel_num = -1;
 	}
 
 	if (other_ATC->subkernel_num != -1){
 		for (int d = 0; d < other_ATC->active_unit_num; d++){
 			Subkernels_per_unit_num[d] = other_ATC->Subkernels_per_unit_num[d];
+			free(Subkernels_per_unit_list[d]);
 			Subkernels_per_unit_list[d] = (int*) malloc(other_ATC->subkernel_num*sizeof(int));
 			for (int sk = 0; sk < other_ATC->subkernel_num; sk++)
 				Subkernels_per_unit_list[d][sk] = other_ATC->Subkernels_per_unit_list[d][sk];
@@ -198,27 +243,13 @@ void ATC::normalize_split(){
 #endif
 }
 
-
-void PARALIA_translate_unit_ids(int case_id, int* active_unit_num_p, int* active_unit_id_list){
-	int mask;
-	*active_unit_num_p = 0;
-	for (int mask_offset = 0; mask_offset < LOC_NUM; mask_offset++){
-		mask =  1 << mask_offset;
-		if (case_id & mask){
-			active_unit_id_list[*active_unit_num_p] = deidxize(mask_offset);
-			(*active_unit_num_p)++;
-			//lprintf(0, "PARALIA_translate_unit_ids(case_id = %d): mask = %d -> Adding unit %d to available\n",
-			//	case_id, mask, deidxize(mask_offset));
-		}
-	}
-}
-
 double ATC::autotune_problem(const char* routine_name, void* initial_problem_wrap){
 	short lvl = 3;
 	double cpu_timer = csecond();
 #ifdef DEBUG
 	lprintf(lvl, "|-----> ATC::autotune_problem(%s, %p)\n", routine_name,
 		initial_problem_wrap);
+	print();
 #endif
 
 	init_modelers(routine_name, initial_problem_wrap);
@@ -257,7 +288,7 @@ double ATC::autotune_problem(const char* routine_name, void* initial_problem_wra
 		int max_unit_num = active_unit_num, initial_T = T;
 		double tile_selection_t = 0, split_selection_t = 0;
 		for (int case_id = 1; case_id < explored_cases; case_id++){
-				PARALIA_translate_unit_ids(case_id, &temp_controller->active_unit_num, temp_controller->active_unit_id_list);
+				translate_binary_to_unit_list(case_id, &temp_controller->active_unit_num, temp_controller->active_unit_id_list);
 				if(temp_controller->active_unit_num > max_unit_num) continue;
 				if(initial_T <= 0) tile_selection_t += temp_controller->optimize_tile();
 				split_selection_t += temp_controller->optimize_split();
@@ -509,9 +540,10 @@ void ATC::print(){
 	printlist<double>(active_unit_score, active_unit_num),
 	pred_t, subkernel_num,
 	printlist<int>(Subkernels_per_unit_num, active_unit_num));
- 	if(subkernel_num != -1)
+ 	if(subkernel_num != -1){
 	for (int d = 0; d < active_unit_num; d++) fprintf(stderr, "Subkernels_per_unit_list[%d] = %s\n", d,
 		printlist<int>(Subkernels_per_unit_list[d], subkernel_num));
+	}
 	fprintf(stderr, "\n");
 	return;
 }

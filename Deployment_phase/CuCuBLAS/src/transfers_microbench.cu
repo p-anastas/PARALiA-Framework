@@ -13,7 +13,7 @@
 /// For current systems 2-4 is sufficient - larger multipliers increase total benchmark time proportionally.
 #define MAX_ASSUMED_H2D_TIMES_SLOWER 2
 
-void report_run(char* filename, size_t dim_1, size_t dim_2, double mean_t, double margin_err, size_t sample_sz, double mean_t_bid, double margin_err_bid, size_t sample_sz_bid, double bench_t){
+void report_run(char* filename, long int dim_1, long int dim_2, double mean_t, double margin_err, long int sample_sz, double mean_t_bid, double margin_err_bid, long int sample_sz_bid, double bench_t){
 
 	FILE* fp = fopen(filename,"a");
 	if (!fp) error("report_run: LogFile failed to open");
@@ -26,7 +26,7 @@ int main(const int argc, const char *argv[]) {
   int ctr = 1, samples, dev_id, dev_count;
 
 	short from, to;
-	size_t minDim = MIN_DIM_TRANS, maxDim = 0, step = STEP_TRANS;
+	long int minDim = MIN_DIM_TRANS, maxDim = 0, step = STEP_TRANS;
 
 	switch (argc) {
 	case (3):
@@ -71,7 +71,7 @@ int main(const int argc, const char *argv[]) {
 	else if(from >= 0) cudaSetDevice(from);
 	else if(to >= 0) cudaSetDevice(to);
 
-	size_t ldsrc, ldest = ldsrc = maxDim + 1;
+	long int ldsrc, ldest = ldsrc = maxDim + 1;
 
 	src = CoCoMalloc(maxDim*(maxDim+1)*sizeof(double), from);
 	dest =  CoCoMalloc(maxDim*(maxDim+1)*sizeof(double), to);
@@ -91,10 +91,10 @@ int main(const int argc, const char *argv[]) {
 #ifdef AUTO_BENCH_USE_BOOST
 	double cpu_timer, transfer_t_vals[MICRO_MAX_ITER], transfer_t_sum, transfer_t_mean, bench_t, error_margin;
 	double transfer_t_bid_sum, transfer_t_bid_mean, error_margin_bid;
-	size_t sample_sz, sample_sz_bid;
+	long int sample_sz, sample_sz_bid;
 	CoCoPeLiaSelectDevice(from);
 	Event_timer_p device_timer = new Event_timer(from);
-	for (size_t dim = minDim; dim < MAX_DIM_BLAS3; dim+=step){ // maxDim+1
+	for (long int dim = minDim; dim < MAX_DIM_BLAS3; dim+=step){ // maxDim+1
 		if (dim >= step * 16) step*=2;
 		transfer_t_sum = transfer_t_mean = bench_t = error_margin = 0;
 		fprintf(stderr, "Cublas-chunk Link %d->%d (Chunk %dx%d):\n", from, to, dim, dim);
@@ -157,7 +157,7 @@ int main(const int argc, const char *argv[]) {
 	/// Local Timers
 	double cpu_timer, t_sq_av, t_sq_min, t_sq_max, t_sq_bid_av, t_sq_bid_min, t_sq_bid_max, bench_t;
 	Event_timer_p device_timer = new Event_timer();
-	for (size_t dim = minDim; dim < maxDim+1; dim+=step){
+	for (long int dim = minDim; dim < maxDim+1; dim+=step){
 		if (dim >= step * 16) step*=2;
 		t_sq_av = t_sq_max = t_sq_bid_av = t_sq_bid_max = bench_t= 0;
 		t_sq_min = t_sq_bid_min = 1e9;
