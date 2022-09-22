@@ -13,11 +13,11 @@
 /// For current systems 10 is sufficient - larger multipliers increase total benchmark time.
 #define MAX_ASSUMED_OTHER_LINK_TIMES_FASTER 10
 
-void report_run(char* filename, size_t dim_1, size_t dim_2, double mean_t, double margin_err, size_t sample_sz, double bench_t){
+void report_run(char* filename, int dim_1, int dim_2, double mean_t, double margin_err, long int sample_sz, double bench_t){
 
 	FILE* fp = fopen(filename,"a");
 	if (!fp) error("report_run: LogFile failed to open");
-   	fprintf(fp,"%d,%d, %e,%e,%zu, %e\n", dim_1, dim_2, mean_t, margin_err, sample_sz, bench_t);
+   	fprintf(fp,"%d,%d, %e,%e,%ld, %e\n", dim_1, dim_2, mean_t, margin_err, sample_sz, bench_t);
         fclose(fp);
 }
 
@@ -26,7 +26,7 @@ int main(const int argc, const char *argv[]) {
   int ctr = 1, samples, dev_id, dev_count;
 
 	short loc_src = -2, loc_dest = -2;
-	size_t minDim = MIN_DIM_TRANS, maxDim = 0, step = STEP_TRANS;
+	int minDim = MIN_DIM_TRANS, maxDim = 0, step = STEP_TRANS;
 
 	switch (argc) {
 	case (3):
@@ -65,7 +65,7 @@ int main(const int argc, const char *argv[]) {
 	}
 
 	void* unit_buffs[2*LOC_NUM];
-  size_t ldsrc, ldest = ldsrc = maxDim + 1;
+  int ldsrc, ldest = ldsrc = maxDim + 1;
 	short elemSize = sizeof(double);
 
 	for(short dev_id_idx = 0 ; dev_id_idx < LOC_NUM; dev_id_idx++){
@@ -108,11 +108,11 @@ int main(const int argc, const char *argv[]) {
 									loc_dest, loc_src, transfer_queue_list[idxize(loc_dest)][idxize(loc_src)]);
 	transfer_queue_list[idxize(loc_dest)][idxize(loc_src)]->sync_barrier();
 	CoCoSyncCheckErr();
-	size_t dim;
+	int dim;
 #ifdef AUTO_BENCH_USE_BOOST
 	double cpu_timer, transfer_t_vals[MICRO_MAX_ITER], transfer_t_sum, transfer_t_mean = 0, bench_t, error_margin;
 	double transfer_t_bid_sum, transfer_t_bid_mean, error_margin_bid;
-	size_t sample_sz, sample_sz_bid;
+	long int sample_sz, sample_sz_bid;
 	CoCoPeLiaSelectDevice(loc_dest);
 	Event_timer_p device_timer = new Event_timer(loc_dest);
 	for (dim = minDim; dim < MAX_DIM_BLAS3; dim+=step){ // maxDim+1
@@ -145,7 +145,7 @@ int main(const int argc, const char *argv[]) {
 			if (sample_sz > MICRO_MIN_ITER && error_margin/transfer_t_mean  * 100 <= 5) break;
 		}
 		bench_t = csecond() - bench_t;
-		fprintf(stderr, "Microbenchmark (dim1 = dim2 = %zu) complete:\t mean_exec_t=%lf ms  ( %lf Gb/s), Error Margin (percentage of mean) = %lf %, Itter = %d, Microbench_t = %lf\n\n", dim, transfer_t_mean  * 1000, Gval_per_s(dim*dim*8, transfer_t_mean), error_margin/transfer_t_mean  * 100, sample_sz, bench_t);
+		fprintf(stderr, "Microbenchmark (dim1 = dim2 = %d) complete:\t mean_exec_t=%lf ms  ( %lf Gb/s), Error Margin (percentage of mean) = %lf %%, Itter = %ld, Microbench_t = %lf\n\n", dim, transfer_t_mean  * 1000, Gval_per_s(dim*dim*8, transfer_t_mean), error_margin/transfer_t_mean  * 100, sample_sz, bench_t);
 		CoCoSyncCheckErr();
 
 		report_run(filename, dim, dim , transfer_t_mean, error_margin, sample_sz, bench_t);
@@ -208,7 +208,7 @@ int main(const int argc, const char *argv[]) {
 			//fprintf(stderr, "Shared Link (%d->%d) transfer complete:\t shared_timer=%lf ms  ( %lf Gb/s)\n\n",
 			//	deidxize(dev_id_idy), deidxize(dev_id_idx), shared_timer  * 1000, Gval_per_s(maxDim*maxDim*elemSize, shared_timer));
 
-			if (transfer_t_mean < shared_timer*(1-NORMALIZE_NEAR_SPLIT_LIMIT)) fprintf(stderr, "Link(%2d->%2d) & Link(%2d->%2d) partially shared: Shared_BW: %1.2lf %\n\n",
+			if (transfer_t_mean < shared_timer*(1-NORMALIZE_NEAR_SPLIT_LIMIT)) fprintf(stderr, "Link(%2d->%2d) & Link(%2d->%2d) partially shared: Shared_BW: %1.2lf %%\n\n",
 				loc_src, loc_dest, deidxize(dev_id_idy), deidxize(dev_id_idx), 100*transfer_t_mean/shared_timer);
 
 			report_run(filename_over, deidxize(dev_id_idx), deidxize(dev_id_idy), transfer_t_mean, shared_timer, MAX_ASSUMED_OTHER_LINK_TIMES_FASTER, bench_t);
