@@ -83,8 +83,8 @@ template<typename dtype> short Tile2D<dtype>::getClosestReadLoc(short dev_id_in)
   lprintf(lvl-1, "|-----> Tile2D(%d)::getClosestReadLoc(%d)\n", id, dev_id_in);
 #endif
   int dev_id_in_idx = idxize(dev_id_in);
-  int pos_min = LOC_NUM;
-  double link_cost_min = 10000000;
+  int pos_max = LOC_NUM;
+  double link_bw_max = 0;
   for (int pos =0; pos < LOC_NUM; pos++){
     if (pos == dev_id_in_idx || StoreBlock[pos] == NULL) {
       //if (StoreBlock[pos]!= NULL)
@@ -97,29 +97,29 @@ template<typename dtype> short Tile2D<dtype>::getClosestReadLoc(short dev_id_in)
       event_status block_status = StoreBlock[pos]->Available->query_status();
       if(block_status == COMPLETE || block_status == CHECKED || block_status == RECORDED){
 #ifdef ENABLE_TRANSFER_HOPS
-        double current_link_cost = link_cost_hop_2D[dev_id_in_idx][pos];
+        double current_link_bw = link_bw_hop[dev_id_in_idx][pos];
 #else
-        double current_link_cost = link_cost[dev_id_in_idx][pos];
+        double current_link_bw = link_bw[dev_id_in_idx][pos];
 #endif
-        if (block_status == RECORDED) current_link_cost+=current_link_cost*FETCH_UNAVAILABLE_PENALTY;
-        if (current_link_cost < link_cost_min){
-          link_cost_min = current_link_cost;
-          pos_min = pos;
+        if (block_status == RECORDED) current_link_bw-=current_link_bw*FETCH_UNAVAILABLE_PENALTY;
+        if (current_link_bw > link_bw_max){
+          link_bw_max = current_link_bw;
+          pos_max = pos;
         }
-        else if (current_link_cost == link_cost_min &&
-        link_used_2D[dev_id_in_idx][pos] < link_used_2D[dev_id_in_idx][pos_min]){
-          link_cost_min = current_link_cost;
-          pos_min = pos;
+        else if (current_link_bw == link_bw_max &&
+        link_used_2D[dev_id_in_idx][pos] < link_used_2D[dev_id_in_idx][pos_max]){
+          link_bw_max = current_link_bw;
+          pos_max = pos;
         }
       }
     }
   }
 #ifdef DEBUG
-  lprintf(lvl, "|-----> Tile2D(%d)::getClosestReadLoc(%d): Selecting cached tile in loc =%d \n", id, dev_id_in, pos_min);
+  lprintf(lvl, "|-----> Tile2D(%d)::getClosestReadLoc(%d): Selecting cached tile in loc =%d \n", id, dev_id_in, pos_max);
 #endif
-  if (pos_min >= LOC_NUM) error("Tile2D(%d)::getClosestReadLoc(%d): No location found for tile - bug.", id, dev_id_in);
-  //Global_Cache[pos_min]->lock();
-  CBlock_p temp_outblock = StoreBlock[pos_min];
+  if (pos_max >= LOC_NUM) error("Tile2D(%d)::getClosestReadLoc(%d): No location found for tile - bug.", id, dev_id_in);
+  //Global_Cache[pos_max]->lock();
+  CBlock_p temp_outblock = StoreBlock[pos_max];
   if(temp_outblock != NULL){
     temp_outblock->lock();
     //temp_outblock->update_state(true);
@@ -128,26 +128,26 @@ template<typename dtype> short Tile2D<dtype>::getClosestReadLoc(short dev_id_in)
     if ((temp == AVAILABLE || temp == SHARABLE || temp == NATIVE) &&
     (block_status == COMPLETE || block_status == CHECKED || block_status == RECORDED)){
       temp_outblock->add_reader(true);
-      //Global_Cache[pos_min]->unlock();
+      //Global_Cache[pos_max]->unlock();
       temp_outblock->unlock();
       #ifdef DDEBUG
         lprintf(lvl-1, "<-----|\n");
       #endif
-      link_used_2D[dev_id_in_idx][pos_min]++;
-      return deidxize(pos_min);
+      link_used_2D[dev_id_in_idx][pos_max]++;
+      return deidxize(pos_max);
     }
-    else error("Tile2D(%d)::getClosestReadLoc(%d): pos_min = %d selected,\
-      but something changed after locking its cache...fixme\n", id, dev_id_in, pos_min);
+    else error("Tile2D(%d)::getClosestReadLoc(%d): pos_max = %d selected,\
+      but something changed after locking its cache...fixme\n", id, dev_id_in, pos_max);
   }
-  else error("Tile2D(%d)::getClosestReadLoc(%d): pos_min = %d selected,\
-    but StoreBlock[pos_min] was NULL after locking its cache...fixme\n", id, dev_id_in, pos_min);
+  else error("Tile2D(%d)::getClosestReadLoc(%d): pos_max = %d selected,\
+    but StoreBlock[pos_max] was NULL after locking its cache...fixme\n", id, dev_id_in, pos_max);
   return -666;
 }
 
 template<typename dtype> double Tile2D<dtype>::getMinLinkCost(short dev_id_in){
   short lvl = 5;
   int dev_id_in_idx = idxize(dev_id_in);
-  double link_cost_min = 10000000;
+  double link_bw_max = 0;
   for (int pos =0; pos < LOC_NUM; pos++){
     CBlock_p temp_outblock = StoreBlock[pos];
     if(temp_outblock == NULL) continue;
@@ -157,14 +157,14 @@ template<typename dtype> double Tile2D<dtype>::getMinLinkCost(short dev_id_in){
       event_status block_status = temp_outblock->Available->query_status();
       if(block_status == COMPLETE || block_status == CHECKED || block_status == RECORDED){
 #ifdef ENABLE_TRANSFER_HOPS
-        double current_link_cost = link_cost_hop_2D[dev_id_in_idx][pos];
+        double current_link_bw = link_bw_hop[dev_id_in_idx][pos];
 #else
-        double current_link_cost = link_cost[dev_id_in_idx][pos];
+        double current_link_bw = link_bw[dev_id_in_idx][pos];
 #endif
-        if (block_status == RECORDED) current_link_cost+=current_link_cost*FETCH_UNAVAILABLE_PENALTY;
-        if (current_link_cost < link_cost_min) link_cost_min = current_link_cost;
+        if (block_status == RECORDED) current_link_bw-=current_link_bw*FETCH_UNAVAILABLE_PENALTY;
+        if (current_link_bw > link_bw_max) link_bw_max = current_link_bw;
       }
     }
   }
-  return link_cost_min;
+  return link_bw_max;
 }

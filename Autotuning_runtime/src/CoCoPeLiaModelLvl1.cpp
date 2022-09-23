@@ -239,8 +239,8 @@ double CoCopeLiaPredictBidirectionalBLAS1(MD_p model, long int T)
 
 }
 
-double PredictBidirectionalHeteroBLAS1(MD_p model, int used_devs, int* used_dev_ids,
-	double* used_dev_relative_scores, long int T){
+double PredictBidirectionalHeteroBLAS1(MD_p model, long int T, int used_devs, int* used_dev_ids,
+	double* used_dev_relative_scores){
 	short lvl = 4;
 	long int prob_dims = 0, reset_D1 = model->D1;
 	double imb_time_multiplier = 1.0, reduce_time_multiplier = 1.0;

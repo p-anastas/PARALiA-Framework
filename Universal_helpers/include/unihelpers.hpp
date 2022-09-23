@@ -226,6 +226,8 @@ int gcd (int a, int b, int c);
 inline short idxize(short num){ return (num == -1) ? LOC_NUM - 1: num;}
 inline short deidxize(short idx){ return (idx == LOC_NUM - 1) ? -1 : idx;}
 inline short remote(short loc, short other_loc){ return (loc == other_loc) ? 0 : 1;}
+inline int is_in_list(int elem, int* elem_list, int list_len){ for (int idx = 0; idx < list_len; idx++)
+		if(elem_list[idx] == elem) return 1; return 0; }
 void translate_binary_to_unit_list(int case_id, int* active_unit_num_p, int* active_unit_id_list);
 
 #endif

@@ -138,7 +138,7 @@ double CoCopeLiaPipelineEmulate(MD_p model, long int T)
 }
 
 
-double PredictReuseHetero(MD_p model, long int T, int used_devs = 1, int* used_dev_ids = NULL,
+double PredictReuseHetero(MD_p model, long int T, int used_devs = 1, int* used_unit_ids = NULL,
 	double* used_dev_relative_scores = NULL)
 {
 	switch(model->problem){
@@ -149,25 +149,116 @@ double PredictReuseHetero(MD_p model, long int T, int used_devs = 1, int* used_d
 			error("PredictReuseHetero: BLAS 2 Not implemented\n");
 			return 0;
 		case BLAS3:
-			return PredictReuseHeteroBLAS3(model, used_devs, used_dev_ids,
-				used_dev_relative_scores, T);
+			return PredictReuseHeteroBLAS3(model, T, used_devs, used_unit_ids,
+				used_dev_relative_scores);
 		default:
 			error("PredictReuseHetero: Invalid Problem %s", printProblem(model->problem));
 	}
 	return 0;
 }
 
-double PredictBidirectionalHetero(MD_p model, long int T, int used_devs = 1, int* used_dev_ids = NULL,
+double PredictBidirectionalHetero(MD_p model, long int T, int used_devs = 1, int* used_unit_ids = NULL,
 	double* used_dev_relative_scores = NULL)
 {
 	switch(model->problem){
 		case BLAS1:
-			return PredictBidirectionalHeteroBLAS1(model, used_devs, used_dev_ids,
-				used_dev_relative_scores, T);
+			return PredictBidirectionalHeteroBLAS1(model, T, used_devs, used_unit_ids,
+				used_dev_relative_scores);
 		case BLAS2:
 			error("PredictBidirectionalHetero: BLAS 2 Not implemented\n");
 		case BLAS3:
 			error("PredictBidirectionalHetero: BLAS 3 Not implemented\n");
+		default:
+			error("PredictBidirectionalHetero: Invalid Problem %s", printProblem(model->problem));
+	}
+	return 0;
+}
+
+double PARALiaPerfPenaltyModifier(MD_p model, long int T, int used_devs){
+	double padding_time_multiplier = 1.0, inbalance_time_multiplier = 1.0;
+#ifdef TILE_IMBALANCE_PENALTY
+	if (model->D1 != -1 && model->D1%T) padding_time_multiplier+=TILE_IMBALANCE_PENALTY;
+	if (model->D2 != -1 && model->D2%T) padding_time_multiplier+=TILE_IMBALANCE_PENALTY;
+	if (model->D3 != -1 && model->D3%T) padding_time_multiplier+=TILE_IMBALANCE_PENALTY;
+#endif
+#ifdef REDUCE_PENALTY /// FIXME: questionable in any heterogeneous system, should consider purging it
+	if ((model->D1/T + (model->D1%T)? 1 : 0) *
+			(model->D2/T + (model->D2%T)? 1 : 0) *
+			(model->D3/T + (model->D3%T)? 1 : 0) % used_devs) inbalance_time_multiplier+=REDUCE_PENALTY;
+#endif
+#ifdef PDEBUG
+	lprintf(lvl, "PARALiaPerfPenaltyModifier: Penaltize tiles leading to padding -> padding_time_multiplier = %lf\
+		\nPenaltize tiles leading SK num not equally distributed to units -> inbalance_time_multiplier = %lf\n",
+		padding_time_multiplier, inbalance_time_multiplier);
+#endif
+	return padding_time_multiplier*inbalance_time_multiplier;
+}
+
+double PARALiaPredictLinkHeteroBLAS3(MD_p model, long int T, int used_devs, int* used_unit_ids,
+	double* used_dev_relative_scores){
+		short lvl = 4;
+		error("PARALiaPredictLinkHeteroBLAS3: Under contruction\n");
+		double penalty = PARALiaPerfPenaltyModifier(model, T, used_devs);
+		int used_unit_idx = -1;
+		for(int unit_idx = 0; unit_idx < used_devs; unit_idx++) if(model->unit_id == used_unit_ids[unit_idx]) used_unit_idx = unit_idx;
+		if (used_unit_idx == - 1) error("PARALiaPredictLinkHeteroBLAS3: Model %p with unit_id = %d not present in given used_unit_ids = %s\n",
+			model, model->unit_id, printlist<int>(used_unit_ids, used_devs));
+
+		double t_recv_full = 0, t_send_full = 0, t_exec_full = 0, t_total = 0;
+		long int maxT = GPUexec3MaxT((GPUexec3Model_p)model->GPUexec_model_ptr);
+		long int Tbig = GPUexec3NearestT((GPUexec3Model_p)model->GPUexec_model_ptr,
+			fmin(maxT, fmin(fmin(model->D1,model->D2), model->D3)));
+		//fprintf(stderr, "Tbig = %ld\n", Tbig);
+		t_exec_full = (model->D1*1.0/Tbig * model->D2*1.0/Tbig * model->D3*1.0/Tbig)*
+			GPUexec3Model_predict((GPUexec3Model_p)model->GPUexec_model_ptr, Tbig, model->flags->TransA, model->flags->TransB);
+		if ( t_exec_full < 0){
+			warning("CoCopeLiaPredictFullOverlap: GPUexec3Model_predict submodel returned negative value, abort prediction");
+			return -1.0;
+		}
+		long long recv_sz = 0, send_sz = 0;
+		for (int i = 0; i < model->V->numT; i++){
+			recv_sz += model->V->in[i]*(*model->V->Dim1[i])*(*model->V->Dim2[i])*model->V->dtype_sz;
+			send_sz += model->V->out[i]*(*model->V->Dim1[i])*(*model->V->Dim2[i])*model->V->dtype_sz;
+			double t_recv_tmp = model->V->in[i]*t_com_predict(model->revlink[idxize(model->V->loc[i])],
+				(*model->V->Dim1[i])*(*model->V->Dim2[i])*model->V->dtype_sz);
+			double t_send_tmp =  model->V->out[i]*t_com_predict(model->revlink[idxize(model->V->out_loc[i])],
+				(*model->V->Dim1[i])*(*model->V->Dim2[i])*model->V->dtype_sz);
+			if(t_recv_tmp < 0 || t_send_tmp < 0 ){
+					warning("CoCopeLiaPredictFullOverlap: t_com_predict submodel idx = %d\
+						returned negative value, abort prediction", idxize(model->V->loc[i]));
+					return -1.0;
+			}
+			t_recv_full+= t_recv_tmp;
+			t_send_full+= t_send_tmp;
+		}
+
+		t_total = fmax(t_exec_full, fmax(t_recv_full, t_send_full));
+#ifdef DPDEBUG
+		fprintf(stderr, "CoCopelia FullOverlap :\n"
+		"\tt_recv_full: %lf ms ( %lf Gb/s)\n"
+		"\tt_exec_full: %lf ms (%lf GFlops/s)\n"
+		"\tt_send_full: %lf ms ( %lf Gb/s)\n"
+		"\tt_total: %lf ms (%lf GFlops/s)\n\n",
+		t_recv_full*1000, Gval_per_s(recv_sz,t_recv_full),
+		t_exec_full*1000, Gval_per_s(gemm_flops(model->D1,model->D2,model->D3), t_exec_full),
+		t_send_full*1000, Gval_per_s(send_sz,t_send_full),
+		t_total*1000, Gval_per_s(gemm_flops(model->D1,model->D2,model->D3), t_total));
+#endif
+
+		return 0;
+	}
+
+double PARALiaPredictLinkHetero(MD_p model, long int T, int used_devs, int* used_unit_ids,
+	double* used_dev_relative_scores)
+{
+	switch(model->problem){
+		case BLAS1:
+			error("PredictBidirectionalHetero: BLAS 3 Not implemented\n");
+		case BLAS2:
+			error("PredictBidirectionalHetero: BLAS 2 Not implemented\n");
+		case BLAS3:
+			return PARALiaPredictLinkHeteroBLAS3(model, T, used_devs, used_unit_ids,
+				used_dev_relative_scores);
 		default:
 			error("PredictBidirectionalHetero: Invalid Problem %s", printProblem(model->problem));
 	}

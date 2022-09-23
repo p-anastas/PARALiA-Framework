@@ -26,7 +26,7 @@ double CoCopeLiaPredictBidirectionalBLAS1(MD_p model, long int T);
 double CoCopeLiaPredictReuseBLAS1(MD_p model, long int T);
 double CoCopeLiaPipelineEmulateBLAS1(MD_p model, long int T);
 
-double PredictBidirectionalHeteroBLAS1(MD_p model, int used_devs, int* used_dev_ids,
-	double* used_dev_relative_scores, long int T);
+double PredictBidirectionalHeteroBLAS1(MD_p model, long int T, int used_devs, int* used_dev_ids,
+	double* used_dev_relative_scores);
 
 #endif

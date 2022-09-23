@@ -36,10 +36,11 @@ enum ModelType{
 	COCOPELIA_REUSE = 6,
 	COCOPELIA_PIPELINE_EMULATE = 7,
 	// PARALia Model additions/modifications
-	HETERO_REUSE = 9,
-	HETERO_BIDIRECTIONAL = 10,
-	FULL_OVERLAP = 11,
-	NO_OVERLAP = 12
+	FULL_OVERLAP = 9,
+	NO_OVERLAP = 10,
+	HETERO_REUSE = 11,
+	HETERO_BIDIRECTIONAL = 12,
+	PARALIA_HETERO_LINK_BASED = 13
 };
 const char* printModel(ModelType mode);
 
@@ -82,6 +83,7 @@ typedef class Modeler{
 		long int getSKNum(int T);
 		long int getGPUexecLines();
 		long int getGPUexecElem(int idx);
+		void getDatalocs(int** dataloc_list_p, int* dataloc_num_p);
 /******************************************************************************/
 /************************ Prediction Functions ********************************/
 		double predict(ModelType mode, long int T = -1, int used_devs = -1, int* used_dev_ids = NULL,
@@ -123,10 +125,11 @@ typedef class ATC{
 	double autotune_problem(const char* routine_name, void* initial_problem_wrap); 	/// Fire the autotuner for a given problem.
 	void init_modelers(const char* routine_name, void* initial_problem_wrap);
 	double optimize_tile(); ///  Predicts the best tile T for a multi-unit problem
-	double optimize_tile_CoCoPeLia(int model_idx, ModelType mode); /// Predicts T using CoCoPeLia models for a single unit, defined at CoCoPeLiaModelWrap.cpp
+	double optimize_tile_CoCoPeLia(int model_idx, ModelType mode); /// Predicts T using CoCoPeLia models for a single unit, defined at Model_functions.cpp
 	double optimize_split();
 	void normalize_split();
 	void update_link_weights(); /// Update link weights. Function defined at TransferLinks.cpp for wholeness.
+	void update_link_shared_weights(); /// Update shared link weights based on problem data locations.
 /******************************************************************************/
 /**************************** Helper Fuctions *********************************/
 	void print(); /// Print the characteristics of the autotune controller to stderr
@@ -135,8 +138,8 @@ typedef class ATC{
 
 }* ATC_p;
 
-extern double link_cost[LOC_NUM][LOC_NUM];
-extern double link_used[LOC_NUM][LOC_NUM];
+extern double link_bw[LOC_NUM][LOC_NUM];
+extern double link_shared_bw[LOC_NUM][LOC_NUM];
 
 
 #ifdef ENABLE_TRANSFER_HOPS
@@ -144,7 +147,7 @@ extern double link_used[LOC_NUM][LOC_NUM];
 #define HOP_PENALTY 0.5
 extern short link_hop_num[LOC_NUM][LOC_NUM];
 extern short link_hop_route[LOC_NUM][LOC_NUM][MAX_ALLOWED_HOPS];
-extern double link_cost_hop[LOC_NUM][LOC_NUM];
+extern double link_bw_hop[LOC_NUM][LOC_NUM];
 #endif
 
 #endif

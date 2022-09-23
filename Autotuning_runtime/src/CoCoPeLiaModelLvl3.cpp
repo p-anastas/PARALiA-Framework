@@ -479,8 +479,8 @@ double CoCopeLiaPipelineEmulateBLAS3(MD_p model, long int T){
 	return t_total;
 }
 
-double PredictReuseHeteroBLAS3(MD_p model, int used_devs, int* used_dev_ids,
-	double* used_dev_relative_scores, long int T){
+double PredictReuseHeteroBLAS3(MD_p model, long int T, int used_devs, int* used_unit_ids,
+	double* used_dev_relative_scores){
 	short lvl = 4;
 	long int prob_dims = 0, reset_D1 = model->D1, reset_D2 = model->D2, reset_D3 = model->D3;
 	double imb_time_multiplier = 1.0, reduce_time_multiplier = 1.0;
@@ -509,7 +509,7 @@ double PredictReuseHeteroBLAS3(MD_p model, int used_devs, int* used_dev_ids,
 	}
 	short iloc = -1;
 	for (int idx = 0; idx < used_devs; idx++)
-		if (used_dev_ids[idx] == model->unit_id){ iloc = idx; break; }
+		if (used_unit_ids[idx] == model->unit_id){ iloc = idx; break; }
 	if (iloc == -1) error("CoCopeLiaPredictReuseHeteroBLAS3:  model->unit_id = %d not found for used_devs = %d\n",
 		model->unit_id, used_devs);
 	double problem_percentage = used_dev_relative_scores[iloc];

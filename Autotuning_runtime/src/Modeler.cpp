@@ -10,7 +10,7 @@
 #include "CoCoPeLiaCoModel.hpp"
 #include "CoCoPeLiaGPUexec.hpp"
 #include "Autotuning_runtime.hpp"
-#include "CoCoPeLiaModelWrap.hpp"
+#include "Model_functions.hpp"
 #include "CoCoPeLiaModelLvl3.hpp"
 #include "CoCoPeLiaModelLvl1.hpp"
 #include "unihelpers.hpp"
@@ -151,6 +151,12 @@ long int Modeler::getGPUexecElem(int idx){
 	return 0;
 }
 
+void Modeler::getDatalocs(int** dataloc_list_p, int* dataloc_num_p){
+	for (int data_chunk = 0; data_chunk < V->numT; data_chunk++)
+	 if (!is_in_list(V->loc[data_chunk], (*dataloc_list_p), (*dataloc_num_p)))
+	 	(*dataloc_list_p)[(*dataloc_num_p)++] = V->loc[data_chunk];
+}
+
 /******************************************************************************/
 /************************ Prediction Functions ********************************/
 
@@ -172,6 +178,10 @@ double Modeler::predict(ModelType mode, long int T, int used_devs, int* used_dev
 			return CoCopeLiaPredictReuse(this, T);
 		case COCOPELIA_PIPELINE_EMULATE:
 			return CoCopeLiaPipelineEmulate(this, T);
+		case FULL_OVERLAP:
+			return PredictFullOverlap(this);
+		case NO_OVERLAP:
+			return PredictZeroOverlap(this);
 		case HETERO_REUSE:
 			if (T == -1 || used_devs == -1 || !used_dev_ids || !used_dev_relative_scores)
 				error("Called Modeler::predict(mode=HETERO_REUSE) with undefined arguments\n");
@@ -180,10 +190,10 @@ double Modeler::predict(ModelType mode, long int T, int used_devs, int* used_dev
 			if (T == -1 || used_devs == -1 || !used_dev_ids || !used_dev_relative_scores)
 				error("Called Modeler::predict(mode=HETERO_BIDIRECTIONAL) with undefined arguments\n");
 			return PredictBidirectionalHetero(this, T, used_devs, used_dev_ids, used_dev_relative_scores);
-		case FULL_OVERLAP:
-			return PredictFullOverlap(this);
-		case NO_OVERLAP:
-			return PredictZeroOverlap(this);
+		case PARALIA_HETERO_LINK_BASED:
+			if (T == -1 || used_devs == -1 || !used_dev_ids || !used_dev_relative_scores)
+				error("Called Modeler::predict(mode=HETERO_REUSE) with undefined arguments\n");
+			return PARALiaPredictLinkHetero(this, T, used_devs, used_dev_ids, used_dev_relative_scores);
 		default:
 			error("CoCoPeLiaModelPredict: Invalid mode %s", printModel(mode));
 			return 0;
