@@ -84,15 +84,30 @@ void ATC::update_link_shared_weights(){
         for (int k = 0; k < LOC_NUM; k++){
           for(int l = 0; l < LOC_NUM; l++){
             if ( k == l || (i == k && j == l)) continue;
-            if(is_in_list(deidxize(l),datalocs, dataloc_num) && is_in_list(deidxize(k),active_unit_id_list, active_unit_num))
-             link_slowdown_multiplier = fmax(link_slowdown_multiplier, unit_modeler_list[i]->revlink[j]->sl[k][l]);
+            if(is_in_list(deidxize(l),datalocs, dataloc_num) && is_in_list(deidxize(k),active_unit_id_list, active_unit_num)){
+             link_slowdown_multiplier = fmax(link_slowdown_multiplier, unit_modeler_list[i]->revlink[j]->sl[l][k]);
+//#ifdef DPDEBUG
+              if (unit_modeler_list[i]->revlink[j]->sl[l][k] != 1.0) lprintf(lvl, "ATC::update_link_shared_weights():\
+                \nFound link (%d -> %d) imposing potential send-based slowdown to (%d -> %d) with sl = %Lf\n",
+                deidxize(k), deidxize(l), deidxize(i), deidxize(j), unit_modeler_list[i]->revlink[j]->sl[l][k]);
+//#endif
+            }
+          if ((i == l) && (j == k)) continue;
+          if(is_in_list(deidxize(k),datalocs, dataloc_num) && is_in_list(deidxize(l),active_unit_id_list, active_unit_num)){
+           link_slowdown_multiplier = fmax(link_slowdown_multiplier, unit_modeler_list[i]->revlink[j]->sl[l][k]);
+//#ifdef DPDEBUG
+            if (unit_modeler_list[i]->link[j]->sl[l][k] != 1.0) lprintf(lvl, "ATC::update_link_shared_weights():\
+              \nFound link (%d -> %d) imposing potential recv-based slowdown to (%d -> %d) with sl = %Lf\n",
+              deidxize(k), deidxize(l), deidxize(i), deidxize(j), unit_modeler_list[i]->revlink[j]->sl[l][k]);
+//#endif
+          }
           }
         }
-#ifdef PDEBUG
+//#ifdef PDEBUG
         if(link_slowdown_multiplier!= 1.00) lprintf(lvl, "ATC::update_link_shared_weights():\
         \nAdjusting link_shared_bw[%d][%d] with link_slowdown_multiplier = %lf\n", i, j, link_slowdown_multiplier);
-#endif
-        link_shared_bw[i][j] *= link_slowdown_multiplier;
+//#endif
+        link_shared_bw[i][j] = link_bw[i][j] * (1/link_slowdown_multiplier);
       }
     }
     /// Normalize costs.

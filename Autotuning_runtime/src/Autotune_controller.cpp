@@ -130,7 +130,7 @@ void ATC::mimic_ATC(ATC_p other_ATC){
 			//Subkernels_per_unit_num[d] = 0;
 			;//Subkernels_per_unit_list[d] = NULL;
 		} /// TODO: Got some "double free 2cache" error when used in many different mimicked ATCs ->
-			/// potential problem here  ATC::update_sk_num resizing Subkernels_per_unit_list[d] might be solution and/or relevant.  
+			/// potential problem here  ATC::update_sk_num resizing Subkernels_per_unit_list[d] might be solution and/or relevant.
 		subkernel_num = -1;
 	}
 
@@ -253,6 +253,7 @@ double ATC::autotune_problem(const char* routine_name, void* initial_problem_wra
 #endif
 
 	init_modelers(routine_name, initial_problem_wrap);
+	update_link_weights();
 	int autotune_eval_devices = 0;
 	if (active_unit_num > 0){
 		if (active_unit_id_list){
@@ -290,6 +291,7 @@ double ATC::autotune_problem(const char* routine_name, void* initial_problem_wra
 		for (int case_id = 1; case_id < explored_cases; case_id++){
 				translate_binary_to_unit_list(case_id, &temp_controller->active_unit_num, temp_controller->active_unit_id_list);
 				if(temp_controller->active_unit_num > max_unit_num) continue;
+				temp_controller->update_link_shared_weights();
 				if(initial_T <= 0) tile_selection_t += temp_controller->optimize_tile();
 				split_selection_t += temp_controller->optimize_split();
 				if(initial_T <= 0){
@@ -318,6 +320,7 @@ double ATC::autotune_problem(const char* routine_name, void* initial_problem_wra
 	else{
 		int initial_T = T;
 		double tile_selection_t = 0, split_selection_t = 0;
+		update_link_shared_weights();
 		if(initial_T <= 0) tile_selection_t += optimize_tile();
 		split_selection_t += optimize_split();
 		if(initial_T <= 0){
@@ -333,7 +336,8 @@ double ATC::autotune_problem(const char* routine_name, void* initial_problem_wra
 #endif
 		split_selection_t += optimize_split();
 	}
-	update_link_weights();
+
+	update_link_shared_weights();
 
 	cpu_timer = csecond() - cpu_timer;
 
@@ -494,7 +498,7 @@ double ATC::optimize_split(){
 				used_model = HETERO_BIDIRECTIONAL;
 				break;
 			case BLAS3:
-				used_model = HETERO_REUSE;
+				used_model = PARALIA_HETERO_LINK_BASED;
 				break;
 			default:
 				error("ATC::optimize_tileAndSplit:\

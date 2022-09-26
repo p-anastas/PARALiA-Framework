@@ -27,6 +27,9 @@ double t_com_predict(CoModel_p model, long double bytes);
 /// Predict t_com for bytes using the CoModel with bidirectional overlap slowdown
 double t_com_sl(CoModel_p model, long double bytes);
 
+/// Predict t_com for bytes using the link_shared_bw adjusting
+double t_com_predict_shared(CoModel_p model, long double bytes);
+
 /// Predict t_com_bid for bytes1,bytes2 using the two link CoModels
 double t_com_bid_predict(CoModel_p model1, CoModel_p model2, long double bytes1, long double bytes2);
 

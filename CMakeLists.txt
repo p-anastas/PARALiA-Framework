@@ -6,7 +6,7 @@ message("CoCopeLia-Framework - BACKEND: " ${BACKEND})
 add_definitions(-DBACKEND="${BACKEND}")
 ## Define the project version (used in logfiles for result testing)
 
-set(PROJECT_VERSION "1.3")
+set(PROJECT_VERSION "1.4")
 message("CoCopeLia-Framework - PROJECT_VERSION: " ${PROJECT_VERSION})
 add_definitions(-DVERSION="${PROJECT_VERSION}")
 
@@ -93,7 +93,7 @@ add_definitions(-DNORMALIZE_NEAR_SPLIT_LIMIT=0.05)
 #add_definitions(-DDDEBUG)
 
 #Run Prediction debug mode (autotuning runtime stuff)
-#add_definitions(-DPDEBUG)
+add_definitions(-DPDEBUG)
 
 #Run Prediction deep debug mode (all autotuning runtime stuff)
 #add_definitions(-DDPDEBUG)

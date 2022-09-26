@@ -175,6 +175,7 @@ double PredictBidirectionalHetero(MD_p model, long int T, int used_devs = 1, int
 }
 
 double PARALiaPerfPenaltyModifier(MD_p model, long int T, int used_devs){
+	short lvl = 5;
 	double padding_time_multiplier = 1.0, inbalance_time_multiplier = 1.0;
 #ifdef TILE_IMBALANCE_PENALTY
 	if (model->D1 != -1 && model->D1%T) padding_time_multiplier+=TILE_IMBALANCE_PENALTY;
@@ -197,7 +198,6 @@ double PARALiaPerfPenaltyModifier(MD_p model, long int T, int used_devs){
 double PARALiaPredictLinkHeteroBLAS3(MD_p model, long int T, int used_devs, int* used_unit_ids,
 	double* used_dev_relative_scores){
 		short lvl = 4;
-		error("PARALiaPredictLinkHeteroBLAS3: Under contruction\n");
 		double penalty = PARALiaPerfPenaltyModifier(model, T, used_devs);
 		int used_unit_idx = -1;
 		for(int unit_idx = 0; unit_idx < used_devs; unit_idx++) if(model->unit_id == used_unit_ids[unit_idx]) used_unit_idx = unit_idx;
@@ -211,41 +211,45 @@ double PARALiaPredictLinkHeteroBLAS3(MD_p model, long int T, int used_devs, int*
 		//fprintf(stderr, "Tbig = %ld\n", Tbig);
 		t_exec_full = (model->D1*1.0/Tbig * model->D2*1.0/Tbig * model->D3*1.0/Tbig)*
 			GPUexec3Model_predict((GPUexec3Model_p)model->GPUexec_model_ptr, Tbig, model->flags->TransA, model->flags->TransB);
-		if ( t_exec_full < 0){
+		t_exec_full*= used_dev_relative_scores[used_unit_idx];
+
+				if ( t_exec_full < 0){
 			warning("CoCopeLiaPredictFullOverlap: GPUexec3Model_predict submodel returned negative value, abort prediction");
 			return -1.0;
 		}
 		long long recv_sz = 0, send_sz = 0;
 		for (int i = 0; i < model->V->numT; i++){
-			recv_sz += model->V->in[i]*(*model->V->Dim1[i])*(*model->V->Dim2[i])*model->V->dtype_sz;
-			send_sz += model->V->out[i]*(*model->V->Dim1[i])*(*model->V->Dim2[i])*model->V->dtype_sz;
-			double t_recv_tmp = model->V->in[i]*t_com_predict(model->revlink[idxize(model->V->loc[i])],
-				(*model->V->Dim1[i])*(*model->V->Dim2[i])*model->V->dtype_sz);
-			double t_send_tmp =  model->V->out[i]*t_com_predict(model->revlink[idxize(model->V->out_loc[i])],
-				(*model->V->Dim1[i])*(*model->V->Dim2[i])*model->V->dtype_sz);
+			long long tmp_recv_sz = model->V->in[i]*(*model->V->Dim1[i])*(*model->V->Dim2[i])*
+				model->V->dtype_sz*used_dev_relative_scores[used_unit_idx];
+			long long tmp_send_sz =  model->V->out[i]*(*model->V->Dim1[i])*(*model->V->Dim2[i])*
+				model->V->dtype_sz*used_dev_relative_scores[used_unit_idx];
+			double t_recv_tmp = t_com_predict_shared(model->revlink[idxize(model->V->loc[i])], tmp_recv_sz);
+			double t_send_tmp = t_com_predict_shared(model->revlink[idxize(model->V->out_loc[i])], tmp_send_sz);
 			if(t_recv_tmp < 0 || t_send_tmp < 0 ){
 					warning("CoCopeLiaPredictFullOverlap: t_com_predict submodel idx = %d\
 						returned negative value, abort prediction", idxize(model->V->loc[i]));
 					return -1.0;
 			}
+			recv_sz += tmp_recv_sz;
+			send_sz += tmp_send_sz;
 			t_recv_full+= t_recv_tmp;
 			t_send_full+= t_send_tmp;
 		}
 
 		t_total = fmax(t_exec_full, fmax(t_recv_full, t_send_full));
-#ifdef DPDEBUG
-		fprintf(stderr, "CoCopelia FullOverlap :\n"
+#ifdef PDEBUG
+		fprintf(stderr, "PARALia  PredictLinkHetero (Unit = %d, Unit_ratio = %.2lf%%):\n"
 		"\tt_recv_full: %lf ms ( %lf Gb/s)\n"
 		"\tt_exec_full: %lf ms (%lf GFlops/s)\n"
 		"\tt_send_full: %lf ms ( %lf Gb/s)\n"
 		"\tt_total: %lf ms (%lf GFlops/s)\n\n",
-		t_recv_full*1000, Gval_per_s(recv_sz,t_recv_full),
-		t_exec_full*1000, Gval_per_s(gemm_flops(model->D1,model->D2,model->D3), t_exec_full),
+		model->unit_id, 100*used_dev_relative_scores[used_unit_idx], t_recv_full*1000, Gval_per_s(recv_sz,t_recv_full),
+		t_exec_full*1000, Gval_per_s(gemm_flops(model->D1,model->D2,model->D3)*used_dev_relative_scores[used_unit_idx], t_exec_full),
 		t_send_full*1000, Gval_per_s(send_sz,t_send_full),
-		t_total*1000, Gval_per_s(gemm_flops(model->D1,model->D2,model->D3), t_total));
+		t_total*1000, Gval_per_s(gemm_flops(model->D1,model->D2,model->D3)*used_dev_relative_scores[used_unit_idx], t_total));
 #endif
 
-		return 0;
+		return t_total;
 	}
 
 double PARALiaPredictLinkHetero(MD_p model, long int T, int used_devs, int* used_unit_ids,

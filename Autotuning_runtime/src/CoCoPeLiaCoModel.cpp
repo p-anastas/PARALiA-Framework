@@ -9,6 +9,7 @@
 
 #include "unihelpers.hpp"
 #include "CoCoPeLiaCoModel.hpp"
+#include "Autotuning_runtime.hpp"
 
 CoModel_p CoModel_init(short to, short from)
 {
@@ -28,7 +29,7 @@ CoModel_p CoModel_init(short to, short from)
 #ifdef DPDEBUG
 	lprintf(lvl, "Reading Linear Model from %s\n", filename);
 #endif
-	int items = fscanf(fp, "Intercept: %Le\nCoefficient: %Le\n%Lf", &(out_model->ti), &(out_model->tb));
+	int items = fscanf(fp, "Intercept: %Le\nCoefficient: %Le\n", &(out_model->ti), &(out_model->tb));
 	if (items != 2) error("CoModel_init: Problem in reading model Inter/Coef\n");
 	for(int d1 = 0; d1 < LOC_NUM; d1++) for(int d2 = 0; d2 < LOC_NUM; d2++) out_model->sl[d1][d2] = 1;
 	int loc_dest, loc_src;
@@ -38,8 +39,17 @@ CoModel_p CoModel_init(short to, short from)
 		if (items != 3) error("CoModel_init(%d,%d): Problem in reading model Slowdown\n", to, from);
 		if (sl < 1 ){
 #ifdef PDEBUG
-	warning("CoModel_init( %d -> %d): sl[%d][%d] = %Lf, check\n", out_model->from, out_model->to, loc_dest, loc_src, out_model->sl[loc_dest][loc_src]);
+	warning("CoModel_init( %d -> %d): sl(%d -> %d) = %Lf, check\n",
+		from, to, loc_src, loc_dest, sl);
 #endif
+			sl = 1;
+		}
+		else if (sl > 2){
+#ifdef PDEBUG
+			warning("CoModel_init( %d -> %d): sl(%d -> %d) = %Lf, reseting to 2.0 for 50%% bw sharing\n",
+				from, to, loc_src, loc_dest, sl);
+#endif				
+			sl = 2.0;
 		}
 		if (!(abs(sl - 1) < NORMALIZE_NEAR_SPLIT_LIMIT)) out_model->sl[idxize(loc_dest)][idxize(loc_src)] = sl;
 	}
@@ -105,6 +115,22 @@ double t_com_predict(CoModel_p model, long double bytes)
 			bytes, model->ti, model-> tb, (model->ti + model-> tb*bytes)*1000);
 #endif
 	return model->ti + model-> tb*bytes;
+}
+
+/// Predict t_com for bytes using a Cmodel
+double t_com_predict_shared(CoModel_p model, long double bytes)
+{
+	if (bytes < 0) return -1;
+	else if ( bytes == 0) return 0;
+	else if (link_shared_bw[idxize(model->to)][idxize(model->from)] == 0.0) return 0;
+#ifdef DPDEBUG
+		lprintf(4, "t_com_predict_shared(%Lf): ti = %Lf, tb = %Lf, link_bw[%d][%d] = %lf, link_shared_bw[%d][%d] = %lf-> t_com = %Lf ms\n",
+			bytes, model->ti, model-> tb, (model->ti + model-> tb*bytes)*1000, model->to, model->from, link_bw[idxize(model->to)][idxize(model->from)],
+		model->to, model->from, link_shared_bw[idxize(model->to)][idxize(model->from)]);
+#endif
+	return (link_bw[idxize(model->to)][idxize(model->from)]/
+		link_shared_bw[idxize(model->to)][idxize(model->from)])*
+		(model->ti + model-> tb*bytes);
 }
 
 /// Predict t_com for bytes including bidirectional use slowdown
