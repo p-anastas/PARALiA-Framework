@@ -338,6 +338,10 @@ double ATC::autotune_problem(const char* routine_name, void* initial_problem_wra
 	}
 
 	update_link_shared_weights();
+//#ifdef PDEBUG
+	link_bw_map_print();
+	link_shared_bw_map_print();
+//#endif
 
 	cpu_timer = csecond() - cpu_timer;
 

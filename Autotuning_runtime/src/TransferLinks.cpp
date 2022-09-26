@@ -67,46 +67,48 @@ void ATC::update_link_shared_weights(){
 #endif
   int* datalocs = (int*) malloc(LOC_NUM*sizeof(int)), dataloc_num = 0;
   unit_modeler_list[0]->getDatalocs(&datalocs, &dataloc_num);
+  //double send_ratio = unit_modeler_list[0]->getSendRatio(), recv_ratio = unit_modeler_list[0]->getRecvRatio();
   if (!dataloc_num)
     error("Called ATC::update_link_shared_weights() without properly initalized model in unit_modeler_list[0]\n");
 #ifdef PDEBUG
     lprintf(lvl, "ATC::update_link_shared_weights( %s, %d )\n", printlist<int>(datalocs, dataloc_num), dataloc_num);
     print();
 #endif
-
+  //int pred_T_dim = 0;
+  //if(T < 1) pred_T_dim = 2048;
+  //else pred_T_dim = T;
   for (int i = 0; i < LOC_NUM; i++){
     for(int j = 0; j < LOC_NUM; j++){
       if(i == j) link_shared_bw[i][j] = 0;
       else{
-        link_shared_bw[i][j] = Gval_per_s(T*T*sizeof(VALUE_TYPE),
-        t_com_predict(unit_modeler_list[i]->revlink[j], T*T*sizeof(VALUE_TYPE)));
+        //link_shared_bw[i][j] = Gval_per_s(pred_T_dim*pred_T_dim*sizeof(VALUE_TYPE),
+        //t_com_predict(unit_modeler_list[i]->revlink[j], pred_T_dim*pred_T_dim*sizeof(VALUE_TYPE)));
         double link_slowdown_multiplier = 1.0;
         for (int k = 0; k < LOC_NUM; k++){
           for(int l = 0; l < LOC_NUM; l++){
-            if ( k == l || (i == k && j == l)) continue;
+            if ((k == l) || (i == k && j == l)) continue;
             if(is_in_list(deidxize(l),datalocs, dataloc_num) && is_in_list(deidxize(k),active_unit_id_list, active_unit_num)){
-             link_slowdown_multiplier = fmax(link_slowdown_multiplier, unit_modeler_list[i]->revlink[j]->sl[l][k]);
-//#ifdef DPDEBUG
-              if (unit_modeler_list[i]->revlink[j]->sl[l][k] != 1.0) lprintf(lvl, "ATC::update_link_shared_weights():\
-                \nFound link (%d -> %d) imposing potential send-based slowdown to (%d -> %d) with sl = %Lf\n",
-                deidxize(k), deidxize(l), deidxize(i), deidxize(j), unit_modeler_list[i]->revlink[j]->sl[l][k]);
-//#endif
+             link_slowdown_multiplier = fmax(link_slowdown_multiplier, unit_modeler_list[i]->link[j]->sl[k][l]);
+#ifdef DPDEBUG
+              if (unit_modeler_list[i]->link[j]->sl[k][l] != 1.0) lprintf(lvl, "ATC::update_link_shared_weights():\
+                \nFound link (%d -> %d) imposing potential recv-based slowdown to (%d -> %d) with sl = %Lf\n",
+                deidxize(l), deidxize(k), deidxize(j), deidxize(i), unit_modeler_list[i]->link[j]->sl[k][l]);
+#endif
             }
-          if ((i == l) && (j == k)) continue;
-          if(is_in_list(deidxize(k),datalocs, dataloc_num) && is_in_list(deidxize(l),active_unit_id_list, active_unit_num)){
-           link_slowdown_multiplier = fmax(link_slowdown_multiplier, unit_modeler_list[i]->revlink[j]->sl[l][k]);
+/*            if(is_in_list(deidxize(k),datalocs, dataloc_num) && is_in_list(deidxize(l),active_unit_id_list, active_unit_num)){
+              link_slowdown_multiplier = fmax(link_slowdown_multiplier, unit_modeler_list[i]->link[j]->sl[k][l]);
 //#ifdef DPDEBUG
-            if (unit_modeler_list[i]->link[j]->sl[l][k] != 1.0) lprintf(lvl, "ATC::update_link_shared_weights():\
-              \nFound link (%d -> %d) imposing potential recv-based slowdown to (%d -> %d) with sl = %Lf\n",
-              deidxize(k), deidxize(l), deidxize(i), deidxize(j), unit_modeler_list[i]->revlink[j]->sl[l][k]);
+              if (unit_modeler_list[i]->link[j]->sl[k][l] != 1.0) lprintf(lvl, "ATC::update_link_shared_weights():\
+                \nFound link (%d -> %d) imposing potential send-based slowdown to (%d -> %d) with sl = %Lf\n",
+                deidxize(l), deidxize(k), deidxize(j), deidxize(i), unit_modeler_list[i]->link[j]->sl[k][l]);
 //#endif
-          }
+            }*/
           }
         }
-//#ifdef PDEBUG
+#ifdef PDEBUG
         if(link_slowdown_multiplier!= 1.00) lprintf(lvl, "ATC::update_link_shared_weights():\
         \nAdjusting link_shared_bw[%d][%d] with link_slowdown_multiplier = %lf\n", i, j, link_slowdown_multiplier);
-//#endif
+#endif
         link_shared_bw[i][j] = link_bw[i][j] * (1/link_slowdown_multiplier);
       }
     }
@@ -126,6 +128,9 @@ void ATC::update_link_shared_weights(){
       for (int k = j ; k < LOC_NUM; k++) if(flag_normalize[k]) link_shared_bw[i][k] = normalize_sum/normalize_num;
     }
   }
+#ifdef PDEBUG
+  link_shared_bw_map_print();
+#endif
 #ifdef DEBUG
   lprintf(lvl, "<-----| update_link_shared_weights()\n");
 #endif
@@ -139,11 +144,14 @@ void ATC::update_link_weights(){
 #ifdef PDEBUG
     print();
 #endif
+  int pred_T_dim = 0;
+  if(T < 1) pred_T_dim = 2048;
+  else pred_T_dim = T;
   for (int i = 0; i < LOC_NUM; i++){
     for(int j = 0; j < LOC_NUM; j++){
       if(i == j) link_bw[i][j] = 0;
-      else link_bw[i][j] = Gval_per_s(T*T*sizeof(VALUE_TYPE),
-      t_com_predict(unit_modeler_list[i]->revlink[j], T*T*sizeof(VALUE_TYPE)));
+      else link_bw[i][j] = Gval_per_s(pred_T_dim*pred_T_dim*sizeof(VALUE_TYPE),
+      t_com_predict(unit_modeler_list[i]->revlink[j], pred_T_dim*pred_T_dim*sizeof(VALUE_TYPE)));
     }
     for(int j = 0; j < LOC_NUM; j++){
       if(i == j) continue;
@@ -163,7 +171,44 @@ void ATC::update_link_weights(){
 #ifdef ENABLE_TRANSFER_HOPS
   InitHopMap(link_bw, link_bw_hop);
 #endif
+#ifdef PDEBUG
+  link_bw_map_print();
+#endif
 #ifdef DEBUG
   lprintf(lvl, "<-----| update_link_weights()\n");
 #endif
+}
+
+void link_bw_map_print(){
+  lprintf(0,"\n Link BW Map:\n   |");
+  for (int d2 = 0; d2 < LOC_NUM; d2++)
+    lprintf(0, "  %2d  |", deidxize(d2));
+  lprintf(0, "\n   |");
+  for (int d2 = 0; d2 < LOC_NUM; d2++)
+    lprintf(0, "-------");
+  lprintf(0, "\n");
+  for (int d1 = 0; d1 < LOC_NUM; d1++){
+    lprintf(0, "%2d | ", deidxize(d1));
+    for (int d2 = 0; d2 < LOC_NUM; d2++){
+      lprintf(0, "%lf | ", link_bw[d1][d2]);
+    }
+    lprintf(0, "\n");
+  }
+}
+
+void link_shared_bw_map_print(){
+  lprintf(0,"\n Link Shared-BW Map:\n   |");
+  for (int d2 = 0; d2 < LOC_NUM; d2++)
+    lprintf(0, "  %2d  |", deidxize(d2));
+  lprintf(0, "\n   |");
+  for (int d2 = 0; d2 < LOC_NUM; d2++)
+    lprintf(0, "-------");
+  lprintf(0, "\n");
+  for (int d1 = 0; d1 < LOC_NUM; d1++){
+    lprintf(0, "%2d | ", deidxize(d1));
+    for (int d2 = 0; d2 < LOC_NUM; d2++){
+      lprintf(0, "%lf | ", link_shared_bw[d1][d2]);
+    }
+    lprintf(0, "\n");
+  }
 }

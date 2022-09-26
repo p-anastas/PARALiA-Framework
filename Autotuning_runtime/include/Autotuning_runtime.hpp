@@ -84,6 +84,8 @@ typedef class Modeler{
 		long int getGPUexecLines();
 		long int getGPUexecElem(int idx);
 		void getDatalocs(int** dataloc_list_p, int* dataloc_num_p);
+		double getRecvRatio(); /// The
+		double getSendRatio();
 /******************************************************************************/
 /************************ Prediction Functions ********************************/
 		double predict(ModelType mode, long int T = -1, int used_devs = -1, int* used_dev_ids = NULL,
@@ -140,7 +142,8 @@ typedef class ATC{
 
 extern double link_bw[LOC_NUM][LOC_NUM];
 extern double link_shared_bw[LOC_NUM][LOC_NUM];
-
+void link_bw_map_print();
+void link_shared_bw_map_print();
 
 #ifdef ENABLE_TRANSFER_HOPS
 #define MAX_ALLOWED_HOPS 2
