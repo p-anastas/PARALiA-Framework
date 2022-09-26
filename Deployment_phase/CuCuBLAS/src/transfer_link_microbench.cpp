@@ -116,7 +116,7 @@ int main(const int argc, const char *argv[]) {
 	long int sample_sz, sample_sz_bid;
 	CoCoPeLiaSelectDevice(loc_dest);
 	Event_timer_p device_timer = new Event_timer(loc_dest);
-	for (dim = minDim; dim < MAX_DIM_BLAS3; dim+=step){ // maxDim+1
+	for (dim = minDim; dim < MAX_DIM_TRANS; dim+=step){ // maxDim+1
 		if (dim >= step * 8) step*=2;
 		if (dim > maxDim) break;
 		transfer_t_sum = transfer_t_mean = bench_t = error_margin = 0;
@@ -191,13 +191,13 @@ int main(const int argc, const char *argv[]) {
 			bench_t = csecond();
 			for(int itt = 0 ; itt < MAX_ASSUMED_OTHER_LINK_TIMES_FASTER; itt++) CoCoMemcpy2DAsync(unit_buffs[2*dev_id_idx+1], ldest,
 										unit_buffs[2*dev_id_idy+1], ldsrc,
-										dim, dim, elemSize,
+										maxDim, maxDim, elemSize,
 										deidxize(dev_id_idx), deidxize(dev_id_idy), transfer_queue_list[dev_id_idx][dev_id_idy]);
 			device_timer->start_point(transfer_queue_list[idxize(loc_dest)][idxize(loc_src)]);
 
 			CoCoMemcpy2DAsync(unit_buffs[2*idxize(loc_dest)], ldest,
 										unit_buffs[2*idxize(loc_src)], ldsrc,
-										dim, dim, elemSize,
+										maxDim, maxDim, elemSize,
 										loc_dest, loc_src, transfer_queue_list[idxize(loc_dest)][idxize(loc_src)]);
 			device_timer->stop_point(transfer_queue_list[idxize(loc_dest)][idxize(loc_src)]);
 
