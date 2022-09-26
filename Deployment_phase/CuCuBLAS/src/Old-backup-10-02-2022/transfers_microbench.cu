@@ -44,7 +44,8 @@ int main(const int argc, const char *argv[]) {
 	check_benchmark(filename);
 
 	// Define the max size of a benchmark kernel to run on this machine.
-	maxDim = min(CoCoGetMaxDimSqAsset2D(3, sizeof(double), STEP_TRANS, to),CoCoGetMaxDimSqAsset2D(3, sizeof(double), STEP_TRANS, from)) ;
+	maxDim = min(CoCoGetMaxDimSqAsset2D(3, sizeof(double), STEP_TRANS, to),
+	min(CoCoGetMaxDimSqAsset2D(3, sizeof(double), STEP_TRANS, from), MAX_DIM_TRANS)) ;
 
 	fprintf(stderr,"\nTransfer benchmark@%s %d->%d : (%d,%d) with step %d\n", TESTBED, from, to, minDim, maxDim, step);
 

@@ -48,13 +48,11 @@ add_definitions(-DDEPLOYDB="${DEPLOYMENT_DIR_DB}")
 add_executable (RunCuCuBlasDaxpyBench ${DEPLOYMENT_DIR_SRC}/daxpy_microbench.cu )
 add_executable (RunCuCuBlasDgemmBench ${DEPLOYMENT_DIR_SRC}/dgemm_microbench.cu )
 #add_executable (RunCuCuBlasSgemmBench ${DEPLOYMENT_DIR_SRC}/sgemm_microbench.cu )
-add_executable (RunCuCuBlasTransferBench ${DEPLOYMENT_DIR_SRC}/transfers_microbench.cu )
 add_executable (RunCuCuBlasLinkBench ${DEPLOYMENT_DIR_SRC}/transfer_link_microbench.cpp )
 
 target_link_libraries(RunCuCuBlasDaxpyBench ${INTERNAL_LINK_LIB} unihelpers)
 target_link_libraries(RunCuCuBlasDgemmBench ${INTERNAL_LINK_LIB} unihelpers)
 #target_link_libraries(RunCuCuBlasSgemmBench ${INTERNAL_LINK_LIB} unihelpers)
-target_link_libraries(RunCuCuBlasTransferBench ${INTERNAL_LINK_LIB} unihelpers)
 target_link_libraries(RunCuCuBlasLinkBench ${INTERNAL_LINK_LIB} unihelpers)
 
 configure_file(${PROJECT_SOURCE_DIR}/RunMicrobenchmarks.in ${DEPLOYMENT_INSTALL_PREFIX}/RunMicrobenchmarks.sh @ONLY)

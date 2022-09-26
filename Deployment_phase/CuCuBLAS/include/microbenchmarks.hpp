@@ -22,6 +22,7 @@
 /// The minimum dimensions and step sizes (of Dim*Dim chunks) for microbenchmarks
 #define MIN_DIM_TRANS 256
 #define STEP_TRANS 256
+#define MAX_DIM_TRANS 10000
 
 #define MIN_DIM_BLAS3 256
 #define STEP_BLAS3 256
