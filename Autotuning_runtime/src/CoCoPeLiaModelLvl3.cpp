@@ -598,7 +598,8 @@ void CoCoModel_gemm_init(MD_p out_model, int dev_id, const char* func, gemm_back
 }
 
 long int CoCopeLiaMinAllowedTBLAS3(MD_p model){
-		return GPUexec3MinT((GPUexec3Model_p)model->GPUexec_model_ptr);
+	long int result = GPUexec3MinT((GPUexec3Model_p)model->GPUexec_model_ptr);
+	return std::max(result, (long int) 1024);
 }
 
 long int CoCopeLiaMaxAllowedTBLAS3(MD_p model){

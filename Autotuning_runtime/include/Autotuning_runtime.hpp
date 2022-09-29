@@ -84,12 +84,17 @@ typedef class Modeler{
 		long int getGPUexecLines();
 		long int getGPUexecElem(int idx);
 		void getDatalocs(int** dataloc_list_p, int* dataloc_num_p);
-		double getRecvRatio(); /// The
-		double getSendRatio();
 /******************************************************************************/
 /************************ Prediction Functions ********************************/
-		double predict(ModelType mode, long int T = -1, int used_devs = -1, int* used_dev_ids = NULL,
-			double* used_dev_relative_scores = NULL);	///  Mode-Generalized prediction wrapper
+		/// Return an optimistic transfer time for a "request_ratio" of the per-unit available data
+		/// e.g. for active_unit_num = 3 units and request_ratio = 1.7, 1/1.7 of request_size will be transfered
+		/// from the 'closest' unit, 0.7/1.7 from the second closest and 0 from the 3rd.
+		double predictBestFriends_t(double request_ratio, long long request_size, int active_unit_num, int* active_unit_id_list);
+		/// Predicts the transfer time for request_size bytes if given by the average of all (other) available BWs
+		double predictAvgBw_t(long long request_size, int active_unit_num, int* active_unit_id_list);
+
+		double predict(ModelType mode, long int T = -1, int active_unit_num = -1, int* active_unit_id_list = NULL,
+			double* active_unit_score = NULL);	///  Mode-Generalized prediction wrapper
 /******************************************************************************/
 
 }* MD_p;

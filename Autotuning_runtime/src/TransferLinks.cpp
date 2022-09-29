@@ -10,8 +10,7 @@ double link_shared_bw[LOC_NUM][LOC_NUM];
 #ifdef ENABLE_TRANSFER_HOPS
 short link_hop_num[LOC_NUM][LOC_NUM];
 short link_hop_route[LOC_NUM][LOC_NUM][MAX_ALLOWED_HOPS];
-//double link_cost_hop_1D[LOC_NUM][LOC_NUM];
-//double link_cost_hop_2D[LOC_NUM][LOC_NUM];
+double link_bw_hop[LOC_NUM][LOC_NUM];
 
 void InitHopMap(double link_bw [][LOC_NUM], double link_bw_out [][LOC_NUM]){
   for (int unit_idx = 0 ; unit_idx < LOC_NUM; unit_idx++)
@@ -23,7 +22,7 @@ void InitHopMap(double link_bw [][LOC_NUM], double link_bw_out [][LOC_NUM]){
       for (int hop_idx = 0 ; hop_idx < LOC_NUM; hop_idx++)
       if(hop_idx!= unit_idx && hop_idx!= unit_idy && unit_idx!= unit_idy){
         double hop_bw =  fmin(link_bw[unit_idx][hop_idx], link_bw[hop_idx][unit_idy]);
-        hop_bw+= HOP_PENALTY*hop_bw;
+        hop_bw-= HOP_PENALTY*hop_bw;
         if (hop_bw > max_hop_bw){
          max_hop_bw = hop_bw;
          link_hop_route[unit_idx][unit_idy][0] = hop_idx;
@@ -37,7 +36,7 @@ void InitHopMap(double link_bw [][LOC_NUM], double link_bw_out [][LOC_NUM]){
       if(hop_idx!= unit_idx && hop_idx!= unit_idy && unit_idx!= unit_idy &&
       hop_idy!= unit_idx && hop_idy!= unit_idy && hop_idy!= hop_idx){
         double hop_bw =  fmin(link_bw[unit_idx][hop_idx], fmin(link_bw[hop_idx][hop_idy], link_bw[hop_idy][unit_idy]));
-        hop_bw+= 2*HOP_PENALTY*hop_bw;
+        hop_bw-= 2*HOP_PENALTY*hop_bw;
         if (hop_bw > max_hop_bw){
           max_hop_bw = hop_bw;
           link_hop_route[unit_idx][unit_idy][0] = hop_idy;
@@ -87,7 +86,8 @@ void ATC::update_link_shared_weights(){
         for (int k = 0; k < LOC_NUM; k++){
           for(int l = 0; l < LOC_NUM; l++){
             if ((k == l) || (i == k && j == l)) continue;
-            if(is_in_list(deidxize(l),datalocs, dataloc_num) && is_in_list(deidxize(k),active_unit_id_list, active_unit_num)){
+            if((is_in_list(deidxize(l),datalocs, dataloc_num) && is_in_list(deidxize(k),active_unit_id_list, active_unit_num)) &&
+              (deidxize(l) == -1 || deidxize(k) == -1) && (deidxize(i) == -1 || deidxize(j) == -1)){ /// FIXME:This should have been a check regarding both link passing from PCIe/ non-NVLINK connections and its not modelling.
              link_slowdown_multiplier = fmax(link_slowdown_multiplier, unit_modeler_list[i]->link[j]->sl[k][l]);
 #ifdef DPDEBUG
               if (unit_modeler_list[i]->link[j]->sl[k][l] != 1.0) lprintf(lvl, "ATC::update_link_shared_weights():\
@@ -105,7 +105,7 @@ void ATC::update_link_shared_weights(){
             }*/
           }
         }
-#ifdef PDEBUG
+#ifdef DPDEBUG
         if(link_slowdown_multiplier!= 1.00) lprintf(lvl, "ATC::update_link_shared_weights():\
         \nAdjusting link_shared_bw[%d][%d] with link_slowdown_multiplier = %lf\n", i, j, link_slowdown_multiplier);
 #endif
@@ -190,7 +190,7 @@ void link_bw_map_print(){
   for (int d1 = 0; d1 < LOC_NUM; d1++){
     lprintf(0, "%2d | ", deidxize(d1));
     for (int d2 = 0; d2 < LOC_NUM; d2++){
-      lprintf(0, "%lf | ", link_bw[d1][d2]);
+      lprintf(0, "%4.2lf | ", link_bw[d1][d2]);
     }
     lprintf(0, "\n");
   }
@@ -207,7 +207,7 @@ void link_shared_bw_map_print(){
   for (int d1 = 0; d1 < LOC_NUM; d1++){
     lprintf(0, "%2d | ", deidxize(d1));
     for (int d2 = 0; d2 < LOC_NUM; d2++){
-      lprintf(0, "%lf | ", link_shared_bw[d1][d2]);
+      lprintf(0, "%4.2lf | ", link_shared_bw[d1][d2]);
     }
     lprintf(0, "\n");
   }

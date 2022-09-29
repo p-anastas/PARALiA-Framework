@@ -38,17 +38,17 @@ CoModel_p CoModel_init(short to, short from)
 		items = fscanf(fp, "Slowdown([%d]->[%d]): %Le\n", &(loc_src), &(loc_dest), &(sl));
 		if (items != 3) error("CoModel_init(%d,%d): Problem in reading model Slowdown\n", to, from);
 		if (sl < 1 ){
-#ifdef PDEBUG
+#ifdef DPDEBUG
 	warning("CoModel_init( %d -> %d): sl(%d -> %d) = %Lf, check\n",
 		from, to, loc_src, loc_dest, sl);
 #endif
 			sl = 1;
 		}
 		else if (sl > 2){
-#ifdef PDEBUG
+#ifdef DPDEBUG
 			warning("CoModel_init( %d -> %d): sl(%d -> %d) = %Lf, reseting to 2.0 for 50%% bw sharing\n",
 				from, to, loc_src, loc_dest, sl);
-#endif				
+#endif
 			sl = 2.0;
 		}
 		if (!(abs(sl - 1) < NORMALIZE_NEAR_SPLIT_LIMIT)) out_model->sl[idxize(loc_dest)][idxize(loc_src)] = sl;

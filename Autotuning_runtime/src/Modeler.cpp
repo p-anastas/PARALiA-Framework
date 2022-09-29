@@ -160,6 +160,46 @@ void Modeler::getDatalocs(int** dataloc_list_p, int* dataloc_num_p){
 /******************************************************************************/
 /************************ Prediction Functions ********************************/
 
+double Modeler::predictBestFriends_t(double request_ratio, long long request_size, int active_unit_num, int* active_unit_id_list)
+{
+		double total_t = 0, remaining_request_ratio = request_ratio;
+		int remaining_unit_id_list[active_unit_num], remaining_unit_num = active_unit_num;
+		for (int i = 0; i < active_unit_num; i++) remaining_unit_id_list[i] = active_unit_id_list[i];
+		while(remaining_request_ratio > 0.0){
+			double curr_ratio = (remaining_request_ratio >= 1.0)? 1.0 : remaining_request_ratio;
+			int i, i_out = 0, closest_remaining_unit_idx = idxize(remaining_unit_id_list[0]);
+			for (i = 0; i < remaining_unit_num; i++){
+				if (remaining_unit_id_list[i] == unit_id) continue;
+				if(link_shared_bw[idxize(unit_id)][idxize(remaining_unit_id_list[i])] >
+					 link_shared_bw[idxize(unit_id)][closest_remaining_unit_idx]){
+					 	closest_remaining_unit_idx = idxize(remaining_unit_id_list[i]);
+						i_out = i;
+					}
+			}
+#ifdef DPDEBUG
+			lprintf(0, "Closest %d friend Unit with bw[%d][%d] = %lf\n", active_unit_num - remaining_unit_num,
+				idxize(unit_id), closest_remaining_unit_idx, link_shared_bw[idxize(unit_id)][closest_remaining_unit_idx]);
+#endif
+			total_t+= t_com_predict_shared(link[closest_remaining_unit_idx], (long long)((1.0*curr_ratio/request_ratio)*request_size));
+			remaining_unit_num--;
+			remaining_unit_id_list[i_out] = remaining_unit_id_list[remaining_unit_num];
+			remaining_request_ratio-=curr_ratio;
+		}
+
+		return total_t;
+}
+
+double Modeler::predictAvgBw_t(long long request_size, int active_unit_num, int* active_unit_id_list)
+{
+		double total_t = 0;
+		for (int i = 0; i < active_unit_num; i++){
+			if (active_unit_id_list[i] == unit_id) continue;
+			total_t += t_com_predict_shared(link[idxize(active_unit_id_list[i])],
+					request_size/(active_unit_num - 1));
+		}
+		return total_t;
+}
+
 double Modeler::predict(ModelType mode, long int T, int used_devs, int* used_dev_ids, double* used_dev_relative_scores){
 	switch(mode){
 		case WERKHOVEN:

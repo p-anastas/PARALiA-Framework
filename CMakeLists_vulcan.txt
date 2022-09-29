@@ -78,7 +78,7 @@ add_definitions(-DEXSTEAL_PENALTY=10)
 add_definitions(-DNORMALIZE_NEAR_SPLIT_LIMIT=0.05)
 
 #Run in testing mode : details about models, decisions and time spend in operations.
-add_definitions(-DTEST)
+#add_definitions(-DTEST)
 
 #Run in Subkernel testing mode : details about time spend in subkernel operations.
 #add_definitions(-DSTEST)
@@ -87,13 +87,13 @@ add_definitions(-DTEST)
 #add_definitions(-DDSTEST)
 
 #Run in debug mode, which includes detailed function calls and info for error-checking
-add_definitions(-DDEBUG)
+#add_definitions(-DDEBUG)
 
 #Run in deep debug mode, for command-to-command debugging
-add_definitions(-DDDEBUG)
+#add_definitions(-DDDEBUG)
 
 #Run Prediction debug mode (autotuning runtime stuff)
-add_definitions(-DPDEBUG)
+#add_definitions(-DPDEBUG)
 
 #Run Prediction deep debug mode (all autotuning runtime stuff)
 #add_definitions(-DDPDEBUG)
@@ -218,6 +218,5 @@ add_definitions(-DDEPLOYDB="${DEPLOYMENT_DIR_DB}")
 
 ADD_SUBDIRECTORY (Autotuning_runtime)
 ADD_SUBDIRECTORY (Library_scheduler)
-
 
 ADD_SUBDIRECTORY (Benchmarking)

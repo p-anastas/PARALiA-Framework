@@ -257,7 +257,7 @@ double ATC::autotune_problem(const char* routine_name, void* initial_problem_wra
 	int autotune_eval_devices = 0;
 	if (active_unit_num > 0){
 		if (active_unit_id_list){
-//#ifdef DEBUG
+//#ifdef PDEBUG
 		lprintf(lvl, "Running on %d devices with dev_ids=[ ", active_unit_num);
 		for (int i =0; i < active_unit_num; i++) fprintf(stderr, "%d ", active_unit_id_list[i]);
 		fprintf(stderr, "]\n");
@@ -265,7 +265,7 @@ double ATC::autotune_problem(const char* routine_name, void* initial_problem_wra
 		}
 		else{
 			autotune_eval_devices = 1;
-//#ifdef DEBUG
+//#ifdef PDEBUG
 		lprintf(lvl, "Running on %d devices with tunable dev_ids\n", active_unit_num);
 //#endif
 		}
@@ -338,10 +338,10 @@ double ATC::autotune_problem(const char* routine_name, void* initial_problem_wra
 	}
 
 	update_link_shared_weights();
-//#ifdef PDEBUG
+#ifdef PDEBUG
 	link_bw_map_print();
 	link_shared_bw_map_print();
-//#endif
+#endif
 
 	cpu_timer = csecond() - cpu_timer;
 
@@ -430,9 +430,9 @@ lprintf(lvl, "|-----> ATC::optimize_tile( autotune_controller{ T=%ld, active_uni
 	while(model->getSKNum(candidate_T) < min_sk) candidate_T/=2;
 	while(model->getSKNum(candidate_T) > max_sk) candidate_T++;
 	if (model->getSKNum(candidate_T) < min_sk){
-//#ifdef PDEBUG
+#ifdef PDEBUG
 		lprintf(lvl, "Default GCD method for obtaining T failed, resorting in secondary method - performance might degrade\n");
-//#endif
+#endif
 			while(model->getSKNum(candidate_T) < min_sk) candidate_T/=2;
 	}
 	T = candidate_T;

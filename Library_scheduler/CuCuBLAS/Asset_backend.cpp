@@ -57,6 +57,7 @@ template void Asset2D<double>::resetProperties();
 
 template<typename dtype> void Asset1D<dtype>::prepareAsync(pthread_t* thread_id, pthread_attr_t attr){
 	pthread_data_in_p prep_data = (pthread_data_in_p) malloc(sizeof(struct pthread_data_in));
+	prep_data->adrs = adrs;
 	prep_data->pin_bytes = dim*inc*dtypesize();
 	cudaPointerAttributes attributes;
 	// TODO: This is a cheat to understand if memory is pinned (to avoid trying to pin it if it already is)
