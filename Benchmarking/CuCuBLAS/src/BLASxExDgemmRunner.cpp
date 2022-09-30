@@ -3,7 +3,6 @@
 ///
 /// \brief The start of Zawarudo
 ///
-
 #include "backend_wrappers.hpp"
 
 #include "unihelpers.hpp"
@@ -16,13 +15,12 @@
 
 int main(const int argc, const char *argv[]) {
 
-
 	char TransA, TransB;
   	double alpha, beta;
 	long int M, N, K;
 	short A_loc, B_loc, C_loc, C_out_loc;
 
-	ATC_p predef_control_values = NULL, return_values = NULL;
+	ATC_p predef_control_values = NULL;
 	ParseInputLvl3(argc, argv, &predef_control_values, &TransA, &TransB, &alpha, &beta, &M, &N, &K, &A_loc, &B_loc, &C_loc, &C_out_loc);
 
 	char *filename = (char *) malloc(256* sizeof(char));
@@ -40,24 +38,30 @@ int main(const int argc, const char *argv[]) {
 			TESTLIBDIR, CoCoDistributionPrint(), CoCoImplementationPrint(), VERSION);
 
 	long int BLASx_tile;
-	if (predef_control_values!= NULL && predef_control_values->T > 0) return_values->T = BLASx_tile = predef_control_values->T;
-	else return_values->T = BLASx_tile = 4096; // The best performing static tile for our machine
+	if (predef_control_values!= NULL && predef_control_values->T > 0) BLASx_tile = predef_control_values->T;
+	else BLASx_tile = 2048; // The best performing static tile for our machine
 	double cache_limit;
-	if (predef_control_values!= NULL && predef_control_values->cache_limit > 0) return_values->cache_limit = cache_limit = predef_control_values->cache_limit;
-	else return_values->cache_limit = cache_limit = 0;
+	if (predef_control_values!= NULL && predef_control_values->cache_limit > 0) cache_limit = predef_control_values->cache_limit;
+	else cache_limit = 0;
 	int dev_num, *dev_ids;
 	if (predef_control_values!= NULL && predef_control_values->active_unit_num > 0){
-		return_values->active_unit_num = dev_num = predef_control_values->active_unit_num;
-		for(int idx =0; idx < return_values->active_unit_num; idx++)
-			return_values->active_unit_id_list[idx] = dev_ids[idx] = predef_control_values->active_unit_id_list[idx];
+		dev_num = predef_control_values->active_unit_num;
+		dev_ids = (int*) malloc(dev_num*sizeof(int));
+		for(int idx =0; idx < predef_control_values->active_unit_num; idx++)
+			dev_ids[idx] = predef_control_values->active_unit_id_list[idx];
 	}
 	else{
-		return_values->active_unit_num = dev_num = DEV_NUM;
+#ifdef ENABLE_CPU_WORKLOAD
+		dev_num = DEV_NUM-1; /// Don't use CPU.
+#else
+		dev_num = DEV_NUM;
+#endif
 		dev_ids = (int*) malloc(dev_num*sizeof(int));
-		for (int i = 0; i < dev_num; i++) return_values->active_unit_id_list[i] = dev_ids[i] = i;
+		for (int i = 0; i < dev_num; i++) dev_ids[i] = i;
 	}
+	if(!predef_control_values) predef_control_values = new ATC();
 #ifdef CHECKLOG
-	CheckLogLvl3(filename, return_values, TransA, TransB, alpha, beta, M, N, K, A_loc, B_loc, C_loc, C_out_loc);
+	CheckLogLvl3(filename, predef_control_values, TransA, TransB, alpha, beta, M, N, K, A_loc, B_loc, C_loc, C_out_loc);
 #endif
 	/// Matrix Layouts for CPU GEMM
 	CBLAS_TRANSPOSE cpu_op_A, cpu_op_B;    // CblasNoTrans, CblasTrans
@@ -111,7 +115,7 @@ int main(const int argc, const char *argv[]) {
 	{
 	int dev_ids[DEV_NUM];
 	for (int i = 0; i < DEV_NUM; i++) dev_ids[i] = i;
-	cuBLASXtDgemmWrap(TransA,  TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC,  (long int) fmin(fmin(fmin(M,N),K)/2,CBLASXT_MAX_SAFE_TILE), 0, DEV_NUM, dev_ids);
+	cuBLASXtDgemmWrap(TransA,  TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC,  (long int) fmin(fmin(fmin(M,N),K)/2,CBLASXT_MAX_SAFE_TILE), 0, dev_num, dev_ids);
 	}
 	CoCoMemcpy(C_out1, C,  M * N *sizeof(double), -2, C_loc);
  	if(Dtest_equality(C_out1, C_out, M * N) < 9) error("Insufficient accuracy for benchmarks\n");
@@ -127,7 +131,7 @@ int main(const int argc, const char *argv[]) {
 	BLASxExDgemmWrap(TransA,  TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC,  BLASx_tile, cache_limit, dev_num, dev_ids);
 	CoCoSyncCheckErr();
 	cpu_timer  = csecond() - cpu_timer;
-	StoreLogLvl3(filename, return_values, TransA, TransB, alpha, beta, M, N, K, A_loc, B_loc, C_loc, C_out_loc, cpu_timer);
+	StoreLogLvl3(filename, predef_control_values, TransA, TransB, alpha, beta, M, N, K, A_loc, B_loc, C_loc, C_out_loc, cpu_timer);
 
 	double first_over_t = cpu_timer;
 
@@ -140,14 +144,14 @@ int main(const int argc, const char *argv[]) {
 		BLASxExDgemmWrap(TransA,  TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC,  BLASx_tile, cache_limit, dev_num, dev_ids);
 		CoCoSyncCheckErr();
 		cpu_timer = csecond() - cpu_timer;
-		StoreLogLvl3(filename, return_values, TransA, TransB, alpha, beta, M, N, K, A_loc, B_loc, C_loc, C_out_loc, cpu_timer);
+		StoreLogLvl3(filename, predef_control_values, TransA, TransB, alpha, beta, M, N, K, A_loc, B_loc, C_loc, C_out_loc, cpu_timer);
 		if ( cpu_timer < min_t ) min_t = cpu_timer;
 		if ( cpu_timer > max_t ) max_t = cpu_timer;
 		avg_t += cpu_timer;
 	}
 	avg_t/=bench_it;
-	fprintf(stderr, "BLASx (%s):\n\tfirst_it_t = %lf ms ( %lf Gflops/s )\n\tavg_t = %lf ms ( %lf Gflops/s )\n\tmin_t = %lf ms ( %lf Gflops/s )\n\tmax_t = %lf ms ( %lf Gflops/s )\n",
-	return_values->print_csv(),
+	fprintf(stderr, "BLASxEx (%s):\n\tfirst_it_t = %lf ms ( %lf Gflops/s )\n\tavg_t = %lf ms ( %lf Gflops/s )\n\tmin_t = %lf ms ( %lf Gflops/s )\n\tmax_t = %lf ms ( %lf Gflops/s )\n",
+	predef_control_values->print_csv(),
 	first_over_t  * 1000, Gval_per_s(gemm_flops(M,N,K),first_over_t),
 	avg_t  * 1000, Gval_per_s(gemm_flops(M,N,K),avg_t),
 	min_t  * 1000, Gval_per_s(gemm_flops(M,N,K),min_t),

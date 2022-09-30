@@ -116,7 +116,7 @@ void Subkernel::request_tile_hops(short TileIdx){
 	else if (TileDimlist[TileIdx] == 2){
 			Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) TileList[TileIdx];
 #ifdef DEBUG
-		lprintf(lvl-1, "|-----> Subkernel(dev=%d,id=%d)::request_tile(Tile(%d.[%d,%d]))\n",
+		lprintf(lvl-1, "|-----> Subkernel(dev=%d,id=%d)::request_tile_hops(Tile(%d.[%d,%d]))\n",
 			run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2);
 #endif
 		short FetchFromId = -42;
@@ -126,7 +126,7 @@ void Subkernel::request_tile_hops(short TileIdx){
 			tmp->StoreBlock[idxize(FetchFromId)]->add_reader();
 			tmp->RW_master = run_dev_id;
 		}
-		if (FetchFromId == run_dev_id) error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::request_tile W_flag = %d, \
+		if (FetchFromId == run_dev_id) error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::request_tile_hops W_flag = %d, \
 			FetchFromId == run_dev_id == %d, state[%d] == %s\n",  run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2,
 			tmp->W_flag, FetchFromId, FetchFromId, print_state(tmp->StoreBlock[idxize(FetchFromId)]->State));
 		short FetchFromId_idx = idxize(FetchFromId);
@@ -137,7 +137,7 @@ void Subkernel::request_tile_hops(short TileIdx){
 #endif
 		CBlock_wrap_p wrap_read = NULL;
 		if (tmp->StoreBlock[FetchFromId_idx]->State == INVALID)
-			error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::request_tile: Fetching from tile in GPU(%d) with INVALID state\n",
+			error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::request_tile_hops: Fetching from tile in GPU(%d) with INVALID state\n",
 				run_dev_id, id, tmp->id,  tmp->GridId1, tmp->GridId2, FetchFromId);
 
 		CQueue_p used_queue;

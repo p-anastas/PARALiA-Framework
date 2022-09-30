@@ -19,7 +19,7 @@ int main(const int argc, const char *argv[]) {
 	long int M, N, K;
 	short A_loc, B_loc, C_loc, C_out_loc;
 
-	ATC_p predef_control_values = NULL, return_values = NULL;
+	ATC_p predef_control_values = NULL;
 	ParseInputLvl3(argc, argv, &predef_control_values, &TransA, &TransB, &alpha, &beta, &M, &N, &K, &A_loc, &B_loc, &C_loc, &C_out_loc);
 
 	char *filename = (char *) malloc(256* sizeof(char));
@@ -37,24 +37,30 @@ int main(const int argc, const char *argv[]) {
 		TESTLIBDIR, CoCoDistributionPrint(), CoCoImplementationPrint(), VERSION);
 
 	long int cublasXt_tile;
-	if (predef_control_values!= NULL && predef_control_values->T > 0) return_values->T = cublasXt_tile = predef_control_values->T;
-	else return_values->T = cublasXt_tile = (long int) fmin(fmin(fmin(M,N),K)/2,CBLASXT_MAX_SAFE_TILE);
+	if (predef_control_values!= NULL && predef_control_values->T > 0) cublasXt_tile = predef_control_values->T;
+	else cublasXt_tile = (long int) fmin(fmin(fmin(M,N),K)/2,CBLASXT_MAX_SAFE_TILE);
 	double cache_limit;
-	if (predef_control_values!= NULL && predef_control_values->cache_limit > 0) return_values->cache_limit = cache_limit = predef_control_values->cache_limit;
-	else return_values->cache_limit = cache_limit = 0;
+	if (predef_control_values!= NULL && predef_control_values->cache_limit > 0) cache_limit = predef_control_values->cache_limit;
+	else cache_limit = -1;
 	int dev_num, *dev_ids;
 	if (predef_control_values!= NULL && predef_control_values->active_unit_num > 0){
-		return_values->active_unit_num = dev_num = predef_control_values->active_unit_num;
-		for(int idx =0; idx < return_values->active_unit_num; idx++)
-			return_values->active_unit_id_list[idx] = dev_ids[idx] = predef_control_values->active_unit_id_list[idx];
+		dev_num = predef_control_values->active_unit_num;
+		dev_ids = (int*) malloc(dev_num*sizeof(int));
+		for(int idx =0; idx < predef_control_values->active_unit_num; idx++)
+			dev_ids[idx] = predef_control_values->active_unit_id_list[idx];
 	}
 	else{
-		return_values->active_unit_num = dev_num = DEV_NUM;
+#ifdef ENABLE_CPU_WORKLOAD
+		dev_num = DEV_NUM-1; /// Don't use CPU.
+#else
+		dev_num = DEV_NUM;
+#endif
 		dev_ids = (int*) malloc(dev_num*sizeof(int));
-		for (int i = 0; i < dev_num; i++) return_values->active_unit_id_list[i] = dev_ids[i] = i;
+		for (int i = 0; i < dev_num; i++) dev_ids[i] = deidxize(i);
 	}
+	if(!predef_control_values) predef_control_values = new ATC();
 #ifdef CHECKLOG
-	CheckLogLvl3(filename, return_values, TransA, TransB, alpha, beta, M, N, K, A_loc, B_loc, C_loc, C_out_loc);
+	CheckLogLvl3(filename, predef_control_values, TransA, TransB, alpha, beta, M, N, K, A_loc, B_loc, C_loc, C_out_loc);
 #endif
 	/// Matrix Layouts for CPU GEMM
 	CBLAS_TRANSPOSE cpu_op_A, cpu_op_B;    // CblasNoTrans, CblasTrans
@@ -108,7 +114,7 @@ int main(const int argc, const char *argv[]) {
 
 	}
 #ifdef CHECKLOG
-	CheckLogLvl3(filename, return_values, TransA, TransB, alpha, beta, M, N, K, A_loc, B_loc, C_loc, C_out_loc);
+	CheckLogLvl3(filename, predef_control_values, TransA, TransB, alpha, beta, M, N, K, A_loc, B_loc, C_loc, C_out_loc);
 #endif
 	double cublasXt_t = best_standard_tile_t;
 	if (predef_control_values!= NULL && predef_control_values->T > 0){
@@ -135,10 +141,10 @@ int main(const int argc, const char *argv[]) {
 		}
 		fprintf(stderr, "\nCUBLASXT DGEMM T_best = %zu : t = %lf ms ( %lf Gflops/s )\n\n", cublasXt_tile, cublasXt_t  * 1000, Gval_per_s(gemm_flops(M,N,K),cublasXt_t));
 	}
-	return_values->T = cublasXt_tile;
+	predef_control_values->T = cublasXt_tile;
 	fprintf(stderr,"Running CUBLASXT DGEMM-> M = %zu, N = %zu, K = %zu T_best = %zu\n", M, N, K, cublasXt_tile);
 #ifdef CHECKLOG
-	CheckLogLvl3(filename, return_values, TransA, TransB, alpha, beta, M, N, K, A_loc, B_loc, C_loc, C_out_loc);
+	CheckLogLvl3(filename, predef_control_values, TransA, TransB, alpha, beta, M, N, K, A_loc, B_loc, C_loc, C_out_loc);
 #endif
 	double min_t = cublasXt_t, max_t = 0, avg_t = 0;
 	cpu_timer = csecond();
@@ -149,14 +155,14 @@ int main(const int argc, const char *argv[]) {
 		cuBLASXtDgemmWrap(TransA,  TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC,  cublasXt_tile, cache_limit, dev_num, dev_ids);
 		CoCoSyncCheckErr();
 		cpu_timer = csecond() - cpu_timer;
-		StoreLogLvl3(filename, return_values, TransA, TransB, alpha, beta, M, N, K, A_loc, B_loc, C_loc, C_out_loc, cpu_timer);
+		StoreLogLvl3(filename, predef_control_values, TransA, TransB, alpha, beta, M, N, K, A_loc, B_loc, C_loc, C_out_loc, cpu_timer);
 		if ( cpu_timer < min_t ) min_t = cpu_timer;
 		if ( cpu_timer > max_t ) max_t = cpu_timer;
 		avg_t += cpu_timer;
 	}
 	avg_t/=bench_it;
 	fprintf(stderr, "cuBLASXt (%s):\n\tavg_t = %lf ms ( %lf Gflops/s )\n\tmin_t = %lf ms ( %lf Gflops/s )\n\tmax_t = %lf ms ( %lf Gflops/s )\n",
-	return_values->print_csv(),
+	predef_control_values->print_csv(),
 	avg_t  * 1000, Gval_per_s(gemm_flops(M,N,K),avg_t),
 	min_t  * 1000, Gval_per_s(gemm_flops(M,N,K),min_t),
 	max_t  * 1000, Gval_per_s(gemm_flops(M,N,K),max_t));

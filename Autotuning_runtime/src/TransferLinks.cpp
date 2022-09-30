@@ -13,6 +13,13 @@ short link_hop_route[LOC_NUM][LOC_NUM][MAX_ALLOWED_HOPS];
 double link_bw_hop[LOC_NUM][LOC_NUM];
 
 void InitHopMap(double link_bw [][LOC_NUM], double link_bw_out [][LOC_NUM]){
+  double safe_hop_penalty = HOP_PENALTY;
+  if ( HOP_PENALTY <= FETCH_UNAVAILABLE_PENALTY){
+    warning("HOP_PENALTY(=%lf) should be larger than FETCH_UNAVAILABLE_PENALTY(=%lf) unless you like potantially infinite transfer circles.\
+    \nIf you do, feel free to implement them cause currently they are not supported (e.g. X->Y->Z must always be assumed more expensive than Y->Z)\n",
+      HOP_PENALTY, FETCH_UNAVAILABLE_PENALTY);
+    safe_hop_penalty = FETCH_UNAVAILABLE_PENALTY*1.01;
+  }
   for (int unit_idx = 0 ; unit_idx < LOC_NUM; unit_idx++)
   for (int unit_idy = 0 ; unit_idy < LOC_NUM; unit_idy++){
     for (int hops = 0 ; hops < MAX_ALLOWED_HOPS; hops++) link_hop_route[unit_idx][unit_idy][hops] = -42;
@@ -22,7 +29,7 @@ void InitHopMap(double link_bw [][LOC_NUM], double link_bw_out [][LOC_NUM]){
       for (int hop_idx = 0 ; hop_idx < LOC_NUM; hop_idx++)
       if(hop_idx!= unit_idx && hop_idx!= unit_idy && unit_idx!= unit_idy){
         double hop_bw =  fmin(link_bw[unit_idx][hop_idx], link_bw[hop_idx][unit_idy]);
-        hop_bw-= HOP_PENALTY*hop_bw;
+        hop_bw-= safe_hop_penalty*hop_bw;
         if (hop_bw > max_hop_bw){
          max_hop_bw = hop_bw;
          link_hop_route[unit_idx][unit_idy][0] = hop_idx;
@@ -36,7 +43,7 @@ void InitHopMap(double link_bw [][LOC_NUM], double link_bw_out [][LOC_NUM]){
       if(hop_idx!= unit_idx && hop_idx!= unit_idy && unit_idx!= unit_idy &&
       hop_idy!= unit_idx && hop_idy!= unit_idy && hop_idy!= hop_idx){
         double hop_bw =  fmin(link_bw[unit_idx][hop_idx], fmin(link_bw[hop_idx][hop_idy], link_bw[hop_idy][unit_idy]));
-        hop_bw-= 2*HOP_PENALTY*hop_bw;
+        hop_bw-= 2*safe_hop_penalty*hop_bw;
         if (hop_bw > max_hop_bw){
           max_hop_bw = hop_bw;
           link_hop_route[unit_idx][unit_idy][0] = hop_idy;
@@ -51,7 +58,7 @@ void InitHopMap(double link_bw [][LOC_NUM], double link_bw_out [][LOC_NUM]){
       lprintf(1, "InitHopMap: %2d->%2d transfer sequence -> %s -> ", unit_idy, unit_idx,
         printlist(link_hop_route[unit_idx][unit_idy], link_hop_num[unit_idx][unit_idy]));
       lprintf(0, "Cost No-hop = %lf, Hop-adjusted = %lf (%3lf times faster)\n", link_bw[unit_idx][unit_idy],
-        link_bw_out[unit_idx][unit_idy], link_bw[unit_idx][unit_idy]/link_bw_out[unit_idx][unit_idy]);
+        link_bw_out[unit_idx][unit_idy], link_bw_out[unit_idx][unit_idy]/link_bw[unit_idx][unit_idy]);
 #endif
     }
     else link_bw_out[unit_idx][unit_idy] = link_bw[unit_idx][unit_idy];

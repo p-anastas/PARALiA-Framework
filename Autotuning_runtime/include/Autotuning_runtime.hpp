@@ -151,8 +151,8 @@ void link_bw_map_print();
 void link_shared_bw_map_print();
 
 #ifdef ENABLE_TRANSFER_HOPS
-#define MAX_ALLOWED_HOPS 2
-#define HOP_PENALTY 0.5
+#define MAX_ALLOWED_HOPS 1
+#define HOP_PENALTY 0.15
 extern short link_hop_num[LOC_NUM][LOC_NUM];
 extern short link_hop_route[LOC_NUM][LOC_NUM][MAX_ALLOWED_HOPS];
 extern double link_bw_hop[LOC_NUM][LOC_NUM];

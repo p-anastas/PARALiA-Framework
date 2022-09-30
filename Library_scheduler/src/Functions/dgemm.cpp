@@ -13,6 +13,7 @@
 #include "DataCaching.hpp"
 
 #include <pthread.h>
+
 pthread_barrier_t  SoftCache_alloc_barrier_gemm;
 
 gemm_backend_in_p initial_gemm = NULL;

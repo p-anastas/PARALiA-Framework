@@ -43,7 +43,7 @@ add_definitions(-DENABLE_CPU_WORKLOAD)
 #add_definitions(-DENABLE_TILE_PREFETCH)
 
 ## Enable using transfer hops for faster transfers between multiple links
-#add_definitions(-DENABLE_TRANSFER_HOPS)
+add_definitions(-DENABLE_TRANSFER_HOPS)
 
 ## Enable sharing of bandwidth between links that utilize the same underlying hardware communication resources
 add_definitions(-DENABLE_LINK_BW_SHARING) # by putting them on different queues
@@ -68,7 +68,7 @@ add_definitions(-DSERIAL_SUBKERNEL_SELECTION)
 ## Define subkernel selection heuristic values. 0 = No penalty
 
 add_definitions(-DMULTIFETCH_PENALTY=2)
-add_definitions(-DFETCH_UNAVAILABLE_PENALTY=0.2)
+add_definitions(-DFETCH_UNAVAILABLE_PENALTY=0.15)
 add_definitions(-DWTILE_TRANSFER_PENALTY=1)
 add_definitions(-DPARALLELBBOTLENECK_PENALTY=0)
 add_definitions(-DEXSTEAL_PENALTY=10)
