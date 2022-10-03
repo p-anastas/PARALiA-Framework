@@ -11,28 +11,40 @@
 
 char* CoCoImplementationPrint(){
 	char* string_out = (char*) malloc (256*sizeof(char));
-#ifdef ENABLE_MUTEX_LOCKING
-#ifdef MULTIDEVICE_REDUCTION_ENABLE
-	sprintf(string_out, "ML-MR-BL%d", MAX_BUFFERING_L);
-#else
-	sprintf(string_out, "ML");
+	char* string_helper = (char*) malloc (256*sizeof(char));
+#ifndef ASYNC_ENABLE
+	strcat(string_out, "_SYNC");
 #endif
-#elif ENABLE_PARALLEL_BACKEND
-	sprintf(string_out, "PB-L%d", MAX_BACKEND_L);
-#elif MULTIDEVICE_REDUCTION_ENABLE
-	sprintf(string_out, "MR-BL%d", MAX_BUFFERING_L);
-#elif UNIHELPER_LOCKFREE_ENABLE
-	sprintf(string_out, "UL");
-#elif BUFFER_REUSE_ENABLE
-	sprintf(string_out, "BR");
-#elif BACKEND_RES_REUSE_ENABLE
-	sprintf(string_out, "BRR");
-#elif ASYNC_ENABLE
-	sprintf(string_out, "ASYNC");
-#else
-	sprintf(string_out, "SYNC");
+#ifndef UNIHELPER_LOCKFREE_ENABLE
+	sprintf(string_out, "_UN-LC");
 #endif
+#ifndef BUFFER_REUSE_ENABLE
+	sprintf(string_out, "_NO-BUF-RE");
+#endif
+#ifndef BACKEND_RES_REUSE_ENABLE
+	sprintf(string_out, "_NO-UN-RE");
+#endif
+#ifdef ENABLE_PARALLEL_BACKEND
+	sprintf(string_helper, "_UN-PB-L%d", MAX_BACKEND_L);
+	strcat(string_out, string_helper);
+#else
+	strcat(string_out, "_UN-NO-PB");
+#endif
+#ifdef ENABLE_TRANSFER_HOPS
+#ifdef ENABLE_TRANSFER_W_HOPS
+	strcat(string_out, "_ALL-");
+#else
+	strcat(string_out, "_RONLY-");
+#endif
+	sprintf(string_helper, "HOPS-%d-%.2lf", MAX_ALLOWED_HOPS, HOP_PENALTY);
+	strcat(string_out, string_helper);
+#endif
+//#ifdef DDEBUG
+	printf("%s\n", string_out);
+//#endif
+	free(string_helper);
 	return string_out;
+
 }
 
 char* CoCoDistributionPrint(){

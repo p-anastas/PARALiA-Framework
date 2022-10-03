@@ -44,6 +44,8 @@ add_definitions(-DENABLE_CPU_WORKLOAD)
 
 ## Enable using transfer hops for faster transfers between multiple links
 add_definitions(-DENABLE_TRANSFER_HOPS)
+## Enable using transfer hops for W tiles as well (no data reuse, but potentially better BW)
+add_definitions(-DENABLE_TRANSFER_W_HOPS)
 
 ## Enable sharing of bandwidth between links that utilize the same underlying hardware communication resources
 add_definitions(-DENABLE_LINK_BW_SHARING) # by putting them on different queues

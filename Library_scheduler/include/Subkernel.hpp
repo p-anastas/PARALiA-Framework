@@ -50,6 +50,7 @@ class Subkernel
 		void sync_request_data();
 		void run_operation();
 		void writeback_data();
+		void writeback_data_hops(); // Experimental
 
 		short no_locked_tiles();
 		short is_RW_lock_master(short dev_id);
