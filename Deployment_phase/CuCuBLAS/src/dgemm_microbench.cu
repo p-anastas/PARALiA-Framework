@@ -15,15 +15,7 @@
 #include "nvem.hpp"
 #endif
 
-void report_run(char* filename, long int M, long int N, long int K, double mean_t, double margin_err, long int sample_sz, double bench_t){
-
-	FILE* fp = fopen(filename,"a");
-	if (!fp) error("report_run: LogFile failed to open");
-   	fprintf(fp,"%d,%d,%d, %e,%e,%zu,%e\n", M, N, K, mean_t, margin_err, sample_sz, bench_t);
-        fclose(fp);
-}
-
-void report_run_powa(char* filename, long int M, long int N, long int K, double mean_t, double W_avg, double Joules, double margin_err, long int sample_sz, double bench_t){
+void report_run(char* filename, long int M, long int N, long int K, double mean_t, double W_avg, double Joules, double margin_err, long int sample_sz, double bench_t){
 
 	FILE* fp = fopen(filename,"a");
 	if (!fp) error("report_run: LogFile failed to open");
@@ -61,13 +53,8 @@ int main(const int argc, const char *argv[]) {
 	}
 
 	char *filename = (char *) malloc(1024* sizeof(char));
-#ifdef ENABLE_POWA
-	sprintf(filename, "%s/Benchmark-Results/cublasDgemm_pw_dev-%d_TransA-%c_TransB-%c_%s.log",
-		DEPLOYDB, dev_id, TransA, TransB, VERSION);
-#else
 	sprintf(filename, "%s/Benchmark-Results/cublasDgemm_dev-%d_TransA-%c_TransB-%c_%s.log",
 		DEPLOYDB, dev_id, TransA, TransB, VERSION);
-#endif
 	check_benchmark(filename);
 
 	// Define the max size of a benchmark kernel to run on this machine.
@@ -186,13 +173,13 @@ int main(const int argc, const char *argv[]) {
 			, Energy: ( %lf Watt -> %lf J), Error Margin (percentage of mean) = %lf %, Itter = %d, Microbench_t = %lf\n\n",
 			T, cublas_t_mean  * 1000, Gval_per_s(gemm_flops(T,T,T), cublas_t_mean),
 			W_avg, J_estimated, error_margin/cublas_t_mean  * 100, sample_sz, bench_t);
-		report_run_powa(filename, T, T, T, cublas_t_mean, W_avg, J_estimated, error_margin, sample_sz, bench_t);
+		report_run(filename, T, T, T, cublas_t_mean, W_avg, J_estimated, error_margin, sample_sz, bench_t);
 #else
 		fprintf(stderr, "Microbenchmark (M = N = K = %zu) complete:\t mean_exec_t=%lf ms ( %.1lf Gflops/s )\
 			, Error Margin (percentage of mean) = %lf %, Itter = %d, Microbench_t = %lf\n\n",
 			T, cublas_t_mean  * 1000, Gval_per_s(gemm_flops(T,T,T), cublas_t_mean),
 			error_margin/cublas_t_mean  * 100, sample_sz, bench_t);
-		report_run(filename, T, T, T, cublas_t_mean, error_margin, sample_sz, bench_t);
+		report_run(filename, T, T, T, cublas_t_mean, -1, -1, error_margin, sample_sz, bench_t);
 #endif
 		bench_ctr++;
 	}
@@ -242,12 +229,12 @@ int main(const int argc, const char *argv[]) {
 		fprintf(stderr, "GPU exec time:\t Average=%lf ms, Min = %lf ms, Max = %lf ms, Energy: ( %lf Watt -> %lf J)\n",
 			cublas_t_av  * 1000, cublas_t_min  * 1000, cublas_t_max  * 1000, W_avg, J_estimated);
 
-		report_run_powa(filename, T, T, T, cublas_t_av, W_avg, J_estimated, fmax(cublas_t_max - cublas_t_av,
+		report_run(filename, T, T, T, cublas_t_av, W_avg, J_estimated, fmax(cublas_t_max - cublas_t_av,
 				cublas_t_av - cublas_t_min), ITER, bench_t);
 #else
 		fprintf(stderr, "GPU exec time:\t Average=%lf ms, Min = %lf ms, Max = %lf ms\n",
 			cublas_t_av  * 1000, cublas_t_min  * 1000, cublas_t_max  * 1000);
-		report_run(filename, T, T, T, cublas_t_av, fmax(cublas_t_max - cublas_t_av,
+		report_run(filename, T, T, T, cublas_t_av, -1, -1, fmax(cublas_t_max - cublas_t_av,
 				cublas_t_av - cublas_t_min), ITER, bench_t);
 #endif
 

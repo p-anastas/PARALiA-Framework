@@ -11,6 +11,7 @@ typedef struct  BLAS1_data{
 	short mode;
 	long int* T_lookup_buf;
 	double* av_time_buf;
+	double* av_W_buf;
 	long int lines;
 	// TODO: These can be used for more robust results or for worst/best case performance prediction
 }* GPUexec1Model_p;
@@ -29,6 +30,7 @@ typedef struct  BLAS2_data{
 	short mode;
 	long int* T_lookup_buf;
 	double* av_time_buf;
+	double* av_W_buf;
 	long int lines;
 	char* TransA_buf;
 }* GPUexec2Model_p;
@@ -48,6 +50,7 @@ typedef struct  BLAS3_data{
 	short mode;
 	long int* T_lookup_buf;
 	double* av_time_buf;
+	double* av_W_buf;
 	long int lines;
 	char* TransA_buf;
 	char* TransB_buf;

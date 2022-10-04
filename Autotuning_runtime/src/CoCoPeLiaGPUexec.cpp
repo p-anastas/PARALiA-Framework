@@ -18,6 +18,7 @@ long int GPUexec3MinT(GPUexec3Model_p model){
 		if (model->T_lookup_buf[ctr] < result) result = model->T_lookup_buf[ctr];
 	return result;
 }
+
 long int GPUexec3MaxT(GPUexec3Model_p model){
 	long int result = model->T_lookup_buf[0];
 	for (long int ctr = 0; ctr < model->lines; ctr++)
@@ -54,7 +55,7 @@ GPUexec3Model_p GPUexec3Model_init(short dev_id, const char* func){
 		else if (!strcmp(func, "Sgemm")) dsize = sizeof(float);
 	}
 	GPUexec3Model_p out_model = (GPUexec3Model_p) malloc(sizeof(struct  BLAS3_data));
-	char filename[256];
+	char filename[1024];
 	sprintf(filename, "%s/Processed/%s_lookup-table_dev-%d.log", DEPLOYDB, func, dev_id);
 	FILE* fp = fopen(filename,"r");
 	if (!fp) {
@@ -72,17 +73,18 @@ GPUexec3Model_p GPUexec3Model_init(short dev_id, const char* func){
 #endif
 	int items;
 	long int trashdata, trashdata2, conv_itter;
-	double error_margin, Dtrashdata;
+	double error_margin, Dtrashdata, Joules;
 	for (int i = 0; i < bench_lines; i++){
-		items = fscanf(fp, "%c,%c,%ld,%ld,%ld,%lf,%lf,%ld,%lf\n",
+		items = fscanf(fp, "%c,%c,%ld,%ld,%ld,%lf,%lf,%lf,%lf,%ld,%lf\n",
 			&out_model->TransA_buf[i], &out_model->TransB_buf[i], &out_model->T_lookup_buf[i],
-			&trashdata, &trashdata2, &out_model->av_time_buf[i], &error_margin, &conv_itter, &Dtrashdata);
-		if (items != 9) error("GPUexec3Model_init: Problem in reading model");
+			&trashdata, &trashdata2, &out_model->av_time_buf[i], &out_model->av_W_buf[i], &Joules, &error_margin, &conv_itter, &Dtrashdata);
+		if (items != 11) error("GPUexec3Model_init: Problem in reading model");
 #ifdef DPDEBUG
-		lprintf(lvl, "Scanned entry %d: T = %ld, TransA = %c, TransB = %c -> t_av = %lf ms\n",
-		i, out_model->T_lookup_buf[i], out_model->TransA_buf[i], out_model->TransB_buf[i], out_model->av_time_buf[i]*1000);
+		lprintf(lvl, "Scanned entry %d: T = %ld, TransA = %c, TransB = %c -> t_av = %lf ms, W_av = %lf W, J_total = %lf J\n",
+		i, out_model->T_lookup_buf[i], out_model->TransA_buf[i], out_model->TransB_buf[i],
+		out_model->av_time_buf[i]*1000, out_model->av_W_buf[i], Joules);
 #endif
-    	}
+  }
 	fclose(fp);
 	out_model->dev_id = dev_id;
 	out_model->func = func;

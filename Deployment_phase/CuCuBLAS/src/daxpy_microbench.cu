@@ -15,15 +15,7 @@
 #include "nvem.hpp"
 #endif
 
-void report_run(char* filename, long int N, double mean_t, double margin_err, long int sample_sz, double bench_t){
-
-	FILE* fp = fopen(filename,"a");
-	if (!fp) error("report_run: LogFile failed to open");
-   	fprintf(fp,"%d, %e,%e,%zu,%e\n", N, mean_t, margin_err, sample_sz, bench_t);
-        fclose(fp);
-}
-
-void report_run_powa(char* filename, long int N, double mean_t, double W_avg, double Joules, double margin_err, long int sample_sz, double bench_t){
+void report_run(char* filename, long int N, double mean_t, double W_avg, double Joules, double margin_err, long int sample_sz, double bench_t){
 
 	FILE* fp = fopen(filename,"a");
 	if (!fp) error("report_run: LogFile failed to open");
@@ -60,11 +52,8 @@ int main(const int argc, const char *argv[]) {
 	}
 
 	char *filename = (char *) malloc(1024* sizeof(char));
-	#ifdef ENABLE_POWA
-		sprintf(filename, "%s/Benchmark-Results/cublasDaxpy_pw_dev-%d_%s.log", DEPLOYDB, dev_id, VERSION);
-	#else
-		sprintf(filename, "%s/Benchmark-Results/cublasDaxpy_dev-%d_%s.log", DEPLOYDB, dev_id, VERSION);
-	#endif
+	sprintf(filename, "%s/Benchmark-Results/cublasDaxpy_dev-%d_%s.log", DEPLOYDB, dev_id, VERSION);
+
 
 	check_benchmark(filename);
 
@@ -169,13 +158,13 @@ int main(const int argc, const char *argv[]) {
 			, Energy: ( %lf Watt -> %lf J), Error Margin (percentage of mean) = %lf %, Itter = %d, Microbench_t = %lf\n\n",
 			T, cublas_t_mean  * 1000, Gval_per_s(axpy_flops(T), cublas_t_mean),
 			W_avg, J_estimated, error_margin/cublas_t_mean  * 100, sample_sz, bench_t);
-		report_run_powa(filename, T, cublas_t_mean, W_avg, J_estimated, error_margin, sample_sz, bench_t);
+		report_run(filename, T, cublas_t_mean, W_avg, J_estimated, error_margin, sample_sz, bench_t);
 #else
 		fprintf(stderr, "Microbenchmark (N = %zu) complete:\t mean_exec_t=%lf ms ( %.1lf Gflops/s )\
 			, Error Margin (percentage of mean) = %lf %, Itter = %d, Microbench_t = %lf\n\n",
 			T, cublas_t_mean  * 1000, Gval_per_s(axpy_flops(T), cublas_t_mean),
 			error_margin/cublas_t_mean  * 100, sample_sz, bench_t);
-		report_run(filename, T, cublas_t_mean, error_margin, sample_sz, bench_t);
+		report_run(filename, T, cublas_t_mean, -1, -1, error_margin, sample_sz, bench_t);
 #endif
 		bench_ctr++;
 	}
@@ -224,7 +213,7 @@ int main(const int argc, const char *argv[]) {
 			, Energy: ( %lf Watt -> %lf J), Error Margin (percentage of mean) = %lf %, Itter = %d, Microbench_t = %lf\n\n",
 			T, cublas_t_mean  * 1000, Gval_per_s(axpy_flops(T), cublas_t_mean),
 			W_avg, J_estimated, error_margin/cublas_t_mean  * 100, sample_sz, bench_t);
-		report_run_powa(filename, T, cublas_t_av, W_avg, J_estimated,
+		report_run(filename, T, cublas_t_av, W_avg, J_estimated,
 			fmax(cublas_t_max - cublas_t_av, cublas_t_av - cublas_t_min), ITER, cublas_t_max);
 #else
 		fprintf(stderr, "Microbenchmark (N = %zu) complete:\t mean_exec_t=%lf ms ( %.1lf Gflops/s )\
