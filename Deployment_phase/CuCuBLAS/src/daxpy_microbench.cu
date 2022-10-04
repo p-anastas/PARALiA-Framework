@@ -48,7 +48,6 @@ int main(const int argc, const char *argv[]) {
 		error("Incorrect input arguments. Usage: ./correct_run dev_id\n");
   	}
 
-
 	/// Set device
 	CoCoPeLiaSelectDevice(dev_id);
 	if (dev_id != -1){
