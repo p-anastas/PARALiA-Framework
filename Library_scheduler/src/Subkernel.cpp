@@ -1371,8 +1371,9 @@ void STEST_print_SK(kernel_pthread_wrap_p* thread_dev_data_list, double routine_
 #ifdef DSTEST
 	lprintf(0,"Pipeline start:\n");
 #endif
-	int transfer_map[LOC_NUM][LOC_NUM] ={{0}}, total_h2d_R = 0, total_d2d_R = 0, total_reuse_R = 0, total_d2h_R = 0,
+	int transfer_map[LOC_NUM][LOC_NUM] ={{0}}, exec_map[LOC_NUM] = {0}, total_h2d_R = 0, total_d2d_R = 0, total_reuse_R = 0, total_d2h_R = 0,
 		total_h2d_W = 0, total_d2d_W = 0, total_reuse_W = 0, total_d2h_W = 0;
+	double transfer_map_bw[LOC_NUM][LOC_NUM]= {{0.0}}, exec_map_perf[LOC_NUM] = {0};
 #ifdef RUNTIME_SCHEDULER_VERSION
 	for (int keri = 0; keri < Sk_num_max; keri++){
 #else
@@ -1398,13 +1399,13 @@ void STEST_print_SK(kernel_pthread_wrap_p* thread_dev_data_list, double routine_
 		}
 #ifdef DSTEST
 		lprintf(0,"\n");
-		for (int d = 0; d < 3/*dev_num*/ ; d++) if(keri < thread_dev_data_list[d]->SubkernelNumDev)
+		for (int d = 0; d < dev_num ; d++) if(keri < thread_dev_data_list[d]->SubkernelNumDev)
 			lprintf(0, "             Subkernel( dev =%2d, id =%6d )                                |",
 				thread_dev_data_list[d]->SubkernelListDev[keri]->run_dev_id,
 				thread_dev_data_list[d]->SubkernelListDev[keri]->id);
 				lprintf(0,"\n");
 
-		for (int d = 0; d < 3/*dev_num*/; d++) if(keri < thread_dev_data_list[d]->SubkernelNumDev)
+		for (int d = 0; d < dev_num; d++) if(keri < thread_dev_data_list[d]->SubkernelNumDev)
 			lprintf(0, " Req_T (%3.1lf->%3.1lf) total = %3.1lf ms (%3.1lf Gb\\s):                                |",
 				(thread_dev_data_list[d]->SubkernelListDev[keri]->req_in_ts-routine_entry_ts)*1000,
 				(thread_dev_data_list[d]->SubkernelListDev[keri]->req_out_ts-routine_entry_ts)*1000,
@@ -1416,7 +1417,7 @@ void STEST_print_SK(kernel_pthread_wrap_p* thread_dev_data_list, double routine_
 					short Tiledim = thread_dev_data_list[d]->SubkernelListDev[keri]->TileDimlist[tileidx];
 					void* TilePtr = thread_dev_data_list[d]->SubkernelListDev[keri]->TileList[tileidx];
 #ifdef DSTEST
-					if(d < 3/*dev_num*/)
+					if(d < dev_num)
 					lprintf(0, " RCV_T( T(%3d.[%2d,%2d]) Dev (%2d)->(%2d) ) (%3.1lf: %3.1lf->%3.1lf) = %3.1lf ms (%3.1lf Gb\\s) |",
 						(Tiledim == 2)? ((Tile2D<VALUE_TYPE>*) TilePtr)->id : ((Tile1D<VALUE_TYPE>*) TilePtr)->id,
 						(Tiledim == 2)? ((Tile2D<VALUE_TYPE>*) TilePtr)->GridId1 : ((Tile1D<VALUE_TYPE>*) TilePtr)->GridId,
@@ -1435,6 +1436,8 @@ void STEST_print_SK(kernel_pthread_wrap_p* thread_dev_data_list, double routine_
 					short is_writer = (Tiledim == 2)? ((Tile2D<VALUE_TYPE>*) TilePtr)->W_total : ((Tile1D<VALUE_TYPE>*) TilePtr)->W_total;
 					if (dev_from != -2 && dev_to != -2){
 						transfer_map[idxize(dev_from)][idxize(dev_to)]++;
+						transfer_map_bw[idxize(dev_from)][idxize(dev_to)]+=
+							Gval_per_s(thread_dev_data_list[d]->SubkernelListDev[keri]->bytes_in[tileidx], request_tile_ms[d][tileidx]/1000);
 						if (dev_from == -1){
 							if(is_writer) total_h2d_W++;
 							else total_h2d_R++;
@@ -1457,8 +1460,8 @@ void STEST_print_SK(kernel_pthread_wrap_p* thread_dev_data_list, double routine_
 				lprintf(0,"\n");
 #endif
 			}
+			for (int d = 0; d < dev_num; d++) if(keri < thread_dev_data_list[d]->SubkernelNumDev){
 #ifdef DSTEST
-			for (int d = 0; d < 3/*dev_num*/; d++) if(keri < thread_dev_data_list[d]->SubkernelNumDev)
 				lprintf(0, " exec_t(%s) (%3.1lf: %3.1lf->%3.1lf) = %3.1lf ms  (%3.1lf Gflops\\s)                    |",
 				thread_dev_data_list[d]->SubkernelListDev[keri]->op_name,
 				(thread_dev_data_list[d]->SubkernelListDev[keri]->op_fire_ts-routine_entry_ts)*1000,
@@ -1467,6 +1470,9 @@ void STEST_print_SK(kernel_pthread_wrap_p* thread_dev_data_list, double routine_
 				exec_t_ms[d], Gval_per_s(thread_dev_data_list[d]->SubkernelListDev[keri]->flops, exec_t_ms[d]/1000));
 				lprintf(0,"\n");
 #endif
+			exec_map[idxize(thread_dev_data_list[d]->SubkernelListDev[keri]->run_dev_id)]++;
+			exec_map_perf[idxize(thread_dev_data_list[d]->SubkernelListDev[keri]->run_dev_id)]+=Gval_per_s(thread_dev_data_list[d]->SubkernelListDev[keri]->flops, exec_t_ms[d]/1000);
+		}
 		for (int tileidx = 0; tileidx < thread_dev_data_list[0]->SubkernelListDev[0]->TileNum; tileidx++){
 			short Tiledim = thread_dev_data_list[0]->SubkernelListDev[0]->TileDimlist[tileidx];
 			void* TilePtr = thread_dev_data_list[0]->SubkernelListDev[0]->TileList[tileidx];
@@ -1474,7 +1480,7 @@ void STEST_print_SK(kernel_pthread_wrap_p* thread_dev_data_list, double routine_
 			if(is_writer){
 				for (int d = 0; d < dev_num; d++) if(keri < thread_dev_data_list[d]->SubkernelNumDev){
 #ifdef DSTEST
-					if(d < 3/*dev_num*/)
+					if(d < dev_num)
 					lprintf(0, " WB_T( T(%3d.[%2d,%2d]) Dev (%2d)->(%2d) ) (%3.1lf: %3.1lf->%3.1lf) = %3.1lf ms  (%3.1lf Gb\\s) |",
 						(Tiledim == 2)? ((Tile2D<VALUE_TYPE>*) TilePtr)->id : ((Tile1D<VALUE_TYPE>*) TilePtr)->id,
 						(Tiledim == 2)? ((Tile2D<VALUE_TYPE>*) TilePtr)->GridId1 : ((Tile1D<VALUE_TYPE>*) TilePtr)->GridId,
@@ -1492,7 +1498,9 @@ void STEST_print_SK(kernel_pthread_wrap_p* thread_dev_data_list, double routine_
 						short is_writer = (Tiledim == 2)? ((Tile2D<VALUE_TYPE>*) TilePtr)->W_total : ((Tile1D<VALUE_TYPE>*) TilePtr)->W_total;
 						if (dev_from != -2 && dev_to != -2){
 							transfer_map[idxize(dev_from)][idxize(dev_to)]++;
-							if (dev_from == -1){
+							transfer_map_bw[idxize(dev_from)][idxize(dev_to)]+=
+								Gval_per_s(thread_dev_data_list[d]->SubkernelListDev[keri]->bytes_out[tileidx], writeback_tile_ms[d][tileidx]/1000);
+														if (dev_from == -1){
 								if(is_writer) total_h2d_W++;
 								else total_h2d_R++;
 							}
@@ -1526,6 +1534,37 @@ void STEST_print_SK(kernel_pthread_wrap_p* thread_dev_data_list, double routine_
 		}
 		lprintf(0, "\n");
 	}
+
+	lprintf(0,"\n Tranfer Map Achieved Bandwidths (GB/s):\n   |");
+	for (int d2 = 0; d2 < LOC_NUM; d2++)
+		lprintf(0, "  %2d   |", deidxize(d2));
+	lprintf(0, "\n   |");
+	for (int d2 = 0; d2 < LOC_NUM; d2++)
+		lprintf(0, "------_-");
+	lprintf(0, "\n");
+	for (int d1 = 0; d1 < LOC_NUM; d1++){
+		lprintf(0, "%2d | ", deidxize(d1));
+		for (int d2 = 0; d2 < LOC_NUM; d2++){
+			if(transfer_map[d1][d2]) lprintf(0, "%5.2lf | ", transfer_map_bw[d1][d2]/transfer_map[d1][d2]);
+			else lprintf(0, "  -   | ");
+		}
+		lprintf(0, "\n");
+	}
+
+	lprintf(0,"\n Subkernel Exec achieved Performance (GFlops/s):\n   |");
+	for (int d2 = 0; d2 < LOC_NUM; d2++)
+		lprintf(0, "  %2d   |", deidxize(d2));
+	lprintf(0, "\n   |");
+	for (int d2 = 0; d2 < LOC_NUM; d2++)
+		lprintf(0, "--------");
+	lprintf(0, "\n");
+	lprintf(0, "   | ");
+	for (int d2 = 0; d2 < LOC_NUM; d2++){
+		if(exec_map[d2]) lprintf(0, "%5.0lf | ", exec_map_perf[d2]/exec_map[d2]);
+		else lprintf(0, "  -   | ");
+	}
+	lprintf(0, "\n   |");
+
 	lprintf(0, "\n");
 	lprintf(0,"\nSum-up R-Tiles:\n");
 	lprintf(0,"Total H2D transfers = %d\n", total_h2d_R);

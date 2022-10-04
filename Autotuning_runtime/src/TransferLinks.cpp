@@ -135,9 +135,9 @@ void ATC::update_link_shared_weights(){
       for (int k = j ; k < LOC_NUM; k++) if(flag_normalize[k]) link_shared_bw[i][k] = normalize_sum/normalize_num;
     }
   }
-#ifdef PDEBUG
+//#ifdef PDEBUG
   link_shared_bw_map_print();
-#endif
+//#endif
 #ifdef DEBUG
   lprintf(lvl, "<-----| update_link_shared_weights()\n");
 #endif
