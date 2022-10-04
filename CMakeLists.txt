@@ -50,6 +50,17 @@ add_definitions(-DENABLE_TRANSFER_W_HOPS)
 ## Enable sharing of bandwidth between links that utilize the same underlying hardware communication resources
 add_definitions(-DENABLE_LINK_BW_SHARING) # by putting them on different queues
 
+## TODO: EXPERMENTAL: Enable power measuring for benchmarks, and energy-related prediction modes for the Autotuner
+add_definitions(-DENABLE_POWA)
+#add_definitions(-DCPU_W_PREDEF=) # TODO: Vulcan CAUTION!!! Define this for your CPU - no CPU power tool installed.
+add_definitions(-DCPU_W_PREDEF=170) # TODO: silver1 CAUTION!!! Define this for your CPU - no CPU power tool installed.
+## Choose the Unit combination that maximizes total performance (minimum time).
+add_definitions(-DPREDICT_OPTIMIZE_TARGET="PERF")
+## Choose the Unit combination that minimizes consumed energy (J).
+## Rarely chooses multi-unit execution, since its almost always less energy-efficient than single-unit.
+#add_definitions(-DPREDICT_OPTIMIZE_TARGET="ENERGY")
+#add_definitions(-DPREDICT_OPTIMIZE_TARGET="OTHER_TBD")
+
 set(SCHEDULE_TYPE 0) # 0 = static, 1 = runtime selection
 
 if (${SCHEDULE_TYPE} EQUAL 0)

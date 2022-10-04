@@ -10,11 +10,24 @@
 //TODO: This should at some point be removed (some fuctions require wrapping)
 #include "backend_wrappers.hpp"
 
+#ifdef ENABLE_POWA
+/// Energy measuring
+#include "nvem.hpp"
+#endif
+
 void report_run(char* filename, long int N, double mean_t, double margin_err, long int sample_sz, double bench_t){
 
 	FILE* fp = fopen(filename,"a");
 	if (!fp) error("report_run: LogFile failed to open");
    	fprintf(fp,"%d, %e,%e,%zu,%e\n", N, mean_t, margin_err, sample_sz, bench_t);
+        fclose(fp);
+}
+
+void report_run_powa(char* filename, long int N, double mean_t, double W_avg, double Joules, double margin_err, long int sample_sz, double bench_t){
+
+	FILE* fp = fopen(filename,"a");
+	if (!fp) error("report_run: LogFile failed to open");
+   	fprintf(fp,"%d, %e,%e,%e,%e,%zu,%e\n", N, mean_t, W_avg, Joules, margin_err, sample_sz, bench_t);
         fclose(fp);
 }
 
@@ -35,19 +48,30 @@ int main(const int argc, const char *argv[]) {
 		error("Incorrect input arguments. Usage: ./correct_run dev_id\n");
   	}
 
-	char *filename = (char *) malloc(256* sizeof(char));
-	sprintf(filename, "%s/Benchmark-Results/cublasDaxpy_dev-%d_%s.log", DEPLOYDB, dev_id, VERSION);
+
+	/// Set device
+	CoCoPeLiaSelectDevice(dev_id);
+	if (dev_id != -1){
+		size_t free_cuda_mem, max_cuda_mem;
+		massert(cudaSuccess == cudaMemGetInfo(&free_cuda_mem, &max_cuda_mem),
+			"daxpy_microbench_gpu: cudaMemGetInfo failed");
+		if (free_cuda_mem < 1.0*PROBLEM_GPU_PERCENTAGE/100*max_cuda_mem)
+			error("daxpy_microbench_gpu: Free memory is much less than max ( Free: %zu, Max: %zu ),\
+			device under utilization\n", free_cuda_mem, max_cuda_mem);
+	}
+
+	char *filename = (char *) malloc(1024* sizeof(char));
+	#ifdef ENABLE_POWA
+		sprintf(filename, "%s/Benchmark-Results/cublasDaxpy_pw_dev-%d_%s.log", DEPLOYDB, dev_id, VERSION);
+	#else
+		sprintf(filename, "%s/Benchmark-Results/cublasDaxpy_dev-%d_%s.log", DEPLOYDB, dev_id, VERSION);
+	#endif
+
 	check_benchmark(filename);
 
-	size_t free_cuda_mem, max_cuda_mem;
-	massert(cudaSuccess == cudaMemGetInfo(&free_cuda_mem, &max_cuda_mem), "CoCopeLiaDgemm: cudaMemGetInfo failed");
-	if (free_cuda_mem*1.2 < 1.0*max_cuda_mem) error("dgemm_microbench_gpu: Free memory is much less than max ( Free: %d, Max: %d ), device under utilization", free_cuda_mem, max_cuda_mem);
 
 	// Define the max size of a benchmark kernel to run on this machine.
 	long int maxDim = CoCoGetMaxDimAsset1D(2, sizeof(double), STEP_BLAS1, dev_id);
-
-	/// Set device
-	cudaSetDevice(dev_id);
 
 	cublasHandle_t handle0;
  	cudaStream_t host_stream;
@@ -100,6 +124,12 @@ int main(const int argc, const char *argv[]) {
 		fprintf(stderr,"Running cublasDaxpy-> T = %d:\n", T);
 		cublas_t_mean = cublas_t_sum = error_margin = 0;
 		sample_sz = 0;
+#ifdef ENABLE_POWA
+		char powa_filename[256];
+		sprintf(powa_filename, "dgemm_microbench_powa.log");
+		NvemStats_p nvem_data;
+		if(dev_id != -1) NvemStartMeasure(dev_id, powa_filename, 0);
+#endif
 		bench_t = csecond();
 		double std_dev = 0;
 		for (sample_sz = 1; sample_sz < MICRO_MAX_ITER + 1; sample_sz++) {
@@ -124,10 +154,30 @@ int main(const int argc, const char *argv[]) {
 			if (sample_sz > MICRO_MIN_ITER && error_margin/cublas_t_mean  * 100 <= 5) break;
 		}
 		bench_t = csecond() - bench_t;
-		fprintf(stderr, "Microbenchmark (M = N = K = %zu) complete:\t mean_exec_t=%lf ms ( %.1lf Gflops/s ), Error Margin (percentage of mean) = %lf %, Itter = %d, Microbench_t = %lf\n\n", T, cublas_t_mean  * 1000, Gval_per_s(axpy_flops(T), cublas_t_mean), error_margin/cublas_t_mean  * 100, sample_sz, bench_t);
 		CoCoSyncCheckErr();
-
+#ifdef ENABLE_POWA
+		if(dev_id != -1) nvem_data = NvemStopMeasure(dev_id, "Energy measure dgemm_microbench");
+		else{
+			nvem_data = (NvemStats_p) malloc(sizeof(struct nvem_results));
+			strcpy(nvem_data->name, "Energy measure dgemm_microbench");
+			nvem_data->sensor_ticks = -1;
+			nvem_data->total_bench_t = csecond() - cpu_timer;
+			nvem_data->W_avg = CPU_W_PREDEF;
+			nvem_data->J_estimated = nvem_data->W_avg*nvem_data->total_bench_t;
+		}
+		double W_avg = nvem_data->W_avg, J_estimated = nvem_data->J_estimated/sample_sz;
+		fprintf(stderr, "Microbenchmark (N = %zu) complete:\t mean_exec_t=%lf ms ( %.1lf Gflops/s )\
+			, Energy: ( %lf Watt -> %lf J), Error Margin (percentage of mean) = %lf %, Itter = %d, Microbench_t = %lf\n\n",
+			T, cublas_t_mean  * 1000, Gval_per_s(axpy_flops(T), cublas_t_mean),
+			W_avg, J_estimated, error_margin/cublas_t_mean  * 100, sample_sz, bench_t);
+		report_run_powa(filename, T, cublas_t_mean, W_avg, J_estimated, error_margin, sample_sz, bench_t);
+#else
+		fprintf(stderr, "Microbenchmark (N = %zu) complete:\t mean_exec_t=%lf ms ( %.1lf Gflops/s )\
+			, Error Margin (percentage of mean) = %lf %, Itter = %d, Microbench_t = %lf\n\n",
+			T, cublas_t_mean  * 1000, Gval_per_s(axpy_flops(T), cublas_t_mean),
+			error_margin/cublas_t_mean  * 100, sample_sz, bench_t);
 		report_run(filename, T, cublas_t_mean, error_margin, sample_sz, bench_t);
+#endif
 		bench_ctr++;
 	}
 #else
@@ -138,6 +188,12 @@ int main(const int argc, const char *argv[]) {
 		fprintf(stderr,"Running cublasDaxpy-> T = %d:\n", T);
 		cublas_t_av = cublas_t_max = 0;
 		cublas_t_min = 1e9;
+#ifdef ENABLE_POWA
+		char powa_filename[256];
+		sprintf(powa_filename, "dgemm_microbench_powa.log");
+		NvemStats_p nvem_data;
+		if(dev_id != -1) NvemStartMeasure(dev_id, powa_filename, 0);
+#endif
 		bench_t = csecond();
 		for (int itt = 0; itt < ITER; itt ++) {
 			cpu_timer = csecond();
@@ -153,10 +209,32 @@ int main(const int argc, const char *argv[]) {
 		}
 		bench_t = csecond() - bench_t;
 		cublas_t_av /= ITER;
-		fprintf(stderr, "GPU exec time:\t Average=%lf ms, Min = %lf ms, Max = %lf ms\n", cublas_t_av  * 1000, cublas_t_min  * 1000, cublas_t_max  * 1000);
 		CoCoSyncCheckErr();
-
-		report_run(filename, T, cublas_t_av, fmax(cublas_t_max - cublas_t_av, cublas_t_av - cublas_t_min), ITER, cublas_t_max);
+#ifdef ENABLE_POWA
+		if(dev_id != -1) nvem_data = NvemStopMeasure(dev_id, "Energy measure dgemm_microbench");
+		else{
+			nvem_data = (NvemStats_p) malloc(sizeof(struct nvem_results));
+			strcpy(nvem_data->name, "Energy measure dgemm_microbench");
+			nvem_data->sensor_ticks = -1;
+			nvem_data->total_bench_t = csecond() - cpu_timer;
+			nvem_data->W_avg = CPU_W_PREDEF;
+			nvem_data->J_estimated = nvem_data->W_avg*nvem_data->total_bench_t;
+		}
+		double W_avg = nvem_data->W_avg, J_estimated = nvem_data->J_estimated/sample_sz;
+		fprintf(stderr, "Microbenchmark (N = %zu) complete:\t mean_exec_t=%lf ms ( %.1lf Gflops/s )\
+			, Energy: ( %lf Watt -> %lf J), Error Margin (percentage of mean) = %lf %, Itter = %d, Microbench_t = %lf\n\n",
+			T, cublas_t_mean  * 1000, Gval_per_s(axpy_flops(T), cublas_t_mean),
+			W_avg, J_estimated, error_margin/cublas_t_mean  * 100, sample_sz, bench_t);
+		report_run_powa(filename, T, cublas_t_av, W_avg, J_estimated,
+			fmax(cublas_t_max - cublas_t_av, cublas_t_av - cublas_t_min), ITER, cublas_t_max);
+#else
+		fprintf(stderr, "Microbenchmark (N = %zu) complete:\t mean_exec_t=%lf ms ( %.1lf Gflops/s )\
+			, Error Margin (percentage of mean) = %lf %, Itter = %d, Microbench_t = %lf\n\n",
+			T, cublas_t_mean  * 1000, Gval_per_s(axpy_flops(T), cublas_t_mean),
+			error_margin/cublas_t_mean  * 100, sample_sz, bench_t);
+		report_run(filename, T, cublas_t_av,
+			fmax(cublas_t_max - cublas_t_av, cublas_t_av - cublas_t_min), ITER, cublas_t_max);
+#endif
 		bench_ctr++;
 	}
 #endif

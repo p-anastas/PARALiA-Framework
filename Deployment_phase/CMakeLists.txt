@@ -13,6 +13,12 @@ message( "Deployment Phase - Included DIR: " ${DEPLOYMENT_DIR}/include )
 include_directories(${UNIHELP_INSTALL_INC})
 message( "Deployment Phase - Included DIR: " ${UNIHELP_INSTALL_INC} )
 
+set(NVEMAPI_PREFIX "${DEPLOYMENT_DIR}/nvidia-energy-measure")
+set (NVEMAPI_INCLUDE_DIRS ${NVEMAPI_PREFIX}/include) # -L${CUDA_LD}
+include_directories(${NVEMAPI_INCLUDE_DIRS} )
+message( "Deployment Phase - NVEMAPI_INCLUDE_DIRS: " ${NVEMAPI_INCLUDE_DIRS} )
+ADD_SUBDIRECTORY (CuCuBLAS/nvidia-energy-measure)
+
 ## TODO: Choose between ->
 ## i) Automatic micro-benchmarking (Population checked within 95% CI) using boost (recommended if boost available).
 message("Deployment Phase - Using Boost for microbenchmark statistics")
@@ -50,10 +56,10 @@ add_executable (RunCuCuBlasDgemmBench ${DEPLOYMENT_DIR_SRC}/dgemm_microbench.cu 
 #add_executable (RunCuCuBlasSgemmBench ${DEPLOYMENT_DIR_SRC}/sgemm_microbench.cu )
 add_executable (RunCuCuBlasLinkBench ${DEPLOYMENT_DIR_SRC}/transfer_link_microbench.cpp )
 
-target_link_libraries(RunCuCuBlasDaxpyBench ${INTERNAL_LINK_LIB} unihelpers)
-target_link_libraries(RunCuCuBlasDgemmBench ${INTERNAL_LINK_LIB} unihelpers)
-#target_link_libraries(RunCuCuBlasSgemmBench ${INTERNAL_LINK_LIB} unihelpers)
-target_link_libraries(RunCuCuBlasLinkBench ${INTERNAL_LINK_LIB} unihelpers)
+target_link_libraries(RunCuCuBlasDaxpyBench ${INTERNAL_LINK_LIB} unihelpers nvidia_powa)
+target_link_libraries(RunCuCuBlasDgemmBench ${INTERNAL_LINK_LIB} unihelpers nvidia_powa)
+#target_link_libraries(RunCuCuBlasSgemmBench ${INTERNAL_LINK_LIB} unihelpers nvidia_powa)
+target_link_libraries(RunCuCuBlasLinkBench ${INTERNAL_LINK_LIB} unihelpers nvidia_powa)
 
 configure_file(${PROJECT_SOURCE_DIR}/RunMicrobenchmarks.in ${DEPLOYMENT_INSTALL_PREFIX}/RunMicrobenchmarks.sh @ONLY)
 configure_file(${PROJECT_SOURCE_DIR}/ProcessDatabase.in ${DEPLOYMENT_INSTALL_PREFIX}/ProcessDatabase.sh @ONLY)
