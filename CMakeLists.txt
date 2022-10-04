@@ -110,15 +110,14 @@ add_definitions(-DNORMALIZE_NEAR_SPLIT_LIMIT=0.05)
 #add_definitions(-DUDDEBUG)
 
 ## Define a name for the testbed, to be used for the whole framework setup
-#set(TESTBED_NAME "dungani")
-#set(TESTBED_NAME "silver1")
-set(TESTBED_NAME "vulcanGPUs")  # TODO: Vulcan
+set(TESTBED_NAME "silver1") # TODO: silver1
+#set(TESTBED_NAME "vulcanGPUs")  # TODO: Vulcan
 message("CoCopeLia-Framework - TESTBED_NAME: " ${TESTBED_NAME})
 add_definitions(-DTESTBED="${TESTBED_NAME}")
 
 ## Define the (max) number of devices for utilization (0-num_devices)
-#set(NUM_LOCATIONS 3) # TODO: silver1
-set(NUM_LOCATIONS 9) # TODO: Vulcan
+set(NUM_LOCATIONS 3) # TODO: silver1
+#set(NUM_LOCATIONS 9) # TODO: Vulcan
 message("CoCopeLia-Framework - NUM_LOCATIONS: " ${NUM_LOCATIONS})
 add_definitions(-DLOC_NUM=${NUM_LOCATIONS})
 
@@ -143,12 +142,12 @@ message("CoCopeLia-Framework - CMAKE_CXX_FLAGS: " ${CMAKE_CXX_FLAGS})
 #	d) auto
 
 ## 2) CUCUBLAS TODO: Other backends?
-#set (CUDA_PREFIX "/usr/local/cuda-11.6")
+set (CUDA_PREFIX "/usr/local/cuda-11.6") # TODO: Silver1
 add_definitions(-DCUDA_VER=1100)
 #set (CUDA_PREFIX "/usr/local/cuda-9.2")
 #add_definitions(-DCUDA_VER=920)
-set (CUDA_PREFIX "/opt/system/cuda/11.7.0") # TODO: Vulcan
-set (CXX_PREFIX "/opt/hlrs/non-spack/2022-02/compiler/gcc/11.2.0") # TODO: Vulcan
+#set (CUDA_PREFIX "/opt/system/cuda/11.7.0") # TODO: Vulcan
+#set (CXX_PREFIX "/opt/hlrs/non-spack/2022-02/compiler/gcc/11.2.0") # TODO: Vulcan
 
 
 if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
@@ -157,8 +156,8 @@ endif()
 
 # 	a) Compiler
 set (CMAKE_CUDA_COMPILER ${CUDA_PREFIX}/bin/nvcc)
-set (CMAKE_CXX_COMPILER ${CXX_PREFIX}/bin/c++) # TODO: Vulcan
-set (CMAKE_C_COMPILER ${CXX_PREFIX}/bin/gcc) # TODO: Vulcan
+#set (CMAKE_CXX_COMPILER ${CXX_PREFIX}/bin/c++) # TODO: Vulcan
+#set (CMAKE_C_COMPILER ${CXX_PREFIX}/bin/gcc) # TODO: Vulcan
 
 # 	b) Compile flags
 set (CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -w -O3")
@@ -171,16 +170,16 @@ set (CUDA_INCLUDE_DIRS ${CUDA_PREFIX}/include ${CUDA_PREFIX}/samples/common/inc)
 include_directories(${CUDA_INCLUDE_DIRS})
 message("CoCopeLia-Framework - CUDA_INCLUDE_DIRS: " ${CUDA_INCLUDE_DIRS})
 
-#set(OPENBLAS_PREFIX "/home/users/panastas/Lib_install/OpenBLAS-gcc93")
-set(OPENBLAS_PREFIX "/zhome/academic/HLRS/xex/xexpanas/OpenBLAS_install_vulcan-11.2") # TODO: Vulcan
+set(OPENBLAS_PREFIX "/home/users/panastas/Lib_install/OpenBLAS-gcc93") # TODO: silver1
+#set(OPENBLAS_PREFIX "/zhome/academic/HLRS/xex/xexpanas/OpenBLAS_install_vulcan-11.2") # TODO: Vulcan
 set (OPENBLAS_INCLUDE_DIRS ${OPENBLAS_PREFIX}/include)
 include_directories(${OPENBLAS_INCLUDE_DIRS})
 message("CoCopeLia-Framework - OPENBLAS_INCLUDE_DIRS: " ${OPENBLAS_INCLUDE_DIRS})
 
 # 	d) Link Libraries
 set (CUDA_LD ${CUDA_PREFIX}/lib64) # or /lib depending on system
-#set (CUDA_LINK "-L${CUDA_LD} -lcudart -lcublas -lcurand -lcuda") # TODO: silver1
-set (CUDA_LINK "-L${CUDA_LD} -lcudart -lcublas -lcurand ") # TODO: Vulcan /opt/system/nvidia/ALL.ALL.510.73.08/libcuda.so.510.73.08 ?
+set (CUDA_LINK "-L${CUDA_LD} -lcudart -lcublas -lcurand -lcuda") # TODO: silver1
+#set (CUDA_LINK "-L${CUDA_LD} -lcudart -lcublas -lcurand ") # TODO: Vulcan /opt/system/nvidia/ALL.ALL.510.73.08/libcuda.so.510.73.08 ?
 message("CoCopeLia-Framework - CUDA_LINK: " ${CUDA_LINK} )
 set (INTERNAL_LINK_LIB "${CUDA_LINK} -lrt -ldl")
 message("CoCopeLia-Framework - INTERNAL_LINK_LIB: " ${INTERNAL_LINK_LIB})

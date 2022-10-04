@@ -21,7 +21,7 @@ int main(const int argc, const char *argv[]) {
 	ATC_p predef_control_values = NULL, return_values = NULL;
 	ParseInputLvl3(argc, argv, &predef_control_values, &TransA, &TransB, &alpha, &beta, &M, &N, &K, &A_loc, &B_loc, &C_loc, &C_out_loc);
 
-	char *filename = (char *) malloc(256* sizeof(char));
+	char *filename = (char *) malloc(1024* sizeof(char));
 	if (predef_control_values!= NULL){
 		error("CoCoPeLiaDgemmRunnerBest: I am not supposed to be used with specific inputs. You probably need CoCoPeLiaDgemmRunner\n");
 	}

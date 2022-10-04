@@ -43,8 +43,8 @@ file(MAKE_DIRECTORY ${BENCH_INSTALL}/testLogs)
 add_definitions(-DTESTLIBDIR="${BENCH_INSTALL}/testLogs")
 
 #BLASX libs and includes
-set (BLASX_PREFIX "/zhome/academic/HLRS/xex/xexpanas/BLASX-pinned") # TODO: vulcan
-#set (BLASX_PREFIX "/home/users/panastas/PhD_stuff/Other-libs/BLASX-pinned") # TODO: silver1
+#set (BLASX_PREFIX "/zhome/academic/HLRS/xex/xexpanas/BLASX-pinned") # TODO: vulcan
+set (BLASX_PREFIX "/home/users/panastas/PhD_stuff/Other-libs/BLASX-pinned") # TODO: silver1
 set (BLASX_INCLUDE_DIRS ${BLASX_PREFIX}/include)
 include_directories(${BLASX_INCLUDE_DIRS} )
 message( "Benchmarking - Included BLASx: " ${BLASX_INCLUDE_DIRS} )
@@ -54,14 +54,14 @@ message( "Benchmarking - Linking BLASx: " ${BLASX_LINK} )
 
 #XKBLAS libs and includes
 #set (XKBLAS_PREFIX "/zhome/academic/HLRS/xex/xexpanas/xkblas-basic/install_vulcan") # TODO: vulcan cuda 10.1.243
-set (XKBLAS_PREFIX "/zhome/academic/HLRS/xex/xexpanas/xkblas-basic/install_vulcan_11") # TODO: vulcan
-#set (XKBLAS_PREFIX "/home/users/panastas/PhD_stuff/Other-libs/xkblas-silver1/install") # TODO: silver1
+#set (XKBLAS_PREFIX "/zhome/academic/HLRS/xex/xexpanas/xkblas-basic/install_vulcan_11") # TODO: vulcan
+set (XKBLAS_PREFIX "/home/users/panastas/PhD_stuff/Other-libs/xkblas-silver1/install") # TODO: silver1
 set (XKBLAS_INCLUDE_DIRS ${XKBLAS_PREFIX}/include)
 include_directories(${XKBLAS_INCLUDE_DIRS} )
 message( "Benchmarking - Included XKBLAS: " ${XKBLAS_INCLUDE_DIRS} )
 set (XKBLAS_LD ${XKBLAS_PREFIX}/lib)
-#set (XKBLAS_LINK  "-L${XKBLAS_LD}  -lm -lpthread -lkaapi -lxkblas -lcuda" )  # TODO: silver1
-set (XKBLAS_LINK  "-L${XKBLAS_LD}  -lm -lpthread -lkaapi -lxkblas /opt/system/nvidia/ALL.ALL.510.73.08/libcuda.so.510.73.08") # TODO: Vulcan   ?
+set (XKBLAS_LINK  "-L${XKBLAS_LD}  -lm -lpthread -lkaapi -lxkblas -lcuda" )  # TODO: silver1
+#set (XKBLAS_LINK  "-L${XKBLAS_LD}  -lm -lpthread -lkaapi -lxkblas /opt/system/nvidia/ALL.ALL.510.73.08/libcuda.so.510.73.08") # TODO: Vulcan   ?
 message( "Benchmarking - Linking XKBLAS: " ${XKBLAS_LINK} )
 
 add_library(benchcocopelia SHARED

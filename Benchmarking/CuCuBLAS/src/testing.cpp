@@ -10,8 +10,8 @@
 #include "CoCoPeLia.hpp"
 
 char* CoCoImplementationPrint(){
-	char* string_out = (char*) malloc (256*sizeof(char));
-	char* string_helper = (char*) malloc (256*sizeof(char));
+	char* string_out = (char*) malloc (1024*sizeof(char));
+	char* string_helper = (char*) malloc (1024*sizeof(char));
 #ifndef ASYNC_ENABLE
 	strcat(string_out, "_SYNC");
 #endif
@@ -48,7 +48,7 @@ char* CoCoImplementationPrint(){
 }
 
 char* CoCoDistributionPrint(){
-	char* string_out = (char*) malloc (256*sizeof(char));
+	char* string_out = (char*) malloc (1024*sizeof(char));
 #ifdef RUNTIME_SCHEDULER_VERSION
 #ifdef DISTRIBUTION
 	sprintf(string_out, "RT-%s", DISTRIBUTION);
@@ -185,7 +185,7 @@ void CheckLogLvl1(char* filename, ATC_p predef_control_values,
 		if (!fp) error("CheckLogLvl1: LogFile %s failed to open\n", filename);
 		else warning("CheckLogLvl1: Generating Logfile %s...\n", filename);
 	}
-	char buffer[256], search_string[256];
+	char buffer[1024], search_string[1024];
 	const char* control_str = (predef_control_values) ? predef_control_values->print_csv() : "-1,-1,-1,-1";
 	sprintf(search_string, "%s, %.5lf,%zu,%zu,%zu,%d,%d,%d,%d", control_str, alpha, D1, inc1, inc2, loc1, loc2, outloc1, outloc2);
 	while (fgets(buffer, sizeof(buffer), fp) != NULL){
@@ -208,7 +208,7 @@ void CheckLogLvl3(char* filename, ATC_p predef_control_values, char TransA, char
 		if (!fp) error("CheckLogLvl3: LogFile %s failed to open\n", filename);
 		else warning("CheckLogLvl3: Generating Logfile %s...\n", filename);
 	}
-	char buffer[256], search_string[256];
+	char buffer[1024], search_string[1024];
 	const char* control_str = (predef_control_values) ? predef_control_values->print_csv() : "-1,-1,-1,-1";
 	sprintf(search_string, "%s, %c,%c,%.5lf,%.5lf,%zu,%zu,%zu,%d,%d,%d,%d", control_str, TransA, TransB, alpha, beta, D1, D2, D3, loc1, loc2, loc3, outloc);
 	while (fgets(buffer, sizeof(buffer), fp) != NULL){

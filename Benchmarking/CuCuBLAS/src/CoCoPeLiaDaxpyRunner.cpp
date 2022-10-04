@@ -22,7 +22,7 @@ int main(const int argc, const char *argv[]) {
 	ATC_p predef_control_values = NULL, return_values = NULL;
 	ParseInputLvl1(argc, argv, &predef_control_values, &alpha, &N, &incx, &incy, &x_loc, &y_loc, &x_out_loc, &y_out_loc);
 
-	char *filename = (char *) malloc(256* sizeof(char));
+	char *filename = (char *) malloc(1024* sizeof(char));
 	if (predef_control_values!= NULL){
 		if (predef_control_values->T > N ) error("Given Tin=%ld bigger than problem dim\n", predef_control_values->T);
 		else if (predef_control_values->T > N/1.5 ) warning("Given Tin=%ld bigger than all problem dims/1.5\n", predef_control_values->T);
