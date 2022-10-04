@@ -712,60 +712,67 @@ void Subkernel::writeback_data_hops(){
 				transfer_queues[Writeback_id_idx][run_dev_id_idx]->add_host_func(
 						(void*)&CoCoSetTimerAsync, (void*) &(wbT_start_ts[j]));
 #endif
-				link_road_p test_road = (link_road_p) malloc(sizeof(struct link_road));
 				int inter_hop_num = link_hop_num[Writeback_id_idx][run_dev_id_idx];
-				test_road->hop_num = 2 + inter_hop_num;
-				test_road->hop_uid_list[0] = run_dev_id;
-				test_road->hop_uid_list[1 + inter_hop_num] = Writeback_id;
+				if(inter_hop_num == 0)
+					CoCoMemcpy2DAsync(tmp->WriteBackBlock->Adrs, tmp->ldim[Writeback_id_idx],
+						tmp->StoreBlock[run_dev_id_idx]->Adrs, tmp->ldim[run_dev_id_idx],
+						tmp->dim1, tmp->dim2, tmp->dtypesize(),
+						Writeback_id, run_dev_id, transfer_queues[Writeback_id_idx][run_dev_id_idx]);
+				else{
+					link_road_p test_road = (link_road_p) malloc(sizeof(struct link_road));
+					test_road->hop_num = 2 + inter_hop_num;
+					test_road->hop_uid_list[0] = run_dev_id;
+					test_road->hop_uid_list[1 + inter_hop_num] = Writeback_id;
 
-				test_road->hop_ldim_list[0] = tmp->ldim[run_dev_id_idx];
-				test_road->hop_ldim_list[1 + inter_hop_num] = tmp->ldim[Writeback_id_idx];
+					test_road->hop_ldim_list[0] = tmp->ldim[run_dev_id_idx];
+					test_road->hop_ldim_list[1 + inter_hop_num] = tmp->ldim[Writeback_id_idx];
 
-				test_road->hop_buf_list[0] = tmp->StoreBlock[run_dev_id_idx]->Adrs;
-				test_road->hop_buf_list[1 + inter_hop_num] = tmp->StoreBlock[Writeback_id_idx]->Adrs;
+					test_road->hop_buf_list[0] = tmp->StoreBlock[run_dev_id_idx]->Adrs;
+					test_road->hop_buf_list[1 + inter_hop_num] = tmp->StoreBlock[Writeback_id_idx]->Adrs;
 
-				for(int inter_hop = 0 ; inter_hop < inter_hop_num; inter_hop++){
-					test_road->hop_uid_list[1+ inter_hop] = link_hop_route[Writeback_id_idx][run_dev_id_idx][inter_hop];
-					test_road->hop_ldim_list[1+ inter_hop] = tmp->ldim[run_dev_id_idx];
-					test_road->hop_cqueue_list[inter_hop] = transfer_queues[idxize(test_road->hop_uid_list[1+inter_hop])][idxize(test_road->hop_uid_list[inter_hop])];
+					for(int inter_hop = 0 ; inter_hop < inter_hop_num; inter_hop++){
+						test_road->hop_uid_list[1+ inter_hop] = link_hop_route[Writeback_id_idx][run_dev_id_idx][inter_hop];
+						test_road->hop_ldim_list[1+ inter_hop] = tmp->ldim[run_dev_id_idx];
+						test_road->hop_cqueue_list[inter_hop] = transfer_queues[idxize(test_road->hop_uid_list[1+inter_hop])][idxize(test_road->hop_uid_list[inter_hop])];
 
-					if (tmp->StoreBlock[idxize(test_road->hop_uid_list[1+inter_hop])] != NULL &&
-						tmp->StoreBlock[idxize(test_road->hop_uid_list[1+inter_hop])]->State != INVALID)
-						error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::writeback_data_hops W_flag = %d, \
-							run_dev_id = %d, Writeback_id = %d, hop_id = %d already cached in loc\n",  run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2,
-							tmp->W_flag, run_dev_id, Writeback_id, test_road->hop_uid_list[1+ inter_hop]);
+						if (tmp->StoreBlock[idxize(test_road->hop_uid_list[1+inter_hop])] != NULL &&
+							tmp->StoreBlock[idxize(test_road->hop_uid_list[1+inter_hop])]->State != INVALID)
+							error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::writeback_data_hops W_flag = %d, \
+								run_dev_id = %d, Writeback_id = %d, hop_id = %d already cached in loc\n",  run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2,
+								tmp->W_flag, run_dev_id, Writeback_id, test_road->hop_uid_list[1+ inter_hop]);
 
-					if(tmp->StoreBlock[idxize(test_road->hop_uid_list[1+inter_hop])] != NULL)
-						tmp->StoreBlock[idxize(test_road->hop_uid_list[1+inter_hop])]->Owner_p = NULL;
-					state new_block_state;
-					new_block_state = EXCLUSIVE;
-					tmp->StoreBlock[idxize(test_road->hop_uid_list[1+inter_hop])] = Global_Cache[idxize(test_road->hop_uid_list[1+inter_hop])]->assign_Cblock(new_block_state,false);
-					tmp->StoreBlock[idxize(test_road->hop_uid_list[1+inter_hop])]->set_owner((void**)&tmp->StoreBlock[idxize(test_road->hop_uid_list[1+inter_hop])],false);
-					tmp->StoreBlock[idxize(test_road->hop_uid_list[1+inter_hop])]->init_writeback_info(tmp->WriteBackBlock,
-						&(tmp->RW_master), tmp->dim1, tmp->dim2, tmp->ldim[idxize(test_road->hop_uid_list[1+inter_hop])], tmp->ldim[idxize(tmp->WriteBackLoc)],
-						tmp->dtypesize(), transfer_queues[idxize(tmp->getWriteBackLoc())][idxize(test_road->hop_uid_list[1+inter_hop])], false);
+						if(tmp->StoreBlock[idxize(test_road->hop_uid_list[1+inter_hop])] != NULL)
+							tmp->StoreBlock[idxize(test_road->hop_uid_list[1+inter_hop])]->Owner_p = NULL;
+						state new_block_state;
+						new_block_state = EXCLUSIVE;
+						tmp->StoreBlock[idxize(test_road->hop_uid_list[1+inter_hop])] = Global_Cache[idxize(test_road->hop_uid_list[1+inter_hop])]->assign_Cblock(new_block_state,false);
+						tmp->StoreBlock[idxize(test_road->hop_uid_list[1+inter_hop])]->set_owner((void**)&tmp->StoreBlock[idxize(test_road->hop_uid_list[1+inter_hop])],false);
+						tmp->StoreBlock[idxize(test_road->hop_uid_list[1+inter_hop])]->init_writeback_info(tmp->WriteBackBlock,
+							&(tmp->RW_master), tmp->dim1, tmp->dim2, tmp->ldim[idxize(test_road->hop_uid_list[1+inter_hop])], tmp->ldim[idxize(tmp->WriteBackLoc)],
+							tmp->dtypesize(), transfer_queues[idxize(tmp->getWriteBackLoc())][idxize(test_road->hop_uid_list[1+inter_hop])], false);
 
-					test_road->hop_buf_list[1 + inter_hop] = tmp->StoreBlock[idxize(test_road->hop_uid_list[1+inter_hop])]->Adrs;
-					test_road->hop_event_list[inter_hop] = tmp->StoreBlock[idxize(test_road->hop_uid_list[1+inter_hop])]->Available;
-				}
+						test_road->hop_buf_list[1 + inter_hop] = tmp->StoreBlock[idxize(test_road->hop_uid_list[1+inter_hop])]->Adrs;
+						test_road->hop_event_list[inter_hop] = tmp->StoreBlock[idxize(test_road->hop_uid_list[1+inter_hop])]->Available;
+					}
 
-				test_road->hop_cqueue_list[0]->wait_for_event(tmp->StoreBlock[run_dev_id_idx]->Available);
+					test_road->hop_cqueue_list[0]->wait_for_event(tmp->StoreBlock[run_dev_id_idx]->Available);
 
-				CQueue_p used_queue = test_road->hop_cqueue_list[inter_hop_num] =
-					transfer_queues[idxize(test_road->hop_uid_list[1+inter_hop_num])][idxize(test_road->hop_uid_list[inter_hop_num])];
-				test_road->hop_event_list[inter_hop_num] = tmp->StoreBlock[Writeback_id_idx]->Available;
-				FasTCoCoMemcpy2DAsync(test_road, tmp->dim1, tmp->dim2, tmp->dtypesize());
+					CQueue_p used_queue = test_road->hop_cqueue_list[inter_hop_num] =
+						transfer_queues[idxize(test_road->hop_uid_list[1+inter_hop_num])][idxize(test_road->hop_uid_list[inter_hop_num])];
+					test_road->hop_event_list[inter_hop_num] = tmp->StoreBlock[Writeback_id_idx]->Available;
+					FasTCoCoMemcpy2DAsync(test_road, tmp->dim1, tmp->dim2, tmp->dtypesize());
 
-				lprintf(1, "Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::writeback_data_hops W_flag = %d, \
-					%2d->%2d transfer sequence -> %s\n", run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2,
-					tmp->W_flag, run_dev_id, Writeback_id,
-					printlist(link_hop_route[Writeback_id_idx][run_dev_id_idx], link_hop_num[Writeback_id_idx][run_dev_id_idx]));
-				for(int inter_hop = 0 ; inter_hop < inter_hop_num; inter_hop++){
-					CBlock_wrap_p wrap_inval = NULL;
-					wrap_inval = (CBlock_wrap_p) malloc (sizeof(struct CBlock_wrap));
-					wrap_inval->lockfree = false;
-					wrap_inval->CBlock = tmp->StoreBlock[idxize(test_road->hop_uid_list[inter_hop+1])];
-					test_road->hop_cqueue_list[inter_hop+1]->add_host_func((void*)&CBlock_INV_wrap, (void*) wrap_inval);
+					lprintf(1, "Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::writeback_data_hops W_flag = %d, \
+						%2d->%2d transfer sequence -> %s\n", run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2,
+						tmp->W_flag, run_dev_id, Writeback_id,
+						printlist(link_hop_route[Writeback_id_idx][run_dev_id_idx], link_hop_num[Writeback_id_idx][run_dev_id_idx]));
+					for(int inter_hop = 0 ; inter_hop < inter_hop_num; inter_hop++){
+						CBlock_wrap_p wrap_inval = NULL;
+						wrap_inval = (CBlock_wrap_p) malloc (sizeof(struct CBlock_wrap));
+						wrap_inval->lockfree = false;
+						wrap_inval->CBlock = tmp->StoreBlock[idxize(test_road->hop_uid_list[inter_hop+1])];
+						test_road->hop_cqueue_list[inter_hop+1]->add_host_func((void*)&CBlock_INV_wrap, (void*) wrap_inval);
+					}
 				}
 
 #ifdef STEST
