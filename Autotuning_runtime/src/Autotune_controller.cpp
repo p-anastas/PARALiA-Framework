@@ -210,7 +210,7 @@ void ATC::normalize_split(){
 	lprintf(lvl, "|-----> ATC::normalize_split\n");
 #endif
 	for (int i = 0; i < active_unit_num; i++)
-	if(active_unit_score[i] < NORMALIZE_NEAR_SPLIT_LIMIT){
+	if(active_unit_score[i] < MINIMUM_UNIT_CONTRIBUTION){
 		for (int j = 0; j < active_unit_num; j++)
 			if (i != j) active_unit_score[j] = active_unit_score[j]/(1 - active_unit_score[i]);
 		active_unit_score[i] = 0;

@@ -78,10 +78,6 @@ void CoCoSetTimerAsync(void* wrapped_timer_Ptr){
 #endif
 }
 
-void CoCoFreeAllocAsync(void* backend_data){
-  free(backend_data);
-}
-
 void cblas_wrap_daxpy(void* backend_data){
   axpy_backend_in_p ptr_ker_translate = (axpy_backend_in_p) backend_data;
   cblas_daxpy(ptr_ker_translate->N, ptr_ker_translate->alpha,

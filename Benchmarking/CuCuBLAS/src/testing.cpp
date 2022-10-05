@@ -92,7 +92,7 @@ void ParseInputLvl1(const int argc, const char *argv[], ATC_p* predef_control_va
 			temp_p->active_unit_num = active_unit_num;
 			int ctr = 0, itter = 0;
 			do {
-				if (dev_ids_token%10 == 1) temp_p->active_unit_id_list[ctr++] = itter;
+				if (dev_ids_token%10 == 1) temp_p->active_unit_id_list[ctr++] = deidxize(itter);
 				itter++;
 				dev_ids_token/=10;
 			} while ( dev_ids_token > 0);

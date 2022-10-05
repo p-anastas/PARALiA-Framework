@@ -66,6 +66,7 @@ GPUexec3Model_p GPUexec3Model_init(short dev_id, const char* func){
 	out_model->lines = bench_lines;
 	out_model->T_lookup_buf = (long int*) malloc( bench_lines* sizeof(long int));
 	out_model->av_time_buf = (double*) malloc( bench_lines* sizeof(double));
+	out_model->av_W_buf = (double*) malloc( bench_lines* sizeof(double));
 	out_model->TransA_buf = (char*) malloc( bench_lines* sizeof(char));
 	out_model->TransB_buf = (char*) malloc( bench_lines* sizeof(char));
 #ifdef PDEBUG

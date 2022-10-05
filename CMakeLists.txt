@@ -61,6 +61,14 @@ add_definitions(-DPREDICT_OPTIMIZE_TARGET="PERF")
 #add_definitions(-DPREDICT_OPTIMIZE_TARGET="ENERGY")
 #add_definitions(-DPREDICT_OPTIMIZE_TARGET="OTHER_TBD")
 
+## Define at which percentage to normalize float values for similar data (e.g. costs, splits etc) to avoid empirical errors leaking into decisions
+## For example see Autotuning_runtime->CoCoPeLiaModel->CoCoPeLiaNormalizeSplit
+add_definitions(-DNORMALIZE_NEAR_SPLIT_LIMIT=0.05)
+
+## Define the minimum allowed percentile contribution in total time from each potential unit
+## In case of energy, the maximum allowed percentile energy increase by each new unit.
+add_definitions(-DMINIMUM_UNIT_CONTRIBUTION=0.05)
+
 set(SCHEDULE_TYPE 0) # 0 = static, 1 = runtime selection
 
 if (${SCHEDULE_TYPE} EQUAL 0)
@@ -78,17 +86,13 @@ endif()
 
 #Run subkernels in provided order
 add_definitions(-DSERIAL_SUBKERNEL_SELECTION)
-## Define subkernel selection heuristic values. 0 = No penalty
 
+## Define subkernel selection heuristic values. 0 = No penalty
 add_definitions(-DMULTIFETCH_PENALTY=2)
 add_definitions(-DFETCH_UNAVAILABLE_PENALTY=0.15)
 add_definitions(-DWTILE_TRANSFER_PENALTY=1)
 add_definitions(-DPARALLELBBOTLENECK_PENALTY=0)
 add_definitions(-DEXSTEAL_PENALTY=10)
-
-## Define at which percentage to normalize float values for similar data (e.g. costs, splits etc) to avoid empirical errors leaking into decisions
-## For example see Autotuning_runtime->CoCoPeLiaModel->CoCoPeLiaNormalizeSplit
-add_definitions(-DNORMALIZE_NEAR_SPLIT_LIMIT=0.05)
 
 #Run in testing mode : details about models, decisions and time spend in operations.
 #add_definitions(-DTEST)
@@ -127,7 +131,7 @@ message("CoCopeLia-Framework - TESTBED_NAME: " ${TESTBED_NAME})
 add_definitions(-DTESTBED="${TESTBED_NAME}")
 
 ## Define the (max) number of devices for utilization (0-num_devices)
-set(NUM_LOCATIONS 3) # TODO: silver1
+set(NUM_LOCATIONS 4) # TODO: silver1
 #set(NUM_LOCATIONS 9) # TODO: Vulcan
 message("CoCopeLia-Framework - NUM_LOCATIONS: " ${NUM_LOCATIONS})
 add_definitions(-DLOC_NUM=${NUM_LOCATIONS})
