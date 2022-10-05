@@ -164,7 +164,7 @@ int main(const int argc, const char *argv[]) {
 			nvem_data = (NvemStats_p) malloc(sizeof(struct nvem_results));
 			strcpy(nvem_data->name, "Energy measure dgemm_microbench");
 			nvem_data->sensor_ticks = -1;
-			nvem_data->total_bench_t = csecond() - cpu_timer;
+			nvem_data->total_bench_t = bench_t;
 			nvem_data->W_avg = CPU_W_PREDEF;
 			nvem_data->J_estimated = nvem_data->W_avg*nvem_data->total_bench_t;
 		}
@@ -221,11 +221,11 @@ int main(const int argc, const char *argv[]) {
 			nvem_data = (NvemStats_p) malloc(sizeof(struct nvem_results));
 			strcpy(nvem_data->name, "Energy measure dgemm_microbench");
 			nvem_data->sensor_ticks = -1;
-			nvem_data->total_bench_t = csecond() - cpu_timer;
+			nvem_data->total_bench_t = bench_t;
 			nvem_data->W_avg = CPU_W_PREDEF;
 			nvem_data->J_estimated = nvem_data->W_avg*nvem_data->total_bench_t;
 		}
-		double W_avg = nvem_data->W_avg, J_estimated = nvem_data->J_estimated/sample_sz;
+		double W_avg = nvem_data->W_avg, J_estimated = nvem_data->J_estimated/ITER;
 		fprintf(stderr, "GPU exec time:\t Average=%lf ms, Min = %lf ms, Max = %lf ms, Energy: ( %lf Watt -> %lf J)\n",
 			cublas_t_av  * 1000, cublas_t_min  * 1000, cublas_t_max  * 1000, W_avg, J_estimated);
 

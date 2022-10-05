@@ -149,7 +149,7 @@ int main(const int argc, const char *argv[]) {
 			nvem_data = (NvemStats_p) malloc(sizeof(struct nvem_results));
 			strcpy(nvem_data->name, "Energy measure dgemm_microbench");
 			nvem_data->sensor_ticks = -1;
-			nvem_data->total_bench_t = csecond() - cpu_timer;
+			nvem_data->total_bench_t = bench_t;
 			nvem_data->W_avg = CPU_W_PREDEF;
 			nvem_data->J_estimated = nvem_data->W_avg*nvem_data->total_bench_t;
 		}
@@ -204,22 +204,22 @@ int main(const int argc, const char *argv[]) {
 			nvem_data = (NvemStats_p) malloc(sizeof(struct nvem_results));
 			strcpy(nvem_data->name, "Energy measure dgemm_microbench");
 			nvem_data->sensor_ticks = -1;
-			nvem_data->total_bench_t = csecond() - cpu_timer;
+			nvem_data->total_bench_t = bench_t;
 			nvem_data->W_avg = CPU_W_PREDEF;
 			nvem_data->J_estimated = nvem_data->W_avg*nvem_data->total_bench_t;
 		}
-		double W_avg = nvem_data->W_avg, J_estimated = nvem_data->J_estimated/sample_sz;
+		double W_avg = nvem_data->W_avg, J_estimated = nvem_data->J_estimated/ITER;
 		fprintf(stderr, "Microbenchmark (N = %zu) complete:\t mean_exec_t=%lf ms ( %.1lf Gflops/s )\
 			, Energy: ( %lf Watt -> %lf J), Error Margin (percentage of mean) = %lf %, Itter = %d, Microbench_t = %lf\n\n",
 			T, cublas_t_mean  * 1000, Gval_per_s(axpy_flops(T), cublas_t_mean),
-			W_avg, J_estimated, error_margin/cublas_t_mean  * 100, sample_sz, bench_t);
+			W_avg, J_estimated, error_margin/cublas_t_mean  * 100, ITER, bench_t);
 		report_run(filename, T, cublas_t_av, W_avg, J_estimated,
 			fmax(cublas_t_max - cublas_t_av, cublas_t_av - cublas_t_min), ITER, cublas_t_max);
 #else
 		fprintf(stderr, "Microbenchmark (N = %zu) complete:\t mean_exec_t=%lf ms ( %.1lf Gflops/s )\
 			, Error Margin (percentage of mean) = %lf %, Itter = %d, Microbench_t = %lf\n\n",
 			T, cublas_t_mean  * 1000, Gval_per_s(axpy_flops(T), cublas_t_mean),
-			error_margin/cublas_t_mean  * 100, sample_sz, bench_t);
+			error_margin/cublas_t_mean  * 100, ITER, bench_t);
 		report_run(filename, T, cublas_t_av,
 			fmax(cublas_t_max - cublas_t_av, cublas_t_av - cublas_t_min), ITER, cublas_t_max);
 #endif
