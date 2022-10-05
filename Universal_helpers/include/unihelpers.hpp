@@ -155,7 +155,8 @@ typedef struct link_road{
 
 // A memcpy implementation using multiple units as intermendiate hops for a better transfer bandwidth
 void FasTCoCoMemcpy2DAsync(link_road_p roadMap, long int rows, long int cols, short elemSize);
-
+// Print bandwidths and links used with FasTCoCoMemcpy2DAsync. Unusable with TTEST flag
+void HopMemcpyPrint();
 /*****************************************************/
 /// Timers for benchmarks
 // CPU accurate timer

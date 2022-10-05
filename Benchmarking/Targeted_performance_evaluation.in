@@ -39,7 +39,7 @@ do
 	## A = Full offload scenario (Initially all data on CPU), B = Partial offload scenario
 	TransA=N
 	TransB=N
-	for scenario in "Full_offload" "Partial_offload" "Device_only_offload" "Device_only_offload_mixed1" "Device_only_offload_mixed2"
+	for scenario in "Full_offload" "Partial_offload" "Partial_offload_RONLY" "Device_only_offload" "Device_only_offload_mixed1" "Device_only_offload_mixed2"
 	do
 		C_loc=-1
 		echo $scenario
@@ -51,6 +51,11 @@ do
 			then
 				A_loc=0
 				B_loc=0
+		elif [ "$scenario" = "Partial_offload_RONLY" ];
+			then
+				A_loc=-1
+				B_loc=-1
+				C_loc=0
 		elif [ "$scenario" = "Device_only_offload" ];
 			then
 				A_loc=0
@@ -76,8 +81,8 @@ do
 			$CoCopelia_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $Sq $Sq $Sq $A_loc $B_loc $C_loc $C_loc  &>> $perf_log
 			#echo "$CoCopelia_run_bestest -1 -1 -1 -1 $TransA $TransB $alpha $beta $Sq $Sq $Sq $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
 			#$CoCopelia_run_bestest -1 -1 -1 -1 $TransA $TransB $alpha $beta $Sq $Sq $Sq $A_loc $B_loc $C_loc $C_loc  &>> $perf_log
-			echo "$CoCopelia_run_best -1 -1 -1 -1 $TransA $TransB $alpha $beta $Sq $Sq $Sq $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
-			$CoCopelia_run_best -1 -1 -1 -1 $TransA $TransB $alpha $beta $Sq $Sq $Sq $A_loc $B_loc $C_loc $C_loc  &>> $perf_log
+			#echo "$CoCopelia_run_best -1 -1 -1 -1 $TransA $TransB $alpha $beta $Sq $Sq $Sq $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
+			#$CoCopelia_run_best -1 -1 -1 -1 $TransA $TransB $alpha $beta $Sq $Sq $Sq $A_loc $B_loc $C_loc $C_loc  &>> $perf_log
 			#echo "$CoCopelia_run_old -1 -1 -1 -1 $TransA $TransB $alpha $beta $Sq $Sq $Sq $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
 			#$CoCopelia_run_old -1 -1 -1 -1 $TransA $TransB $alpha $beta $Sq $Sq $Sq $A_loc $B_loc $C_loc $C_loc  &>> $perf_log
 			#echo "$CoCopelia_run_best_old -1 -1 -1 -1 $TransA $TransB $alpha $beta $Sq $Sq $Sq $A_loc $B_loc $C_loc $C_loc &>> $perf_log"

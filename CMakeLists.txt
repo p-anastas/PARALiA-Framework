@@ -52,8 +52,8 @@ add_definitions(-DENABLE_LINK_BW_SHARING) # by putting them on different queues
 
 ## TODO: EXPERMENTAL: Enable power measuring for benchmarks, and energy-related prediction modes for the Autotuner
 add_definitions(-DENABLE_POWA)
-#add_definitions(-DCPU_W_PREDEF=) # TODO: Vulcan CAUTION!!! Define this for your CPU - no CPU power tool installed.
-add_definitions(-DCPU_W_PREDEF=170) # TODO: silver1 CAUTION!!! Define this for your CPU - no CPU power tool installed.
+add_definitions(-DCPU_W_PREDEF=300) # TODO: Vulcan CAUTION!!! Define this for your CPU - no CPU power tool installed.
+#add_definitions(-DCPU_W_PREDEF=170) # TODO: silver1 CAUTION!!! Define this for your CPU - no CPU power tool installed.
 ## Choose the Unit combination that maximizes total performance (minimum time).
 add_definitions(-DPREDICT_OPTIMIZE_TARGET="PERF")
 ## Choose the Unit combination that minimizes consumed energy (J).
@@ -91,7 +91,7 @@ add_definitions(-DSERIAL_SUBKERNEL_SELECTION)
 add_definitions(-DMULTIFETCH_PENALTY=2)
 add_definitions(-DFETCH_UNAVAILABLE_PENALTY=0.15)
 add_definitions(-DWTILE_TRANSFER_PENALTY=1)
-add_definitions(-DPARALLELBBOTLENECK_PENALTY=0)
+add_definitions(-DPARALLELBBOTLENECK_PENALTY=0.5)
 add_definitions(-DEXSTEAL_PENALTY=10)
 
 #Run in testing mode : details about models, decisions and time spend in operations.
@@ -102,6 +102,9 @@ add_definitions(-DEXSTEAL_PENALTY=10)
 
 #Run in Deep Subkernel testing mode : many details about time spend in subkernel operations.
 #add_definitions(-DDSTEST)
+
+#Run in Link Hop testing mode; transfers using link hops are logged and timed.
+#add_definitions(-DTTEST)
 
 #Run in debug mode, which includes detailed function calls and info for error-checking
 #add_definitions(-DDEBUG)
@@ -125,14 +128,14 @@ add_definitions(-DEXSTEAL_PENALTY=10)
 #add_definitions(-DUDDEBUG)
 
 ## Define a name for the testbed, to be used for the whole framework setup
-set(TESTBED_NAME "silver1") # TODO: silver1
-#set(TESTBED_NAME "vulcanGPUs")  # TODO: Vulcan
+#set(TESTBED_NAME "silver1") # TODO: silver1
+set(TESTBED_NAME "vulcan")  # TODO: Vulcan
 message("CoCopeLia-Framework - TESTBED_NAME: " ${TESTBED_NAME})
 add_definitions(-DTESTBED="${TESTBED_NAME}")
 
 ## Define the (max) number of devices for utilization (0-num_devices)
-set(NUM_LOCATIONS 4) # TODO: silver1
-#set(NUM_LOCATIONS 9) # TODO: Vulcan
+#set(NUM_LOCATIONS 4) # TODO: silver1
+set(NUM_LOCATIONS 9) # TODO: Vulcan
 message("CoCopeLia-Framework - NUM_LOCATIONS: " ${NUM_LOCATIONS})
 add_definitions(-DLOC_NUM=${NUM_LOCATIONS})
 
@@ -157,12 +160,12 @@ message("CoCopeLia-Framework - CMAKE_CXX_FLAGS: " ${CMAKE_CXX_FLAGS})
 #	d) auto
 
 ## 2) CUCUBLAS TODO: Other backends?
-set (CUDA_PREFIX "/usr/local/cuda-11.6") # TODO: Silver1
+#set (CUDA_PREFIX "/usr/local/cuda-11.6") # TODO: Silver1
 add_definitions(-DCUDA_VER=1100)
 #set (CUDA_PREFIX "/usr/local/cuda-9.2")
 #add_definitions(-DCUDA_VER=920)
-#set (CUDA_PREFIX "/opt/system/cuda/11.7.0") # TODO: Vulcan
-#set (CXX_PREFIX "/opt/hlrs/non-spack/2022-02/compiler/gcc/11.2.0") # TODO: Vulcan
+set (CUDA_PREFIX "/opt/system/cuda/11.7.0") # TODO: Vulcan
+set (CXX_PREFIX "/opt/hlrs/non-spack/2022-02/compiler/gcc/11.2.0") # TODO: Vulcan
 
 
 if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
@@ -171,8 +174,8 @@ endif()
 
 # 	a) Compiler
 set (CMAKE_CUDA_COMPILER ${CUDA_PREFIX}/bin/nvcc)
-#set (CMAKE_CXX_COMPILER ${CXX_PREFIX}/bin/c++) # TODO: Vulcan
-#set (CMAKE_C_COMPILER ${CXX_PREFIX}/bin/gcc) # TODO: Vulcan
+set (CMAKE_CXX_COMPILER ${CXX_PREFIX}/bin/c++) # TODO: Vulcan
+set (CMAKE_C_COMPILER ${CXX_PREFIX}/bin/gcc) # TODO: Vulcan
 
 # 	b) Compile flags
 set (CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -w -O3")
@@ -185,16 +188,16 @@ set (CUDA_INCLUDE_DIRS ${CUDA_PREFIX}/include ${CUDA_PREFIX}/samples/common/inc)
 include_directories(${CUDA_INCLUDE_DIRS})
 message("CoCopeLia-Framework - CUDA_INCLUDE_DIRS: " ${CUDA_INCLUDE_DIRS})
 
-set(OPENBLAS_PREFIX "/home/users/panastas/Lib_install/OpenBLAS-gcc93") # TODO: silver1
-#set(OPENBLAS_PREFIX "/zhome/academic/HLRS/xex/xexpanas/OpenBLAS_install_vulcan-11.2") # TODO: Vulcan
+#set(OPENBLAS_PREFIX "/home/users/panastas/Lib_install/OpenBLAS-gcc93") # TODO: silver1
+set(OPENBLAS_PREFIX "/zhome/academic/HLRS/xex/xexpanas/OpenBLAS_install_vulcan-11.2") # TODO: Vulcan
 set (OPENBLAS_INCLUDE_DIRS ${OPENBLAS_PREFIX}/include)
 include_directories(${OPENBLAS_INCLUDE_DIRS})
 message("CoCopeLia-Framework - OPENBLAS_INCLUDE_DIRS: " ${OPENBLAS_INCLUDE_DIRS})
 
 # 	d) Link Libraries
 set (CUDA_LD ${CUDA_PREFIX}/lib64) # or /lib depending on system
-set (CUDA_LINK "-L${CUDA_LD} -lcudart -lcublas -lcurand -lcuda") # TODO: silver1
-#set (CUDA_LINK "-L${CUDA_LD} -lcudart -lcublas -lcurand ") # TODO: Vulcan /opt/system/nvidia/ALL.ALL.510.73.08/libcuda.so.510.73.08 ?
+#set (CUDA_LINK "-L${CUDA_LD} -lcudart -lcublas -lcurand -lcuda") # TODO: silver1
+set (CUDA_LINK "-L${CUDA_LD} -lcudart -lcublas -lcurand ") # TODO: Vulcan /opt/system/nvidia/ALL.ALL.510.73.08/libcuda.so.510.73.08 ?
 message("CoCopeLia-Framework - CUDA_LINK: " ${CUDA_LINK} )
 set (INTERNAL_LINK_LIB "${CUDA_LINK} -lrt -ldl")
 message("CoCopeLia-Framework - INTERNAL_LINK_LIB: " ${INTERNAL_LINK_LIB})

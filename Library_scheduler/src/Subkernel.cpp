@@ -207,12 +207,22 @@ void Subkernel::request_tile_hops(short TileIdx){
 			used_queue = test_road->hop_cqueue_list[inter_hop_num] =
 				transfer_queues[idxize(test_road->hop_uid_list[1+inter_hop_num])][idxize(test_road->hop_uid_list[inter_hop_num])];
 			test_road->hop_event_list[inter_hop_num] = tmp->StoreBlock[run_dev_id_idx]->Available;
+#ifdef STEST
+			used_queue->add_host_func((void*)&CoCoSetTimerAsync, (void*) &reqT_start_ts[TileIdx]);
+#endif
 			FasTCoCoMemcpy2DAsync(test_road, tmp->dim1, tmp->dim2, tmp->dtypesize());
-
+#ifdef STEST
+			used_queue->add_host_func((void*)&CoCoSetTimerAsync, (void*) &reqT_end_ts[TileIdx]);
+			bytes_in[TileIdx]= tmp->size();
+			dev_in_from[TileIdx] = FetchFromId;
+			dev_in_to[TileIdx] = run_dev_id;
+#endif
+#ifdef PDEBUG
 			lprintf(1, "Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::request_tile_hops W_flag = %d, \
 				%2d->%2d transfer sequence -> %s\n", run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2,
 				tmp->W_flag, FetchFromId, run_dev_id,
 				printlist(link_hop_route[run_dev_id_idx][FetchFromId_idx], link_hop_num[run_dev_id_idx][FetchFromId_idx]));
+#endif
 			if(tmp->W_flag){
 				//if (tmp->StoreBlock[FetchFromId_idx]!= tmp->WriteBackBlock){
 					for(int inter_hop = 0 ; inter_hop < inter_hop_num; inter_hop++){
@@ -708,16 +718,24 @@ void Subkernel::writeback_data_hops(){
 				if (prev_state != NATIVE)
 					error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::writeback_data_hops: Tile(j=%d) WriteBackBlock was %s instead of NATIVE\n",
 						run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2, j, print_state(prev_state));
+				int inter_hop_num = link_hop_num[Writeback_id_idx][run_dev_id_idx];
+				if(inter_hop_num == 0){
 #ifdef STEST
-				transfer_queues[Writeback_id_idx][run_dev_id_idx]->add_host_func(
+					transfer_queues[Writeback_id_idx][run_dev_id_idx]->add_host_func(
 						(void*)&CoCoSetTimerAsync, (void*) &(wbT_start_ts[j]));
 #endif
-				int inter_hop_num = link_hop_num[Writeback_id_idx][run_dev_id_idx];
-				if(inter_hop_num == 0)
 					CoCoMemcpy2DAsync(tmp->WriteBackBlock->Adrs, tmp->ldim[Writeback_id_idx],
 						tmp->StoreBlock[run_dev_id_idx]->Adrs, tmp->ldim[run_dev_id_idx],
 						tmp->dim1, tmp->dim2, tmp->dtypesize(),
 						Writeback_id, run_dev_id, transfer_queues[Writeback_id_idx][run_dev_id_idx]);
+#ifdef STEST
+					transfer_queues[Writeback_id_idx][run_dev_id_idx]->add_host_func(
+							(void*)&CoCoSetTimerAsync, (void*) &(wbT_end_ts[j]));
+					bytes_out[j]= tmp->size();
+					dev_out_from[j] = run_dev_id;
+					dev_out_to[j] = Writeback_id;
+#endif
+				}
 				else{
 					link_road_p test_road = (link_road_p) malloc(sizeof(struct link_road));
 					test_road->hop_num = 2 + inter_hop_num;
@@ -760,12 +778,24 @@ void Subkernel::writeback_data_hops(){
 					CQueue_p used_queue = test_road->hop_cqueue_list[inter_hop_num] =
 						transfer_queues[idxize(test_road->hop_uid_list[1+inter_hop_num])][idxize(test_road->hop_uid_list[inter_hop_num])];
 					test_road->hop_event_list[inter_hop_num] = tmp->StoreBlock[Writeback_id_idx]->Available;
+#ifdef STEST
+					used_queue->add_host_func(
+						(void*)&CoCoSetTimerAsync, (void*) &(wbT_start_ts[j]));
+#endif
 					FasTCoCoMemcpy2DAsync(test_road, tmp->dim1, tmp->dim2, tmp->dtypesize());
-
+#ifdef STEST
+				used_queue->add_host_func(
+						(void*)&CoCoSetTimerAsync, (void*) &(wbT_end_ts[j]));
+				bytes_out[j]= tmp->size();
+				dev_out_from[j] = run_dev_id;
+				dev_out_to[j] = Writeback_id;
+#endif
+#ifdef PDEBUG
 					lprintf(1, "Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::writeback_data_hops W_flag = %d, \
 						%2d->%2d transfer sequence -> %s\n", run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2,
 						tmp->W_flag, run_dev_id, Writeback_id,
 						printlist(link_hop_route[Writeback_id_idx][run_dev_id_idx], link_hop_num[Writeback_id_idx][run_dev_id_idx]));
+#endif
 					for(int inter_hop = 0 ; inter_hop < inter_hop_num; inter_hop++){
 						CBlock_wrap_p wrap_inval = NULL;
 						wrap_inval = (CBlock_wrap_p) malloc (sizeof(struct CBlock_wrap));
@@ -774,14 +804,6 @@ void Subkernel::writeback_data_hops(){
 						test_road->hop_cqueue_list[inter_hop+1]->add_host_func((void*)&CBlock_INV_wrap, (void*) wrap_inval);
 					}
 				}
-
-#ifdef STEST
-				transfer_queues[Writeback_id_idx][run_dev_id_idx]->add_host_func(
-						(void*)&CoCoSetTimerAsync, (void*) &(wbT_end_ts[j]));
-				bytes_out[j]= tmp->size();
-				dev_out_from[j] = run_dev_id;
-				dev_out_to[j] = Writeback_id;
-#endif
 
 				Ptr_atomic_int_p wrapped_op = (Ptr_atomic_int_p) malloc(sizeof(struct Ptr_atomic_int));
 				wrapped_op->ato_int_ptr = &tmp->RW_lock_holders;
@@ -1565,6 +1587,9 @@ void STEST_print_SK(kernel_pthread_wrap_p* thread_dev_data_list, double routine_
 	}
 	lprintf(0, "\n   |");
 
+#ifdef TTEST
+	HopMemcpyPrint();
+#endif
 	lprintf(0, "\n");
 	lprintf(0,"\nSum-up R-Tiles:\n");
 	lprintf(0,"Total H2D transfers = %d\n", total_h2d_R);

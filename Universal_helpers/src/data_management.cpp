@@ -10,12 +10,17 @@
 #include <curand.h>
 
 #include "unihelpers.hpp"
-//#include "backend_wrappers.hpp"
+#include "backend_wrappers.hpp"
+
+#ifdef TTEST /// C programmers hate him
+double timers[LOC_NUM][LOC_NUM][2][10000];
+long long bytes[LOC_NUM][LOC_NUM][10000];
+int timer_ctr[LOC_NUM][LOC_NUM] = {{0}};
+#endif
 
 //#define SPLIT_2D_ROWISE
 void FasTCoCoMemcpy2DAsync(link_road_p roadMap, long int rows, long int cols, short elemSize){
 	if(roadMap->hop_num < 2) error("FasTCoCoMemcpy2DAsync: Cannot copy with less than 2 locations\n");
-
 	int buffer_bw_overlap = 8;
 	Event_p step_events[roadMap->hop_num][buffer_bw_overlap];
 	for(int uid_ctr = 0; uid_ctr < roadMap->hop_num - 1; uid_ctr++){
@@ -23,6 +28,16 @@ void FasTCoCoMemcpy2DAsync(link_road_p roadMap, long int rows, long int cols, sh
 		long int local_rows = rows/buffer_bw_overlap;
 #else
 		long int local_cols = cols/buffer_bw_overlap;
+#endif
+#ifdef TTEST
+			if (timer_ctr[roadMap->hop_uid_list[uid_ctr + 1]][roadMap->hop_uid_list[uid_ctr]] > 10000)
+				error("FasTCoCoMemcpy2DAsync(dest = %d, src = %d) exeeded 10000 transfers in TTEST Mode\n",
+					roadMap->hop_uid_list[uid_ctr + 1], roadMap->hop_uid_list[uid_ctr]);
+			bytes[roadMap->hop_uid_list[uid_ctr + 1]][roadMap->hop_uid_list[uid_ctr]]
+			[timer_ctr[roadMap->hop_uid_list[uid_ctr + 1]][roadMap->hop_uid_list[uid_ctr]]] += rows*cols*elemSize;
+			roadMap->hop_cqueue_list[uid_ctr]->add_host_func(
+				(void*)&CoCoSetTimerAsync, (void*) &(timers[roadMap->hop_uid_list[uid_ctr + 1]][roadMap->hop_uid_list[uid_ctr]]
+				[0][timer_ctr[roadMap->hop_uid_list[uid_ctr + 1]][roadMap->hop_uid_list[uid_ctr]]]));
 #endif
 		for(int steps = 0; steps < buffer_bw_overlap; steps++){
 			step_events[uid_ctr][steps] = new Event(roadMap->hop_uid_list[uid_ctr+1]);
@@ -47,5 +62,50 @@ void FasTCoCoMemcpy2DAsync(link_road_p roadMap, long int rows, long int cols, sh
 			step_events[uid_ctr][steps]->record_to_queue(roadMap->hop_cqueue_list[uid_ctr]);
 		}
 		roadMap->hop_event_list[uid_ctr]->record_to_queue(roadMap->hop_cqueue_list[uid_ctr]);
+#ifdef TTEST
+	roadMap->hop_cqueue_list[uid_ctr]->add_host_func(
+	(void*)&CoCoSetTimerAsync, (void*) &(timers[roadMap->hop_uid_list[uid_ctr + 1]][roadMap->hop_uid_list[uid_ctr]]
+	[1][timer_ctr[roadMap->hop_uid_list[uid_ctr + 1]][roadMap->hop_uid_list[uid_ctr]]++]));
+#endif
 	}
 }
+
+#ifdef TTEST
+void HopMemcpyPrint(){
+	lprintf(0,"\n Hop Tranfer Map:\n   |");
+	for (int d2 = 0; d2 < LOC_NUM; d2++)
+		lprintf(0, "  %2d  |", deidxize(d2));
+	lprintf(0, "\n   |");
+	for (int d2 = 0; d2 < LOC_NUM; d2++)
+		lprintf(0, "-------");
+	lprintf(0, "\n");
+	for (int d1 = 0; d1 < LOC_NUM; d1++){
+		lprintf(0, "%2d | ", deidxize(d1));
+		for (int d2 = 0; d2 < LOC_NUM; d2++){
+			lprintf(0, "%4d | ", timer_ctr[d1][d2]);
+		}
+		lprintf(0, "\n");
+	}
+
+	lprintf(0,"\n Hop Tranfer Map Achieved Bandwidths (GB/s):\n   |");
+	for (int d2 = 0; d2 < LOC_NUM; d2++)
+		lprintf(0, "    %2d     |", deidxize(d2));
+	lprintf(0, "\n   |");
+	for (int d2 = 0; d2 < LOC_NUM; d2++)
+		lprintf(0, "------------");
+	lprintf(0, "\n");
+	for (int d1 = 0; d1 < LOC_NUM; d1++){
+		lprintf(0, "%2d | ", deidxize(d1));
+		for (int d2 = 0; d2 < LOC_NUM; d2++){
+			if(timer_ctr[d1][d2]){
+				double total_bw = 0;
+				for (int idx = 0; idx < timer_ctr[d1][d2]; idx++) total_bw+= (
+					Gval_per_s(bytes[d1][d2][idx], timers[d1][d2][1][idx] - timers[d1][d2][0][idx]));
+				lprintf(0, "%lf | ", total_bw/timer_ctr[d1][d2] );
+			}
+			else lprintf(0, "    -     | ");
+		}
+		lprintf(0, "\n");
+	}
+}
+#endif

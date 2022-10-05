@@ -138,9 +138,6 @@ void ATC::update_link_shared_weights(){
 #ifdef PDEBUG
   link_shared_bw_map_print();
 #else
-#ifdef STEST
-  link_shared_bw_map_print();
-#endif
 #endif
 #ifdef DEBUG
   lprintf(lvl, "<-----| update_link_shared_weights()\n");

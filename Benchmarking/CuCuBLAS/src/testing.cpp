@@ -24,6 +24,9 @@ char* CoCoImplementationPrint(){
 #ifndef BACKEND_RES_REUSE_ENABLE
 	sprintf(string_out, "_NO-UN-RE");
 #endif
+#ifndef ENABLE_SEND_RECV_OVERLAP
+	sprintf(string_out, "_NO-SND-RCV-OVER");
+#endif
 #ifdef ENABLE_PARALLEL_BACKEND
 	sprintf(string_helper, "_UN-PB-L%d", MAX_BACKEND_L);
 	strcat(string_out, string_helper);
@@ -39,6 +42,10 @@ char* CoCoImplementationPrint(){
 	sprintf(string_helper, "HOPS-%d-%.2lf", MAX_ALLOWED_HOPS, HOP_PENALTY);
 	strcat(string_out, string_helper);
 #endif
+#ifdef ENABLE_POWA
+	sprintf(string_helper, "_PW-PRED-%s", PREDICT_OPTIMIZE_TARGET);
+	strcat(string_out, string_helper);
+#endif
 //#ifdef DDEBUG
 	printf("%s\n", string_out);
 //#endif
@@ -51,7 +58,9 @@ char* CoCoDistributionPrint(){
 	char* string_out = (char*) malloc (1024*sizeof(char));
 #ifdef RUNTIME_SCHEDULER_VERSION
 #ifdef DISTRIBUTION
-	sprintf(string_out, "RT-%s", DISTRIBUTION);
+	sprintf(string_out, "RT-%s_MFP-%4.2lf_FUP-%4.2lf_WTP-%4.2lf_PBP-%4.2lf_EXP-%4.2lf",
+		DISTRIBUTION, MULTIFETCH_PENALTY, FETCH_UNAVAILABLE_PENALTY, WTILE_TRANSFER_PENALTY,
+		PARALLELBBOTLENECK_PENALTY, EXSTEAL_PENALTY);
 #else
 #error
 #endif
