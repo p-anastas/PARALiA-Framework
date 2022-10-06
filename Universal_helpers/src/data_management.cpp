@@ -89,10 +89,10 @@ void HopMemcpyPrint(){
 
 	lprintf(0,"\n Hop Tranfer Map Achieved Bandwidths (GB/s):\n   |");
 	for (int d2 = 0; d2 < LOC_NUM; d2++)
-		lprintf(0, "    %2d     |", deidxize(d2));
+		lprintf(0, "  %2d   |", deidxize(d2));
 	lprintf(0, "\n   |");
 	for (int d2 = 0; d2 < LOC_NUM; d2++)
-		lprintf(0, "------------");
+		lprintf(0, "--------");
 	lprintf(0, "\n");
 	for (int d1 = 0; d1 < LOC_NUM; d1++){
 		lprintf(0, "%2d | ", deidxize(d1));
@@ -101,9 +101,9 @@ void HopMemcpyPrint(){
 				double total_bw = 0;
 				for (int idx = 0; idx < timer_ctr[d1][d2]; idx++) total_bw+= (
 					Gval_per_s(bytes[d1][d2][idx], timers[d1][d2][1][idx] - timers[d1][d2][0][idx]));
-				lprintf(0, "%lf | ", total_bw/timer_ctr[d1][d2] );
+				lprintf(0, "%04.2lf | ", total_bw/timer_ctr[d1][d2] );
 			}
-			else lprintf(0, "    -     | ");
+			else lprintf(0, "  -   | ");
 		}
 		lprintf(0, "\n");
 	}

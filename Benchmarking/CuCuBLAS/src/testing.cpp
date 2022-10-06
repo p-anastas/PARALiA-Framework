@@ -55,12 +55,13 @@ char* CoCoImplementationPrint(){
 }
 
 char* CoCoDistributionPrint(){
-	char* string_out = (char*) malloc (1024*sizeof(char));
+	char* string_out = (char*) malloc (2048*sizeof(char));
 #ifdef RUNTIME_SCHEDULER_VERSION
 #ifdef DISTRIBUTION
-	sprintf(string_out, "RT-%s_MFP-%4.2lf_FUP-%4.2lf_WTP-%4.2lf_PBP-%4.2lf_EXP-%4.2lf",
-		DISTRIBUTION, MULTIFETCH_PENALTY, FETCH_UNAVAILABLE_PENALTY, WTILE_TRANSFER_PENALTY,
-		PARALLELBBOTLENECK_PENALTY, EXSTEAL_PENALTY);
+	sprintf(string_out, "RT-%s", DISTRIBUTION);
+	//sprintf(string_out, "RT-%s_MFP-%4.2lf_FUP-%4.2lf_WTP-%4.2lf_PBP-%4.2lf_EXP-%4.2lf",
+	//	DISTRIBUTION, MULTIFETCH_PENALTY, FETCH_UNAVAILABLE_PENALTY, WTILE_TRANSFER_PENALTY,
+	//	PARALLELBBOTLENECK_PENALTY, EXSTEAL_PENALTY); This does not work , wonder why!
 #else
 #error
 #endif

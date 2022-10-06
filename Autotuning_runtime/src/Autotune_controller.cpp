@@ -307,7 +307,8 @@ double ATC::autotune_problem(const char* routine_name, void* initial_problem_wra
 #endif
 				split_selection_t += temp_controller->optimize_split();
 
-				if (temp_controller->pred_t < pred_t) mimic_ATC(temp_controller);
+				if (temp_controller->pred_t +
+					temp_controller->pred_t*((temp_controller->active_unit_num-active_unit_num)*MINIMUM_UNIT_CONTRIBUTION) < pred_t) mimic_ATC(temp_controller);
 #ifdef PDEBUG
 						lprintf(0, "==============================================\n");
 						lprintf(0, "Autotune devices (iter %d): Tuning for active_unit_id_list = [ ", case_id);

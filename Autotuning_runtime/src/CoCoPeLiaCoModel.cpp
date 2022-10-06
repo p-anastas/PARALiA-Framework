@@ -128,9 +128,15 @@ double t_com_predict_shared(CoModel_p model, long double bytes)
 			bytes, model->ti, model-> tb, (model->ti + model-> tb*bytes)*1000, model->to, model->from, link_bw[idxize(model->to)][idxize(model->from)],
 		model->to, model->from, link_shared_bw[idxize(model->to)][idxize(model->from)]);
 #endif
+#ifdef ENABLE_TRANSFER_HOPS
 	return (link_bw[idxize(model->to)][idxize(model->from)]/
 		link_shared_bw[idxize(model->to)][idxize(model->from)])*
 		(model->ti + model-> tb*bytes);
+#else
+	return (link_bw[idxize(model->to)][idxize(model->from)]/
+		link_shared_bw_hop[idxize(model->to)][idxize(model->from)])*
+		(model->ti + model-> tb*bytes);
+#endif
 }
 
 /// Predict t_com for bytes including bidirectional use slowdown
