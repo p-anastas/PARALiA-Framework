@@ -130,11 +130,11 @@ double t_com_predict_shared(CoModel_p model, long double bytes)
 #endif
 #ifdef ENABLE_TRANSFER_HOPS
 	return (link_bw[idxize(model->to)][idxize(model->from)]/
-		link_shared_bw[idxize(model->to)][idxize(model->from)])*
+		link_shared_bw_hop[idxize(model->to)][idxize(model->from)])*
 		(model->ti + model-> tb*bytes);
 #else
 	return (link_bw[idxize(model->to)][idxize(model->from)]/
-		link_shared_bw_hop[idxize(model->to)][idxize(model->from)])*
+		link_shared_bw[idxize(model->to)][idxize(model->from)])*
 		(model->ti + model-> tb*bytes);
 #endif
 }

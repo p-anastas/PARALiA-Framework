@@ -1460,8 +1460,8 @@ void STEST_print_SK(kernel_pthread_wrap_p* thread_dev_data_list, double routine_
 					short is_reader = (Tiledim == 2)? ((Tile2D<VALUE_TYPE>*) TilePtr)->R_flag : ((Tile1D<VALUE_TYPE>*) TilePtr)->R_flag;
 					short is_writer = (Tiledim == 2)? ((Tile2D<VALUE_TYPE>*) TilePtr)->W_total : ((Tile1D<VALUE_TYPE>*) TilePtr)->W_total;
 					if (dev_from != -2 && dev_to != -2){
-						transfer_map[idxize(dev_from)][idxize(dev_to)]++;
-						transfer_map_bw[idxize(dev_from)][idxize(dev_to)]+=
+						transfer_map[idxize(dev_to)][idxize(dev_from)]++;
+						transfer_map_bw[idxize(dev_to)][idxize(dev_from)]+=
 							Gval_per_s(thread_dev_data_list[d]->SubkernelListDev[keri]->bytes_in[tileidx], request_tile_ms[d][tileidx]/1000);
 						if (dev_from == -1){
 							if(is_writer) total_h2d_W++;
@@ -1522,8 +1522,8 @@ void STEST_print_SK(kernel_pthread_wrap_p* thread_dev_data_list, double routine_
 						short is_reader = (Tiledim == 2)? ((Tile2D<VALUE_TYPE>*) TilePtr)->R_flag : ((Tile1D<VALUE_TYPE>*) TilePtr)->R_flag;
 						short is_writer = (Tiledim == 2)? ((Tile2D<VALUE_TYPE>*) TilePtr)->W_total : ((Tile1D<VALUE_TYPE>*) TilePtr)->W_total;
 						if (dev_from != -2 && dev_to != -2){
-							transfer_map[idxize(dev_from)][idxize(dev_to)]++;
-							transfer_map_bw[idxize(dev_from)][idxize(dev_to)]+=
+							transfer_map[idxize(dev_to)][idxize(dev_from)]++;
+							transfer_map_bw[idxize(dev_to)][idxize(dev_from)]+=
 								Gval_per_s(thread_dev_data_list[d]->SubkernelListDev[keri]->bytes_out[tileidx], writeback_tile_ms[d][tileidx]/1000);
 														if (dev_from == -1){
 								if(is_writer) total_h2d_W++;

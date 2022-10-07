@@ -98,13 +98,13 @@ add_definitions(-DEXSTEAL_PENALTY=10)
 #add_definitions(-DTEST)
 
 #Run in Subkernel testing mode : details about time spend in subkernel operations.
-#add_definitions(-DSTEST)
+add_definitions(-DSTEST)
 
 #Run in Deep Subkernel testing mode : many details about time spend in subkernel operations.
 #add_definitions(-DDSTEST)
 
 #Run in Link Hop testing mode; transfers using link hops are logged and timed.
-#add_definitions(-DTTEST)
+add_definitions(-DTTEST)
 
 #Run in debug mode, which includes detailed function calls and info for error-checking
 #add_definitions(-DDEBUG)

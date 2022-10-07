@@ -14,7 +14,7 @@ short link_hop_route[LOC_NUM][LOC_NUM][MAX_HOP_ROUTES][MAX_ALLOWED_HOPS];
 double link_bw_hop[LOC_NUM][LOC_NUM];
 double link_shared_bw_hop[LOC_NUM][LOC_NUM];
 
-void InitHopMap(double link_bw_in [][LOC_NUM], double link_bw_out [][LOC_NUM], int* active_unit_id_list, int active_unit_num){
+void InitHopMap(MD_p* unit_modeler_list, double link_bw_in [][LOC_NUM], double link_bw_out [][LOC_NUM], int* active_unit_id_list, int active_unit_num){
   double safe_hop_penalty = HOP_PENALTY;
   if ( HOP_PENALTY <= FETCH_UNAVAILABLE_PENALTY){
 #ifdef PDEBUG
@@ -35,8 +35,12 @@ void InitHopMap(double link_bw_in [][LOC_NUM], double link_bw_out [][LOC_NUM], i
       for (int hop_idx = 0 ; hop_idx < LOC_NUM; hop_idx++)
       if(hop_idx!= unit_idx && hop_idx!= unit_idy && unit_idx!= unit_idy){
         if(!is_in_list(deidxize(hop_idx),active_unit_id_list, active_unit_num)) continue;
-        double hop_bw =  fmin(link_bw_in[unit_idx][hop_idx], link_bw_in[hop_idx][unit_idy]);
-        hop_bw-= safe_hop_penalty*hop_bw;
+        double hop_bw =  fmin(link_bw_in[unit_idx][hop_idx], link_bw_in[hop_idx][unit_idy]) /
+          unit_modeler_list[unit_idx]->link[hop_idx]->sl[hop_idx][unit_idy]; // FIXME: Might be reverse
+        /// FIXME: This selects links with better sub-parts e.g. BW src->50->20->dest > src->20->20->dest
+        /// Theoretically better for BW util, but might result in overloaded central locs with good connectivity
+        if(link_bw_in[unit_idx][hop_idx] == link_bw_in[hop_idx][unit_idy]) hop_bw-= safe_hop_penalty*hop_bw;
+        else hop_bw-= (safe_hop_penalty/2)*hop_bw;
         if (hop_bw > max_hop_bw){
          max_hop_bw = hop_bw;
          link_hop_route_num[unit_idx][unit_idy] = 1;
@@ -111,8 +115,7 @@ void ATC::update_link_shared_weights(){
           for(int l = 0; l < LOC_NUM; l++){
             if ((k == l) || (i == k && j == l)) continue;
             if((is_in_list(deidxize(l),datalocs, dataloc_num) && is_in_list(deidxize(k),active_unit_id_list, active_unit_num)) &&
-              ((deidxize(l) == -1 || deidxize(k) == -1) && (deidxize(i) == -1 || deidxize(j) == -1))/// FIXME:This should have been a check regarding both link passing from PCIe/ non-NVLINK connections and its not modelling.
-              ){// || (i == l && j == k)){ /// FIXME: Include bidirectional slowdown for links?
+              1 ){//}((deidxize(l) == -1 || deidxize(k) == -1) && (deidxize(i) == -1 || deidxize(j) == -1))/// FIXME:This should have been a check regarding both link passing from PCIe/ non-NVLINK connections and its not modelling.
              link_slowdown_multiplier = fmax(link_slowdown_multiplier, unit_modeler_list[i]->link[j]->sl[k][l]);
 #ifdef DPDEBUG
               if (unit_modeler_list[i]->link[j]->sl[k][l] != 1.0) lprintf(lvl, "ATC::update_link_shared_weights():\
@@ -157,7 +160,7 @@ void ATC::update_link_shared_weights(){
   link_shared_bw_map_print();
 #endif
 #ifdef ENABLE_TRANSFER_HOPS
-  InitHopMap(link_shared_bw, link_shared_bw_hop, active_unit_id_list, active_unit_num);
+  InitHopMap(unit_modeler_list, link_shared_bw, link_shared_bw_hop, active_unit_id_list, active_unit_num);
 #ifdef PDEBUG
   link_shared_bw_hop_map_print();
 #endif
@@ -213,7 +216,7 @@ void ATC::update_link_weights(){
   link_bw_map_print();
 #endif
 #ifdef ENABLE_TRANSFER_HOPS
-  InitHopMap(link_bw, link_bw_hop, active_unit_id_list, active_unit_num);
+  InitHopMap(unit_modeler_list, link_bw, link_bw_hop, active_unit_id_list, active_unit_num);
 #ifdef PDEBUG
   link_bw_hop_map_print();
 #endif

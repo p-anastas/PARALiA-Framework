@@ -191,13 +191,13 @@ int main(const int argc, const char *argv[]) {
 			bench_t = csecond();
 			for(int itt = 0 ; itt < MAX_ASSUMED_OTHER_LINK_TIMES_FASTER; itt++) CoCoMemcpy2DAsync(unit_buffs[2*dev_id_idx+1], ldest,
 										unit_buffs[2*dev_id_idy+1], ldsrc,
-										dim, dim, elemSize,
+										dim-step, dim-step, elemSize,
 										deidxize(dev_id_idx), deidxize(dev_id_idy), transfer_queue_list[dev_id_idx][dev_id_idy]);
 			device_timer->start_point(transfer_queue_list[idxize(loc_dest)][idxize(loc_src)]);
 
 			CoCoMemcpy2DAsync(unit_buffs[2*idxize(loc_dest)], ldest,
 										unit_buffs[2*idxize(loc_src)], ldsrc,
-										dim, dim, elemSize,
+										dim-step, dim-step, elemSize,
 										loc_dest, loc_src, transfer_queue_list[idxize(loc_dest)][idxize(loc_src)]);
 			device_timer->stop_point(transfer_queue_list[idxize(loc_dest)][idxize(loc_src)]);
 
@@ -207,7 +207,7 @@ int main(const int argc, const char *argv[]) {
 			CoCoSyncCheckErr();
 			bench_t = csecond() - bench_t;
 			//fprintf(stderr, "Shared Link (%d->%d) transfer complete:\t shared_timer=%lf ms  ( %lf Gb/s)\n\n",
-			//	deidxize(dev_id_idy), deidxize(dev_id_idx), shared_timer  * 1000, Gval_per_s(maxDim*maxDim*elemSize, shared_timer));
+			//	deidxize(dev_id_idy), deidxize(dev_id_idx), shared_timer  * 1000, Gval_per_s((dim-step)*(dim-step)*elemSize, shared_timer));
 
 			if (transfer_t_mean < shared_timer*(1-NORMALIZE_NEAR_SPLIT_LIMIT)) fprintf(stderr, "Link(%2d->%2d) & Link(%2d->%2d) partially shared: Shared_BW: %1.2lf %%\n\n",
 				loc_src, loc_dest, deidxize(dev_id_idy), deidxize(dev_id_idx), 100*transfer_t_mean/shared_timer);

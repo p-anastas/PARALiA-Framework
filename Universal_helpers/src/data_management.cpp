@@ -16,6 +16,18 @@
 double timers[LOC_NUM][LOC_NUM][2][10000];
 long long bytes[LOC_NUM][LOC_NUM][10000];
 int timer_ctr[LOC_NUM][LOC_NUM] = {{0}};
+
+void reseTTEST(){
+	for(int i = 0; i < LOC_NUM; i++)
+		for(int j = 0; j < LOC_NUM; j++){
+			for(int k = 0; k < timer_ctr[i][j]; k++){
+				bytes[i][j][k] = 0;
+				timers[i][j][0][k] = 0;
+				timers[i][j][1][k] = 0;
+			}
+			timer_ctr[i][j] = 0;
+		}
+}
 #endif
 
 //#define SPLIT_2D_ROWISE
@@ -107,5 +119,6 @@ void HopMemcpyPrint(){
 		}
 		lprintf(0, "\n");
 	}
+	reseTTEST();
 }
 #endif
