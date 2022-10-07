@@ -191,13 +191,13 @@ int main(const int argc, const char *argv[]) {
 			bench_t = csecond();
 			for(int itt = 0 ; itt < MAX_ASSUMED_OTHER_LINK_TIMES_FASTER; itt++) CoCoMemcpy2DAsync(unit_buffs[2*dev_id_idx+1], ldest,
 										unit_buffs[2*dev_id_idy+1], ldsrc,
-										maxDim, maxDim, elemSize,
+										dim, dim, elemSize,
 										deidxize(dev_id_idx), deidxize(dev_id_idy), transfer_queue_list[dev_id_idx][dev_id_idy]);
 			device_timer->start_point(transfer_queue_list[idxize(loc_dest)][idxize(loc_src)]);
 
 			CoCoMemcpy2DAsync(unit_buffs[2*idxize(loc_dest)], ldest,
 										unit_buffs[2*idxize(loc_src)], ldsrc,
-										maxDim, maxDim, elemSize,
+										dim, dim, elemSize,
 										loc_dest, loc_src, transfer_queue_list[idxize(loc_dest)][idxize(loc_src)]);
 			device_timer->stop_point(transfer_queue_list[idxize(loc_dest)][idxize(loc_src)]);
 
