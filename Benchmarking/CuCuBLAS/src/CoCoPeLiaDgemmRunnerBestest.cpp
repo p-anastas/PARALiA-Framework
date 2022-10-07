@@ -159,7 +159,7 @@ int main(const int argc, const char *argv[]) {
 	CheckLogLvl3(filename, return_values, TransA, TransB, alpha, beta, M, N, K, A_loc, B_loc, C_loc, C_out_loc);
 #endif
 	// Store the time required for the first call (+ 1-time overheads etc)
-	StoreLogLvl3(filename, return_values, TransA, TransB, alpha, beta, M, N, K, A_loc, B_loc, C_loc, C_out_loc, cpu_timer);
+	//StoreLogLvl3(filename, return_values, TransA, TransB, alpha, beta, M, N, K, A_loc, B_loc, C_loc, C_out_loc, cpu_timer);
 
 	double first_over_t = cpu_timer;
 

@@ -175,7 +175,7 @@ int main(const int argc, const char *argv[]) {
 	XKBLASDgemmWrap(TransA,  TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C, ldC,  XKBLAS_tile, cache_limit, dev_num, dev_ids);
 	CoCoSyncCheckErr();
 	cpu_timer  = csecond() - cpu_timer;
-	StoreLogLvl3(filename, predef_control_values, TransA, TransB, alpha, beta, M, N, K, A_loc, B_loc, C_loc, C_out_loc, cpu_timer);
+	//StoreLogLvl3(filename, predef_control_values, TransA, TransB, alpha, beta, M, N, K, A_loc, B_loc, C_loc, C_out_loc, cpu_timer);
 	xkblas_memory_invalidate_caches();
 	double first_over_t = cpu_timer;
 

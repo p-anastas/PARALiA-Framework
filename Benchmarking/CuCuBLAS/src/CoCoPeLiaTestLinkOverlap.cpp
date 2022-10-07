@@ -119,7 +119,7 @@ int main(const int argc, const char *argv[]) {
 		for(short dev_id_idy = 0 ; dev_id_idy < LOC_NUM; dev_id_idy++){
 			if (dev_id_idx == dev_id_idy ||
 				(dev_id_idx == idxize(loc_dest) && dev_id_idy == idxize(loc_src))) continue;
-			for(int itt = 0 ; itt < 5; itt++) CoCoMemcpy2DAsync(unit_buffs[3*dev_id_idx+1], ldest,
+			for(int itt = 0 ; itt < 10; itt++) CoCoMemcpy2DAsync(unit_buffs[3*dev_id_idx+1], ldest,
 										unit_buffs[3*dev_id_idy+1], ldsrc,
 										TileDim, TileDim, elemSize,
 										deidxize(dev_id_idx), deidxize(dev_id_idy), transfer_queue_list[dev_id_idx][dev_id_idy]);

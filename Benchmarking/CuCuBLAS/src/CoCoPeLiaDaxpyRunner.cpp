@@ -123,7 +123,7 @@ int main(const int argc, const char *argv[]) {
 		CheckLogLvl1(filename, predef_control_values, alpha, N, incx, incy, x_loc, y_loc, x_out_loc, y_out_loc);
 	#endif
 		// Store the time required for the first call (+ 1-time overheads etc)
-		StoreLogLvl1(filename, predef_control_values, alpha, N, incx, incy, x_loc, y_loc, x_out_loc, y_out_loc, cpu_timer);
+		//StoreLogLvl1(filename, predef_control_values, alpha, N, incx, incy, x_loc, y_loc, x_out_loc, y_out_loc, cpu_timer);
 
 		double first_over_t = cpu_timer;
 
