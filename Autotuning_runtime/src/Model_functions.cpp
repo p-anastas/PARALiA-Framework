@@ -258,10 +258,10 @@ double PARALiaPredictLinkHeteroBLAS3(MD_p model, long int T, int active_unit_num
 		active_unit_num, D1_parts, D2_parts, extra_transfer_ratio);
 #endif
 		long long recv_sz_extra = extra_transfer_ratio * recv_sz_RONLY;
-		//double t_recv_extra_optimistic = model->predictBestFriends_t(extra_transfer_ratio, recv_sz_extra, active_unit_num, active_unit_id_list);
+		double t_recv_extra_optimistic = model->predictBestFriends_t(extra_transfer_ratio, recv_sz_extra, active_unit_num, active_unit_id_list);
 	 	double t_recv_extra_pesimistic = model->predictAvgBw_t(recv_sz_extra, active_unit_num, active_unit_id_list);
 
-		double t_recv_extra = t_recv_extra_pesimistic; // (t_recv_extra_optimistic + t_recv_extra_pesimistic)/2;
+		double t_recv_extra = (t_recv_extra_optimistic + t_recv_extra_pesimistic)/2;
 
 		t_total = fmax(t_exec_full, fmax(t_recv_full + t_recv_extra, t_send_full));
 #ifdef DPDEBUG

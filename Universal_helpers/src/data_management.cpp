@@ -42,14 +42,14 @@ void FasTCoCoMemcpy2DAsync(link_road_p roadMap, long int rows, long int cols, sh
 		long int local_cols = cols/buffer_bw_overlap;
 #endif
 #ifdef TTEST
-			if (timer_ctr[roadMap->hop_uid_list[uid_ctr + 1]][roadMap->hop_uid_list[uid_ctr]] > 10000)
+			if (timer_ctr[idxize(roadMap->hop_uid_list[uid_ctr + 1])][idxize(roadMap->hop_uid_list[uid_ctr])] > 10000)
 				error("FasTCoCoMemcpy2DAsync(dest = %d, src = %d) exeeded 10000 transfers in TTEST Mode\n",
 					roadMap->hop_uid_list[uid_ctr + 1], roadMap->hop_uid_list[uid_ctr]);
-			bytes[roadMap->hop_uid_list[uid_ctr + 1]][roadMap->hop_uid_list[uid_ctr]]
-			[timer_ctr[roadMap->hop_uid_list[uid_ctr + 1]][roadMap->hop_uid_list[uid_ctr]]] += rows*cols*elemSize;
+			bytes[idxize(roadMap->hop_uid_list[uid_ctr + 1])][idxize(roadMap->hop_uid_list[uid_ctr])]
+			[timer_ctr[idxize(roadMap->hop_uid_list[uid_ctr + 1])][idxize(roadMap->hop_uid_list[uid_ctr])]] += rows*cols*elemSize;
 			roadMap->hop_cqueue_list[uid_ctr]->add_host_func(
-				(void*)&CoCoSetTimerAsync, (void*) &(timers[roadMap->hop_uid_list[uid_ctr + 1]][roadMap->hop_uid_list[uid_ctr]]
-				[0][timer_ctr[roadMap->hop_uid_list[uid_ctr + 1]][roadMap->hop_uid_list[uid_ctr]]]));
+				(void*)&CoCoSetTimerAsync, (void*) &(timers[idxize(roadMap->hop_uid_list[uid_ctr + 1])][idxize(roadMap->hop_uid_list[uid_ctr])]
+				[0][timer_ctr[idxize(roadMap->hop_uid_list[uid_ctr + 1])][idxize(roadMap->hop_uid_list[uid_ctr])]]));
 #endif
 		for(int steps = 0; steps < buffer_bw_overlap; steps++){
 			step_events[uid_ctr][steps] = new Event(roadMap->hop_uid_list[uid_ctr+1]);
@@ -76,8 +76,8 @@ void FasTCoCoMemcpy2DAsync(link_road_p roadMap, long int rows, long int cols, sh
 		roadMap->hop_event_list[uid_ctr]->record_to_queue(roadMap->hop_cqueue_list[uid_ctr]);
 #ifdef TTEST
 	roadMap->hop_cqueue_list[uid_ctr]->add_host_func(
-	(void*)&CoCoSetTimerAsync, (void*) &(timers[roadMap->hop_uid_list[uid_ctr + 1]][roadMap->hop_uid_list[uid_ctr]]
-	[1][timer_ctr[roadMap->hop_uid_list[uid_ctr + 1]][roadMap->hop_uid_list[uid_ctr]]++]));
+	(void*)&CoCoSetTimerAsync, (void*) &(timers[idxize(roadMap->hop_uid_list[uid_ctr + 1])][idxize(roadMap->hop_uid_list[uid_ctr])]
+	[1][timer_ctr[idxize(roadMap->hop_uid_list[uid_ctr + 1])][idxize(roadMap->hop_uid_list[uid_ctr])]++]));
 #endif
 	}
 }

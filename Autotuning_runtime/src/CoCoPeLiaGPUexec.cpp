@@ -188,19 +188,20 @@ GPUexec1Model_p GPUexec1Model_init(short dev_id, const char* func){
 	out_model->lines = bench_lines;
 	out_model->T_lookup_buf = (long int*) malloc( bench_lines* sizeof(long int));
 	out_model->av_time_buf = (double*) malloc( bench_lines* sizeof(double));
+	out_model->av_W_buf = (double*) malloc( bench_lines* sizeof(double));
 #ifdef PDEBUG
 	lprintf(lvl, "Reading %ld lines from %s\n", bench_lines, filename);
 #endif
 	int items;
 	long int conv_itter;
-	double error_margin, Dtrashdata;
+	double error_margin, Dtrashdata, Joules;
 	for (int i = 0; i < bench_lines; i++){
-		items = fscanf(fp, "%ld,%lf,%lf,%ld,%lf\n",
-			&out_model->T_lookup_buf[i], &out_model->av_time_buf[i], &error_margin, &conv_itter, &Dtrashdata);
-		if (items != 5) error("GPUexec1Model_init: Problem in reading model");
+		items = fscanf(fp, "%ld,%lf,%lf,%lf,%lf,%ld,%lf\n",
+			&out_model->T_lookup_buf[i], &out_model->av_time_buf[i], &out_model->av_W_buf[i], &Joules, &error_margin, &conv_itter, &Dtrashdata);
+		if (items != 7) error("GPUexec1Model_init: Problem in reading model");
 #ifdef DPDEBUG
-		lprintf(lvl, "Scanned entry %d: T = %ld -> t_av = %lf ms\n",
-		i, out_model->T_lookup_buf[i], out_model->av_time_buf[i]*1000);
+		lprintf(lvl, "Scanned entry %d: T = %ld -> t_av = %lf ms, W_av = %lf W, J_total = %lf J\n",
+		i, out_model->T_lookup_buf[i], out_model->av_time_buf[i]*1000, out_model->av_W_buf[i], Joules);
 #endif
     	}
 	fclose(fp);

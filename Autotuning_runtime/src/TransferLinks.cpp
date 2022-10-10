@@ -35,12 +35,9 @@ void InitHopMap(MD_p* unit_modeler_list, double link_bw_in [][LOC_NUM], double l
       for (int hop_idx = 0 ; hop_idx < LOC_NUM; hop_idx++)
       if(hop_idx!= unit_idx && hop_idx!= unit_idy && unit_idx!= unit_idy){
         if(!is_in_list(deidxize(hop_idx),active_unit_id_list, active_unit_num)) continue;
-        double hop_bw =  fmin(link_bw_in[unit_idx][hop_idx], link_bw_in[hop_idx][unit_idy]) /
-          unit_modeler_list[unit_idx]->link[hop_idx]->sl[hop_idx][unit_idy]; // FIXME: Might be reverse
-        /// FIXME: This selects links with better sub-parts e.g. BW src->50->20->dest > src->20->20->dest
-        /// Theoretically better for BW util, but might result in overloaded central locs with good connectivity
-        if(link_bw_in[unit_idx][hop_idx] == link_bw_in[hop_idx][unit_idy]) hop_bw-= safe_hop_penalty*hop_bw;
-        else hop_bw-= (safe_hop_penalty/2)*hop_bw;
+        double hop_bw =  fmin(link_bw_in[unit_idx][hop_idx], link_bw_in[hop_idx][unit_idy]);
+        //  /unit_modeler_list[unit_idx]->link[hop_idx]->sl[hop_idx][unit_idy]; // FIXME: Might be reverse
+        hop_bw-= safe_hop_penalty*hop_bw;
         if (hop_bw > max_hop_bw){
          max_hop_bw = hop_bw;
          link_hop_route_num[unit_idx][unit_idy] = 1;

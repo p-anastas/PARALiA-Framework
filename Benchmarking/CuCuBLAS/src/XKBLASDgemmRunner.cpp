@@ -67,7 +67,7 @@ int main(const int argc, const char *argv[]) {
 	ATC_p predef_control_values = NULL;
 	ParseInputLvl3(argc, argv, &predef_control_values, &TransA, &TransB, &alpha, &beta, &M, &N, &K, &A_loc, &B_loc, &C_loc, &C_out_loc);
 
-	char *filename = (char *) malloc(2048* sizeof(char));
+	char *filename = (char *) malloc(1024* sizeof(char));
 	if (predef_control_values!= NULL){
 		if(predef_control_values->T > 0) {
 			if (predef_control_values->T > M || predef_control_values->T > N || predef_control_values->T > K)
@@ -75,7 +75,7 @@ int main(const int argc, const char *argv[]) {
 			else if (predef_control_values->T > M/1.5 && predef_control_values->T > N/1.5 && predef_control_values->T > K/1.5)
 				error("Given Tin=%ld bigger than all problem dims/1.5\n", predef_control_values->T);
 		}
-			sprintf(filename, "%s/XKBLASDgemmRunner_predefined_vals_%s_%s_%s.log",
+			sprintf(filename, "%s/XKBLASDgemmRunner_predifined_vals_%s_%s_%s.log",
 				TESTLIBDIR, CoCoDistributionPrint(), CoCoImplementationPrint(), VERSION);
 	}
 	else sprintf(filename, "%s/XKBLASDgemmRunner_%s_%s_%s.log",
