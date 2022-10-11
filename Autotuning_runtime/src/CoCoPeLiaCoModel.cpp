@@ -122,7 +122,11 @@ double t_com_predict_shared(CoModel_p model, long double bytes)
 {
 	if (bytes < 0) return -1;
 	else if ( bytes == 0) return 0;
+#ifdef ENABLE_TRANSFER_HOPS
+	else if (link_shared_bw_hop[idxize(model->to)][idxize(model->from)] == 0.0) return 0;
+#else
 	else if (link_shared_bw[idxize(model->to)][idxize(model->from)] == 0.0) return 0;
+#endif	
 #ifdef DPDEBUG
 		lprintf(4, "t_com_predict_shared(%Lf): ti = %Lf, tb = %Lf, link_bw[%d][%d] = %lf, link_shared_bw[%d][%d] = %lf-> t_com = %Lf ms\n",
 			bytes, model->ti, model-> tb, (model->ti + model-> tb*bytes)*1000, model->to, model->from, link_bw[idxize(model->to)][idxize(model->from)],

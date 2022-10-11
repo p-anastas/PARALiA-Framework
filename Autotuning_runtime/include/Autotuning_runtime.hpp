@@ -84,6 +84,7 @@ typedef class Modeler{
 		long int getGPUexecLines();
 		long int getGPUexecElem(int idx);
 		void getDatalocs(int** dataloc_list_p, int* dataloc_num_p);
+		void getWDatalocs(int** dataloc_list_p, int* dataloc_num_p);
 /******************************************************************************/
 /************************ Prediction Functions ********************************/
 		/// Return an optimistic transfer time for a "request_ratio" of the per-unit available data
@@ -152,7 +153,7 @@ void link_shared_bw_map_print();
 
 #ifdef ENABLE_TRANSFER_HOPS
 #define MAX_ALLOWED_HOPS 1
-#define MAX_HOP_ROUTES 4
+#define MAX_HOP_ROUTES 1
 #define HOP_PENALTY 0.15
 extern short link_hop_num[LOC_NUM][LOC_NUM];
 extern short link_hop_route_num[LOC_NUM][LOC_NUM];
@@ -161,6 +162,9 @@ extern double link_bw_hop[LOC_NUM][LOC_NUM];
 extern double link_shared_bw_hop[LOC_NUM][LOC_NUM];
 void link_bw_hop_map_print();
 void link_shared_bw_hop_map_print();
+#ifdef ENABLE_PREDICT_HOP_MODE
+extern short Snd_hops_and_NOSRO_enable_flag;
+#endif
 #endif
 
 #endif

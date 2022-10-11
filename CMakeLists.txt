@@ -43,9 +43,11 @@ add_definitions(-DENABLE_CPU_WORKLOAD)
 #add_definitions(-DENABLE_TILE_PREFETCH)
 
 ## Enable using transfer hops for faster transfers between multiple links
-#add_definitions(-DENABLE_TRANSFER_HOPS)
+add_definitions(-DENABLE_TRANSFER_HOPS)
 ## Enable using transfer hops for W tiles as well (no data reuse, but potentially better BW)
 #add_definitions(-DENABLE_TRANSFER_W_HOPS)
+## Enable using heuristic-based W-hops (and Send-Recv Over) activation
+#add_definitions(-DENABLE_PREDICT_HOP_MODE)
 
 ## Enable sharing of bandwidth between links that utilize the same underlying hardware communication resources
 add_definitions(-DENABLE_LINK_BW_SHARING) # by putting them on different queues
@@ -113,10 +115,10 @@ add_definitions(-DEXSTEAL_PENALTY=10)
 #add_definitions(-DDDEBUG)
 
 #Run Prediction debug mode (autotuning runtime stuff)
-add_definitions(-DPDEBUG)
+#add_definitions(-DPDEBUG)
 
 #Run Prediction deep debug mode (all autotuning runtime stuff)
-add_definitions(-DDPDEBUG)
+#add_definitions(-DDPDEBUG)
 
 #Run in caching debug mode, for cache-related debugging
 #add_definitions(-DCDEBUG)

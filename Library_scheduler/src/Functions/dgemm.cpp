@@ -246,13 +246,23 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 		__sync_lock_release(&Sk_select_lock_gemm);
 		curr->run_operation();
 #ifdef ENABLE_SEND_RECV_OVERLAP
+#ifdef ENABLE_PREDICT_HOP_MODE
+	if(!Snd_hops_and_NOSRO_enable_flag) curr->writeback_data();
+#else
 		curr->writeback_data();
+#endif
 #endif
 	}
 
 #ifndef ENABLE_SEND_RECV_OVERLAP
 	for (int keri = 0; keri < gemm_subkernel_data->SubkernelNumDev; keri++)
 		gemm_subkernel_data->SubkernelListDev[keri]->writeback_data();
+#else
+#ifdef ENABLE_PREDICT_HOP_MODE
+	if(Snd_hops_and_NOSRO_enable_flag)
+		for (int keri = 0; keri < gemm_subkernel_data->SubkernelNumDev; keri++)
+		 gemm_subkernel_data->SubkernelListDev[keri]->writeback_data();
+#endif
 #endif
 
 	CoCoSyncCheckErr();

@@ -157,6 +157,12 @@ void Modeler::getDatalocs(int** dataloc_list_p, int* dataloc_num_p){
 	 	(*dataloc_list_p)[(*dataloc_num_p)++] = V->loc[data_chunk];
 }
 
+void Modeler::getWDatalocs(int** dataloc_list_p, int* dataloc_num_p){
+	for (int data_chunk = 0; data_chunk < V->numT; data_chunk++)
+	 if (!is_in_list(V->loc[data_chunk], (*dataloc_list_p), (*dataloc_num_p)) && V->out[data_chunk])
+	 	(*dataloc_list_p)[(*dataloc_num_p)++] = V->loc[data_chunk];
+}
+
 /******************************************************************************/
 /************************ Prediction Functions ********************************/
 

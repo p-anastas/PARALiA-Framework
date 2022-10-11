@@ -765,9 +765,9 @@ void Subkernel::writeback_data_hops(){
 						test_road->hop_cqueue_list[inter_hop] = transfer_queues[idxize(test_road->hop_uid_list[1+inter_hop])]
 							[idxize(test_road->hop_uid_list[inter_hop])];
 						block_ptr[inter_hop] = Global_Cache[idxize(test_road->hop_uid_list[1+inter_hop])]->assign_Cblock(new_block_state,false);
-						block_ptr[inter_hop]->init_writeback_info(tmp->WriteBackBlock, &(tmp->RW_master), tmp->dim1, tmp->dim2,
-							tmp->ldim[idxize(test_road->hop_uid_list[1+inter_hop])], tmp->ldim[idxize(tmp->WriteBackLoc)],
-							tmp->dtypesize(), transfer_queues[idxize(tmp->getWriteBackLoc())][idxize(test_road->hop_uid_list[1+inter_hop])], false);
+						//block_ptr[inter_hop]->init_writeback_info(tmp->WriteBackBlock, &(tmp->RW_master), tmp->dim1, tmp->dim2,
+						//	tmp->ldim[idxize(test_road->hop_uid_list[1+inter_hop])], tmp->ldim[idxize(tmp->WriteBackLoc)],
+						//	tmp->dtypesize(), transfer_queues[idxize(tmp->getWriteBackLoc())][idxize(test_road->hop_uid_list[1+inter_hop])], false);
 
 						test_road->hop_buf_list[1 + inter_hop] = block_ptr[inter_hop]->Adrs;
 						test_road->hop_event_list[inter_hop] = block_ptr[inter_hop]->Available;
@@ -833,8 +833,15 @@ void Subkernel::writeback_data_hops(){
 void Subkernel::writeback_data(){
 	short lvl = 4;
 #ifdef ENABLE_TRANSFER_W_HOPS
+#ifdef ENABLE_PREDICT_HOP_MODE
+	if(Snd_hops_and_NOSRO_enable_flag) {
+		writeback_data_hops();
+		return;
+	}
+#else
 	writeback_data_hops();
 	return;
+#endif
 #endif
 #ifdef DEBUG
 	lprintf(lvl-1, "|-----> Subkernel(dev=%d,id=%d)::writeback_data()\n", run_dev_id, id);

@@ -13,6 +13,19 @@ short link_hop_route_num[LOC_NUM][LOC_NUM];
 short link_hop_route[LOC_NUM][LOC_NUM][MAX_HOP_ROUTES][MAX_ALLOWED_HOPS];
 double link_bw_hop[LOC_NUM][LOC_NUM];
 double link_shared_bw_hop[LOC_NUM][LOC_NUM];
+#ifdef ENABLE_PREDICT_HOP_MODE
+short Snd_hops_and_NOSRO_enable_flag = 1;
+void predict_hop_mode(MD_p unit_modeler){
+  short lvl = 3;
+#ifdef DEBUG
+    lprintf(lvl, "|-----> predict_hop_mode(%p)\n", unit_modeler);
+#endif
+  int* datalocs = (int*) malloc(LOC_NUM*sizeof(int)), dataloc_num = 0;
+  unit_modeler->getWDatalocs(&datalocs, &dataloc_num);
+  /// FIXME: Naive predict hop mode for tested devices
+  if (is_in_list(-1, datalocs, dataloc_num)) Snd_hops_and_NOSRO_enable_flag = 0;
+}
+#endif
 
 void InitHopMap(MD_p* unit_modeler_list, double link_bw_in [][LOC_NUM], double link_bw_out [][LOC_NUM], int* active_unit_id_list, int active_unit_num){
   double safe_hop_penalty = HOP_PENALTY;
@@ -81,6 +94,9 @@ void InitHopMap(MD_p* unit_modeler_list, double link_bw_in [][LOC_NUM], double l
     }
     else link_bw_out[unit_idx][unit_idy] = link_bw_in[unit_idx][unit_idy];
   }
+#ifdef ENABLE_PREDICT_HOP_MODE
+  predict_hop_mode(unit_modeler_list[0]);
+#endif
 }
 #endif
 

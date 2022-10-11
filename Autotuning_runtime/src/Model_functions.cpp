@@ -233,7 +233,7 @@ double PARALiaPredictLinkHeteroBLAS3(MD_p model, long int T, int active_unit_num
 			}
 			recv_sz += tmp_recv_sz;
 			send_sz += tmp_send_sz;
-			if(!model->V->out[i]) { recv_sz_RONLY+= recv_sz; recv_num_RONLY++; }
+			if(!model->V->out[i] && model->V->loc[i] != model->unit_id) { recv_sz_RONLY+= recv_sz; recv_num_RONLY++; }
 			t_recv_full+= t_recv_tmp;
 			t_send_full+= t_send_tmp;
 		}
@@ -259,9 +259,9 @@ double PARALiaPredictLinkHeteroBLAS3(MD_p model, long int T, int active_unit_num
 #endif
 		long long recv_sz_extra = extra_transfer_ratio * recv_sz_RONLY;
 		double t_recv_extra_optimistic = model->predictBestFriends_t(extra_transfer_ratio, recv_sz_extra, active_unit_num, active_unit_id_list);
-	 	double t_recv_extra_pesimistic = model->predictAvgBw_t(recv_sz_extra, active_unit_num, active_unit_id_list);
+	 	//double t_recv_extra_pesimistic = model->predictAvgBw_t(recv_sz_extra, active_unit_num, active_unit_id_list);
 
-		double t_recv_extra = (t_recv_extra_optimistic + t_recv_extra_pesimistic)/2;
+		double t_recv_extra = t_recv_extra_optimistic; //(t_recv_extra_optimistic + t_recv_extra_pesimistic)/2;
 
 		t_total = fmax(t_exec_full, fmax(t_recv_full + t_recv_extra, t_send_full));
 #ifdef DPDEBUG
