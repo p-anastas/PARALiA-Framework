@@ -37,7 +37,7 @@ CoModel_p CoModel_init(short to, short from)
 	while(!feof(fp)){
 		items = fscanf(fp, "Slowdown([%d]->[%d]): %Le\n", &(loc_src), &(loc_dest), &(sl));
 		if (items != 3) error("CoModel_init(%d,%d): Problem in reading model Slowdown\n", to, from);
-		if (sl < 1 ){
+		if (sl < 1 - NORMALIZE_NEAR_SPLIT_LIMIT){
 #ifdef DPDEBUG
 	warning("CoModel_init( %d -> %d): sl(%d -> %d) = %Lf, check\n",
 		from, to, loc_src, loc_dest, sl);
@@ -126,7 +126,7 @@ double t_com_predict_shared(CoModel_p model, long double bytes)
 	else if (link_shared_bw_hop[idxize(model->to)][idxize(model->from)] == 0.0) return 0;
 #else
 	else if (link_shared_bw[idxize(model->to)][idxize(model->from)] == 0.0) return 0;
-#endif	
+#endif
 #ifdef DPDEBUG
 		lprintf(4, "t_com_predict_shared(%Lf): ti = %Lf, tb = %Lf, link_bw[%d][%d] = %lf, link_shared_bw[%d][%d] = %lf-> t_com = %Lf ms\n",
 			bytes, model->ti, model-> tb, (model->ti + model-> tb*bytes)*1000, model->to, model->from, link_bw[idxize(model->to)][idxize(model->from)],

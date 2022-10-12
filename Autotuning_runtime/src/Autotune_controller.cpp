@@ -20,6 +20,7 @@ ATC::ATC(){
 	Subkernels_per_unit_num = (int*) malloc(LOC_NUM*sizeof(int));
 	Subkernels_per_unit_list = (int**) malloc(LOC_NUM*sizeof(int*));
 	for (int d = 0; d < LOC_NUM; d++){
+		active_unit_score[d] = -42.0;
 		Subkernels_per_unit_list[d] = NULL;
 		Subkernels_per_unit_num[d] = 0;
 	}
@@ -294,19 +295,6 @@ double ATC::autotune_problem(const char* routine_name, void* initial_problem_wra
 				temp_controller->update_link_shared_weights();
 				if(initial_T <= 0) tile_selection_t += temp_controller->optimize_tile();
 				split_selection_t += temp_controller->optimize_split();
-				if(initial_T <= 0){
-#ifdef PDEBUG
-					lprintf(lvl, "Recallibrating T = %ld prediction (2nd pass)\n", temp_controller->T);
-#endif
-					tile_selection_t += temp_controller->optimize_tile();
-				}
-#ifdef PDEBUG
-				lprintf(lvl, "Recallibrating Split = [ ");
-				for (int i =0; i < temp_controller->active_unit_num; i++) lprintf(0, "%.5lf ", temp_controller->active_unit_score[i]);
-				lprintf(0, "] prediction (2nd pass)\n");
-#endif
-				split_selection_t += temp_controller->optimize_split();
-
 				if (temp_controller->pred_t +
 					temp_controller->pred_t*((temp_controller->active_unit_num-active_unit_num)*MINIMUM_UNIT_CONTRIBUTION) < pred_t) mimic_ATC(temp_controller);
 #ifdef PDEBUG
@@ -323,18 +311,6 @@ double ATC::autotune_problem(const char* routine_name, void* initial_problem_wra
 		double tile_selection_t = 0, split_selection_t = 0;
 		update_link_shared_weights();
 		if(initial_T <= 0) tile_selection_t += optimize_tile();
-		split_selection_t += optimize_split();
-		if(initial_T <= 0){
-#ifdef PDEBUG
-			lprintf(lvl, "Recallibrating T = %ld prediction (2nd pass)\n", T);
-#endif
-			tile_selection_t += optimize_tile();
-		}
-#ifdef PDEBUG
-		lprintf(lvl, "Recallibrating Split = [ ");
-		for (int i =0; i < active_unit_num; i++) fprintf(stderr, "%.5lf ", active_unit_score[i]);
-		lprintf(0, "] prediction (2nd pass)\n");
-#endif
 		split_selection_t += optimize_split();
 	}
 
@@ -490,7 +466,17 @@ double ATC::optimize_split(){
 				active_unit_id_list[idx], idx, active_unit_score[idx]);
 #endif
 	}
+	normalize_split();
+	for(int idx = 0; idx < active_unit_num; idx++){;
+#ifdef PDEBUG
+		lprintf(lvl, "Normalized Relative score for unit_id = %d (idx = %d ): active_unit_score = %e\n",
+				active_unit_id_list[idx], idx, active_unit_score[idx]);
+#endif
+	}
+
 	double temp_overlap_t = 0;
+	double active_unit_score_new[LOC_NUM];
+	temp_score = 0;
 	for(int idx = 0; idx < active_unit_num; idx++){
 		int cur_dev_id = active_unit_id_list[idx], cur_dev_idx = idxize(cur_dev_id);
 		model = unit_modeler_list[cur_dev_idx];
@@ -510,6 +496,10 @@ double ATC::optimize_split(){
 				model->problem switch default reached\n");
 		}
 		temp_t = model->predict(used_model, T, active_unit_num, active_unit_id_list, active_unit_score);
+		active_unit_score_new[idx] = temp_t;
+		if (active_unit_score_new[idx] != 0) active_unit_score_new[idx] = active_unit_score[idx]/active_unit_score_new[idx];
+		else warning("ATC::optimize_split: active_unit_score_new[%d] == 0\n", idx);
+		temp_score+= active_unit_score_new[idx];
 		if(temp_t > 0) temp_overlap_t = fmax(temp_overlap_t, temp_t);
 		else error("model->predict(%p(dev_id = %d, (idx = %d )), T = %ld): negative prediction temp_t = %lf\n",
 			model, cur_dev_id, cur_dev_idx, T, temp_t);
@@ -518,7 +508,22 @@ double ATC::optimize_split(){
 			model, cur_dev_id, cur_dev_idx, T, temp_overlap_t, temp_t);
 #endif
 	}
+	for(int idx = 0; idx < active_unit_num; idx++){
+		active_unit_score[idx] = active_unit_score_new[idx]/temp_score;
+#ifdef PDEBUG
+		lprintf(lvl, "Recalibrating Relative score for unit_id = %d (idx = %d ): active_unit_score = %e\n",
+				active_unit_id_list[idx], idx, active_unit_score[idx]);
+#endif
+	}
+
 	normalize_split();
+	for(int idx = 0; idx < active_unit_num; idx++){;
+#ifdef PDEBUG
+		lprintf(lvl, "Normalized Relative score for unit_id = %d (idx = %d ): active_unit_score = %e\n",
+				active_unit_id_list[idx], idx, active_unit_score[idx]);
+#endif
+	}
+
 	pred_t = temp_overlap_t;
 
 #ifdef PDEBUG

@@ -176,8 +176,13 @@ double Modeler::predictBestFriends_t(double request_ratio, long long request_siz
 			int i, i_out = 0, closest_remaining_unit_idx = idxize(remaining_unit_id_list[0]);
 			for (i = 0; i < remaining_unit_num; i++){
 				if (remaining_unit_id_list[i] == unit_id) continue;
+#ifdef ENABLE_TRANSFER_HOPS
+				if(link_shared_bw_hop[idxize(unit_id)][idxize(remaining_unit_id_list[i])] >
+					 link_shared_bw_hop[idxize(unit_id)][closest_remaining_unit_idx]){
+#else
 				if(link_shared_bw[idxize(unit_id)][idxize(remaining_unit_id_list[i])] >
 					 link_shared_bw[idxize(unit_id)][closest_remaining_unit_idx]){
+#endif
 					 	closest_remaining_unit_idx = idxize(remaining_unit_id_list[i]);
 						i_out = i;
 					}

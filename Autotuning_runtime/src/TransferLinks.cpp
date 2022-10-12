@@ -127,14 +127,29 @@ void ATC::update_link_shared_weights(){
         for (int k = 0; k < LOC_NUM; k++){
           for(int l = 0; l < LOC_NUM; l++){
             if ((k == l) || (i == k && j == l)) continue;
-            if((is_in_list(deidxize(l),datalocs, dataloc_num) && is_in_list(deidxize(k),active_unit_id_list, active_unit_num)) &&
-              1 ){//}((deidxize(l) == -1 || deidxize(k) == -1) && (deidxize(i) == -1 || deidxize(j) == -1))/// FIXME:This should have been a check regarding both link passing from PCIe/ non-NVLINK connections and its not modelling.
+            if(!link_hop_num[k][l] && (is_in_list(deidxize(l),datalocs, dataloc_num) && is_in_list(deidxize(k),active_unit_id_list, active_unit_num))){
              link_slowdown_multiplier = fmax(link_slowdown_multiplier, unit_modeler_list[i]->link[j]->sl[k][l]);
 #ifdef DPDEBUG
               if (unit_modeler_list[i]->link[j]->sl[k][l] != 1.0) lprintf(lvl, "ATC::update_link_shared_weights():\
                 \nFound link (%d -> %d) imposing potential recv-based slowdown to (%d -> %d) with sl = %Lf\n",
                 deidxize(l), deidxize(k), deidxize(j), deidxize(i), unit_modeler_list[i]->link[j]->sl[k][l]);
 #endif
+            }
+            else if(link_hop_num[k][l]){
+              int hoplocs[link_hop_num[k][l] + 2];
+              hoplocs[0] = k;
+              hoplocs[link_hop_num[k][l]+1] = l;
+              for (int idx = 0; idx < link_hop_num[k][l]; idx++) hoplocs[idx+1] = link_hop_route[k][l][0][idx];
+              for (int idx = 0; idx < link_hop_num[k][l] + 1; idx++){
+                if(is_in_list(deidxize(hoplocs[idx+1]),datalocs, dataloc_num) && is_in_list(deidxize(hoplocs[idx]),active_unit_id_list, active_unit_num))
+                link_slowdown_multiplier = fmax(link_slowdown_multiplier, unit_modeler_list[i]->link[j]->sl[hoplocs[idx]][hoplocs[idx+1]]);
+   #ifdef DPDEBUG
+                 if (unit_modeler_list[i]->link[j]->sl[hoplocs[idx]][hoplocs[idx+1]] != 1.0) lprintf(lvl, "ATC::update_link_shared_weights():\
+                   \nFound link (%d -> %d) imposing potential recv-based slowdown to (%d -> %d) with sl = %Lf\n",
+                   deidxize(hoplocs[idx+1]), deidxize(hoplocs[idx]), deidxize(j), deidxize(i), unit_modeler_list[i]->link[j]->sl[hoplocs[idx]][hoplocs[idx+1]]);
+   #endif
+
+              }
             }
 /*            if(is_in_list(deidxize(k),datalocs, dataloc_num) && is_in_list(deidxize(l),active_unit_id_list, active_unit_num)){
               link_slowdown_multiplier = fmax(link_slowdown_multiplier, unit_modeler_list[i]->link[j]->sl[k][l]);
