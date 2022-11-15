@@ -57,10 +57,12 @@ add_definitions(-DENABLE_POWA)
 add_definitions(-DCPU_W_PREDEF=300) # TODO: Vulcan CAUTION!!! Define this for your CPU - no CPU power tool installed.
 #add_definitions(-DCPU_W_PREDEF=170) # TODO: silver1 CAUTION!!! Define this for your CPU - no CPU power tool installed.
 ## Choose the Unit combination that maximizes total performance (minimum time).
-add_definitions(-DPREDICT_OPTIMIZE_TARGET="PERF")
+#add_definitions(-DPREDICT_OPTIMIZE_TARGET="PERF")
 ## Choose the Unit combination that minimizes consumed energy (J).
 ## Rarely chooses multi-unit execution, since its almost always less energy-efficient than single-unit.
 #add_definitions(-DPREDICT_OPTIMIZE_TARGET="ENERGY")
+#add_definitions(-DPREDICT_OPTIMIZE_TARGET="POWER-DELAY")
+add_definitions(-DPREDICT_OPTIMIZE_TARGET="ENERGY-DELAY")
 #add_definitions(-DPREDICT_OPTIMIZE_TARGET="OTHER_TBD")
 
 ## Define at which percentage to normalize float values for similar data (e.g. costs, splits etc) to avoid empirical errors leaking into decisions
@@ -100,13 +102,13 @@ add_definitions(-DEXSTEAL_PENALTY=10)
 #add_definitions(-DTEST)
 
 #Run in Subkernel testing mode : details about time spend in subkernel operations.
-add_definitions(-DSTEST)
+#add_definitions(-DSTEST)
 
 #Run in Deep Subkernel testing mode : many details about time spend in subkernel operations.
 #add_definitions(-DDSTEST)
 
 #Run in Link Hop testing mode; transfers using link hops are logged and timed.
-add_definitions(-DTTEST)
+#add_definitions(-DTTEST)
 
 #Run in debug mode, which includes detailed function calls and info for error-checking
 #add_definitions(-DDEBUG)

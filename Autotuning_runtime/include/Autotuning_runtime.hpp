@@ -80,7 +80,9 @@ typedef class Modeler{
 		void print(); /// print the characteristics of a modeler to stderr
 		long int getMinT();
 		long int getMaxT();
+		long int getFlops();
 		long int getSKNum(int T);
+		double getGPUexecWatts();
 		long int getGPUexecLines();
 		long int getGPUexecElem(int idx);
 		void getDatalocs(int** dataloc_list_p, int* dataloc_num_p);
@@ -108,7 +110,8 @@ typedef class ATC{
 		int* active_unit_id_list;	/// The list of ids of said units.
 		double* active_unit_score; /// The 'score' of each said units relative to the total task completion.
 		double pred_t; /// The predicted seconds the whole operation will require using the above parameters.
-
+		double pred_J; /// The predicted Joules the whole operation will require using the above parameters.
+		double power_delay, energy_delay; /// The predicted power and energy delay products using the above parameters.
 		long int subkernel_num; /// The number of subkernels.
 		int* Subkernels_per_unit_num; /// The number of subkernels derived from a unit's score that that unit unit will fire.
 		int** Subkernels_per_unit_list; /// The sk_id ids of said sub-kernels, IF they are predefined and not dynamic.
@@ -154,7 +157,7 @@ void link_shared_bw_map_print();
 #ifdef ENABLE_TRANSFER_HOPS
 #define MAX_ALLOWED_HOPS 1
 #define MAX_HOP_ROUTES 1
-#define HOP_PENALTY 0.15
+#define HOP_PENALTY 0.5
 extern short link_hop_num[LOC_NUM][LOC_NUM];
 extern short link_hop_route_num[LOC_NUM][LOC_NUM];
 extern short link_hop_route[LOC_NUM][LOC_NUM][MAX_HOP_ROUTES][MAX_ALLOWED_HOPS];

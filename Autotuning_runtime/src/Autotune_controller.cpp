@@ -25,7 +25,7 @@ ATC::ATC(){
 		Subkernels_per_unit_num[d] = 0;
 	}
 	T = active_unit_num = subkernel_num = -1;
-	pred_t = -1.0;
+	pred_t = pred_J = power_delay = energy_delay = -1.0;
 	cache_limit = 0;
 
 	unit_modeler_list = (MD_p*) malloc(LOC_NUM*sizeof(MD_p));
@@ -122,6 +122,9 @@ void ATC::mimic_ATC(ATC_p other_ATC){
 	for (int d = 0; d < other_ATC->active_unit_num; d++) active_unit_id_list[d] = other_ATC->active_unit_id_list[d];
 	for (int d = 0; d < other_ATC->active_unit_num; d++) active_unit_score[d] = other_ATC->active_unit_score[d];
 	pred_t = other_ATC->pred_t;
+	pred_J = other_ATC->pred_J;
+	power_delay = other_ATC->power_delay;
+	energy_delay = other_ATC->energy_delay;
 	cache_limit = other_ATC->cache_limit;
 
 	if(subkernel_num != -1){
@@ -286,7 +289,7 @@ double ATC::autotune_problem(const char* routine_name, void* initial_problem_wra
 		ATC_p temp_controller = new ATC();
 		temp_controller->mimic_ATC(this);
 		int explored_cases = pow(2,LOC_NUM);
-		pred_t = DBL_MAX;
+		pred_t = pred_J = DBL_MAX;
 		int max_unit_num = active_unit_num, initial_T = T;
 		double tile_selection_t = 0, split_selection_t = 0;
 		for (int case_id = 1; case_id < explored_cases; case_id++){
@@ -295,14 +298,65 @@ double ATC::autotune_problem(const char* routine_name, void* initial_problem_wra
 				temp_controller->update_link_shared_weights();
 				if(initial_T <= 0) tile_selection_t += temp_controller->optimize_tile();
 				split_selection_t += temp_controller->optimize_split();
+#ifndef ENABLE_POWA
 				if (temp_controller->pred_t +
 					temp_controller->pred_t*((temp_controller->active_unit_num-active_unit_num)*MINIMUM_UNIT_CONTRIBUTION) < pred_t) mimic_ATC(temp_controller);
 #ifdef PDEBUG
-						lprintf(0, "==============================================\n");
-						lprintf(0, "Autotune devices (iter %d): Tuning for active_unit_id_list = [ ", case_id);
-						for (int i =0; i < temp_controller->active_unit_num; i++) lprintf(0, "%d ", temp_controller->active_unit_id_list[i]);
-						lprintf(0, "] -> pred_t = %lf, best_pred_t = %lf\n", temp_controller->pred_t,  pred_t);
-						lprintf(0, "==============================================\n");
+				lprintf(0, "==============================================\n");
+				lprintf(0, "Autotune devices (iter %d): Tuning for active_unit_id_list = [ ", case_id);
+				for (int i =0; i < temp_controller->active_unit_num; i++) lprintf(0, "%d ", temp_controller->active_unit_id_list[i]);
+				lprintf(0, "] -> pred_t = %lf, best_pred_t = %lf\n", temp_controller->pred_t,  pred_t);
+				lprintf(0, "==============================================\n");
+#endif
+#else
+				if (!strcmp(PREDICT_OPTIMIZE_TARGET,"PERF")){
+					if (temp_controller->pred_t +
+						temp_controller->pred_t*((temp_controller->active_unit_num-active_unit_num)*MINIMUM_UNIT_CONTRIBUTION) < pred_t) mimic_ATC(temp_controller);
+#ifdef PDEBUG
+					lprintf(0, "==============================================\n");
+					lprintf(0, "Autotune devices (iter %d): Tuning for active_unit_id_list = [ ", case_id);
+					for (int i =0; i < temp_controller->active_unit_num; i++) lprintf(0, "%d ", temp_controller->active_unit_id_list[i]);
+					lprintf(0, "] -> pred_t = %lf, best_pred_t = %lf\n", temp_controller->pred_t,  pred_t);
+					lprintf(0, "==============================================\n");
+#endif
+				}
+				else if(!strcmp(PREDICT_OPTIMIZE_TARGET,"ENERGY")){
+					if (temp_controller->pred_J // Minus here to allow reverse effect for MINIMUM_UNIT_CONTRIBUTION (otherwise less devices always better)
+						- temp_controller->pred_J*((temp_controller->active_unit_num-active_unit_num)*MINIMUM_UNIT_CONTRIBUTION)
+						< pred_J) mimic_ATC(temp_controller);
+#ifdef PDEBUG
+					lprintf(0, "==============================================\n");
+					lprintf(0, "Autotune devices (iter %d): Tuning for active_unit_id_list = [ ", case_id);
+					for (int i =0; i < temp_controller->active_unit_num; i++) lprintf(0, "%d ", temp_controller->active_unit_id_list[i]);
+					lprintf(0, "] -> pred_J = %lf, best_pred_J = %lf\n", temp_controller->pred_J,  pred_J);
+					lprintf(0, "==============================================\n");
+#endif
+				}
+				else if(!strcmp(PREDICT_OPTIMIZE_TARGET,"POWER-DELAY")){
+					if (temp_controller->power_delay
+						- temp_controller->power_delay*((temp_controller->active_unit_num-active_unit_num)*MINIMUM_UNIT_CONTRIBUTION)
+						> power_delay) mimic_ATC(temp_controller);
+#ifdef PDEBUG
+					lprintf(0, "==============================================\n");
+					lprintf(0, "Autotune devices (iter %d): Tuning for active_unit_id_list = [ ", case_id);
+					for (int i =0; i < temp_controller->active_unit_num; i++) lprintf(0, "%d ", temp_controller->active_unit_id_list[i]);
+					lprintf(0, "] -> power_delay = %lf, best_power_delay = %lf\n", temp_controller->power_delay,  power_delay);
+					lprintf(0, "==============================================\n");
+#endif
+				}
+				else if(!strcmp(PREDICT_OPTIMIZE_TARGET,"ENERGY-DELAY")){
+					if (temp_controller->energy_delay
+						- temp_controller->energy_delay*((temp_controller->active_unit_num-active_unit_num)*MINIMUM_UNIT_CONTRIBUTION)
+						> energy_delay) mimic_ATC(temp_controller);
+#ifdef PDEBUG
+					lprintf(0, "==============================================\n");
+					lprintf(0, "Autotune devices (iter %d): Tuning for active_unit_id_list = [ ", case_id);
+					for (int i =0; i < temp_controller->active_unit_num; i++) lprintf(0, "%d ", temp_controller->active_unit_id_list[i]);
+					lprintf(0, "] -> energy_delay = %lf, best_energy_delay = %lf\n", temp_controller->energy_delay,  energy_delay);
+					lprintf(0, "==============================================\n");
+#endif
+				}
+				else error("PREDICT_OPTIMIZE_TARGET = %s not implemented\n", PREDICT_OPTIMIZE_TARGET);
 #endif
 		}
 	}
@@ -322,12 +376,11 @@ double ATC::autotune_problem(const char* routine_name, void* initial_problem_wra
 
 	cpu_timer = csecond() - cpu_timer;
 
-
 	lprintf(0, "====================================\n");
 	lprintf(0, "ATC::autotune_problem: Autotuning complete-> t_autotune = %lf ms\n", cpu_timer*1000);
-	lprintf(0, "autotune_controller: T=%ld,  active_unit_num=%d, Problem split = %s -> %s : t_pred = %lf ms\n",
+	lprintf(0, "autotune_controller: T=%ld,  active_unit_num=%d, Problem split = %s -> %s : pred_t = %lf ms, pred_J = %lf kJ\n",
 		T, active_unit_num, printlist<int>(active_unit_id_list, active_unit_num),
-		printlist<double>(active_unit_score, active_unit_num), pred_t*1000);
+		printlist<double>(active_unit_score, active_unit_num), pred_t*1000, pred_J/1000);
 	lprintf(0, "====================================\n");
 
 #ifdef DEBUG
@@ -450,11 +503,23 @@ double ATC::optimize_split(){
 	if (T > max_allowed_T)
 		error("ATC::optimize_split: Give T = %ld > max_allowed_T = %ld\n", T, max_allowed_T);
 
-	double temp_t, min_overlap_t = 10000000, temp_score = 0;
+	double min_overlap_t = 10000000, temp_score = 0;
 
 	for(int idx = 0; idx < active_unit_num; idx++){
 		int cur_dev_idx = idxize(active_unit_id_list[idx]);
+#ifndef ENABLE_POWA
 		active_unit_score[idx] = unit_modeler_list[cur_dev_idx]->predict(FULL_OVERLAP);
+#else
+		if (!strcmp(PREDICT_OPTIMIZE_TARGET,"PERF")) active_unit_score[idx] =
+			unit_modeler_list[cur_dev_idx]->predict(FULL_OVERLAP);
+		else if (!strcmp(PREDICT_OPTIMIZE_TARGET,"ENERGY")) active_unit_score[idx] =
+			unit_modeler_list[cur_dev_idx]->predict(FULL_OVERLAP)*unit_modeler_list[cur_dev_idx]->getGPUexecWatts();
+		else if (!strcmp(PREDICT_OPTIMIZE_TARGET,"POWER-DELAY")) active_unit_score[idx] =
+			unit_modeler_list[cur_dev_idx]->predict(FULL_OVERLAP);
+		else if (!strcmp(PREDICT_OPTIMIZE_TARGET,"ENERGY-DELAY")) active_unit_score[idx] =
+			unit_modeler_list[cur_dev_idx]->predict(FULL_OVERLAP);
+		else error("PREDICT_OPTIMIZE_TARGET = %s not implemented\n", PREDICT_OPTIMIZE_TARGET);
+#endif
 		if (active_unit_score[idx] != 0) active_unit_score[idx] = 1/active_unit_score[idx];
 		else warning("ATC::optimize_split: active_unit_score[%d] == 0\n", idx);
 		temp_score+= active_unit_score[idx];
@@ -474,7 +539,7 @@ double ATC::optimize_split(){
 #endif
 	}
 
-	double temp_overlap_t = 0;
+	double temp_overlap_t = 0, total_J = 0;
 	double active_unit_score_new[LOC_NUM];
 	temp_score = 0;
 	for(int idx = 0; idx < active_unit_num; idx++){
@@ -495,9 +560,11 @@ double ATC::optimize_split(){
 				error("ATC::optimize_tileAndSplit:\
 				model->problem switch default reached\n");
 		}
-		temp_t = model->predict(used_model, T, active_unit_num, active_unit_id_list, active_unit_score);
+#ifndef ENABLE_POWA
+		double temp_t = model->predict(used_model, T, active_unit_num, active_unit_id_list, active_unit_score);
 		active_unit_score_new[idx] = temp_t;
-		if (active_unit_score_new[idx] != 0) active_unit_score_new[idx] = active_unit_score[idx]/active_unit_score_new[idx];
+		if (active_unit_score_new[idx] != 0) //ctive_unit_score_new[idx] = active_unit_score[idx]/active_unit_score_new[idx]; this was wrong?
+			active_unit_score_new[idx] = 1/active_unit_score_new[idx];
 		else warning("ATC::optimize_split: active_unit_score_new[%d] == 0\n", idx);
 		temp_score+= active_unit_score_new[idx];
 		if(temp_t > 0) temp_overlap_t = fmax(temp_overlap_t, temp_t);
@@ -507,7 +574,41 @@ double ATC::optimize_split(){
 		lprintf(lvl, "model->predict(%p) for dev_id = %d (idx = %d ) with T = %ld: temp_overlap_t = %lf, temp_t = %lf\n",
 			model, cur_dev_id, cur_dev_idx, T, temp_overlap_t, temp_t);
 #endif
+#else
+		double temp_t = model->predict(used_model, T, active_unit_num, active_unit_id_list, active_unit_score);
+		double temp_J = temp_t*unit_modeler_list[cur_dev_idx]->getGPUexecWatts();
+		long int temp_flops = active_unit_score[idx]*model->getFlops();
+		double temp_PDP = (temp_flops/temp_t)/unit_modeler_list[cur_dev_idx]->getGPUexecWatts();
+		double temp_EDP = (temp_flops/temp_t)*(temp_flops/temp_t)/unit_modeler_list[cur_dev_idx]->getGPUexecWatts();
+		if(temp_t > 0) temp_overlap_t = fmax(temp_overlap_t, temp_t);
+		else error("model->predict(%p(dev_id = %d, (idx = %d )), T = %ld): negative prediction temp_t = %lf\n",
+			model, cur_dev_id, cur_dev_idx, T, temp_t);
+		total_J += temp_J;
+#ifdef PDEBUG
+		lprintf(lvl, "model->predict(%p) for dev_id = %d (idx = %d ) with T = %ld: temp_overlap_t = %lf, temp_t = %lf\
+		total_J = %lf, temp_J = %lf\n",
+			model, cur_dev_id, cur_dev_idx, T, temp_overlap_t, temp_t, total_J, temp_J);
+#endif
+		if (!strcmp(PREDICT_OPTIMIZE_TARGET,"PERF")) active_unit_score_new[idx] = temp_t;
+		else if (!strcmp(PREDICT_OPTIMIZE_TARGET,"ENERGY")) active_unit_score_new[idx] = temp_J;
+		else if (!strcmp(PREDICT_OPTIMIZE_TARGET,"POWER-DELAY")) active_unit_score_new[idx] = 1/temp_PDP;
+		else if (!strcmp(PREDICT_OPTIMIZE_TARGET,"ENERGY-DELAY")) active_unit_score_new[idx] = 1/temp_EDP;
+		else error("PREDICT_OPTIMIZE_TARGET = %s not implemented\n", PREDICT_OPTIMIZE_TARGET);
+		if (active_unit_score_new[idx] != 0) //active_unit_score_new[idx] = active_unit_score[idx]/active_unit_score_new[idx]; this was wrong?
+			active_unit_score_new[idx] = 1/active_unit_score_new[idx];
+		else warning("ATC::optimize_split: active_unit_score_new[%d] == 0\n", idx);
+		temp_score+= active_unit_score_new[idx];
+#endif
 	}
+#ifndef ENABLE_POWA
+	pred_t = temp_overlap_t;
+#else
+	pred_t = temp_overlap_t;
+	pred_J = total_J;
+	long int total_flops = model->getFlops();
+	power_delay = (total_flops/temp_overlap_t)/(total_J/temp_overlap_t);
+	energy_delay = (total_flops/temp_overlap_t)*(total_flops/temp_overlap_t)/(total_J/temp_overlap_t);
+#endif
 	for(int idx = 0; idx < active_unit_num; idx++){
 		active_unit_score[idx] = active_unit_score_new[idx]/temp_score;
 #ifdef PDEBUG
@@ -523,8 +624,6 @@ double ATC::optimize_split(){
 				active_unit_id_list[idx], idx, active_unit_score[idx]);
 #endif
 	}
-
-	pred_t = temp_overlap_t;
 
 #ifdef PDEBUG
 	lprintf(lvl, "====================================\n");

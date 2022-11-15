@@ -108,6 +108,13 @@ long int Modeler::getMaxT(){
 	return 0;
 }
 
+long int Modeler::getFlops(){
+	if (strcmp(func,"gemm")) return gemm_flops(D1,D2,D3);
+	else if (strcmp(func,"axpy")) return axpy_flops(D1);
+	else error("Modeler::getFlops() not implemented for %s\n", func);
+	return -1;
+}
+
 long int Modeler::getSKNum(int T){
 	switch(problem){
 		case BLAS1:
@@ -119,6 +126,21 @@ long int Modeler::getSKNum(int T){
 			return CoCopeLiaGetSKNumBLAS3(this, T);
 		default:
 			error("CoCopeLiaGetSKNum: Invalid Problem %s", printProblem(problem));
+	}
+	return 0;
+}
+
+// Currently return the Watts for the last(larger) measurement
+double Modeler::getGPUexecWatts(){
+	switch(problem){
+		case BLAS1:
+			return ((GPUexec1Model_p)GPUexec_model_ptr)->av_W_buf[((GPUexec1Model_p)GPUexec_model_ptr)->lines-1];
+		case BLAS2:
+			return ((GPUexec2Model_p)GPUexec_model_ptr)->av_W_buf[((GPUexec2Model_p)GPUexec_model_ptr)->lines-1];
+		case BLAS3:
+			return ((GPUexec3Model_p)GPUexec_model_ptr)->av_W_buf[((GPUexec3Model_p)GPUexec_model_ptr)->lines-1];
+		default:
+			error("CoCoPeLiaGPUexecGetLines: Invalid Problem %s", printProblem(problem));
 	}
 	return 0;
 }
