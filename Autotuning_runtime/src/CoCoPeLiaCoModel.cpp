@@ -123,12 +123,12 @@ double t_com_predict_shared(CoModel_p model, long double bytes)
 	if (bytes < 0) return -1;
 	else if ( bytes == 0) return 0;
 	else if (final_estimated_link_bw[idxize(model->to)][idxize(model->from)] == 0.0) return 0;
+	long double tb_estimated = 1/(1e9*final_estimated_link_bw[idxize(model->to)][idxize(model->from)]);
 #ifdef DPDEBUG
-		lprintf(4, "t_com_predict_shared(%Lf): ti = %Lf, tb = %Lf, link_bw[%d][%d] = %lf, link_shared_bw[%d][%d] = %lf-> t_com = %Lf ms\n",
-			bytes, model->ti, model-> tb, (model->ti + model-> tb*bytes)*1000, model->to, model->from, link_bw[idxize(model->to)][idxize(model->from)],
-		model->to, model->from, link_shared_bw[idxize(model->to)][idxize(model->from)]);
+		lprintf(4, "t_com_predict_shared(%Le): ti = %Le, tb = %Le, tb_estimated[%d][%d] = %Le, t_com = %Le ms\n",
+			bytes, model->ti, model-> tb, model->to, model->from, tb_estimated, model->ti + tb_estimated* bytes);
 #endif
-	return model->ti + 1/(10e9*final_estimated_link_bw[idxize(model->to)][idxize(model->from)])* bytes;
+	return model->ti + tb_estimated* bytes;
 }
 
 /// Predict t_com for bytes including bidirectional use slowdown

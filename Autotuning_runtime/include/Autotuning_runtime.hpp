@@ -135,6 +135,8 @@ typedef class LinkMap{
 		void print_link_bw();
 		void print_link_bw_shared();
 		void print_link_bw_shared_hops();
+		void copy(class LinkMap* other_linkmap);
+		void reset(); // Resets all but the initial link_lat and link_bw to zero.
 /******************************************************************************/
 /************************ Class main Functions ********************************/
 		void update_link_weights(MD_p* list_of_models, int T);

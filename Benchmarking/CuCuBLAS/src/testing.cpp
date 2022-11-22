@@ -13,7 +13,7 @@ char* CoCoImplementationPrint(){
 	char* string_out = (char*) malloc (1024*sizeof(char));
 	char* string_helper = (char*) malloc (1024*sizeof(char));
 #ifndef ASYNC_ENABLE
-	strcat(string_out, "_SYNC");
+	sprintf(string_out, "_SYNC");
 #endif
 #ifndef UNIHELPER_LOCKFREE_ENABLE
 	sprintf(string_out, "_UN-LC");
@@ -28,10 +28,10 @@ char* CoCoImplementationPrint(){
 	sprintf(string_out, "_NO-SND-RCV-OVER");
 #endif
 #ifdef ENABLE_PARALLEL_BACKEND
-	sprintf(string_helper, "_UN-PB-L%d", MAX_BACKEND_L);
-	strcat(string_out, string_helper);
+	//sprintf(string_helper, "_UN-PB-L%d", MAX_BACKEND_L);
+	sprintf(string_out, "_UN-PB-L%d", MAX_BACKEND_L);
 #else
-	strcat(string_out, "_UN-NO-PB");
+	sprintf(string_out, "_UN-NO-PB");
 #endif
 #ifdef ENABLE_TRANSFER_HOPS
 #ifdef ENABLE_TRANSFER_W_HOPS

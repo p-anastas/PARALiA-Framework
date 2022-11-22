@@ -75,7 +75,7 @@ int main(const int argc, const char *argv[]) {
 			else if (predef_control_values->T > M/1.5 && predef_control_values->T > N/1.5 && predef_control_values->T > K/1.5)
 				error("Given Tin=%ld bigger than all problem dims/1.5\n", predef_control_values->T);
 		}
-			sprintf(filename, "%s/XKBLASDgemmRunner_predifined_vals_%s_%s_%s.log",
+			sprintf(filename, "%s/XKBLASDgemmRunner_predefined_vals_%s_%s_%s.log",
 				TESTLIBDIR, CoCoDistributionPrint(), CoCoImplementationPrint(), VERSION);
 	}
 	else sprintf(filename, "%s/XKBLASDgemmRunner_%s_%s_%s.log",
@@ -94,9 +94,9 @@ int main(const int argc, const char *argv[]) {
 		error("XKBLASDgemmRunner: XKBLAS not modified to accept devices from within script\n");
 	else{
 #ifdef ENABLE_CPU_WORKLOAD
-		dev_num = DEV_NUM-1; /// Don't use CPU.
+		dev_num = LOC_NUM-1; /// Don't use CPU.
 #else
-		dev_num = DEV_NUM;
+		dev_num = LOC_NUM;
 #endif
 		dev_ids = (int*) malloc(dev_num*sizeof(int));
 		for (int i = 0; i < dev_num; i++) dev_ids[i] = deidxize(i);

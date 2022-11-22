@@ -32,6 +32,7 @@ ATC::ATC(){
 	cache_limit = 0;
 
 	unit_modeler_list = (MD_p*) malloc(LOC_NUM*sizeof(MD_p));
+	linkmap = new LinkMap();
 #ifdef DEBUG
 	lprintf(lvl, "<-----|\n");
 #endif
@@ -129,7 +130,7 @@ void ATC::mimic_ATC(ATC_p other_ATC){
 	power_delay = other_ATC->power_delay;
 	energy_delay = other_ATC->energy_delay;
 	cache_limit = other_ATC->cache_limit;
-	linkmap = other_ATC->linkmap;
+	linkmap->copy(other_ATC->linkmap);
 
 	if(subkernel_num != -1){
 		for (int d = 0; d < LOC_NUM; d++){
@@ -261,8 +262,6 @@ double ATC::autotune_problem(const char* routine_name, void* initial_problem_wra
 #endif
 
 	init_modelers(routine_name, initial_problem_wrap);
-	linkmap = new LinkMap();
-	(routine_name, initial_problem_wrap);
 	linkmap->update_link_weights(unit_modeler_list, T);
 	int autotune_eval_devices = 0;
 	if (active_unit_num > 0){
@@ -301,6 +300,7 @@ double ATC::autotune_problem(const char* routine_name, void* initial_problem_wra
 		for (int case_id = 1; case_id < explored_cases; case_id++){
 				translate_binary_to_unit_list(case_id, &temp_controller->active_unit_num, temp_controller->active_unit_id_list);
 				if(temp_controller->active_unit_num > max_unit_num) continue;
+				temp_controller->linkmap->reset();
 				temp_controller->linkmap->update_link_shared_weights(temp_controller->unit_modeler_list,
 						temp_controller->active_unit_id_list, temp_controller->active_unit_num);
 				if(initial_T <= 0) tile_selection_t += temp_controller->optimize_tile();
@@ -376,12 +376,6 @@ double ATC::autotune_problem(const char* routine_name, void* initial_problem_wra
 		split_selection_t += optimize_split();
 	}
 
-	linkmap->update_link_shared_weights(unit_modeler_list,
-			active_unit_id_list, active_unit_num);
-#ifdef PDEBUG
-	linkmap->print_link_bw();
-	linkmap->print_link_bw_shared();
-#endif
 	final_estimated_linkmap = linkmap;
 	for(int i = 0; i< LOC_NUM; i++)	for(int j = 0; j< LOC_NUM; j++)
 #ifdef ENABLE_TRANSFER_HOPS
