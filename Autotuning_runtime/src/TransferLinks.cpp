@@ -188,9 +188,13 @@ void ATC::update_link_shared_weights(){
   link_shared_bw_map_print();
 #endif
 #ifdef ENABLE_TRANSFER_HOPS
+#ifndef ENABLE_ESPA
   InitHopMap(unit_modeler_list, link_shared_bw, link_shared_bw_hop, active_unit_id_list, active_unit_num);
 #ifdef PDEBUG
   link_shared_bw_hop_map_print();
+#endif
+#else
+  ESPA_InitHopMap(unit_modeler_list, link_shared_bw, link_shared_bw_hop, active_unit_id_list, active_unit_num);
 #endif
 #endif
 #ifdef DEBUG
@@ -244,9 +248,13 @@ void ATC::update_link_weights(){
   link_bw_map_print();
 #endif
 #ifdef ENABLE_TRANSFER_HOPS
+#ifndef ENABLE_ESPA
   InitHopMap(unit_modeler_list, link_bw, link_bw_hop, active_unit_id_list, active_unit_num);
 #ifdef PDEBUG
   link_bw_hop_map_print();
+#endif
+#else
+  ESPA_InitHopMap(unit_modeler_list, link_bw, link_bw_hop, active_unit_id_list, active_unit_num);
 #endif
 #endif
 #ifdef DEBUG

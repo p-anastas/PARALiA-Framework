@@ -142,9 +142,9 @@ void Subkernel::request_tile_hops(short TileIdx){
 
 		CQueue_p used_queue;
 #ifndef ENABLE_TRANSFER_W_HOPS
-		if(link_hop_num[run_dev_id_idx][FetchFromId_idx] == 0 || tmp->W_flag){
+		if(final_estimated_linkmap->link_hop_num[run_dev_id_idx][FetchFromId_idx] == 0 || tmp->W_flag){
 #else
-		if(link_hop_num[run_dev_id_idx][FetchFromId_idx] == 0){
+		if(final_estimated_linkmap->link_hop_num[run_dev_id_idx][FetchFromId_idx] == 0){
 #endif
 			used_queue = transfer_queues[run_dev_id_idx][FetchFromId_idx];
 			used_queue->wait_for_event(tmp->StoreBlock[FetchFromId_idx]->Available);
@@ -164,7 +164,7 @@ void Subkernel::request_tile_hops(short TileIdx){
 		}
 		else{
 			link_road_p test_road = (link_road_p) malloc(sizeof(struct link_road));
-			int inter_hop_num = link_hop_num[run_dev_id_idx][FetchFromId_idx];
+			int inter_hop_num = final_estimated_linkmap->link_hop_num[run_dev_id_idx][FetchFromId_idx];
 			test_road->hop_num = 2 + inter_hop_num;
 			test_road->hop_uid_list[0] = FetchFromId;
 			test_road->hop_uid_list[1 + inter_hop_num] = run_dev_id;
@@ -174,10 +174,10 @@ void Subkernel::request_tile_hops(short TileIdx){
 
 			test_road->hop_buf_list[0] = tmp->StoreBlock[FetchFromId_idx]->Adrs;
 			test_road->hop_buf_list[1 + inter_hop_num] = tmp->StoreBlock[run_dev_id_idx]->Adrs;
-			short selected_route = rand() % (link_hop_route_num[run_dev_id_idx][FetchFromId_idx] - 0) + 0;
+			short selected_route = rand() % (final_estimated_linkmap->link_hop_route_num[run_dev_id_idx][FetchFromId_idx] - 0) + 0;
 			CBlock_p block_ptr[inter_hop_num] = {NULL};
 			for(int inter_hop = 0 ; inter_hop < inter_hop_num; inter_hop++){
-				test_road->hop_uid_list[1+ inter_hop] = link_hop_route[run_dev_id_idx][FetchFromId_idx][selected_route][inter_hop];
+				test_road->hop_uid_list[1+ inter_hop] = final_estimated_linkmap->link_hop_route[run_dev_id_idx][FetchFromId_idx][selected_route][inter_hop];
 				test_road->hop_ldim_list[1+ inter_hop] = tmp->ldim[run_dev_id_idx];
 				test_road->hop_cqueue_list[inter_hop] = transfer_queues[idxize(test_road->hop_uid_list[1+inter_hop])][idxize(test_road->hop_uid_list[inter_hop])];
 
@@ -220,8 +220,8 @@ void Subkernel::request_tile_hops(short TileIdx){
 			lprintf(1, "Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::request_tile_hops W_flag = %d, \
 				%2d->%2d transfer sequence -> %s (route = %d)\n", run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2,
 				tmp->W_flag, FetchFromId, run_dev_id,
-				printlist(link_hop_route[run_dev_id_idx][FetchFromId_idx][selected_route],
-					link_hop_num[run_dev_id_idx][FetchFromId_idx]), selected_route);
+				printlist(final_estimated_linkmap->link_hop_route[run_dev_id_idx][FetchFromId_idx][selected_route],
+					final_estimated_linkmap->link_hop_num[run_dev_id_idx][FetchFromId_idx]), selected_route);
 #endif
 			FasTCoCoMemcpy2DAsync(test_road, tmp->dim1, tmp->dim2, tmp->dtypesize());
 #ifdef STEST
@@ -724,7 +724,7 @@ void Subkernel::writeback_data_hops(){
 				if (prev_state != NATIVE)
 					error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::writeback_data_hops: Tile(j=%d) WriteBackBlock was %s instead of NATIVE\n",
 						run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2, j, print_state(prev_state));
-				int inter_hop_num = link_hop_num[Writeback_id_idx][run_dev_id_idx];
+				int inter_hop_num = final_estimated_linkmap->link_hop_num[Writeback_id_idx][run_dev_id_idx];
 				CQueue_p used_queue;
 				if(inter_hop_num == 0){
 					transfer_queues[Writeback_id_idx][run_dev_id_idx]->wait_for_event(operation_complete);
@@ -756,11 +756,11 @@ void Subkernel::writeback_data_hops(){
 
 					test_road->hop_buf_list[0] = tmp->StoreBlock[run_dev_id_idx]->Adrs;
 					test_road->hop_buf_list[1 + inter_hop_num] = tmp->WriteBackBlock->Adrs;
-					short selected_route = rand() % (link_hop_route_num[Writeback_id_idx][run_dev_id_idx] - 0) + 0;
+					short selected_route = rand() % (final_estimated_linkmap->link_hop_route_num[Writeback_id_idx][run_dev_id_idx] - 0) + 0;
 					state new_block_state = EXCLUSIVE;
 					CBlock_p block_ptr[inter_hop_num] = {NULL};
 					for(int inter_hop = 0 ; inter_hop < inter_hop_num; inter_hop++){
-						test_road->hop_uid_list[1+ inter_hop] = link_hop_route[Writeback_id_idx][run_dev_id_idx][selected_route][inter_hop];
+						test_road->hop_uid_list[1+ inter_hop] = final_estimated_linkmap->link_hop_route[Writeback_id_idx][run_dev_id_idx][selected_route][inter_hop];
 						test_road->hop_ldim_list[1+ inter_hop] = tmp->ldim[run_dev_id_idx];
 						test_road->hop_cqueue_list[inter_hop] = transfer_queues[idxize(test_road->hop_uid_list[1+inter_hop])]
 							[idxize(test_road->hop_uid_list[inter_hop])];
@@ -788,8 +788,8 @@ void Subkernel::writeback_data_hops(){
 					lprintf(1, "Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::writeback_data_hops W_flag = %d, \
 						%2d->%2d transfer sequence -> %s (route %d)\n", run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2,
 						tmp->W_flag, run_dev_id, Writeback_id,
-						printlist(link_hop_route[Writeback_id_idx][run_dev_id_idx][selected_route],
-							link_hop_num[Writeback_id_idx][run_dev_id_idx]), selected_route);
+						printlist(final_estimated_linkmap->link_hop_route[Writeback_id_idx][run_dev_id_idx][selected_route],
+							final_estimated_linkmap->link_hop_num[Writeback_id_idx][run_dev_id_idx]), selected_route);
 #endif
 					FasTCoCoMemcpy2DAsync(test_road, tmp->dim1, tmp->dim2, tmp->dtypesize());
 #ifdef STEST

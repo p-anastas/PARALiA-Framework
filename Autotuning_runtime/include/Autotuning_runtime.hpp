@@ -102,6 +102,55 @@ typedef class Modeler{
 
 }* MD_p;
 
+#define MAX_ALLOWED_HOPS 1
+#define MAX_HOP_ROUTES 1
+#define HOP_PENALTY 0.15
+
+typedef class LinkMap{
+	public:
+		// Empirically obtained values for links if used independently
+		double link_lat[LOC_NUM][LOC_NUM] = {{0}};
+		double link_bw[LOC_NUM][LOC_NUM] = {{0}};
+
+		// Estimated bandwidth values for links if used silmuntaniously for a given problem
+		double link_bw_shared[LOC_NUM][LOC_NUM] = {{0}};
+		double link_bw_shared_hops[LOC_NUM][LOC_NUM] = {{0}};
+
+		// Number of current link uses. TODO: For runtime optimization, not implemented
+		long long link_uses[LOC_NUM][LOC_NUM] = {{0}};
+
+		// The backend hop route used for each transfer.
+		short link_hop_route[LOC_NUM][LOC_NUM][MAX_ALLOWED_HOPS][MAX_HOP_ROUTES] = {{{{0}}}};
+		// The number of intermediate hops between unit memories each link utilizes.
+		short link_hop_num[LOC_NUM][LOC_NUM] = {{0}};
+
+		// The number of different available routes for each link. TODO: Not implemented
+		short link_hop_route_num[LOC_NUM][LOC_NUM] = {{0}};
+
+/********************** Initialization/Modification ***************************/
+		LinkMap();
+		~LinkMap();
+/******************************************************************************/
+/**************************** Helper Fuctions *********************************/
+		void print_link_bw();
+		void print_link_bw_shared();
+		void print_link_bw_shared_hops();
+/******************************************************************************/
+/************************ Class main Functions ********************************/
+		void update_link_weights(MD_p* list_of_models, int T);
+		void update_link_shared_weights(MD_p* list_of_models,
+			int* active_unit_id_list, int active_unit_num);
+		void init_hop_routes(MD_p* list_of_models, int* active_unit_id_list, int unit_num);
+
+/******************************************************************************/
+/************************ Class ESPA Functions ********************************/
+
+		void ESPA_init(MD_p* list_of_models, int* list_of_units,
+			int* list_of_unit_percentages, int unit_num, int init_type);
+		void ESPA_init_hop_routes(MD_p* list_of_models, int* list_of_units,
+				int* list_of_unit_percentages, int unit_num, int init_type);
+/******************************************************************************/
+}* LinkMap_p;
 
 typedef class ATC{
 	public:
@@ -118,6 +167,7 @@ typedef class ATC{
 
 		long long cache_limit; /// The 'cache' size allocation limit for all devices in bytes, IF any.
 		MD_p* unit_modeler_list; /// The list of modelers for ALL available units (e.g. LOC_NUM)
+		LinkMap_p linkmap; /// The LinkMap representation of the system memory interconnection.
 /********************** Initialization/Modification ***************************/
 	ATC();	/// Constructor
 	~ATC(); /// Destructor
@@ -139,8 +189,6 @@ typedef class ATC{
 	double optimize_tile_CoCoPeLia(int model_idx, ModelType mode); /// Predicts T using CoCoPeLia models for a single unit, defined at Model_functions.cpp
 	double optimize_split();
 	void normalize_split();
-	void update_link_weights(); /// Update link weights. Function defined at TransferLinks.cpp for wholeness.
-	void update_link_shared_weights(); /// Update shared link weights based on problem data locations.
 /******************************************************************************/
 /**************************** Helper Fuctions *********************************/
 	void print(); /// Print the characteristics of the autotune controller to stderr
@@ -149,25 +197,6 @@ typedef class ATC{
 
 }* ATC_p;
 
-extern double link_bw[LOC_NUM][LOC_NUM];
-extern double link_shared_bw[LOC_NUM][LOC_NUM];
-void link_bw_map_print();
-void link_shared_bw_map_print();
-
-#ifdef ENABLE_TRANSFER_HOPS
-#define MAX_ALLOWED_HOPS 1
-#define MAX_HOP_ROUTES 1
-#define HOP_PENALTY 0.5
-extern short link_hop_num[LOC_NUM][LOC_NUM];
-extern short link_hop_route_num[LOC_NUM][LOC_NUM];
-extern short link_hop_route[LOC_NUM][LOC_NUM][MAX_HOP_ROUTES][MAX_ALLOWED_HOPS];
-extern double link_bw_hop[LOC_NUM][LOC_NUM];
-extern double link_shared_bw_hop[LOC_NUM][LOC_NUM];
-void link_bw_hop_map_print();
-void link_shared_bw_hop_map_print();
-#ifdef ENABLE_PREDICT_HOP_MODE
-extern short Snd_hops_and_NOSRO_enable_flag;
-#endif
-#endif
-
+extern double final_estimated_link_bw[LOC_NUM][LOC_NUM];
+extern LinkMap_p final_estimated_linkmap;
 #endif

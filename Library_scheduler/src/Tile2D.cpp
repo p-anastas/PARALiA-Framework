@@ -8,7 +8,6 @@
 #include "unihelpers.hpp"
 
 int Tile2D_num = 0;
-double link_used_2D[LOC_NUM][LOC_NUM] = {0};
 
 template class Tile2D<double>;
 
@@ -96,18 +95,14 @@ template<typename dtype> short Tile2D<dtype>::getClosestReadLoc(short dev_id_in)
     if (temp == AVAILABLE || temp == SHARABLE || temp == NATIVE){
       event_status block_status = StoreBlock[pos]->Available->query_status();
       if(block_status == COMPLETE || block_status == CHECKED || block_status == RECORDED){
-#ifdef ENABLE_TRANSFER_HOPS
-        double current_link_bw = link_shared_bw_hop[dev_id_in_idx][pos];
-#else
-        double current_link_bw = link_shared_bw[dev_id_in_idx][pos];
-#endif
+        double current_link_bw = final_estimated_link_bw[dev_id_in_idx][pos];
         if (block_status == RECORDED) current_link_bw-=current_link_bw*FETCH_UNAVAILABLE_PENALTY;
         if (current_link_bw > link_bw_max){
           link_bw_max = current_link_bw;
           pos_max = pos;
         }
         else if (current_link_bw == link_bw_max &&
-        link_used_2D[dev_id_in_idx][pos] < link_used_2D[dev_id_in_idx][pos_max]){
+        final_estimated_linkmap->link_uses[dev_id_in_idx][pos] < final_estimated_linkmap->link_uses[dev_id_in_idx][pos_max]){
           link_bw_max = current_link_bw;
           pos_max = pos;
         }
@@ -133,7 +128,7 @@ template<typename dtype> short Tile2D<dtype>::getClosestReadLoc(short dev_id_in)
       #ifdef DDEBUG
         lprintf(lvl-1, "<-----|\n");
       #endif
-      link_used_2D[dev_id_in_idx][pos_max]++;
+      final_estimated_linkmap->link_uses[dev_id_in_idx][pos_max]++;
       return deidxize(pos_max);
     }
     else error("Tile2D(%d)::getClosestReadLoc(%d): pos_max = %d selected,\
@@ -156,11 +151,8 @@ template<typename dtype> double Tile2D<dtype>::getMinLinkCost(short dev_id_in){
     if (temp == AVAILABLE || temp == SHARABLE || temp == NATIVE){
       event_status block_status = temp_outblock->Available->query_status();
       if(block_status == COMPLETE || block_status == CHECKED || block_status == RECORDED){
-#ifdef ENABLE_TRANSFER_HOPS
-        double current_link_bw = link_shared_bw_hop[dev_id_in_idx][pos];
-#else
-        double current_link_bw = link_shared_bw[dev_id_in_idx][pos];
-#endif
+        double current_link_bw = final_estimated_link_bw[dev_id_in_idx][pos];
+
         if (block_status == RECORDED) current_link_bw-=current_link_bw*FETCH_UNAVAILABLE_PENALTY;
         if (current_link_bw > link_bw_max) link_bw_max = current_link_bw;
       }

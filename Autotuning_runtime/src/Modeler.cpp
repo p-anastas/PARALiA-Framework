@@ -198,20 +198,15 @@ double Modeler::predictBestFriends_t(double request_ratio, long long request_siz
 			int i, i_out = 0, closest_remaining_unit_idx = idxize(remaining_unit_id_list[0]);
 			for (i = 0; i < remaining_unit_num; i++){
 				if (remaining_unit_id_list[i] == unit_id) continue;
-#ifdef ENABLE_TRANSFER_HOPS
-				if(link_shared_bw_hop[idxize(unit_id)][idxize(remaining_unit_id_list[i])] >
-					 link_shared_bw_hop[idxize(unit_id)][closest_remaining_unit_idx]){
-#else
-				if(link_shared_bw[idxize(unit_id)][idxize(remaining_unit_id_list[i])] >
-					 link_shared_bw[idxize(unit_id)][closest_remaining_unit_idx]){
-#endif
+				if(final_estimated_link_bw[idxize(unit_id)][idxize(remaining_unit_id_list[i])] >
+					 final_estimated_link_bw[idxize(unit_id)][closest_remaining_unit_idx]){
 					 	closest_remaining_unit_idx = idxize(remaining_unit_id_list[i]);
 						i_out = i;
 					}
 			}
 #ifdef DPDEBUG
 			lprintf(0, "Closest %d friend Unit with bw[%d][%d] = %lf\n", active_unit_num - remaining_unit_num,
-				idxize(unit_id), closest_remaining_unit_idx, link_shared_bw[idxize(unit_id)][closest_remaining_unit_idx]);
+				idxize(unit_id), closest_remaining_unit_idx, final_estimated_link_bw[idxize(unit_id)][closest_remaining_unit_idx]);
 #endif
 			total_t+= t_com_predict_shared(link[closest_remaining_unit_idx], (long long)((1.0*curr_ratio/request_ratio)*request_size));
 			remaining_unit_num--;

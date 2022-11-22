@@ -9,6 +9,9 @@
 
 #include <float.h> /// For DBL_MAX
 
+double final_estimated_link_bw[LOC_NUM][LOC_NUM] = {{0}};
+LinkMap_p final_estimated_linkmap;
+
 /********************** Initialization/Modification ***************************/
 ATC::ATC(){
 	short lvl = 2;
@@ -126,6 +129,7 @@ void ATC::mimic_ATC(ATC_p other_ATC){
 	power_delay = other_ATC->power_delay;
 	energy_delay = other_ATC->energy_delay;
 	cache_limit = other_ATC->cache_limit;
+	linkmap = other_ATC->linkmap;
 
 	if(subkernel_num != -1){
 		for (int d = 0; d < LOC_NUM; d++){
@@ -257,7 +261,9 @@ double ATC::autotune_problem(const char* routine_name, void* initial_problem_wra
 #endif
 
 	init_modelers(routine_name, initial_problem_wrap);
-	update_link_weights();
+	linkmap = new LinkMap();
+	(routine_name, initial_problem_wrap);
+	linkmap->update_link_weights(unit_modeler_list, T);
 	int autotune_eval_devices = 0;
 	if (active_unit_num > 0){
 		if (active_unit_id_list){
@@ -295,7 +301,8 @@ double ATC::autotune_problem(const char* routine_name, void* initial_problem_wra
 		for (int case_id = 1; case_id < explored_cases; case_id++){
 				translate_binary_to_unit_list(case_id, &temp_controller->active_unit_num, temp_controller->active_unit_id_list);
 				if(temp_controller->active_unit_num > max_unit_num) continue;
-				temp_controller->update_link_shared_weights();
+				temp_controller->linkmap->update_link_shared_weights(temp_controller->unit_modeler_list,
+						temp_controller->active_unit_id_list, temp_controller->active_unit_num);
 				if(initial_T <= 0) tile_selection_t += temp_controller->optimize_tile();
 				split_selection_t += temp_controller->optimize_split();
 #ifndef ENABLE_POWA
@@ -363,17 +370,25 @@ double ATC::autotune_problem(const char* routine_name, void* initial_problem_wra
 	else{
 		int initial_T = T;
 		double tile_selection_t = 0, split_selection_t = 0;
-		update_link_shared_weights();
+		linkmap->update_link_shared_weights(unit_modeler_list,
+				active_unit_id_list, active_unit_num);
 		if(initial_T <= 0) tile_selection_t += optimize_tile();
 		split_selection_t += optimize_split();
 	}
 
-	update_link_shared_weights();
+	linkmap->update_link_shared_weights(unit_modeler_list,
+			active_unit_id_list, active_unit_num);
 #ifdef PDEBUG
-	link_bw_map_print();
-	link_shared_bw_map_print();
+	linkmap->print_link_bw();
+	linkmap->print_link_bw_shared();
 #endif
-
+	final_estimated_linkmap = linkmap;
+	for(int i = 0; i< LOC_NUM; i++)	for(int j = 0; j< LOC_NUM; j++)
+#ifdef ENABLE_TRANSFER_HOPS
+		final_estimated_link_bw[i][j] = final_estimated_linkmap->link_bw_shared_hops[i][j];
+#else
+		final_estimated_link_bw[i][j] = final_estimated_linkmap->link_bw_shared[i][j];
+#endif
 	cpu_timer = csecond() - cpu_timer;
 
 	lprintf(0, "====================================\n");

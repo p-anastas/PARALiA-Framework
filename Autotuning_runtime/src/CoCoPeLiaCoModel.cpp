@@ -122,25 +122,13 @@ double t_com_predict_shared(CoModel_p model, long double bytes)
 {
 	if (bytes < 0) return -1;
 	else if ( bytes == 0) return 0;
-#ifdef ENABLE_TRANSFER_HOPS
-	else if (link_shared_bw_hop[idxize(model->to)][idxize(model->from)] == 0.0) return 0;
-#else
-	else if (link_shared_bw[idxize(model->to)][idxize(model->from)] == 0.0) return 0;
-#endif
+	else if (final_estimated_link_bw[idxize(model->to)][idxize(model->from)] == 0.0) return 0;
 #ifdef DPDEBUG
 		lprintf(4, "t_com_predict_shared(%Lf): ti = %Lf, tb = %Lf, link_bw[%d][%d] = %lf, link_shared_bw[%d][%d] = %lf-> t_com = %Lf ms\n",
 			bytes, model->ti, model-> tb, (model->ti + model-> tb*bytes)*1000, model->to, model->from, link_bw[idxize(model->to)][idxize(model->from)],
 		model->to, model->from, link_shared_bw[idxize(model->to)][idxize(model->from)]);
 #endif
-#ifdef ENABLE_TRANSFER_HOPS
-	return (link_bw[idxize(model->to)][idxize(model->from)]/
-		link_shared_bw_hop[idxize(model->to)][idxize(model->from)])*
-		(model->ti + model-> tb*bytes);
-#else
-	return (link_bw[idxize(model->to)][idxize(model->from)]/
-		link_shared_bw[idxize(model->to)][idxize(model->from)])*
-		(model->ti + model-> tb*bytes);
-#endif
+	return model->ti + 1/(10e9*final_estimated_link_bw[idxize(model->to)][idxize(model->from)])* bytes;
 }
 
 /// Predict t_com for bytes including bidirectional use slowdown

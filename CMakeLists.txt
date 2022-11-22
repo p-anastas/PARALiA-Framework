@@ -39,8 +39,10 @@ add_definitions(-DENABLE_CPU_WORKLOAD)
 ## Enable using a different parallel worker for scheduling each tile request
 #add_definitions(-DENABLE_PTHREAD_TILE_REQUEST)
 
-## Enable pre-fetching (cheap) tiles for future subkernels
+## Enable pre-fetching (cheap) tiles for future subkernels TODO: DONT
 #add_definitions(-DENABLE_TILE_PREFETCH)
+
+
 
 ## Enable using transfer hops for faster transfers between multiple links
 add_definitions(-DENABLE_TRANSFER_HOPS)
@@ -48,6 +50,9 @@ add_definitions(-DENABLE_TRANSFER_HOPS)
 #add_definitions(-DENABLE_TRANSFER_W_HOPS)
 ## Enable using heuristic-based W-hops (and Send-Recv Over) activation
 #add_definitions(-DENABLE_PREDICT_HOP_MODE)
+
+## Enable using estimated performance aggregation for initializing the link_hop_route
+#add_definitions(-DENABLE_ESPA)
 
 ## Enable sharing of bandwidth between links that utilize the same underlying hardware communication resources
 add_definitions(-DENABLE_LINK_BW_SHARING) # by putting them on different queues
@@ -57,12 +62,12 @@ add_definitions(-DENABLE_POWA)
 add_definitions(-DCPU_W_PREDEF=300) # TODO: Vulcan CAUTION!!! Define this for your CPU - no CPU power tool installed.
 #add_definitions(-DCPU_W_PREDEF=170) # TODO: silver1 CAUTION!!! Define this for your CPU - no CPU power tool installed.
 ## Choose the Unit combination that maximizes total performance (minimum time).
-#add_definitions(-DPREDICT_OPTIMIZE_TARGET="PERF")
+add_definitions(-DPREDICT_OPTIMIZE_TARGET="PERF")
 ## Choose the Unit combination that minimizes consumed energy (J).
 ## Rarely chooses multi-unit execution, since its almost always less energy-efficient than single-unit.
 #add_definitions(-DPREDICT_OPTIMIZE_TARGET="ENERGY")
 #add_definitions(-DPREDICT_OPTIMIZE_TARGET="POWER-DELAY")
-add_definitions(-DPREDICT_OPTIMIZE_TARGET="ENERGY-DELAY")
+#add_definitions(-DPREDICT_OPTIMIZE_TARGET="ENERGY-DELAY")
 #add_definitions(-DPREDICT_OPTIMIZE_TARGET="OTHER_TBD")
 
 ## Define at which percentage to normalize float values for similar data (e.g. costs, splits etc) to avoid empirical errors leaking into decisions
