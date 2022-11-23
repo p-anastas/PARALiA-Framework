@@ -104,7 +104,7 @@ typedef class Modeler{
 
 #define MAX_ALLOWED_HOPS 1
 #define MAX_HOP_ROUTES 1
-#define HOP_PENALTY 0.15
+#define HOP_PENALTY 0.2
 
 typedef class LinkMap{
 	public:
@@ -127,6 +127,10 @@ typedef class LinkMap{
 		// The number of different available routes for each link. TODO: Not implemented
 		short link_hop_route_num[LOC_NUM][LOC_NUM] = {{0}};
 
+		/// ESPA stuff
+		long double ESPA_bytes[LOC_NUM][LOC_NUM] = {{0}};
+		double ESPA_ETA[LOC_NUM][LOC_NUM] = {{0}};
+
 /********************** Initialization/Modification ***************************/
 		LinkMap();
 		~LinkMap();
@@ -137,6 +141,8 @@ typedef class LinkMap{
 		void print_link_bw_shared_hops();
 		void copy(class LinkMap* other_linkmap);
 		void reset(); // Resets all but the initial link_lat and link_bw to zero.
+
+		void print_ESPA();
 /******************************************************************************/
 /************************ Class main Functions ********************************/
 		void update_link_weights(MD_p* list_of_models, int T);
@@ -147,10 +153,10 @@ typedef class LinkMap{
 /******************************************************************************/
 /************************ Class ESPA Functions ********************************/
 
-		void ESPA_init(MD_p* list_of_models, int* list_of_units,
-			int* list_of_unit_percentages, int unit_num, int init_type);
-		void ESPA_init_hop_routes(MD_p* list_of_models, int* list_of_units,
-				int* list_of_unit_percentages, int unit_num, int init_type);
+		void ESPA_init(MD_p* unit_modeler_list, int* active_unit_id_list,
+			double* active_unit_score, int active_unit_num, int init_type);
+		void ESPA_init_hop_routes(MD_p* unit_modeler_list, int* active_unit_id_list,
+			double* active_unit_score, int active_unit_num, int init_type);
 /******************************************************************************/
 }* LinkMap_p;
 

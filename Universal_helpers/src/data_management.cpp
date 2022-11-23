@@ -32,10 +32,10 @@ void reseTTEST(){
 
 //#define SPLIT_2D_ROWISE
 void FasTCoCoMemcpy2DAsync(link_road_p roadMap, long int rows, long int cols, short elemSize){
-	if(roadMap->hop_num < 2) error("FasTCoCoMemcpy2DAsync: Cannot copy with less than 2 locations\n");
+	if(roadMap->hop_num - roadMap->starting_hop < 2) error("FasTCoCoMemcpy2DAsync: Cannot copy with less than 2 locations\n");
 	int buffer_bw_overlap = 8;
 	Event_p step_events[roadMap->hop_num][buffer_bw_overlap];
-	for(int uid_ctr = 0; uid_ctr < roadMap->hop_num - 1; uid_ctr++){
+	for(int uid_ctr = roadMap->starting_hop; uid_ctr < roadMap->hop_num - 1; uid_ctr++){
 #ifdef SPLIT_2D_ROWISE
 		long int local_rows = rows/buffer_bw_overlap;
 #else
@@ -47,9 +47,12 @@ void FasTCoCoMemcpy2DAsync(link_road_p roadMap, long int rows, long int cols, sh
 					roadMap->hop_uid_list[uid_ctr + 1], roadMap->hop_uid_list[uid_ctr]);
 			bytes[idxize(roadMap->hop_uid_list[uid_ctr + 1])][idxize(roadMap->hop_uid_list[uid_ctr])]
 			[timer_ctr[idxize(roadMap->hop_uid_list[uid_ctr + 1])][idxize(roadMap->hop_uid_list[uid_ctr])]] += rows*cols*elemSize;
-			roadMap->hop_cqueue_list[uid_ctr]->add_host_func(
-				(void*)&CoCoSetTimerAsync, (void*) &(timers[idxize(roadMap->hop_uid_list[uid_ctr + 1])][idxize(roadMap->hop_uid_list[uid_ctr])]
-				[0][timer_ctr[idxize(roadMap->hop_uid_list[uid_ctr + 1])][idxize(roadMap->hop_uid_list[uid_ctr])]]));
+			//roadMap->hop_cqueue_list[uid_ctr]->add_host_func(
+			//	(void*)&CoCoSetTimerAsync, (void*) &(timers[idxize(roadMap->hop_uid_list[uid_ctr + 1])][idxize(roadMap->hop_uid_list[uid_ctr])]
+			//	[0][timer_ctr[idxize(roadMap->hop_uid_list[uid_ctr + 1])][idxize(roadMap->hop_uid_list[uid_ctr])]]));
+			CoCoSetTimerAsync(&(timers[idxize(roadMap->hop_uid_list[uid_ctr + 1])]
+				[idxize(roadMap->hop_uid_list[uid_ctr])][0]
+				[timer_ctr[idxize(roadMap->hop_uid_list[uid_ctr + 1])][idxize(roadMap->hop_uid_list[uid_ctr])]]));
 #endif
 		for(int steps = 0; steps < buffer_bw_overlap; steps++){
 			step_events[uid_ctr][steps] = new Event(roadMap->hop_uid_list[uid_ctr+1]);

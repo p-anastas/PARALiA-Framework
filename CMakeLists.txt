@@ -42,8 +42,6 @@ add_definitions(-DENABLE_CPU_WORKLOAD)
 ## Enable pre-fetching (cheap) tiles for future subkernels TODO: DONT
 #add_definitions(-DENABLE_TILE_PREFETCH)
 
-
-
 ## Enable using transfer hops for faster transfers between multiple links
 add_definitions(-DENABLE_TRANSFER_HOPS)
 ## Enable using transfer hops for W tiles as well (no data reuse, but potentially better BW)
@@ -94,13 +92,10 @@ else()
 endif()
 
 #Run subkernels in provided order
-add_definitions(-DSERIAL_SUBKERNEL_SELECTION)
+#add_definitions(-DSERIAL_SUBKERNEL_SELECTION)
 
 ## Define subkernel selection heuristic values. 0 = No penalty
 add_definitions(-DMULTIFETCH_PENALTY=2)
-add_definitions(-DFETCH_UNAVAILABLE_PENALTY=0.15)
-add_definitions(-DWTILE_TRANSFER_PENALTY=1)
-add_definitions(-DPARALLELBBOTLENECK_PENALTY=0.5)
 add_definitions(-DEXSTEAL_PENALTY=10)
 
 #Run in testing mode : details about models, decisions and time spend in operations.

@@ -303,6 +303,27 @@ double ATC::autotune_problem(const char* routine_name, void* initial_problem_wra
 				temp_controller->linkmap->reset();
 				temp_controller->linkmap->update_link_shared_weights(temp_controller->unit_modeler_list,
 						temp_controller->active_unit_id_list, temp_controller->active_unit_num);
+#ifdef ENABLE_TRANSFER_HOPS
+#ifndef ENABLE_ESPA
+				temp_controller->linkmap->init_hop_routes(temp_controller->unit_modeler_list,
+						temp_controller->active_unit_id_list, temp_controller->active_unit_num);
+#else
+  			temp_controller->linkmap->ESPA_init(temp_controller->unit_modeler_list,
+						temp_controller->active_unit_id_list,
+						NULL, temp_controller->active_unit_num, 0);
+  			temp_controller->linkmap->ESPA_init_hop_routes(temp_controller->unit_modeler_list,
+						temp_controller->active_unit_id_list,
+						NULL, temp_controller->active_unit_num, 0);
+#endif
+#ifdef PDEBUG
+  temp_controller->linkmap->print_link_bw_shared_hops();
+#endif
+  for(int i = 0; i< LOC_NUM; i++)	for(int j = 0; j< LOC_NUM; j++)
+    final_estimated_link_bw[i][j] = temp_controller->linkmap->link_bw_shared_hops[i][j];
+#else
+  for(int i = 0; i< LOC_NUM; i++)	for(int j = 0; j< LOC_NUM; j++)
+    final_estimated_link_bw[i][j] = temp_controller->linkmap->link_bw_shared[i][j];
+#endif
 				if(initial_T <= 0) tile_selection_t += temp_controller->optimize_tile();
 				split_selection_t += temp_controller->optimize_split();
 #ifndef ENABLE_POWA
@@ -372,17 +393,54 @@ double ATC::autotune_problem(const char* routine_name, void* initial_problem_wra
 		double tile_selection_t = 0, split_selection_t = 0;
 		linkmap->update_link_shared_weights(unit_modeler_list,
 				active_unit_id_list, active_unit_num);
+#ifdef ENABLE_TRANSFER_HOPS
+#ifndef ENABLE_ESPA
+		linkmap->init_hop_routes(unit_modeler_list,
+			active_unit_id_list, active_unit_num);
+#else
+		linkmap->ESPA_init(unit_modeler_list,
+			active_unit_id_list,
+			NULL, active_unit_num, 0);
+		linkmap->ESPA_init_hop_routes(unit_modeler_list,
+			active_unit_id_list,
+			NULL, active_unit_num, 0);
+#endif
+#ifdef PDEBUG
+  	linkmap->print_link_bw_shared_hops();
+#endif
+  	for(int i = 0; i< LOC_NUM; i++)	for(int j = 0; j< LOC_NUM; j++)
+    	final_estimated_link_bw[i][j] = linkmap->link_bw_shared_hops[i][j];
+#else
+  	for(int i = 0; i< LOC_NUM; i++)	for(int j = 0; j< LOC_NUM; j++)
+    	final_estimated_link_bw[i][j] = linkmap->link_bw_shared[i][j];
+#endif
 		if(initial_T <= 0) tile_selection_t += optimize_tile();
 		split_selection_t += optimize_split();
 	}
 
-	final_estimated_linkmap = linkmap;
-	for(int i = 0; i< LOC_NUM; i++)	for(int j = 0; j< LOC_NUM; j++)
 #ifdef ENABLE_TRANSFER_HOPS
-		final_estimated_link_bw[i][j] = final_estimated_linkmap->link_bw_shared_hops[i][j];
+#ifndef ENABLE_ESPA
+	linkmap->init_hop_routes(unit_modeler_list,
+			active_unit_id_list, active_unit_num);
 #else
-		final_estimated_link_bw[i][j] = final_estimated_linkmap->link_bw_shared[i][j];
+	linkmap->ESPA_init(unit_modeler_list,
+			active_unit_id_list,
+			active_unit_score, active_unit_num, 1);
+	linkmap->ESPA_init_hop_routes(unit_modeler_list,
+			active_unit_id_list,
+			active_unit_score, active_unit_num, 1);
 #endif
+#ifdef PDEBUG
+  linkmap->print_link_bw_shared_hops();
+#endif
+  for(int i = 0; i< LOC_NUM; i++)	for(int j = 0; j< LOC_NUM; j++)
+    final_estimated_link_bw[i][j] = linkmap->link_bw_shared_hops[i][j];
+#else
+  for(int i = 0; i< LOC_NUM; i++)	for(int j = 0; j< LOC_NUM; j++)
+    final_estimated_link_bw[i][j] = linkmap->link_bw_shared[i][j];
+#endif
+	final_estimated_linkmap = linkmap;
+
 	cpu_timer = csecond() - cpu_timer;
 
 	lprintf(0, "====================================\n");

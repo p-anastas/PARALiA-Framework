@@ -56,6 +56,7 @@ class Subkernel
 		short is_RW_lock_master(short dev_id);
 		short RW_lock_initialized();
 		long double opt_fetch_cost(short dev_id);
+		long double opt_fetch_score(short dev_id);
 };
 
 typedef struct kernel_pthread_wrap{

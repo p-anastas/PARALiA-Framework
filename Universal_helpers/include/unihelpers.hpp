@@ -148,6 +148,7 @@ typedef struct link_road{
 	int hop_uid_list[LOC_NUM];
 	void* hop_buf_list[LOC_NUM];
 	int hop_ldim_list[LOC_NUM];
+	int starting_hop = 0; 
 
 	CQueue_p hop_cqueue_list[LOC_NUM-1];
 	Event_p hop_event_list[LOC_NUM-1];
