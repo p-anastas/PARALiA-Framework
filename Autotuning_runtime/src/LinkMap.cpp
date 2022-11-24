@@ -129,7 +129,7 @@ void LinkMap::update_link_shared_weights(MD_p* unit_modeler_list,
           for(int l = 0; l < LOC_NUM; l++){
             if ((k == l) || (i == k && j == l)) continue;
             if(!link_hop_num[k][l] && (is_in_list(deidxize(l),datalocs, dataloc_num) && is_in_list(deidxize(k),active_unit_id_list, active_unit_num))){
-             link_slowdown_multiplier = link_slowdown_multiplier + (unit_modeler_list[i]->link[j]->sl[k][l] - 1);
+             link_slowdown_multiplier = fmax(link_slowdown_multiplier, (unit_modeler_list[i]->link[j]->sl[k][l] - 1));
 #ifdef DPDEBUG
               if (unit_modeler_list[i]->link[j]->sl[k][l] != 1.0) lprintf(lvl, "ATC::update_link_map_shared():\
                 \nFound link (%d -> %d) imposing potential recv-based slowdown to (%d -> %d) with sl = %Lf\n",
@@ -143,7 +143,7 @@ void LinkMap::update_link_shared_weights(MD_p* unit_modeler_list,
               for (int idx = 0; idx < link_hop_num[k][l]; idx++) hoplocs[idx+1] = link_hop_route[k][l][0][idx];
               for (int idx = 0; idx < link_hop_num[k][l] + 1; idx++){
                 if(is_in_list(deidxize(hoplocs[idx+1]),datalocs, dataloc_num) && is_in_list(deidxize(hoplocs[idx]),active_unit_id_list, active_unit_num))
-                link_slowdown_multiplier = link_slowdown_multiplier +  (unit_modeler_list[i]->link[j]->sl[hoplocs[idx]][hoplocs[idx+1]] - 1);
+                link_slowdown_multiplier = fmax(link_slowdown_multiplier,(unit_modeler_list[i]->link[j]->sl[hoplocs[idx]][hoplocs[idx+1]] - 1));
    #ifdef DPDEBUG
                  if (unit_modeler_list[i]->link[j]->sl[hoplocs[idx]][hoplocs[idx+1]] != 1.0) lprintf(lvl, "ATC::update_link_map_shared():\
                    \nFound link (%d -> %d) imposing potential recv-based slowdown to (%d -> %d) with sl = %Lf\n",
@@ -166,7 +166,7 @@ void LinkMap::update_link_shared_weights(MD_p* unit_modeler_list,
         if(link_slowdown_multiplier!= 1.00) lprintf(lvl, "ATC::update_link_map_shared():\
         \nAdjusting link_bw_shared[%d][%d] with link_slowdown_multiplier = %lf\n", i, j, link_slowdown_multiplier);
 #endif
-        if(link_slowdown_multiplier>2) link_slowdown_multiplier = 2; 
+        if(link_slowdown_multiplier>2) link_slowdown_multiplier = 2;
         link_bw_shared[i][j] = link_bw[i][j] * (1/link_slowdown_multiplier);
       }
     }

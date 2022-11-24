@@ -381,49 +381,63 @@ ATC_p CoCopeLiaDgemm(char TransA,  char TransB, long int M, long int N, long int
 
 	long int T = autotune_controller_gemm->T;
 
-	int GPU_Block_num, Block_num = 1 + (A_asset->dim1/T + ((A_asset->dim1%T)? 1 : 0))* (A_asset->dim2/T + ((A_asset->dim2%T)? 1 : 0)) +
-				(B_asset->dim1/T + ((B_asset->dim1%T)? 1 : 0))* (B_asset->dim2/T + ((B_asset->dim2%T)? 1 : 0)) +
-				(C_asset->dim1/T + ((C_asset->dim1%T)? 1 : 0))* (C_asset->dim2/T + ((C_asset->dim2%T)? 1 : 0));
+	int Block_num_A = (A_asset->dim1/T + ((A_asset->dim1%T)? 1 : 0))* (A_asset->dim2/T + ((A_asset->dim2%T)? 1 : 0)),
+			Block_num_B = (B_asset->dim1/T + ((B_asset->dim1%T)? 1 : 0))* (B_asset->dim2/T + ((B_asset->dim2%T)? 1 : 0)),
+			Block_num_C = (C_asset->dim1/T + ((C_asset->dim1%T)? 1 : 0))* (C_asset->dim2/T + ((C_asset->dim2%T)? 1 : 0));
 	long long Block_sz = 	T*T*sizeof(VALUE_TYPE);
-	GPU_Block_num = Block_num;
-	if(autotune_controller_gemm->cache_limit > 0){
-		int max_block_num = autotune_controller_gemm->cache_limit/Block_sz;
+	for(int cache_loc = 0; cache_loc < LOC_NUM; cache_loc++){
+		int Block_num = 0, Native_block_num = 0;
+		if (A_asset->loc == deidxize(cache_loc)) Native_block_num+=Block_num_A;
+		if (B_asset->loc == deidxize(cache_loc)) Native_block_num+=Block_num_B;
+		if (C_asset->loc == deidxize(cache_loc)) Native_block_num+=Block_num_C;
+
+		long long max_cache_sz = 0;
+		if(autotune_controller_gemm->cache_limit > 0) max_cache_sz = autotune_controller_gemm->cache_limit;
+		else{
+			long long free_dev_mem, max_dev_mem = 0, prev_DevCache_sz = Native_block_num*Block_sz;
+			if (Global_Cache[cache_loc] != NULL) prev_DevCache_sz = (long long)
+				fmax(prev_DevCache_sz, Global_Cache[cache_loc]->BlockSize* Global_Cache[cache_loc]->BlockNum);
+			int prev_dev = CoCoPeLiaGetDevice();
+			CoCoPeLiaSelectDevice(deidxize(cache_loc));
+			if(deidxize(cache_loc)!=-1) CoCoPeLiaDevGetMemInfo(&free_dev_mem, &max_dev_mem);
+			else free_dev_mem = max_dev_mem = 100000000000; // TODO: hard coded value, should put something that reads it from system?
+			CoCoPeLiaSelectDevice(prev_dev);
+			max_cache_sz = free_dev_mem - ((long long) max_dev_mem*(1-PROBLEM_GPU_PERCENTAGE/100.0)) + prev_DevCache_sz;
+		}
+		Block_num = 1 + Block_num_A + Block_num_B + Block_num_C;
+		int max_block_num = max_cache_sz/Block_sz;
 		if(max_block_num < Block_num){
 			//#ifdef DEBUG
 			if(!reuse_model_flag){
-				lprintf(0, "CoCopeLiaDgemm: Input cache limit %lld forces problem to use %d blocks\
-					instead of %d needed for the full problem\n", autotune_controller_gemm->cache_limit, max_block_num, Block_num);
+				lprintf(0, "CoCopeLiaDgemm: Problem will use %d blocks for dev_id = %d\
+					instead of %d needed for the full problem\n", max_block_num, deidxize(cache_loc), Block_num);
 				lprintf(0, "====================================\n");
 			}
+			Block_num = max_block_num;
 			// With Parallel backends unfortunately == SK_blocks + Max_Exclusive_Blocks - 1
 			int worst_case_ex_blocks = 3; //2 + (C_asset->dim1/T + ((C_asset->dim1%T)? 1 : 0))* (C_asset->dim2/T + ((C_asset->dim2%T)? 1 : 0));
 			if(max_block_num < worst_case_ex_blocks)
 				error("CoCopeLiaDgemm: Not able to run with < %d blocks per cache due to EX scheduling\n", worst_case_ex_blocks);
-				GPU_Block_num = max_block_num;
 		}
-	}
-	for(int cache_loc = 0; cache_loc < LOC_NUM; cache_loc++){
-		int curr_block_num = Block_num;
-		if(deidxize(cache_loc)!= -1) curr_block_num = GPU_Block_num;
 #ifdef BUFFER_REUSE_ENABLE
-		if(Global_Cache[cache_loc] == NULL) Global_Cache[cache_loc] = new Cache(deidxize(cache_loc), curr_block_num, Block_sz);
-		else if (Global_Cache[cache_loc]->BlockSize != Block_sz || Global_Cache[cache_loc]->BlockNum < curr_block_num){
+		if(Global_Cache[cache_loc] == NULL) Global_Cache[cache_loc] = new Cache(deidxize(cache_loc), Block_num, Block_sz);
+		else if (Global_Cache[cache_loc]->BlockSize != Block_sz || Global_Cache[cache_loc]->BlockNum < Block_num){
 #ifdef DEBUG
 		lprintf(lvl, "CoCopeLiaDgemm: Previous Cache smaller than requested:\
 		Global_Cache[%d]->BlockSize=%lld vs Block_sz = %lld,\
 		Global_Cache[%d]->BlockNum=%d vs Block_num = %d\n",
 		cache_loc, Global_Cache[cache_loc]->BlockSize, Block_sz,
-		cache_loc, Global_Cache[cache_loc]->BlockNum, curr_block_num);
+		cache_loc, Global_Cache[cache_loc]->BlockNum, Block_num);
 #endif
 			delete Global_Cache[cache_loc];
-			Global_Cache[cache_loc] = new Cache(deidxize(cache_loc), curr_block_num, Block_sz);
+			Global_Cache[cache_loc] = new Cache(deidxize(cache_loc), Block_num, Block_sz);
 		}
 		else{
 			;
 		}
 #else
 			if(Global_Cache[cache_loc]!= NULL) error("CoCopeLiaDgemm: Global_Cache[%d] was not NULL with reuse disabled\n", cache_loc);
-			Global_Cache[cache_loc] = new Cache(deidxize(cache_loc), curr_block_num, Block_sz);
+			Global_Cache[cache_loc] = new Cache(deidxize(cache_loc), Block_num, Block_sz);
 #endif
 	}
 

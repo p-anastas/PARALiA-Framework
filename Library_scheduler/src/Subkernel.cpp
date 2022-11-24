@@ -122,7 +122,7 @@ void Subkernel::request_tile_hops(short TileIdx){
 			run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2);
 #endif
 		short FetchFromId = -42;
-		if(!tmp->W_flag) FetchFromId = tmp->getClosestReadLoc(run_dev_id);
+		if(!tmp->W_total) FetchFromId = tmp->getClosestReadLoc(run_dev_id);
 		else {
 			FetchFromId = tmp->RW_master;
 			tmp->StoreBlock[idxize(FetchFromId)]->add_reader();
@@ -144,7 +144,7 @@ void Subkernel::request_tile_hops(short TileIdx){
 
 		CQueue_p used_queue;
 #ifndef ENABLE_TRANSFER_W_HOPS
-		if(final_estimated_linkmap->link_hop_num[run_dev_id_idx][FetchFromId_idx] == 0 || tmp->W_flag){
+		if(final_estimated_linkmap->link_hop_num[run_dev_id_idx][FetchFromId_idx] == 0 || tmp->W_total){
 #else
 		if(final_estimated_linkmap->link_hop_num[run_dev_id_idx][FetchFromId_idx] == 0){
 #endif
@@ -184,11 +184,11 @@ void Subkernel::request_tile_hops(short TileIdx){
 				test_road->hop_ldim_list[1+ inter_hop] = tmp->ldim[run_dev_id_idx];
 				test_road->hop_cqueue_list[inter_hop] = recv_queues[idxize(test_road->hop_uid_list[1+inter_hop])][idxize(test_road->hop_uid_list[inter_hop])];
 
-				if (!tmp->W_flag && tmp->StoreBlock[idxize(test_road->hop_uid_list[1+inter_hop])] != NULL &&
+				if (!tmp->W_total && tmp->StoreBlock[idxize(test_road->hop_uid_list[1+inter_hop])] != NULL &&
 					tmp->StoreBlock[idxize(test_road->hop_uid_list[1+inter_hop])]->State != INVALID)
-					error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::request_tile_hops W_flag = %d, \
+					error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::request_tile_hops W_total = %d, \
 						FetchFromId = %d, run_dev_id = %d, hop_id = %d already cached in loc\n",  run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2,
-						tmp->W_flag, FetchFromId, run_dev_id, test_road->hop_uid_list[1+ inter_hop]);
+						tmp->W_total, FetchFromId, run_dev_id, test_road->hop_uid_list[1+ inter_hop]);
 */
 			int starting_hop = 0;
 			for(int inter_hop = 0 ; inter_hop < inter_hop_num; inter_hop++){
@@ -196,12 +196,12 @@ void Subkernel::request_tile_hops(short TileIdx){
 				test_road->hop_ldim_list[1+ inter_hop] = tmp->ldim[run_dev_id_idx];
 				test_road->hop_cqueue_list[inter_hop] = recv_queues[idxize(test_road->hop_uid_list[1+inter_hop])][idxize(test_road->hop_uid_list[inter_hop])];
 
-				if (!tmp->W_flag && tmp->StoreBlock[idxize(test_road->hop_uid_list[1+inter_hop])] != NULL &&
+				if (!tmp->W_total && tmp->StoreBlock[idxize(test_road->hop_uid_list[1+inter_hop])] != NULL &&
 					tmp->StoreBlock[idxize(test_road->hop_uid_list[1+inter_hop])]->State != INVALID) starting_hop = inter_hop;
 			}
 			for(int inter_hop = starting_hop ; inter_hop < inter_hop_num; inter_hop++){
 				state new_block_state;
-				if(!tmp->W_flag){
+				if(!tmp->W_total){
 					new_block_state = SHARABLE;
 					if(tmp->StoreBlock[idxize(test_road->hop_uid_list[1+inter_hop])] != NULL)
 						tmp->StoreBlock[idxize(test_road->hop_uid_list[1+inter_hop])]->Owner_p = NULL;
@@ -231,13 +231,13 @@ void Subkernel::request_tile_hops(short TileIdx){
 			//CoCoSetTimerAsync((void*) &reqT_start_ts[TileIdx]);
 			//used_queue->add_host_func((void*)&CoCoSetTimerAsync, (void*) &reqT_start_ts[TileIdx]);
 #endif
-#ifdef PDEBUG
+//#ifdef PDEBUG
 			lprintf(1, "Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::request_tile_hops W_flag = %d, \
 				%2d->%2d transfer sequence -> %s (route = %d)\n", run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2,
 				tmp->W_flag, FetchFromId, run_dev_id,
 				printlist(final_estimated_linkmap->link_hop_route[run_dev_id_idx][FetchFromId_idx][selected_route],
 					final_estimated_linkmap->link_hop_num[run_dev_id_idx][FetchFromId_idx]), selected_route);
-#endif
+//#endif
 			FasTCoCoMemcpy2DAsync(test_road, tmp->dim1, tmp->dim2, tmp->dtypesize());
 #ifdef STEST
 			//used_queue->add_host_func((void*)&CoCoSetTimerAsync, (void*) &reqT_end_ts[TileIdx]);
@@ -245,7 +245,7 @@ void Subkernel::request_tile_hops(short TileIdx){
 			//dev_in_from[TileIdx] = FetchFromId;
 			//dev_in_to[TileIdx] = run_dev_id;
 #endif
-			if(tmp->W_flag){
+			if(tmp->W_total){
 				//if (tmp->StoreBlock[FetchFromId_idx]!= tmp->WriteBackBlock){
 					for(int inter_hop = 0 ; inter_hop < inter_hop_num; inter_hop++){
 						CBlock_wrap_p wrap_inval = NULL;
@@ -257,7 +257,7 @@ void Subkernel::request_tile_hops(short TileIdx){
 				//}
 			}
 		}
-		if(tmp->W_flag){
+		if(tmp->W_total){
 			CBlock_wrap_p wrap_inval = NULL;
 			wrap_inval = (CBlock_wrap_p) malloc (sizeof(struct CBlock_wrap));
 			wrap_inval->lockfree = false;
@@ -288,7 +288,7 @@ void Subkernel::request_tile(short TileIdx){
 			run_dev_id, id, tmp->id, tmp->GridId);
 #endif
 		short FetchFromId = - 42;
-		if(!tmp->W_flag) FetchFromId = tmp->getClosestReadLoc(run_dev_id);
+		if(!tmp->W_total) FetchFromId = tmp->getClosestReadLoc(run_dev_id);
 		else {
 			FetchFromId = tmp->RW_master;
 			tmp->StoreBlock[idxize(FetchFromId)]->add_reader();
@@ -321,7 +321,7 @@ void Subkernel::request_tile(short TileIdx){
 		dev_in_from[TileIdx] = FetchFromId;
 		dev_in_to[TileIdx] = run_dev_id;
 #endif
-		if(tmp->W_flag){
+		if(tmp->W_total){
 			//if (tmp->StoreBlock[FetchFromId_idx]!= tmp->WriteBackBlock){
 				CBlock_wrap_p wrap_inval = NULL;
 				wrap_inval = (CBlock_wrap_p) malloc (sizeof(struct CBlock_wrap));
@@ -345,7 +345,7 @@ void Subkernel::request_tile(short TileIdx){
 			run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2);
 #endif
 		short FetchFromId = -42;
-		if(!tmp->W_flag) FetchFromId = tmp->getClosestReadLoc(run_dev_id);
+		if(!tmp->W_total) FetchFromId = tmp->getClosestReadLoc(run_dev_id);
 		else {
 			FetchFromId = tmp->RW_master;
 			tmp->StoreBlock[idxize(FetchFromId)]->add_reader();
@@ -380,7 +380,7 @@ void Subkernel::request_tile(short TileIdx){
 		dev_in_from[TileIdx] = FetchFromId;
 		dev_in_to[TileIdx] = run_dev_id;
 #endif
-		if(tmp->W_flag){
+		if(tmp->W_total){
 			//if (tmp->StoreBlock[FetchFromId_idx]!= tmp->WriteBackBlock){
 				CBlock_wrap_p wrap_inval = NULL;
 				wrap_inval = (CBlock_wrap_p) malloc (sizeof(struct CBlock_wrap));
@@ -423,11 +423,11 @@ void Subkernel::request_data(){
 				tmp->StoreBlock[run_dev_id_idx]->State == INVALID) {
 				if(tmp->StoreBlock[run_dev_id_idx] != NULL) tmp->StoreBlock[run_dev_id_idx]->Owner_p = NULL;
 				state new_block_state;
-				if(tmp->W_flag) new_block_state = EXCLUSIVE;
+				if(tmp->W_total) new_block_state = EXCLUSIVE;
 				else new_block_state = SHARABLE;
 				tmp->StoreBlock[run_dev_id_idx] = Global_Cache[run_dev_id_idx]->assign_Cblock(new_block_state,false);
 				tmp->StoreBlock[run_dev_id_idx]->set_owner((void**)&tmp->StoreBlock[run_dev_id_idx],false);
-				if(tmp->W_flag) tmp->StoreBlock[run_dev_id_idx]->init_writeback_info(tmp->WriteBackBlock,
+				if(tmp->W_total) tmp->StoreBlock[run_dev_id_idx]->init_writeback_info(tmp->WriteBackBlock,
 					&(tmp->RW_master), 1, tmp->dim, tmp->dim, tmp->dim,
 					tmp->dtypesize(), recv_queues[idxize(tmp->getWriteBackLoc())][run_dev_id_idx], false);
 #ifdef DEBUG
@@ -436,7 +436,7 @@ void Subkernel::request_data(){
 #endif
 #ifdef ENABLE_PTHREAD_TILE_REQUEST
 					if (tmp->R_flag) {
-						if(!tmp->W_flag){
+						if(!tmp->W_total){
 							tile_req_p wrap_request = (tile_req_p) malloc(sizeof(struct tile_req));
 							wrap_request->sk = this;
 							wrap_request->TileIdx = j;
@@ -455,12 +455,12 @@ void Subkernel::request_data(){
 #endif
 			}
 			else if(tmp->StoreBlock[run_dev_id_idx]->State == NATIVE &&
-				tmp->W_flag && tmp->RW_master!= run_dev_id){
-				if(tmp->W_flag);// tmp->StoreBlock[run_dev_id_idx]->add_writer();
+				tmp->W_total && tmp->RW_master!= run_dev_id){
+				if(tmp->W_total);// tmp->StoreBlock[run_dev_id_idx]->add_writer();
 				else tmp->StoreBlock[run_dev_id_idx]->add_reader();
 #ifdef ENABLE_PTHREAD_TILE_REQUEST
 				if (tmp->R_flag) {
-					if(!tmp->W_flag){
+					if(!tmp->W_total){
 						tile_req_p wrap_request = (tile_req_p) malloc(sizeof(struct tile_req));
 						wrap_request->sk = this;
 						wrap_request->TileIdx = j;
@@ -480,7 +480,7 @@ void Subkernel::request_data(){
 			}
 			else{
 				//tmp->StoreBlock[run_dev_id_idx]->Available->sync_barrier(); // Is this needed?
-				if (tmp->W_flag);// tmp->StoreBlock[run_dev_id_idx]->add_writer();
+				if (tmp->W_total);// tmp->StoreBlock[run_dev_id_idx]->add_writer();
 				else tmp->StoreBlock[run_dev_id_idx]->add_reader();
 			}
 		}
@@ -490,11 +490,11 @@ void Subkernel::request_data(){
 				tmp->StoreBlock[run_dev_id_idx]->State == INVALID) {
 				if(tmp->StoreBlock[run_dev_id_idx] != NULL) tmp->StoreBlock[run_dev_id_idx]->Owner_p = NULL;
 				state new_block_state;
-				if(tmp->W_flag) new_block_state = EXCLUSIVE;
+				if(tmp->W_total) new_block_state = EXCLUSIVE;
 				else new_block_state = SHARABLE;
 				tmp->StoreBlock[run_dev_id_idx] = Global_Cache[run_dev_id_idx]->assign_Cblock(new_block_state,false);
 				tmp->StoreBlock[run_dev_id_idx]->set_owner((void**)&tmp->StoreBlock[run_dev_id_idx],false);
-				if(tmp->W_flag) tmp->StoreBlock[run_dev_id_idx]->init_writeback_info(tmp->WriteBackBlock,
+				if(tmp->W_total) tmp->StoreBlock[run_dev_id_idx]->init_writeback_info(tmp->WriteBackBlock,
 					&(tmp->RW_master), tmp->dim1, tmp->dim2, tmp->ldim[run_dev_id_idx], tmp->ldim[idxize(tmp->WriteBackLoc)],
 					tmp->dtypesize(), recv_queues[idxize(tmp->getWriteBackLoc())][run_dev_id_idx], false);
 
@@ -521,8 +521,8 @@ void Subkernel::request_data(){
 #endif
 			}
 			else if(tmp->StoreBlock[run_dev_id_idx]->State == NATIVE &&
-				tmp->W_flag && tmp->RW_master!= run_dev_id){
-					if(tmp->W_flag);// tmp->StoreBlock[run_dev_id_idx]->add_writer();
+				tmp->W_total && tmp->RW_master!= run_dev_id){
+					if(tmp->W_total);// tmp->StoreBlock[run_dev_id_idx]->add_writer();
 					else tmp->StoreBlock[run_dev_id_idx]->add_reader();
 #ifdef ENABLE_PTHREAD_TILE_REQUEST
 				if (tmp->R_flag) {
@@ -543,7 +543,7 @@ void Subkernel::request_data(){
 			}
 			else{
 				//tmp->StoreBlock[run_dev_id_idx]->Available->sync_barrier(); // Is this needed?
-				if (tmp->W_flag);// tmp->StoreBlock[run_dev_id_idx]->add_writer();
+				if (tmp->W_total);// tmp->StoreBlock[run_dev_id_idx]->add_writer();
 				else tmp->StoreBlock[run_dev_id_idx]->add_reader();
 			}
 		}
@@ -586,11 +586,11 @@ void Subkernel::run_operation(){
 		for (int j = 0; j < TileNum; j++){ /// Method only works for max 1 W(rite) Tile.
 			if (TileDimlist[j] == 1){
 					Tile1D<VALUE_TYPE>* tmp = (Tile1D<VALUE_TYPE>*) TileList[j];
-					if(tmp->W_flag) RW_parallel_backend_ctr = tmp->RW_Master_backend_ctr;
+					if(tmp->W_total) RW_parallel_backend_ctr = tmp->RW_Master_backend_ctr;
 			}
 			else if (TileDimlist[j] == 2){
 					Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) TileList[j];
-					if(tmp->W_flag) RW_parallel_backend_ctr = tmp->RW_Master_backend_ctr;
+					if(tmp->W_total) RW_parallel_backend_ctr = tmp->RW_Master_backend_ctr;
 			}
 		}
 		exec_queue[run_dev_id_idx]->set_parallel_backend(RW_parallel_backend_ctr);
@@ -608,7 +608,7 @@ void Subkernel::run_operation(){
 						run_dev_id, id, tmp->id, tmp->GridId, j);
 				if(tmp->R_flag) exec_queue[run_dev_id_idx]->wait_for_event(tmp->StoreBlock[run_dev_id_idx]->Available);
 				#ifdef ENABLE_PARALLEL_BACKEND
-				if(tmp->W_flag) tmp->RW_Master_backend_ctr = RW_parallel_backend_ctr;
+				if(tmp->W_total) tmp->RW_Master_backend_ctr = RW_parallel_backend_ctr;
 				#endif
 		}
 		else if (TileDimlist[j] == 2){
@@ -619,7 +619,7 @@ void Subkernel::run_operation(){
 						run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2, j);
 				if(tmp->R_flag) exec_queue[run_dev_id_idx]->wait_for_event(tmp->StoreBlock[run_dev_id_idx]->Available);
 				#ifdef ENABLE_PARALLEL_BACKEND
-				if(tmp->W_flag) tmp->RW_Master_backend_ctr = RW_parallel_backend_ctr;
+				if(tmp->W_total) tmp->RW_Master_backend_ctr = RW_parallel_backend_ctr;
 				#endif
 		}
 	}
@@ -654,7 +654,7 @@ void Subkernel::run_operation(){
 
 			if(tmp->R_flag) tmp->R_flag--;
 
-			if(tmp->W_flag){
+			if(tmp->W_total){
 				tmp->W_flag--;
 				if(!tmp->W_flag) WR_last[j] = 1;
 				else{
@@ -680,7 +680,7 @@ void Subkernel::run_operation(){
 
 			if(tmp->R_flag) tmp->R_flag--;
 
-			if(tmp->W_flag){
+			if(tmp->W_total){
 				tmp->W_flag--;
 				if(!tmp->W_flag) WR_last[j] = 1;
 				else{
@@ -794,23 +794,24 @@ void Subkernel::writeback_data_hops(){
 						//test_road->hop_cqueue_list[inter_hop]->wait_for_event(operation_complete);
 					}
 
-					test_road->hop_cqueue_list[0]->wait_for_event(operation_complete);
+					test_road->hop_cqueue_list[test_road->starting_hop]->wait_for_event(operation_complete);
 
 					used_queue = test_road->hop_cqueue_list[inter_hop_num] =
 						wb_queues[idxize(test_road->hop_uid_list[1+inter_hop_num])][idxize(test_road->hop_uid_list[inter_hop_num])];
 					test_road->hop_event_list[inter_hop_num] = tmp->WriteBackBlock->Available;
+					test_road->hop_event_list[inter_hop_num]->reset();
 #ifdef STEST
 					used_queue->add_host_func(
 						(void*)&CoCoSetTimerAsync, (void*) &(wbT_start_ts[j]));
 					//CoCoSetTimerAsync((void*) &(wbT_start_ts[j]);
 #endif
-#ifdef PDEBUG
+//#ifdef PDEBUG
 					lprintf(1, "Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::writeback_data_hops W_flag = %d, \
 						%2d->%2d transfer sequence -> %s (route %d)\n", run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2,
 						tmp->W_flag, run_dev_id, Writeback_id,
 						printlist(final_estimated_linkmap->link_hop_route[Writeback_id_idx][run_dev_id_idx][selected_route],
 							final_estimated_linkmap->link_hop_num[Writeback_id_idx][run_dev_id_idx]), selected_route);
-#endif
+//#endif
 					FasTCoCoMemcpy2DAsync(test_road, tmp->dim1, tmp->dim2, tmp->dtypesize());
 #ifdef STEST
 				used_queue->add_host_func(
@@ -819,7 +820,7 @@ void Subkernel::writeback_data_hops(){
 				dev_out_from[j] = run_dev_id;
 				dev_out_to[j] = Writeback_id;
 #endif
-					for(int inter_hop = 0 ; inter_hop < inter_hop_num; inter_hop++){
+					for(int inter_hop = test_road->starting_hop; inter_hop < inter_hop_num; inter_hop++){
 						CBlock_wrap_p wrap_inval = NULL;
 						wrap_inval = (CBlock_wrap_p) malloc (sizeof(struct CBlock_wrap));
 						wrap_inval->lockfree = false;

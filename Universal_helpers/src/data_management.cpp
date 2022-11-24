@@ -34,6 +34,8 @@ void reseTTEST(){
 void FasTCoCoMemcpy2DAsync(link_road_p roadMap, long int rows, long int cols, short elemSize){
 	if(roadMap->hop_num - roadMap->starting_hop < 2) error("FasTCoCoMemcpy2DAsync: Cannot copy with less than 2 locations\n");
 	int buffer_bw_overlap = 8;
+	if (rows/buffer_bw_overlap < 100) buffer_bw_overlap = (rows/100) + 1 ;
+	if (cols/buffer_bw_overlap < 100) buffer_bw_overlap = (cols/100) + 1 ; 
 	Event_p step_events[roadMap->hop_num][buffer_bw_overlap];
 	for(int uid_ctr = roadMap->starting_hop; uid_ctr < roadMap->hop_num - 1; uid_ctr++){
 #ifdef SPLIT_2D_ROWISE

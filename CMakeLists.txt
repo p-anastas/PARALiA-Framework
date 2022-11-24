@@ -43,7 +43,7 @@ add_definitions(-DENABLE_CPU_WORKLOAD)
 #add_definitions(-DENABLE_TILE_PREFETCH)
 
 ## Enable using transfer hops for faster transfers between multiple links
-add_definitions(-DENABLE_TRANSFER_HOPS)
+#add_definitions(-DENABLE_TRANSFER_HOPS)
 ## Enable using transfer hops for W tiles as well (no data reuse, but potentially better BW)
 #add_definitions(-DENABLE_TRANSFER_W_HOPS)
 ## Enable using heuristic-based W-hops (and Send-Recv Over) activation
@@ -92,11 +92,13 @@ else()
 endif()
 
 #Run subkernels in provided order
-#add_definitions(-DSERIAL_SUBKERNEL_SELECTION)
+add_definitions(-DSERIAL_SUBKERNEL_SELECTION)
 
 ## Define subkernel selection heuristic values. 0 = No penalty
 add_definitions(-DMULTIFETCH_PENALTY=2)
 add_definitions(-DEXSTEAL_PENALTY=10)
+add_definitions(-DFETCH_UNAVAILABLE_PENALTY=0.1)
+
 
 #Run in testing mode : details about models, decisions and time spend in operations.
 #add_definitions(-DTEST)

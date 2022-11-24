@@ -49,6 +49,7 @@ template<typename dtype> void Asset2D<dtype>::InitTileMap(int T1, int T2, Cache_
 
   int current_ctr, T1tmp, T2tmp;
   void* tile_addr = NULL;
+  int loc_idx = idxize(CoCoGetPtrLoc(adrs));
   for (int itt1 = 0; itt1 < GridSz1; itt1++){
     if ( itt1 == GridSz1 - 1) T1tmp = T1Last;
     else  T1tmp = T1;
@@ -60,12 +61,12 @@ template<typename dtype> void Asset2D<dtype>::InitTileMap(int T1, int T2, Cache_
       if (transpose == 'N'){
          tile_addr = adrs + itt1*T1 + itt2*T2*ldim;
          Tile_map[current_ctr] = new Tile2D<dtype>(tile_addr, T1tmp, T2tmp, ldim, itt1, itt2,
-           init_loc_cache_p[idxize(CoCoGetPtrLoc(adrs))]->assign_Cblock(NATIVE, true));
+           init_loc_cache_p[loc_idx]->assign_Cblock(NATIVE, true));
        }
       else if (transpose == 'T'){
         tile_addr = adrs + itt1*T1*ldim + itt2*T2;
         Tile_map[current_ctr] = new Tile2D<dtype>(tile_addr, T2tmp, T1tmp, ldim, itt2, itt1,
-           init_loc_cache_p[idxize(CoCoGetPtrLoc(adrs))]->assign_Cblock(NATIVE, true));
+           init_loc_cache_p[loc_idx]->assign_Cblock(NATIVE, true));
       }
       else error("Asset2D<dtype>::InitTileMap: Unknown transpose type\n");
 
