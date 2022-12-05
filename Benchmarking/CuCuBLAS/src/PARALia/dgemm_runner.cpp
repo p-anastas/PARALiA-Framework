@@ -23,14 +23,20 @@ int main(const int argc, const char *argv[]) {
 
 	char *filename = (char *) malloc(1024* sizeof(char));
 	if (predef_control_values!= NULL){
-		error("CoCoPeLiaDgemmRunnerBest: I am not supposed to be used with specific inputs. You probably need CoCoPeLiaDgemmRunner\n");
+		if(predef_control_values->T > 0) {
+			if (predef_control_values->T > M || predef_control_values->T > N || predef_control_values->T > K)
+				error("Given Tin=%ld bigger than problem dim\n", predef_control_values->T);
+			else if (predef_control_values->T > M/1.5 && predef_control_values->T > N/1.5 && predef_control_values->T > K/1.5)
+				warning("Given Tin=%ld bigger than all problem dims/1.5\n", predef_control_values->T);
+		}
+		sprintf(filename, "%s/CoCoPeLiaDgemmRunner_predefined_vals_%s_%s_%s.log",
+			TESTLIBDIR, CoCoDistributionPrint(), CoCoImplementationPrint(), VERSION);
 	}
-	else sprintf(filename, "%s/CoCoPeLiaDgemmRunnerBest_%s_%s_%s.log",
+	else sprintf(filename, "%s/CoCoPeLiaDgemmRunner_%s_%s_%s.log",
 		TESTLIBDIR, CoCoDistributionPrint(), CoCoImplementationPrint(), VERSION);
 #ifdef CHECKLOG
 	CheckLogLvl3(filename, predef_control_values, TransA, TransB, alpha, beta, M, N, K, A_loc, B_loc, C_loc, C_out_loc);
 #endif
-	predef_control_values = new ATC();
 	/// Matrix Layouts for CPU GEMM
 	CBLAS_TRANSPOSE cpu_op_A, cpu_op_B;    // CblasNoTrans, CblasTrans
 	cublasOperation_t gpu_op_A, gpu_op_B; // CUBLAS_OP_N, CUBLAS_OP_T
@@ -63,53 +69,12 @@ int main(const int argc, const char *argv[]) {
 	fprintf(stderr, "done.\nInit time:\t%lf ms\n\n",  cpu_timer  * 1000);
 
 #ifdef RUNVALIDATION
-	double *C_buf;
-	C_buf  = (double*) malloc(M * N*sizeof(double));
-	CoCoMemcpy(C_buf, C,  M * N *sizeof(double), -2, C_loc);
-#endif
-
-	long int best_T = (long int) fmin(fmin(fmin(M/LOC_NUM,N/LOC_NUM),K),CBLASXT_MAX_SAFE_TILE);
-	predef_control_values-> cache_limit = 0;
-	predef_control_values->active_unit_num = -1;
-	predef_control_values-> T = best_T;
-	// Warmup
-	for(int it = 0; it < 10; it++){
-		return_values = CoCopeLiaDgemmControled(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC, predef_control_values);
-		CoCoSyncCheckErr();
-	}
-
-	cpu_timer  = csecond();
-	return_values = CoCopeLiaDgemmControled(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC, predef_control_values);
-	CoCoSyncCheckErr();
-	cpu_timer  = csecond() - cpu_timer;
-
-	short bench_it = 10;
-	double best_t = cpu_timer;
-	for (long int T_trial = (((long int)fmax(fmin(fmin(M/32,N/32),K/32),512))/512)*512; T_trial <= (long int) fmin(fmin(fmin(M/sqrt(DEV_NUM),N/sqrt(DEV_NUM)),K),CBLASXT_MAX_SAFE_TILE); T_trial+=512){
-			fprintf(stderr,"Running CoCopeLia DGEMM-> M = %zu, N = %zu, K = %zu, T = %zu\n", M, N, K, T_trial);
-			predef_control_values-> T = T_trial;
-			cpu_timer  = csecond();
-			for(int it = 0; it < bench_it; it++){
-				return_values = CoCopeLiaDgemmControled(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC, predef_control_values);
-				CoCoSyncCheckErr();
-			}
-			cpu_timer  = (csecond() - cpu_timer)/bench_it;
-			fprintf(stderr, "Total time:\t%lf ms\n", cpu_timer  * 1000);
-			if (cpu_timer < best_t){
-				best_t = cpu_timer;
-				best_T = T_trial;
-			}
-	}
-	fprintf(stderr, "\nCoCopeLia DGEMM T_best = %zu : t = %lf ms ( %lf Gflops/s )\n\n", best_T, best_t  * 1000, Gval_per_s(gemm_flops(M,N,K),best_t));
-	predef_control_values-> T = best_T;
-	for (int i = 0; i< LOC_NUM; i++) CoCopeLiaDevCacheFree(deidxize(i));
-
-#ifdef RUNVALIDATION
-	double *C_out, *C_out1;
+	double *C_out, *C_out1, *C_buf;
 	C_out  = (double*) malloc(M * N*sizeof(double));
 	C_out1  = (double*) malloc(M * N*sizeof(double));
+	C_buf  = (double*) malloc(M * N*sizeof(double));
 
- 	CoCoMemcpy(C, C_buf,  M * N *sizeof(double), C_loc, -2);
+	CoCoMemcpy(C_buf, C,  M * N *sizeof(double), -2, C_loc);
 
 	// Call for Validate
 	if (predef_control_values!= NULL) return_values = CoCopeLiaDgemmControled(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC, predef_control_values);
@@ -134,7 +99,6 @@ int main(const int argc, const char *argv[]) {
 #endif
 
 	cpu_timer = csecond();
-	// First call for Validate
 	if (predef_control_values!= NULL) return_values = CoCopeLiaDgemmControled(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC, predef_control_values);
 	else return_values = CoCopeLiaDgemm(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC);
 	CoCoSyncCheckErr();
@@ -148,17 +112,25 @@ int main(const int argc, const char *argv[]) {
 
 	double first_over_t = cpu_timer;
 
+	short warmup_bench_it = 10;
+	if ( M >= 20000 && N >= 20000 && K >= 20000) warmup_bench_it = 2;
+	for(int it = 0; it < warmup_bench_it; it++){
+		if (predef_control_values!= NULL) return_values = CoCopeLiaDgemmControled(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC, predef_control_values);
+		else return_values = CoCopeLiaDgemm(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC);
+	}
+	CoCoSyncCheckErr();
+	
 	double min_t = first_over_t, max_t = 0, avg_t = 0;
 	cpu_timer = csecond();
-  bench_it = 100;
-	if ( M >= 8192 || N >= 8192 || K >= 8192) bench_it = 10;
+	short bench_it = 100;
+	if ( M >= 20000 && N >= 20000 && K >= 20000) bench_it = 20;
 	for(int it = 0; it < bench_it; it++){
 		cpu_timer = csecond();
 		if (predef_control_values!= NULL) return_values = CoCopeLiaDgemmControled(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC, predef_control_values);
 		else return_values = CoCopeLiaDgemm(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC);
 		CoCoSyncCheckErr();
 		cpu_timer = csecond() - cpu_timer;
-		StoreLogLvl3(filename, return_values, TransA, TransB, alpha, beta, M, N, K, A_loc, B_loc, C_loc, C_out_loc, cpu_timer);
+		StoreLogLvl3(filename, return_values, TransA, TransB, alpha, beta, M, N, K, A_loc, B_loc, C_loc, C_out_loc, cpu_timer, return_values->pred_t, return_values->pred_J);
 		if ( cpu_timer < min_t ) min_t = cpu_timer;
 		if ( cpu_timer > max_t ) max_t = cpu_timer;
 		avg_t += cpu_timer;

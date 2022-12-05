@@ -8,6 +8,8 @@
 
 #include "Autotuning_runtime.hpp"
 
+double PARALiaPerfPenaltyModifier(MD_p model, long int T, int active_unit_num);
+
 /// A naive prediction of the full-overlap (~unreachable) performance of a modeled routine
 double PredictFullOverlap(MD_p model);
 /// A naive prediction of the zero-overlap (~worst case) performance of a modeled routine

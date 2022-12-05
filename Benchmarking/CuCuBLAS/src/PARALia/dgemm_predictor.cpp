@@ -83,7 +83,7 @@ int main(const int argc, const char *argv[]) {
 
 	lprintf(0, "CoCoPeLiaDgemmPredictor: t_autotune = %lf ms\n", autotune_timer*1000);
 	autotune_controller_gemm->print();
-	StoreLogLvl3(filename, autotune_controller_gemm, TransA, TransB, alpha, beta, M, N, K, A_loc, B_loc, C_loc, C_out_loc, cpu_timer);
+	StoreLogLvl3(filename, autotune_controller_gemm, TransA, TransB, alpha, beta, M, N, K, A_loc, B_loc, C_loc, C_out_loc, cpu_timer, autotune_controller_gemm->pred_t, autotune_controller_gemm->pred_J);
 
 	CoCoSyncCheckErr();
 	CoCoFree(A_ptr, A_loc);

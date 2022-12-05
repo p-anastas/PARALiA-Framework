@@ -176,6 +176,7 @@ double PredictBidirectionalHetero(MD_p model, long int T, int active_unit_num = 
 
 double PARALiaPerfPenaltyModifier(MD_p model, long int T, int active_unit_num){
 	short lvl = 5;
+	if (T == -1) return 1.0;
 	double padding_time_multiplier = 1.0, inbalance_time_multiplier = 1.0;
 #ifdef TILE_IMBALANCE_PENALTY
 	if (model->D1 != -1 && model->D1%T) padding_time_multiplier+=TILE_IMBALANCE_PENALTY;
@@ -263,7 +264,7 @@ double PARALiaPredictLinkHeteroBLAS3(MD_p model, long int T, int active_unit_num
 
 		double t_recv_extra = t_recv_extra_pesimistic; // (t_recv_extra_optimistic + t_recv_extra_pesimistic)/2;
 
-		t_total = fmax(t_exec_full, fmax(t_recv_full + t_recv_extra, t_send_full));
+		t_total = penalty * fmax(t_exec_full, fmax(t_recv_full + t_recv_extra, t_send_full));
 #ifdef PDEBUG
 		fprintf(stderr, "PARALia  PredictLinkHetero (Unit = %d, Unit_ratio = %.2lf%%):\n"
 		"\tt_recv_full: %lf ms ( %lf Gb/s)\n"
@@ -297,7 +298,6 @@ double PARALiaPredictLinkHetero(MD_p model, long int T, int active_unit_num, int
 	}
 	return 0;
 }
-
 
 ///  Itterates through benchmarked values for T and chooses the Tbest that minimizes total time.
 double ATC::optimize_tile_CoCoPeLia(int model_idx, ModelType mode){

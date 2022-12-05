@@ -29,7 +29,12 @@ double gemm_entry_ts;
 Subkernel** Subkernel_list_gemm;
 int Subkernel_num_gemm;
 int remaining_Subkernels_gemm;
+
+//#define GEMM_FIRE_SK_DEV_ORDER
+#ifdef GEMM_FIRE_SK_DEV_ORDER
 int curr_sk_idx_gemm = 0;
+int curr_sk_gemm_unit_list[LOC_NUM], curr_sk_gemm_unit_num;
+#endif
 
 int Sk_select_lock_gemm = 0;
 
@@ -194,16 +199,16 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 		}
 		while(__sync_lock_test_and_set(&Sk_select_lock_gemm, 1));
 
-		// if(curr_sk_idx_gemm < autotune_controller_gemm->active_unit_num && autotune_controller_gemm->active_unit_id_list[curr_sk_idx_gemm] != dev_id){
-		// 	__sync_lock_release(&Sk_select_lock_gemm);
-		// 	continue;
+		//if(curr_sk_idx_gemm < autotune_controller_gemm->active_unit_num && autotune_controller_gemm->active_unit_id_list[curr_sk_idx_gemm] != dev_id){
+		//__sync_lock_release(&Sk_select_lock_gemm);
+		//continue;
 		// } // Fire first round in device order
-
-		// if(autotune_controller_gemm->active_unit_id_list[curr_sk_idx_gemm] != dev_id){
-		// 	__sync_lock_release(&Sk_select_lock_gemm);
-		// 	continue;
-		// } // Fire all rounds in device order
-
+#ifdef GEMM_FIRE_SK_DEV_ORDER
+		if(curr_sk_gemm_unit_list[curr_sk_idx_gemm] != dev_id){
+		__sync_lock_release(&Sk_select_lock_gemm);
+	  continue;
+		} // Fire all rounds in device order
+#endif
 		curr = SubkernelSelect(dev_id, Subkernel_list_gemm, Subkernel_num_gemm);
 		if (!curr){
 //#ifdef DDEBUG
@@ -212,8 +217,10 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 
 			// if (curr_sk_idx_gemm < autotune_controller_gemm->active_unit_num) curr_sk_idx_gemm++; // Fire first round in device order
 
-			// if (curr_sk_idx_gemm == autotune_controller_gemm->active_unit_num -1) curr_sk_idx_gemm = 0;
-			// else curr_sk_idx_gemm++; // Fire all rounds in device order
+#ifdef GEMM_FIRE_SK_DEV_ORDER
+			if (curr_sk_idx_gemm == curr_sk_gemm_unit_num -1) curr_sk_idx_gemm = 0;
+			else curr_sk_idx_gemm++; // Fire all rounds in device order
+#endif
 
 			__sync_lock_release(&Sk_select_lock_gemm);
 			continue;
@@ -239,9 +246,21 @@ void* CoCopeLiaDgemmAgentVoid(void* kernel_pthread_wrapped){
 		CoCoGemmUpdatePointers(curr);
 
 		//if (curr_sk_idx_gemm < autotune_controller_gemm->active_unit_num) curr_sk_idx_gemm++;  // Fire first round in device order
-
-		// if (curr_sk_idx_gemm == autotune_controller_gemm->active_unit_num -1) curr_sk_idx_gemm = 0;
-		// else curr_sk_idx_gemm++; // Fire all rounds in device order
+#ifdef GEMM_FIRE_SK_DEV_ORDER
+		if(0 == remaining_Subkernels_gemm){
+			int slide_flag = 0;
+			for (int idx = 0; idx < curr_sk_gemm_unit_num - 1; idx++){
+				if (curr_sk_gemm_unit_list[curr_sk_idx_gemm] == curr_sk_gemm_unit_list[idx]) slide_flag  = 1;
+				if(slide_flag) curr_sk_gemm_unit_list[idx] = curr_sk_gemm_unit_list[idx+1];
+			}
+			curr_sk_gemm_unit_num--;
+			if (curr_sk_idx_gemm == curr_sk_gemm_unit_num) curr_sk_idx_gemm = 0;
+		}
+		else{
+			if (curr_sk_idx_gemm == curr_sk_gemm_unit_num -1) curr_sk_idx_gemm = 0;
+			else curr_sk_idx_gemm++; // Fire all rounds in device order
+		}
+#endif
 
 		__sync_lock_release(&Sk_select_lock_gemm);
 		curr->run_operation();
@@ -486,6 +505,13 @@ ATC_p CoCopeLiaDgemm(char TransA,  char TransB, long int M, long int N, long int
 
 	//s = pthread_attr_init(&attr);
 	//if (s != 0) error("CoCopeLiaDgemm: pthread_attr_init failed s=%d\n", s);
+
+#ifdef GEMM_FIRE_SK_DEV_ORDER
+	// Fire all devices in other_dev_score_winner
+	curr_sk_idx_gemm = 0;
+	curr_sk_gemm_unit_num = autotune_controller_gemm->active_unit_num;
+	for(int i = 0; i < curr_sk_gemm_unit_num; i ++) curr_sk_gemm_unit_list[i] = autotune_controller_gemm->active_unit_id_list[i];
+#endif
 
 	pthread_t thread_id[autotune_controller_gemm->active_unit_num];
 	kernel_pthread_wrap_p thread_dev_data[autotune_controller_gemm->active_unit_num];

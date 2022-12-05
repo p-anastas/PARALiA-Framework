@@ -65,8 +65,8 @@ set (XKBLAS_LINK  "-L${XKBLAS_LD}  -lm -lpthread -lkaapi -lxkblas /opt/system/nv
 message( "Benchmarking - Linking XKBLAS: " ${XKBLAS_LINK} )
 
 add_library(benchcocopelia SHARED
-${BENCH_DIR_SRC}/cuBLASWrappers.cpp
-${BENCH_DIR_SRC}/cuBLASXtWrappers.cpp
+${BENCH_DIR_SRC}/cuBLASXt/cuBLASWrappers.cpp
+${BENCH_DIR_SRC}/cuBLASXt/cuBLASXtWrappers.cpp
 ${BENCH_DIR_SRC}/testing.cpp
 )
 target_link_libraries(benchcocopelia cocopelia ${INTERNAL_LINK_LIB} ${OPENBLAS_LINK} cocopelia autotuning_runtime unihelpers )
@@ -78,38 +78,35 @@ configure_file(${BENCH_DIR_INC}/BLASxWrapped.hpp ${BENCH_INSTALL_INC}/BLASxWrapp
 #Enable checking the existing logs for each benchmark before executing it, to avoid running the same exact test multiple times.
 #add_definitions(-DCHECKLOG)
 
-add_executable (cuBLASXtDgemmRunner ${BENCH_DIR_SRC}/cuBLASXtDgemmRunner.cpp )
-add_executable (BLASxDgemmRunner ${BENCH_DIR_SRC}/BLASxDgemmRunner.cpp ${BENCH_DIR_SRC}/BLASXWrappers.cpp)
-add_executable (BLASxExDgemmRunner ${BENCH_DIR_SRC}/BLASxExDgemmRunner.cpp ${BENCH_DIR_SRC}/BLASXWrappers.cpp)
-add_executable (XKBLASDgemmRunner ${BENCH_DIR_SRC}/XKBLASDgemmRunner.cpp)
-
-add_executable (CoCoPeLiaTestLinkOverlap ${BENCH_DIR_SRC}/CoCoPeLiaTestLinkOverlap.cpp)
-add_executable (CoCoPeLiaTestFasTransfer ${BENCH_DIR_SRC}/CoCoPeLiaTestFasTransfer.cpp)
-
-target_link_libraries(cuBLASXtDgemmRunner ${INTERNAL_LINK_LIB} benchcocopelia unihelpers)
-target_link_libraries(BLASxDgemmRunner ${INTERNAL_LINK_LIB} benchcocopelia unihelpers ${BLASX_LINK})
-target_link_libraries(BLASxExDgemmRunner ${INTERNAL_LINK_LIB} benchcocopelia unihelpers ${BLASX_LINK})
-target_link_libraries(XKBLASDgemmRunner ${INTERNAL_LINK_LIB} benchcocopelia unihelpers ${XKBLAS_LINK} )
+## Internal testers for PARALia components
+add_executable (CoCoPeLiaTestLinkOverlap ${BENCH_DIR_SRC}/Component_testers/CoCoPeLiaTestLinkOverlap.cpp)
+add_executable (CoCoPeLiaTestFasTransfer ${BENCH_DIR_SRC}/Component_testers/CoCoPeLiaTestFasTransfer.cpp)
 
 target_link_libraries(CoCoPeLiaTestLinkOverlap ${INTERNAL_LINK_LIB} benchcocopelia unihelpers )
 target_link_libraries(CoCoPeLiaTestFasTransfer ${INTERNAL_LINK_LIB} benchcocopelia unihelpers )
 
-add_executable (CoCoPeLiaDgemmTester ${BENCH_DIR_SRC}/CoCoPeLiaDgemmTester.cpp )
-add_executable (CoCoPeLiaDgemmRunner ${BENCH_DIR_SRC}/CoCoPeLiaDgemmRunner.cpp )
-add_executable (CoCoPeLiaDgemmPredictor ${BENCH_DIR_SRC}/CoCoPeLiaDgemmPredictor.cpp )
-add_executable (CoCoPeLiaDgemmRunnerBest ${BENCH_DIR_SRC}/CoCoPeLiaDgemmRunnerBest.cpp )
-add_executable (CoCoPeLiaDgemmRunnerBestest ${BENCH_DIR_SRC}/CoCoPeLiaDgemmRunnerBestest.cpp )
+## Runners for SotA
+add_executable (cuBLASXt_dgemm_runner ${BENCH_DIR_SRC}/cuBLASXt/cuBLASXt_dgemm_runner.cpp )
+add_executable (BLASx_dgemm_runner ${BENCH_DIR_SRC}/BLASX/BLASx_dgemm_runner.cpp ${BENCH_DIR_SRC}/BLASX/BLASXWrappers.cpp)
+add_executable (BLASxEx_dgemm_runner ${BENCH_DIR_SRC}/BLASX/BLASxEx_dgemm_runner.cpp ${BENCH_DIR_SRC}/BLASX/BLASXWrappers.cpp)
+add_executable (XKBLAS_dgemm_runner ${BENCH_DIR_SRC}/XKBLAS/XKBLAS_dgemm_runner.cpp)
 
-add_executable (CoCoPeLiaDaxpyRunner ${BENCH_DIR_SRC}/CoCoPeLiaDaxpyRunner.cpp )
-add_executable (CoCoPeLiaDaxpyRunnerBest ${BENCH_DIR_SRC}/CoCoPeLiaDaxpyRunnerBest.cpp )
+target_link_libraries(cuBLASXt_dgemm_runner ${INTERNAL_LINK_LIB} benchcocopelia unihelpers)
+target_link_libraries(BLASx_dgemm_runner ${INTERNAL_LINK_LIB} benchcocopelia unihelpers ${BLASX_LINK})
+target_link_libraries(BLASxEx_dgemm_runner ${INTERNAL_LINK_LIB} benchcocopelia unihelpers ${BLASX_LINK})
+target_link_libraries(XKBLAS_dgemm_runner ${INTERNAL_LINK_LIB} benchcocopelia unihelpers ${XKBLAS_LINK} )
 
-target_link_libraries(CoCoPeLiaDgemmTester ${INTERNAL_LINK_LIB} benchcocopelia)
-target_link_libraries(CoCoPeLiaDgemmRunner ${INTERNAL_LINK_LIB} benchcocopelia unihelpers)
-target_link_libraries(CoCoPeLiaDgemmPredictor ${INTERNAL_LINK_LIB} benchcocopelia unihelpers)
-target_link_libraries(CoCoPeLiaDgemmRunnerBest ${INTERNAL_LINK_LIB} benchcocopelia unihelpers)
-target_link_libraries(CoCoPeLiaDgemmRunnerBestest ${INTERNAL_LINK_LIB} benchcocopelia unihelpers)
-target_link_libraries(CoCoPeLiaDaxpyRunner ${INTERNAL_LINK_LIB} benchcocopelia unihelpers)
-target_link_libraries(CoCoPeLiaDaxpyRunnerBest ${INTERNAL_LINK_LIB} benchcocopelia unihelpers)
+## PARALia Runners and Testers 
+add_executable (dgemm_tester ${BENCH_DIR_SRC}/PARALia/dgemm_tester.cpp )
+add_executable (dgemm_runner ${BENCH_DIR_SRC}/PARALia/dgemm_runner.cpp )
+add_executable (dgemm_predictor ${BENCH_DIR_SRC}/PARALia/dgemm_predictor.cpp )
+
+add_executable (daxpy_runner ${BENCH_DIR_SRC}/PARALia/daxpy_runner.cpp )
+
+target_link_libraries(dgemm_tester ${INTERNAL_LINK_LIB} benchcocopelia)
+target_link_libraries(dgemm_runner ${INTERNAL_LINK_LIB} benchcocopelia unihelpers)
+target_link_libraries(dgemm_predictor ${INTERNAL_LINK_LIB} benchcocopelia unihelpers)
+target_link_libraries(daxpy_runner ${INTERNAL_LINK_LIB} benchcocopelia unihelpers)
 
 set (BENCH_INSTALL_INC ${BENCH_INSTALL_INC} PARENT_SCOPE)
 #message( "->\nBenchmarking - Shared Library: " ${CMAKE_LIBRARY_OUTPUT_DIRECTORY} )

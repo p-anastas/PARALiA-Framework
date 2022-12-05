@@ -82,6 +82,7 @@ typedef class Modeler{
 		long int getMaxT();
 		long int getFlops();
 		long int getSKNum(int T);
+		double getGPUexecFull();
 		double getGPUexecWatts();
 		long int getGPUexecLines();
 		long int getGPUexecElem(int idx);
@@ -130,6 +131,9 @@ typedef class LinkMap{
 		/// ESPA stuff
 		long double ESPA_bytes[LOC_NUM][LOC_NUM] = {{0}};
 		double ESPA_ETA[LOC_NUM][LOC_NUM] = {{0}};
+		int ESPA_ETA_sorted_dec_ids[LOC_NUM*LOC_NUM] = {0};
+
+		double ESPA_ETA_max, ESPA_ETA_mean, ESPA_ETA_var = 0;
 
 /********************** Initialization/Modification ***************************/
 		LinkMap();
@@ -142,7 +146,6 @@ typedef class LinkMap{
 		void copy(class LinkMap* other_linkmap);
 		void reset(); // Resets all but the initial link_lat and link_bw to zero.
 
-		void print_ESPA();
 /******************************************************************************/
 /************************ Class main Functions ********************************/
 		void update_link_weights(MD_p* list_of_models, int T);
@@ -153,10 +156,20 @@ typedef class LinkMap{
 /******************************************************************************/
 /************************ Class ESPA Functions ********************************/
 
+		double update_ESPA_ETA_max();
+		double update_ESPA_ETA_mean();
+		double update_ESPA_ETA_mean_and_var();
+		double update_ESPA_ETA_idx(MD_p* unit_modeler_list, int idxi, int idxj);
+		void update_ESPA_ETA_sorted_dec_ids();
+
 		void ESPA_init(MD_p* unit_modeler_list, int* active_unit_id_list,
 			double* active_unit_score, int active_unit_num, int init_type);
 		void ESPA_init_hop_routes(MD_p* unit_modeler_list, int* active_unit_id_list,
 			double* active_unit_score, int active_unit_num, int init_type);
+		double ESPA_predict(MD_p unit_modeler, int T, int* active_unit_id_list,
+			double* active_unit_score, int active_unit_num, int init_type);
+
+		void print_ESPA();
 /******************************************************************************/
 }* LinkMap_p;
 

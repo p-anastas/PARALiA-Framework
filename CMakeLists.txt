@@ -6,7 +6,7 @@ message("CoCopeLia-Framework - BACKEND: " ${BACKEND})
 add_definitions(-DBACKEND="${BACKEND}")
 ## Define the project version (used in logfiles for result testing)
 
-set(PROJECT_VERSION "1.4")
+set(PROJECT_VERSION "1.5")
 message("CoCopeLia-Framework - PROJECT_VERSION: " ${PROJECT_VERSION})
 add_definitions(-DVERSION="${PROJECT_VERSION}")
 
@@ -43,14 +43,16 @@ add_definitions(-DENABLE_CPU_WORKLOAD)
 #add_definitions(-DENABLE_TILE_PREFETCH)
 
 ## Enable using transfer hops for faster transfers between multiple links
-#add_definitions(-DENABLE_TRANSFER_HOPS)
+add_definitions(-DENABLE_TRANSFER_HOPS)
 ## Enable using transfer hops for W tiles as well (no data reuse, but potentially better BW)
-#add_definitions(-DENABLE_TRANSFER_W_HOPS)
+add_definitions(-DENABLE_TRANSFER_W_HOPS)
 ## Enable using heuristic-based W-hops (and Send-Recv Over) activation
 #add_definitions(-DENABLE_PREDICT_HOP_MODE)
 
 ## Enable using estimated performance aggregation for initializing the link_hop_route
-#add_definitions(-DENABLE_ESPA)
+add_definitions(-DENABLE_ESPA)
+## Define the strategy for agreggating the transfer time of a problem if ESPA is used. 0 = equal distribution (first call) + aggregate sum, 1 = sum, 2 = max. 
+add_definitions(-DESPA_COMMUNICATION_AGGREGATOR=1)
 
 ## Enable sharing of bandwidth between links that utilize the same underlying hardware communication resources
 add_definitions(-DENABLE_LINK_BW_SHARING) # by putting them on different queues
@@ -74,7 +76,9 @@ add_definitions(-DNORMALIZE_NEAR_SPLIT_LIMIT=0.05)
 
 ## Define the minimum allowed percentile contribution in total time from each potential unit
 ## In case of energy, the maximum allowed percentile energy increase by each new unit.
-add_definitions(-DMINIMUM_UNIT_CONTRIBUTION=0.05)
+add_definitions(-DMINIMUM_UNIT_CONTRIBUTION=0.025)
+
+
 
 set(SCHEDULE_TYPE 0) # 0 = static, 1 = runtime selection
 
@@ -91,12 +95,17 @@ elseif(${SCHEDULE_TYPE} EQUAL 1)
 else()
 endif()
 
+## Allow fetching from "Recorded" (i.e. transfer scheduled, not complete) blocks locations if closer to the destination unit.
+## Disabling this flag paired with SERIAL_SUBKERNEL_SELECTION leads to many simultaneous fetches and is not advised due to performance degredation.
+add_definitions(-DALLOW_FETCH_RECORDED)
+
 #Run subkernels in provided order
 add_definitions(-DSERIAL_SUBKERNEL_SELECTION)
 
 ## Define subkernel selection heuristic values. 0 = No penalty
-add_definitions(-DMULTIFETCH_PENALTY=2)
-add_definitions(-DEXSTEAL_PENALTY=10)
+add_definitions(-DMULTIFETCH_PENALTY=3)
+add_definitions(-DEXSTART_PENALTY=1000) # If this is large : Heuristic -> Prefer SKs you have fetched WR tiles for before selecting new
+add_definitions(-DEXSTEAL_PENALTY=100000) # If this is large : Heuristic -> Only 'steal' SKs others hold WR tiles for if you have no other option
 add_definitions(-DFETCH_UNAVAILABLE_PENALTY=0.1)
 
 

@@ -74,6 +74,7 @@ void Subkernel::sync_request_data_RONLY(){
 
 void Subkernel::sync_request_data(){
 	short lvl = 4;
+	//return;
 #ifdef DEBUG
 	lprintf(lvl-1, "|-----> Subkernel(dev=%d,id=%d)::sync_request_data()\n", run_dev_id, id);
 #endif
@@ -231,13 +232,13 @@ void Subkernel::request_tile_hops(short TileIdx){
 			//CoCoSetTimerAsync((void*) &reqT_start_ts[TileIdx]);
 			//used_queue->add_host_func((void*)&CoCoSetTimerAsync, (void*) &reqT_start_ts[TileIdx]);
 #endif
-//#ifdef PDEBUG
+#ifdef DPDEBUG
 			lprintf(1, "Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::request_tile_hops W_flag = %d, \
 				%2d->%2d transfer sequence -> %s (route = %d)\n", run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2,
 				tmp->W_flag, FetchFromId, run_dev_id,
 				printlist(final_estimated_linkmap->link_hop_route[run_dev_id_idx][FetchFromId_idx][selected_route],
 					final_estimated_linkmap->link_hop_num[run_dev_id_idx][FetchFromId_idx]), selected_route);
-//#endif
+#endif
 			FasTCoCoMemcpy2DAsync(test_road, tmp->dim1, tmp->dim2, tmp->dtypesize());
 #ifdef STEST
 			//used_queue->add_host_func((void*)&CoCoSetTimerAsync, (void*) &reqT_end_ts[TileIdx]);
@@ -805,13 +806,13 @@ void Subkernel::writeback_data_hops(){
 						(void*)&CoCoSetTimerAsync, (void*) &(wbT_start_ts[j]));
 					//CoCoSetTimerAsync((void*) &(wbT_start_ts[j]);
 #endif
-//#ifdef PDEBUG
+#ifdef DPDEBUG
 					lprintf(1, "Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::writeback_data_hops W_flag = %d, \
 						%2d->%2d transfer sequence -> %s (route %d)\n", run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2,
 						tmp->W_flag, run_dev_id, Writeback_id,
 						printlist(final_estimated_linkmap->link_hop_route[Writeback_id_idx][run_dev_id_idx][selected_route],
 							final_estimated_linkmap->link_hop_num[Writeback_id_idx][run_dev_id_idx]), selected_route);
-//#endif
+#endif
 					FasTCoCoMemcpy2DAsync(test_road, tmp->dim1, tmp->dim2, tmp->dtypesize());
 #ifdef STEST
 				used_queue->add_host_func(
@@ -1207,11 +1208,11 @@ short Subkernel::RW_lock_initialized(){
 	for (int j = 0; j < TileNum; j++){
 		if (TileDimlist[j] == 1){
 			Tile1D<VALUE_TYPE>* tmp = (Tile1D<VALUE_TYPE>*) TileList[j];
-			if(tmp->W_flag && /*tmp->W_total != tmp->W_flag &&*/ tmp->RW_lock!=-42) return 1;
+			if(tmp->W_total && /*tmp->W_total != tmp->W_flag &&*/ tmp->RW_lock!=-42) return 1;
 		}
 		else if (TileDimlist[j] == 2){
 			Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) TileList[j];
-			if(tmp->W_flag && /*tmp->W_total != tmp->W_flag &&*/ tmp->RW_lock!=-42) return 1;
+			if(tmp->W_total && /*tmp->W_total != tmp->W_flag &&*/ tmp->RW_lock!=-42) return 1;
 		}
 	}
 	return 0;
@@ -1338,89 +1339,6 @@ int SubkernelPrefetchCheapRONLYTiles(int numTiles, short dev_id, Subkernel** Sub
 	return tiles_prefetched;
 }
 
-long double Subkernel::opt_fetch_cost(short dev_id){
-	long double fetch_cost = 0, inter_fetch_cost = 0;
-	short prefetched = 0;
-	for (int j = 0; j < TileNum; j++){
-		if (TileDimlist[j] == 1){
-			Tile1D<VALUE_TYPE>* tmp = (Tile1D<VALUE_TYPE>*) TileList[j];
-			long double temp_fetch_cost = tmp->getMinLinkCost(dev_id);
-			if(tmp->W_flag) temp_fetch_cost+= WTILE_TRANSFER_PENALTY*temp_fetch_cost;
-			inter_fetch_cost = prefetched = 0;
-			for(int loc_idx = 0; loc_idx < LOC_NUM; loc_idx++){
-				CBlock_p curr_block = tmp->StoreBlock[loc_idx];
-				if(curr_block != NULL && curr_block->Available->query_status() == RECORDED){
-					if (deidxize(loc_idx) == dev_id){
-						prefetched = 1;
-						warning("opt_fetch_cost(dev_id=%d, TiledIdx=%d): Already fetching in dev_id (?)\n", dev_id, j);
-					}
-					else inter_fetch_cost+=temp_fetch_cost*MULTIFETCH_PENALTY;
-				}
-			}
-			if(!prefetched) fetch_cost+= (inter_fetch_cost + temp_fetch_cost);
-		}
-		else if (TileDimlist[j] == 2){
-			Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) TileList[j];
-			long double temp_fetch_cost = tmp->getMinLinkCost(dev_id);
-			if(tmp->W_flag) temp_fetch_cost+= WTILE_TRANSFER_PENALTY*temp_fetch_cost;
-			inter_fetch_cost = prefetched = 0;
-			for(int loc_idx = 0; loc_idx < LOC_NUM; loc_idx++){
-				CBlock_p curr_block = tmp->StoreBlock[loc_idx];
-				if(curr_block != NULL && curr_block->Available->query_status() == RECORDED){
-					if (deidxize(loc_idx) == dev_id){
-						prefetched = 1;
-						warning("opt_fetch_cost(dev_id=%d, TiledIdx=%d): Already fetching in dev_id (?)\n", dev_id, j);
-					}
-					else inter_fetch_cost+=temp_fetch_cost*MULTIFETCH_PENALTY;
-				}
-			}
-			if(!prefetched) fetch_cost+= (inter_fetch_cost + temp_fetch_cost);
-		}
-	}
-	return fetch_cost;
-}
-
-Subkernel* SubkernelSelect(short dev_id, Subkernel** Subkernel_list, long Subkernel_list_len){
-#ifdef SERIAL_SUBKERNEL_SELECTION
-		return SubkernelSelectSerial(dev_id, Subkernel_list, Subkernel_list_len);
-#endif
-	Subkernel* curr_sk = NULL;
-	long sk_idx;
-	long double min_fetch_cost = DBL_MAX;
-	Subkernel* min_fetch_cost_sk = NULL;
-	for (sk_idx = 0; sk_idx < Subkernel_list_len; sk_idx++){
-		curr_sk = Subkernel_list[sk_idx];
-		if (curr_sk->run_dev_id==-42 &&
-				(curr_sk->no_locked_tiles() || curr_sk->is_RW_lock_master(dev_id))) {
-			long double fetch_cost = curr_sk->opt_fetch_cost(dev_id);
-			if(!curr_sk->no_locked_tiles()) fetch_cost+=PARALLELBBOTLENECK_PENALTY*fetch_cost;
-			else if(!curr_sk->is_RW_lock_master(dev_id)) fetch_cost+=EXSTEAL_PENALTY*fetch_cost/curr_sk->TileNum;
-			if(fetch_cost < min_fetch_cost){
-				min_fetch_cost = fetch_cost;
-				min_fetch_cost_sk = curr_sk;
-			}
-			// else if(fetch_cost == min_fetch_cost && curr_sk->no_locked_tiles()){
-			// 	printf("Same fetch cost\n");
-			// 	int other_dev_score_winner = 0;
-			// 	for (int dev = 0; dev< LOC_NUM; dev++) if(deidxize(dev)!= dev_id){
-			// 		long double fetch_cost_me = curr_sk->opt_fetch_cost(deidxize(dev)),
-			// 		fetch_cost_bro = min_fetch_cost_sk->opt_fetch_cost(deidxize(dev));
-			// 		if(fetch_cost_me <= fetch_cost_bro) other_dev_score_winner ++;
-			// 		else other_dev_score_winner--;
-			// 	}
-			// 	if(other_dev_score_winner < 0){
-			// 		min_fetch_cost = fetch_cost;
-			// 		min_fetch_cost_sk = curr_sk;
-			// 	}
-			// }
-		}
-	}
-	if(min_fetch_cost_sk) min_fetch_cost_sk->prepare_launch(dev_id);
-	else 	failed_selections[idxize(dev_id)]++;
-	return min_fetch_cost_sk;
-}
-
-*/
 
 long double Subkernel::opt_fetch_score(short dev_id){
 	long double fetch_score = 0, inter_fetch_score = 0;
@@ -1507,6 +1425,95 @@ Subkernel* SubkernelSelect(short dev_id, Subkernel** Subkernel_list, long Subker
 	if(max_fetch_score_sk) max_fetch_score_sk->prepare_launch(dev_id);
 	else 	failed_selections[idxize(dev_id)]++;
 	return max_fetch_score_sk;
+}
+
+*/
+
+
+long double Subkernel::opt_fetch_cost(short dev_id){
+	long double fetch_cost = 0, inter_fetch_cost = 0;
+	short prefetched = 0;
+	for (int j = 0; j < TileNum; j++){
+		if (TileDimlist[j] == 1){
+			Tile1D<VALUE_TYPE>* tmp = (Tile1D<VALUE_TYPE>*) TileList[j];
+			long double temp_fetch_cost = tmp->getMinLinkCost(dev_id);
+			inter_fetch_cost = prefetched = 0;
+			for(int loc_idx = 0; loc_idx < LOC_NUM; loc_idx++){
+				CBlock_p curr_block = tmp->StoreBlock[loc_idx];
+				if(curr_block != NULL && curr_block->Available->query_status() == RECORDED){
+					if (deidxize(loc_idx) == dev_id){
+						prefetched = 1;
+#ifdef PDEBUG
+						warning("Subkernel::opt_fetch_cost(dev_id=%d, TiledIdx=%d): Already fetching in dev_id (?)\n", dev_id, j);
+#endif
+					}
+					else inter_fetch_cost+=temp_fetch_cost*MULTIFETCH_PENALTY;
+				}
+			}
+			if(!prefetched) fetch_cost+= (inter_fetch_cost + temp_fetch_cost);
+		}
+		else if (TileDimlist[j] == 2){
+			Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) TileList[j];
+			long double temp_fetch_cost = tmp->getMinLinkCost(dev_id);
+			inter_fetch_cost = prefetched = 0;
+			for(int loc_idx = 0; loc_idx < LOC_NUM; loc_idx++){
+				CBlock_p curr_block = tmp->StoreBlock[loc_idx];
+				if(curr_block != NULL && curr_block->Available->query_status() == RECORDED){
+					if (deidxize(loc_idx) == dev_id){
+						prefetched = 1;
+#ifdef PDEBUG
+						warning("Subkernel::opt_fetch_cost(dev_id=%d, TiledIdx=%d): Already fetching in dev_id (?)\n", dev_id, j);
+#endif
+					}
+					else inter_fetch_cost+=temp_fetch_cost*MULTIFETCH_PENALTY;
+				}
+			}
+			if(!prefetched) fetch_cost+= (inter_fetch_cost + temp_fetch_cost);
+		}
+	}
+	return fetch_cost;
+}
+
+Subkernel* SubkernelSelect(short dev_id, Subkernel** Subkernel_list, long Subkernel_list_len){
+#ifdef SERIAL_SUBKERNEL_SELECTION
+		return SubkernelSelectSerial(dev_id, Subkernel_list, Subkernel_list_len);
+#endif
+	Subkernel* curr_sk = NULL;
+	long sk_idx;
+	long double min_fetch_cost = DBL_MAX;
+	Subkernel* min_fetch_cost_sk = NULL;
+	for (sk_idx = 0; sk_idx < Subkernel_list_len; sk_idx++){
+		curr_sk = Subkernel_list[sk_idx];
+		if (curr_sk->run_dev_id==-42 &&
+				(curr_sk->no_locked_tiles() || curr_sk->is_RW_lock_master(dev_id))) {
+			long double fetch_cost = curr_sk->opt_fetch_cost(dev_id);
+			if(curr_sk->no_locked_tiles() && (!curr_sk->is_RW_lock_master(dev_id) && curr_sk->RW_lock_initialized()))
+				fetch_cost+=EXSTEAL_PENALTY*fetch_cost/curr_sk->TileNum;
+			else if(curr_sk->no_locked_tiles() && (!curr_sk->is_RW_lock_master(dev_id) && !curr_sk->RW_lock_initialized()))
+				fetch_cost+=EXSTART_PENALTY*fetch_cost/curr_sk->TileNum;
+			if(fetch_cost < min_fetch_cost){
+				min_fetch_cost = fetch_cost;
+				min_fetch_cost_sk = curr_sk;
+			}
+			// else if(fetch_cost == min_fetch_cost && curr_sk->no_locked_tiles()){
+			//
+			// 	int other_dev_score_winner = 0;
+			// 	for (int dev = 0; dev< LOC_NUM; dev++) if(deidxize(dev)!= dev_id){
+			// 		long double fetch_cost_me = curr_sk->opt_fetch_cost(deidxize(dev)),
+			// 		fetch_cost_bro = min_fetch_cost_sk->opt_fetch_cost(deidxize(dev));
+			// 		if(fetch_cost_me <= fetch_cost_bro) other_dev_score_winner ++;
+			// 		else other_dev_score_winner--;
+			// 	}
+			// 	if(other_dev_score_winner < 0){
+			// 		min_fetch_cost = fetch_cost;
+			// 		min_fetch_cost_sk = curr_sk;
+			// 	}
+			// }
+		}
+	}
+	if(min_fetch_cost_sk) min_fetch_cost_sk->prepare_launch(dev_id);
+	else 	failed_selections[idxize(dev_id)]++;
+	return min_fetch_cost_sk;
 }
 
 void CoCopeLiaDevCacheFree(short dev_id){

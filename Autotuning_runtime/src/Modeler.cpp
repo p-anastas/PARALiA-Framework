@@ -130,6 +130,29 @@ long int Modeler::getSKNum(int T){
 	return 0;
 }
 
+
+// Currently return the Watts for the last(larger) measurement
+double Modeler::getGPUexecFull(){
+	switch(problem){
+		case BLAS1:
+			error("getGPUexecFull: BLAS 1 Not implemented\n");
+		case BLAS2:
+			error("getGPUexecFull: BLAS 2 Not implemented\n");
+		case BLAS3:
+			{
+				long int maxT = GPUexec3MaxT((GPUexec3Model_p)GPUexec_model_ptr);
+				long int Tbig = GPUexec3NearestT((GPUexec3Model_p)GPUexec_model_ptr,
+					fmin(maxT, fmin(fmin(D1,D2), D3)));
+					//fprintf(stderr, "Tbig = %ld\n", Tbig);
+				return (D1*1.0/Tbig * D2*1.0/Tbig * D3*1.0/Tbig)*
+					GPUexec3Model_predict((GPUexec3Model_p)GPUexec_model_ptr, Tbig, flags->TransA, flags->TransB);
+			}
+		default:
+			error("CoCoPeLiaGPUexecGetLines: Invalid Problem %s", printProblem(problem));
+	}
+	return 0;
+}
+
 // Currently return the Watts for the last(larger) measurement
 double Modeler::getGPUexecWatts(){
 	switch(problem){

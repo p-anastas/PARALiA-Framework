@@ -308,21 +308,22 @@ double ATC::autotune_problem(const char* routine_name, void* initial_problem_wra
 				temp_controller->linkmap->init_hop_routes(temp_controller->unit_modeler_list,
 						temp_controller->active_unit_id_list, temp_controller->active_unit_num);
 #else
-  			temp_controller->linkmap->ESPA_init(temp_controller->unit_modeler_list,
+  				temp_controller->linkmap->ESPA_init(temp_controller->unit_modeler_list,
 						temp_controller->active_unit_id_list,
 						NULL, temp_controller->active_unit_num, 0);
-  			temp_controller->linkmap->ESPA_init_hop_routes(temp_controller->unit_modeler_list,
+  				temp_controller->linkmap->ESPA_init_hop_routes(temp_controller->unit_modeler_list,
 						temp_controller->active_unit_id_list,
 						NULL, temp_controller->active_unit_num, 0);
 #endif
-#ifdef PDEBUG
-  temp_controller->linkmap->print_link_bw_shared_hops();
-#endif
-  for(int i = 0; i< LOC_NUM; i++)	for(int j = 0; j< LOC_NUM; j++)
-    final_estimated_link_bw[i][j] = temp_controller->linkmap->link_bw_shared_hops[i][j];
+
+	temp_controller->linkmap->update_link_shared_weights(temp_controller->unit_modeler_list,
+		temp_controller->active_unit_id_list, temp_controller->active_unit_num);
+
+  	for(int i = 0; i< LOC_NUM; i++)	for(int j = 0; j< LOC_NUM; j++)
+    	final_estimated_link_bw[i][j] = temp_controller->linkmap->link_bw_shared_hops[i][j];
 #else
-  for(int i = 0; i< LOC_NUM; i++)	for(int j = 0; j< LOC_NUM; j++)
-    final_estimated_link_bw[i][j] = temp_controller->linkmap->link_bw_shared[i][j];
+  	for(int i = 0; i< LOC_NUM; i++)	for(int j = 0; j< LOC_NUM; j++)
+    	final_estimated_link_bw[i][j] = temp_controller->linkmap->link_bw_shared[i][j];
 #endif
 				if(initial_T <= 0) tile_selection_t += temp_controller->optimize_tile();
 				split_selection_t += temp_controller->optimize_split();
@@ -419,20 +420,7 @@ double ATC::autotune_problem(const char* routine_name, void* initial_problem_wra
 	}
 
 #ifdef ENABLE_TRANSFER_HOPS
-#ifndef ENABLE_ESPA
-	linkmap->init_hop_routes(unit_modeler_list,
-			active_unit_id_list, active_unit_num);
-#else
-	linkmap->ESPA_init(unit_modeler_list,
-			active_unit_id_list,
-			active_unit_score, active_unit_num, 1);
-	linkmap->ESPA_init_hop_routes(unit_modeler_list,
-			active_unit_id_list,
-			active_unit_score, active_unit_num, 1);
-#endif
-#ifdef PDEBUG
-  linkmap->print_link_bw_shared_hops();
-#endif
+
   for(int i = 0; i< LOC_NUM; i++)	for(int j = 0; j< LOC_NUM; j++)
     final_estimated_link_bw[i][j] = linkmap->link_bw_shared_hops[i][j];
 #else
@@ -574,19 +562,24 @@ double ATC::optimize_split(){
 
 	for(int idx = 0; idx < active_unit_num; idx++){
 		int cur_dev_idx = idxize(active_unit_id_list[idx]);
-#ifndef ENABLE_POWA
-		active_unit_score[idx] = unit_modeler_list[cur_dev_idx]->predict(FULL_OVERLAP);
+#ifdef ENABLE_ESPA
+		double tmp_score = linkmap->ESPA_predict(unit_modeler_list[cur_dev_idx], -1, active_unit_id_list, NULL, active_unit_num, 0);
 #else
-		if (!strcmp(PREDICT_OPTIMIZE_TARGET,"PERF")) active_unit_score[idx] =
-			unit_modeler_list[cur_dev_idx]->predict(FULL_OVERLAP);
+		double tmp_score = unit_modeler_list[cur_dev_idx]->predict(FULL_OVERLAP);
+#endif
+#ifndef ENABLE_POWA
+		active_unit_score[idx] = tmp_score;
+#else
+		if (!strcmp(PREDICT_OPTIMIZE_TARGET,"PERF")) active_unit_score[idx] = tmp_score;
 		else if (!strcmp(PREDICT_OPTIMIZE_TARGET,"ENERGY")) active_unit_score[idx] =
-			unit_modeler_list[cur_dev_idx]->predict(FULL_OVERLAP)*unit_modeler_list[cur_dev_idx]->getGPUexecWatts();
+			tmp_score*unit_modeler_list[cur_dev_idx]->getGPUexecWatts();
 		else if (!strcmp(PREDICT_OPTIMIZE_TARGET,"POWER-DELAY")) active_unit_score[idx] =
-			unit_modeler_list[cur_dev_idx]->predict(FULL_OVERLAP);
+			tmp_score;
 		else if (!strcmp(PREDICT_OPTIMIZE_TARGET,"ENERGY-DELAY")) active_unit_score[idx] =
-			unit_modeler_list[cur_dev_idx]->predict(FULL_OVERLAP);
+			tmp_score;
 		else error("PREDICT_OPTIMIZE_TARGET = %s not implemented\n", PREDICT_OPTIMIZE_TARGET);
 #endif
+
 		if (active_unit_score[idx] != 0) active_unit_score[idx] = 1/active_unit_score[idx];
 		else warning("ATC::optimize_split: active_unit_score[%d] == 0\n", idx);
 		temp_score+= active_unit_score[idx];
@@ -605,6 +598,15 @@ double ATC::optimize_split(){
 				active_unit_id_list[idx], idx, active_unit_score[idx]);
 #endif
 	}
+
+#ifdef ENABLE_ESPA
+  				linkmap->ESPA_init(unit_modeler_list,
+						active_unit_id_list,
+						active_unit_score, active_unit_num, 1);
+  				linkmap->ESPA_init_hop_routes(unit_modeler_list,
+						active_unit_id_list,
+						active_unit_score, active_unit_num, 1);
+#endif
 
 	double temp_overlap_t = 0, total_J = 0;
 	double active_unit_score_new[LOC_NUM];
@@ -627,8 +629,13 @@ double ATC::optimize_split(){
 				error("ATC::optimize_tileAndSplit:\
 				model->problem switch default reached\n");
 		}
+#ifdef ENABLE_ESPA
+		double tmp_score = linkmap->ESPA_predict(model, T, active_unit_id_list, active_unit_score, active_unit_num, ESPA_COMMUNICATION_AGGREGATOR);
+#else
+		double tmp_score = model->predict(used_model, T, active_unit_num, active_unit_id_list, active_unit_score);
+#endif
 #ifndef ENABLE_POWA
-		double temp_t = model->predict(used_model, T, active_unit_num, active_unit_id_list, active_unit_score);
+		double temp_t = tmp_score;
 		active_unit_score_new[idx] = temp_t;
 		if (active_unit_score_new[idx] != 0) //ctive_unit_score_new[idx] = active_unit_score[idx]/active_unit_score_new[idx]; this was wrong?
 			active_unit_score_new[idx] = 1/active_unit_score_new[idx];
@@ -642,7 +649,7 @@ double ATC::optimize_split(){
 			model, cur_dev_id, cur_dev_idx, T, temp_overlap_t, temp_t);
 #endif
 #else
-		double temp_t = model->predict(used_model, T, active_unit_num, active_unit_id_list, active_unit_score);
+		double temp_t = tmp_score;
 		double temp_J = temp_t*unit_modeler_list[cur_dev_idx]->getGPUexecWatts();
 		long int temp_flops = active_unit_score[idx]*model->getFlops();
 		double temp_PDP = (temp_flops/temp_t)/unit_modeler_list[cur_dev_idx]->getGPUexecWatts();

@@ -244,11 +244,11 @@ void StoreLogLvl1(char* filename, ATC_p predef_control_values, double alpha, lon
 	return;
 }
 
-void StoreLogLvl3(char* filename, ATC_p predef_control_values, char TransA, char TransB, double alpha, double beta, long int D1, long int D2, long int D3, short loc1, short loc2, short loc3, short outloc, double timer){
+void StoreLogLvl3(char* filename, ATC_p predef_control_values, char TransA, char TransB, double alpha, double beta, long int D1, long int D2, long int D3, short loc1, short loc2, short loc3, short outloc, double timer, double pred_t, double pred_J){
 	FILE* fp = fopen(filename,"a");
 	if (!fp) error("report_results: LogFile failed to open");
 	const char* control_str = (predef_control_values) ? predef_control_values->print_csv() : "-1,-1,-1,-1";
-   	fprintf(fp,"%s, %c,%c,%.5lf,%.5lf,%zu,%zu,%zu,%d,%d,%d,%d, %e\n",  control_str, TransA, TransB, alpha, beta, D1, D2, D3, loc1, loc2, loc3, outloc, timer);
+   	fprintf(fp,"%s, %c,%c,%.5lf,%.5lf,%zu,%zu,%zu,%d,%d,%d,%d, %e,%e,%e\n",  control_str, TransA, TransB, alpha, beta, D1, D2, D3, loc1, loc2, loc3, outloc, timer, pred_t, pred_J);
 
         fclose(fp);
 	return;

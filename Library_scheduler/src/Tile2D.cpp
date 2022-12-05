@@ -94,7 +94,11 @@ template<typename dtype> short Tile2D<dtype>::getClosestReadLoc(short dev_id_in)
     state temp = StoreBlock[pos]->State;
     if (temp == AVAILABLE || temp == SHARABLE || temp == NATIVE){
       event_status block_status = StoreBlock[pos]->Available->query_status();
+#ifdef ALLOW_FETCH_RECORDED      
       if(block_status == COMPLETE || block_status == CHECKED || block_status == RECORDED){
+#else
+      if(block_status == COMPLETE || block_status == CHECKED){
+#endif      
         double current_link_bw = final_estimated_link_bw[dev_id_in_idx][pos];
         if (block_status == RECORDED) current_link_bw-=current_link_bw*FETCH_UNAVAILABLE_PENALTY;
         if (current_link_bw > link_bw_max){
@@ -121,7 +125,11 @@ template<typename dtype> short Tile2D<dtype>::getClosestReadLoc(short dev_id_in)
     state temp = temp_outblock->State;
     event_status block_status = temp_outblock->Available->query_status();
     if ((temp == AVAILABLE || temp == SHARABLE || temp == NATIVE) &&
+#ifdef ALLOW_FETCH_RECORDED      
     (block_status == COMPLETE || block_status == CHECKED|| block_status == RECORDED)){
+#else
+    (block_status == COMPLETE || block_status == CHECKED)){
+#endif
       temp_outblock->add_reader(true);
       //Global_Cache[pos_max]->unlock();
       temp_outblock->unlock();
@@ -150,7 +158,11 @@ template<typename dtype> double Tile2D<dtype>::getMinLinkCost(short dev_id_in){
     state temp = temp_outblock->State;
     if (temp == AVAILABLE || temp == SHARABLE || temp == NATIVE){
       event_status block_status = temp_outblock->Available->query_status();
-      if(block_status == COMPLETE || block_status == CHECKED || block_status == RECORDED){
+#ifdef ALLOW_FETCH_RECORDED      
+    if(block_status == COMPLETE || block_status == CHECKED || block_status == RECORDED){
+#else
+    if(block_status == COMPLETE || block_status == CHECKED){
+#endif  
         double current_link_bw = final_estimated_link_bw[dev_id_in_idx][pos];
 
         if (block_status == RECORDED) current_link_bw-=current_link_bw*FETCH_UNAVAILABLE_PENALTY;
