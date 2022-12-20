@@ -10,6 +10,12 @@
 #include "CoCoPeLiaCoModel.hpp"
 #include "backend_wrappers.hpp"
 
+#ifdef PDEBUG
+#ifndef SDEBUG
+#define SDEBUG
+#endif
+#endif
+
 // TODO: To avoid mallocs, define a set vec size of 4 (No BLAS has that many data arguments anyway)
 typedef struct V_struct{
 	// Routine specific
@@ -145,6 +151,7 @@ typedef class LinkMap{
 		void print_link_bw_shared_hops();
 		void copy(class LinkMap* other_linkmap);
 		void reset(); // Resets all but the initial link_lat and link_bw to zero.
+		void reset_links(int unit_id); // Resets all link(s) related with unit_id (the initial link and all passing through it)
 
 /******************************************************************************/
 /************************ Class main Functions ********************************/

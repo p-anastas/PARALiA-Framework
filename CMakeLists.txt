@@ -51,8 +51,8 @@ add_definitions(-DENABLE_TRANSFER_W_HOPS)
 
 ## Enable using estimated performance aggregation for initializing the link_hop_route
 add_definitions(-DENABLE_ESPA)
-## Define the strategy for agreggating the transfer time of a problem if ESPA is used. 0 = equal distribution (first call) + aggregate sum, 1 = sum, 2 = max. 
-add_definitions(-DESPA_COMMUNICATION_AGGREGATOR=1)
+## Define the strategy for agreggating the transfer time of a problem if ESPA is used. 0 = max, 1 = sum. 
+add_definitions(-DESPA_COMMUNICATION_AGGREGATOR=0)
 
 ## Enable sharing of bandwidth between links that utilize the same underlying hardware communication resources
 add_definitions(-DENABLE_LINK_BW_SHARING) # by putting them on different queues
@@ -62,12 +62,23 @@ add_definitions(-DENABLE_POWA)
 add_definitions(-DCPU_W_PREDEF=300) # TODO: Vulcan CAUTION!!! Define this for your CPU - no CPU power tool installed.
 #add_definitions(-DCPU_W_PREDEF=170) # TODO: silver1 CAUTION!!! Define this for your CPU - no CPU power tool installed.
 ## Choose the Unit combination that maximizes total performance (minimum time).
-add_definitions(-DPREDICT_OPTIMIZE_TARGET="PERF")
+#add_definitions(-DPREDICT_OPTIMIZE_TARGET="PERF")
 ## Choose the Unit combination that minimizes consumed energy (J).
 ## Rarely chooses multi-unit execution, since its almost always less energy-efficient than single-unit.
 #add_definitions(-DPREDICT_OPTIMIZE_TARGET="ENERGY")
+
+## Choose the Unit combination that maximizes the power-delay product (similar results with energy).
 #add_definitions(-DPREDICT_OPTIMIZE_TARGET="POWER-DELAY")
-#add_definitions(-DPREDICT_OPTIMIZE_TARGET="ENERGY-DELAY")
+
+## Choose the Unit combination that maximizes the energy-delay product - closer to "PERF" but also slightly considering energy.
+add_definitions(-DPREDICT_OPTIMIZE_TARGET="ENERGY-DELAY")
+
+## Choose the Unit combination based on a configurable minimum acceptable percentile performance-improvement-per-J-increase. 
+## Example for choosing U1(tpred = X, En = J1) vs U2(tpred = Y, En = J2) units with PERPER_LIMIT: if ( X/Y >= PERPER_LIMIT*J2/J1) U2 else U1
+#add_definitions(-DPREDICT_OPTIMIZE_TARGET="PERF-PER-J")
+## PERPER_LIMIT higher -> "ENERGY", lower -> "PERF"
+add_definitions(-DPERPER_LIMIT=0.01)
+
 #add_definitions(-DPREDICT_OPTIMIZE_TARGET="OTHER_TBD")
 
 ## Define at which percentage to normalize float values for similar data (e.g. costs, splits etc) to avoid empirical errors leaking into decisions
@@ -77,8 +88,6 @@ add_definitions(-DNORMALIZE_NEAR_SPLIT_LIMIT=0.05)
 ## Define the minimum allowed percentile contribution in total time from each potential unit
 ## In case of energy, the maximum allowed percentile energy increase by each new unit.
 add_definitions(-DMINIMUM_UNIT_CONTRIBUTION=0.025)
-
-
 
 set(SCHEDULE_TYPE 0) # 0 = static, 1 = runtime selection
 
@@ -126,6 +135,9 @@ add_definitions(-DFETCH_UNAVAILABLE_PENALTY=0.1)
 
 #Run in deep debug mode, for command-to-command debugging
 #add_definitions(-DDDEBUG)
+
+#Run Simple Prediction debug mode (well-presented simple autotuning runtime stuff)
+#add_definitions(-DSDEBUG)
 
 #Run Prediction debug mode (autotuning runtime stuff)
 #add_definitions(-DPDEBUG)

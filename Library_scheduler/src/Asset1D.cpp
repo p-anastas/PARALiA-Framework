@@ -53,6 +53,7 @@ template<typename dtype> void Asset1D<dtype>::InitTileMap(int T, Cache_p* init_l
 }
 
 template void Asset1D<double>::InitTileMap(int T, Cache_p* init_loc_cache_p);
+template void Asset1D<float>::InitTileMap(int T, Cache_p* init_loc_cache_p);
 
 template<typename dtype> void Asset1D<dtype>::DestroyTileMap(){
   int current_ctr;
@@ -64,7 +65,7 @@ template<typename dtype> void Asset1D<dtype>::DestroyTileMap(){
 }
 
 template void Asset1D<double>::DestroyTileMap();
-
+template void Asset1D<float>::DestroyTileMap();
 
 template<typename dtype> void Asset1D<dtype>::DrawTileMap(){
   fprintf(stderr, " Tile1D representation: \
@@ -127,3 +128,4 @@ template<typename dtype> void Asset1D<dtype>::DrawTileMap(){
 }
 
 template void Asset1D<double>::DrawTileMap();
+template void Asset1D<float>::DrawTileMap();

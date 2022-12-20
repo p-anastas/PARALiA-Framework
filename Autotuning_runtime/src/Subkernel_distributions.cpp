@@ -12,8 +12,12 @@ void CoCoDistributeSubkernelsRoundRobin(ATC_p autotune_controller){
   #ifdef DEBUG
   	lprintf(lvl, "|-----> CoCoDistributeSubkernelsRoundRobin(%p)\n", autotune_controller);
   #endif
-  if (autotune_controller->subkernel_num <= autotune_controller->active_unit_num){
+  if (autotune_controller->subkernel_num < autotune_controller->active_unit_num){ // < or <= here?
+    int pred_active_unit_num = autotune_controller->active_unit_num;
     autotune_controller->active_unit_num = autotune_controller->subkernel_num;
+    warning("CoCoDistributeSubkernelsRoundRobin: Problem with predicted active_unit_num(%d) < subkernel_num(%d) will be run with active_unit_num = %d\n", 
+    	pred_active_unit_num, autotune_controller->subkernel_num, autotune_controller->active_unit_num); 
+    for (int d = autotune_controller->active_unit_num; d < pred_active_unit_num; d++) autotune_controller->linkmap->reset_links(autotune_controller->active_unit_id_list[d]);         	
     for (int d = 0 ; d < autotune_controller->active_unit_num; d++){
       autotune_controller->Subkernels_per_unit_num[d] = 1;
       autotune_controller->Subkernels_per_unit_list[d][0] = d;
@@ -78,7 +82,11 @@ void CoCoDistributeSubkernelsNaive(ATC_p autotune_controller){
   	lprintf(lvl, "|-----> CoCoDistributeSubkernelsNaive(%p)\n", autotune_controller);
   #endif
   if (autotune_controller->subkernel_num <= autotune_controller->active_unit_num){
+    int pred_active_unit_num = autotune_controller->active_unit_num;
     autotune_controller->active_unit_num = autotune_controller->subkernel_num;
+    warning("CoCoDistributeSubkernelsNaive: Problem with predicted active_unit_num(%d) < subkernel_num(%d) will be run with active_unit_num = %d\n", 
+    	pred_active_unit_num, autotune_controller->subkernel_num, autotune_controller->active_unit_num); 
+    for (int d = autotune_controller->active_unit_num; d < pred_active_unit_num; d++) autotune_controller->linkmap->reset_links(autotune_controller->active_unit_id_list[d]);  
     for (int d = 0 ; d < autotune_controller->active_unit_num; d++){
       autotune_controller->Subkernels_per_unit_num[d] = 1;
       autotune_controller->Subkernels_per_unit_list[d][0] = d;
@@ -140,7 +148,11 @@ void CoCoDistributeSubkernelsRoundRobinChunk(ATC_p autotune_controller,  int Chu
   	lprintf(lvl, "|-----> CoCoDistributeSubkernelsRoundRobinChunk(%p, %d)\n", autotune_controller, Chunk_size);
   #endif
   if (autotune_controller->subkernel_num <= autotune_controller->active_unit_num){
+    int pred_active_unit_num = autotune_controller->active_unit_num;
     autotune_controller->active_unit_num = autotune_controller->subkernel_num;
+    warning("CoCoDistributeSubkernelsRoundRobinChunk: Problem with predicted active_unit_num(%d) < subkernel_num(%d) will be run with active_unit_num = %d\n", 
+    	pred_active_unit_num, autotune_controller->subkernel_num, autotune_controller->active_unit_num); 
+    for (int d = autotune_controller->active_unit_num; d < pred_active_unit_num; d++) autotune_controller->linkmap->reset_links(autotune_controller->active_unit_id_list[d]);  
     for (int d = 0 ; d < autotune_controller->active_unit_num; d++){
       autotune_controller->Subkernels_per_unit_num[d] = 1;
       autotune_controller->Subkernels_per_unit_list[d][0] = d;
@@ -215,7 +227,11 @@ void CoCoDistributeSubkernelsRoundRobinChunkReverse(ATC_p autotune_controller,  
   	lprintf(lvl, "|-----> CoCoDistributeSubkernelsRoundRobinChunkReverse(%p, %d)\n", autotune_controller, Chunk_size);
   #endif
   if (autotune_controller->subkernel_num <= autotune_controller->active_unit_num){
+    int pred_active_unit_num = autotune_controller->active_unit_num;
     autotune_controller->active_unit_num = autotune_controller->subkernel_num;
+    warning("CoCoDistributeSubkernelsRoundRobinChunkReverse: Problem with predicted active_unit_num(%d) < subkernel_num(%d) will be run with active_unit_num = %d\n", 
+    	pred_active_unit_num, autotune_controller->subkernel_num, autotune_controller->active_unit_num); 
+    for (int d = autotune_controller->active_unit_num; d < pred_active_unit_num; d++) autotune_controller->linkmap->reset_links(autotune_controller->active_unit_id_list[d]);  
     for (int d = 0 ; d < autotune_controller->active_unit_num; d++){
       autotune_controller->Subkernels_per_unit_num[d] = 1;
       autotune_controller->Subkernels_per_unit_list[d][0] = d;
@@ -309,7 +325,11 @@ void CoCoDistributeSubkernels2DBlockCyclic(ATC_p autotune_controller, int D1Grid
     return CoCoDistributeSubkernelsRoundRobin(autotune_controller);
   }
   if (autotune_controller->subkernel_num <= autotune_controller->active_unit_num){
+    int pred_active_unit_num = autotune_controller->active_unit_num;
     autotune_controller->active_unit_num = autotune_controller->subkernel_num;
+    warning("CoCoDistributeSubkernels2DBlockCyclic: Problem with predicted active_unit_num(%d) < subkernel_num(%d) will be run with active_unit_num = %d\n", 
+    	pred_active_unit_num, autotune_controller->subkernel_num, autotune_controller->active_unit_num); 
+    for (int d = autotune_controller->active_unit_num; d < pred_active_unit_num; d++) autotune_controller->linkmap->reset_links(autotune_controller->active_unit_id_list[d]);  
     for (int d = 0 ; d < autotune_controller->active_unit_num; d++){
       autotune_controller->Subkernels_per_unit_num[d] = 1;
       autotune_controller->Subkernels_per_unit_list[d][0] = d;

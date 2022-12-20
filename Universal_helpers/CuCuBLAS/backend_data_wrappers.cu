@@ -324,7 +324,7 @@ void CoCoEnableLinks(short target_dev_i, short num_devices){
 		int dev_id_current = deidxize(j);
 		if (dev_id_target == dev_id_current || dev_id_target == -1 || dev_id_current == -1) continue;
 		int can_access_peer;
-		massert(cudaSuccess == cudaDeviceCanAccessPeer(&can_access_peer, dev_id_target, dev_id_current), "CoCopeLiaDgemm: cudaDeviceCanAccessPeer failed\n");
+		massert(cudaSuccess == cudaDeviceCanAccessPeer(&can_access_peer, dev_id_target, dev_id_current), "PARALiaDgemm: cudaDeviceCanAccessPeer failed\n");
 		if(can_access_peer){
 			cudaError_t check_peer = cudaDeviceEnablePeerAccess(dev_id_current, 0);
 			if(check_peer == cudaSuccess){ ;

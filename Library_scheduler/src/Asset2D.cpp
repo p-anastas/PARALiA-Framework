@@ -8,6 +8,7 @@
 #include "unihelpers.hpp"
 
 template class Asset2D<double>;
+template class Asset2D<float>;
 
 template<typename dtype> Tile2D<dtype>* Asset2D<dtype>::getTile(int iloc1, int iloc2){
   if(iloc1 >= GridSz1) error("Asset2D::getTile : iloc1 >= GridSz1 (%d vs %d)\n", iloc1, GridSz1);
@@ -78,6 +79,7 @@ template<typename dtype> void Asset2D<dtype>::InitTileMap(int T1, int T2, Cache_
 }
 
 template void Asset2D<double>::InitTileMap(int T1, int T2, Cache_p* init_loc_cache_p);
+template void Asset2D<float>::InitTileMap(int T1, int T2, Cache_p* init_loc_cache_p);
 
 template<typename dtype> void Asset2D<dtype>::DestroyTileMap(){
   int current_ctr;
@@ -90,6 +92,7 @@ template<typename dtype> void Asset2D<dtype>::DestroyTileMap(){
 }
 
 template void Asset2D<double>::DestroyTileMap();
+template void Asset2D<float>::DestroyTileMap();
 
 template<typename dtype> void Asset2D<dtype>::DrawTileMap(){
   fprintf(stderr, " Tile2D representation: \
@@ -156,3 +159,4 @@ template<typename dtype> void Asset2D<dtype>::DrawTileMap(){
 }
 
 template void Asset2D<double>::DrawTileMap();
+template void Asset2D<float>::DrawTileMap();

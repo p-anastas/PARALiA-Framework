@@ -87,7 +87,7 @@ void cblas_sgemm_wrap_for_cublasXt(char* gpu_op_A, char* gpu_op_B, int* M, int* 
 cblas_sgemm(CblasColMajor, cpu_op_A, cpu_op_B, *M, *N, *K, *alpha, A, *ldA, B, *ldB, *beta, C, *ldC);
 }
 
-double cuBLASXtSgemmWrap(char TransA, char TransB, long int M, long int N, long int K, float alpha, float* A, long int ldA, float* B, long int ldB, float beta, float* C, long int ldC, long int T, double cpu_ratio, short dev_id){
+double cuBLASXtSgemmWrap(char TransA, char TransB, long int M, long int N, long int K, float alpha, float* A, long int ldA, float* B, long int ldB, float beta, float* C, long int ldC, long int T, double cpu_ratio, short dev_num, int dev_ids[] ){
 	short lvl = 1;
 	double total_t = csecond();
 #ifdef DEBUG
@@ -104,18 +104,12 @@ double cuBLASXtSgemmWrap(char TransA, char TransB, long int M, long int N, long 
 	cublasOperation_t gpu_op_A = OpCharToCublas(TransA), gpu_op_B = OpCharToCublas(TransB);
 	cublasStatus_t stat;
 	cublasXtHandle_t handle0;
-	int device_ids[1] = {dev_id};
-
-	// TODO: For now use only one device;
-	int cur_id; cudaGetDevice(&cur_id);
-	if ( cur_id != dev_id) printf("cuBLASXtSgemmWrap: Device change initiated(%d->%d)\n",cur_id, dev_id);
-	cudaSetDevice(dev_id);
 
 	/// Required allocations for device
 	assert(CUBLAS_STATUS_SUCCESS == cublasXtCreate(&handle0));
-	assert(CUBLAS_STATUS_SUCCESS == cublasXtDeviceSelect(handle0, 1, device_ids));
+	assert(CUBLAS_STATUS_SUCCESS == cublasXtDeviceSelect(handle0, dev_num, dev_ids));
 	assert(CUBLAS_STATUS_SUCCESS == cublasXtSetBlockDim(handle0, T));
-	assert(CUBLAS_STATUS_SUCCESS == cublasXtSetCpuRoutine(handle0, CUBLASXT_GEMM, CUBLASXT_FLOAT, (void*) &cblas_sgemm_wrap_for_cublasXt));
+	assert(CUBLAS_STATUS_SUCCESS == cublasXtSetCpuRoutine(handle0, CUBLASXT_GEMM, CUBLASXT_DOUBLE, (void*) &cblas_dgemm_wrap_for_cublasXt));
 	assert(CUBLAS_STATUS_SUCCESS == cublasXtSetCpuRatio(handle0, CUBLASXT_GEMM, CUBLASXT_DOUBLE, cpu_ratio));
 	assert(CUBLAS_STATUS_SUCCESS == cublasXtSetPinningMemMode(handle0, CUBLASXT_PINNING_ENABLED));
 #ifdef TEST
@@ -123,7 +117,6 @@ double cuBLASXtSgemmWrap(char TransA, char TransB, long int M, long int N, long 
 	lprintf(lvl, "cuBLASXt initialization/pinning -> t_init = %lf ms\n", cpu_timer*1000);
     	cpu_timer = csecond();
 #endif
-
 	assert(CUBLAS_STATUS_SUCCESS == cublasXtSgemm(handle0, gpu_op_A, gpu_op_B, M, N, K, &alpha, A, ldA, B, ldB, &beta, C, ldC));
 	CoCoSyncCheckErr();
 #ifdef TEST
@@ -138,3 +131,4 @@ double cuBLASXtSgemmWrap(char TransA, char TransB, long int M, long int N, long 
 	return total_t;
 
 }
+

@@ -48,12 +48,14 @@ template<typename dtype> void Asset2D<dtype>::prepareAsync(pthread_t* thread_id,
 }
 
 template void Asset2D<double>::prepareAsync(pthread_t* thread_id, pthread_attr_t attr);
+template void Asset2D<float>::prepareAsync(pthread_t* thread_id, pthread_attr_t attr);
 
 template<typename dtype> void Asset2D<dtype>::resetProperties(){
 	if (pin_internally) cudaHostUnregister(adrs);
 }
 
 template void Asset2D<double>::resetProperties();
+template void Asset2D<float>::resetProperties();
 
 template<typename dtype> void Asset1D<dtype>::prepareAsync(pthread_t* thread_id, pthread_attr_t attr){
 	pthread_data_in_p prep_data = (pthread_data_in_p) malloc(sizeof(struct pthread_data_in));
@@ -71,9 +73,11 @@ template<typename dtype> void Asset1D<dtype>::prepareAsync(pthread_t* thread_id,
 }
 
 template void Asset1D<double>::prepareAsync(pthread_t* thread_id, pthread_attr_t attr);
+template void Asset1D<float>::prepareAsync(pthread_t* thread_id, pthread_attr_t attr);
 
 template<typename dtype> void Asset1D<dtype>::resetProperties(){
 	if (pin_internally) cudaHostUnregister(adrs);
 }
 
 template void Asset1D<double>::resetProperties();
+template void Asset1D<float>::resetProperties();

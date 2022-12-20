@@ -51,6 +51,7 @@ ${LIBSC_DIR_SRC}/Tile1D.cpp
 ${LIBSC_DIR_SRC}/Tile2D.cpp
 ${LIBSC_DIR_SRC}/Subkernel.cpp
 ${LIBSC_DIR_SRC}/Functions/dgemm.cpp
+${LIBSC_DIR_SRC}/Functions/sgemm.cpp
 ${LIBSC_DIR_SRC}/Functions/daxpy.cpp
 ${BACKEND_LIBSC_DIR}/Asset_backend.cpp
 )

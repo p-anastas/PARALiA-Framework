@@ -98,12 +98,14 @@ target_link_libraries(XKBLAS_dgemm_runner ${INTERNAL_LINK_LIB} benchcocopelia un
 
 ## PARALia Runners and Testers 
 add_executable (dgemm_tester ${BENCH_DIR_SRC}/PARALia/dgemm_tester.cpp )
+add_executable (sgemm_tester ${BENCH_DIR_SRC}/PARALia/sgemm_tester.cpp )
 add_executable (dgemm_runner ${BENCH_DIR_SRC}/PARALia/dgemm_runner.cpp )
 add_executable (dgemm_predictor ${BENCH_DIR_SRC}/PARALia/dgemm_predictor.cpp )
 
 add_executable (daxpy_runner ${BENCH_DIR_SRC}/PARALia/daxpy_runner.cpp )
 
 target_link_libraries(dgemm_tester ${INTERNAL_LINK_LIB} benchcocopelia)
+target_link_libraries(sgemm_tester ${INTERNAL_LINK_LIB} benchcocopelia)
 target_link_libraries(dgemm_runner ${INTERNAL_LINK_LIB} benchcocopelia unihelpers)
 target_link_libraries(dgemm_predictor ${INTERNAL_LINK_LIB} benchcocopelia unihelpers)
 target_link_libraries(daxpy_runner ${INTERNAL_LINK_LIB} benchcocopelia unihelpers)

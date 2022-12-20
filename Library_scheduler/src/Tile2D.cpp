@@ -10,6 +10,7 @@
 int Tile2D_num = 0;
 
 template class Tile2D<double>;
+template class Tile2D<float>;
 
 template<typename dtype>  Tile2D<dtype>::Tile2D(void * in_addr, int in_dim1, int in_dim2,
   int in_ldim, int inGrid1, int inGrid2, CBlock_p init_loc_block_p)

@@ -10,6 +10,7 @@
 int Tile1D_num = 0;
 
 template class Tile1D<double>;
+template class Tile1D<float>;
 
 template<typename dtype>  Tile1D<dtype>::Tile1D(void * in_addr, int in_dim,
   int in_inc, int inGrid, CBlock_p init_loc_block_p)
@@ -76,8 +77,6 @@ template<typename dtype> short Tile1D<dtype>::isLocked(){
 #endif
 }
 
-// TODO: to make this more sophisticated, we have to add prediction data in it.
-// For now: closest = already in device, then other GPUs, then host (since devices in order etc, host after in CacheLocId)
 template<typename dtype> short Tile1D<dtype>::getClosestReadLoc(short dev_id_in){
   short lvl = 5;
 #ifdef DDEBUG
@@ -96,10 +95,13 @@ template<typename dtype> short Tile1D<dtype>::getClosestReadLoc(short dev_id_in)
     state temp = StoreBlock[pos]->State;
     if (temp == AVAILABLE || temp == SHARABLE || temp == NATIVE){
       event_status block_status = StoreBlock[pos]->Available->query_status();
-      if(block_status == COMPLETE || block_status == CHECKED){// || block_status == RECORDED){
+#ifdef ALLOW_FETCH_RECORDED      
+      if(block_status == COMPLETE || block_status == CHECKED || block_status == RECORDED){
+#else
+      if(block_status == COMPLETE || block_status == CHECKED){
+#endif      
         double current_link_bw = final_estimated_link_bw[dev_id_in_idx][pos];
-
-        //if (block_status == RECORDED) current_link_bw-=current_link_bw*FETCH_UNAVAILABLE_PENALTY;
+        if (block_status == RECORDED) current_link_bw-=current_link_bw*FETCH_UNAVAILABLE_PENALTY;
         if (current_link_bw > link_bw_max){
           link_bw_max = current_link_bw;
           pos_max = pos;
@@ -124,7 +126,11 @@ template<typename dtype> short Tile1D<dtype>::getClosestReadLoc(short dev_id_in)
     state temp = temp_outblock->State;
     event_status block_status = temp_outblock->Available->query_status();
     if ((temp == AVAILABLE || temp == SHARABLE || temp == NATIVE) &&
-    (block_status == COMPLETE || block_status == CHECKED)){// || block_status == RECORDED)){
+#ifdef ALLOW_FETCH_RECORDED      
+    (block_status == COMPLETE || block_status == CHECKED|| block_status == RECORDED)){
+#else
+    (block_status == COMPLETE || block_status == CHECKED)){
+#endif
       temp_outblock->add_reader(true);
       //Global_Cache[pos_max]->unlock();
       temp_outblock->unlock();
@@ -147,15 +153,20 @@ template<typename dtype> double Tile1D<dtype>::getMinLinkCost(short dev_id_in){
   int dev_id_in_idx = idxize(dev_id_in);
   double link_bw_max = 0;
   for (int pos =0; pos < LOC_NUM; pos++){
-    if(StoreBlock[pos] == NULL) continue;
+    CBlock_p temp_outblock = StoreBlock[pos];
+    if(temp_outblock == NULL) continue;
     //StoreBlock[pos]->update_state(false);
-    state temp = StoreBlock[pos]->State;
+    state temp = temp_outblock->State;
     if (temp == AVAILABLE || temp == SHARABLE || temp == NATIVE){
-      event_status block_status = StoreBlock[pos]->Available->query_status();
-      if(block_status == COMPLETE || block_status == CHECKED){//|| block_status == RECORDED){
+      event_status block_status = temp_outblock->Available->query_status();
+#ifdef ALLOW_FETCH_RECORDED      
+    if(block_status == COMPLETE || block_status == CHECKED || block_status == RECORDED){
+#else
+    if(block_status == COMPLETE || block_status == CHECKED){
+#endif  
         double current_link_bw = final_estimated_link_bw[dev_id_in_idx][pos];
 
-        //if (block_status == RECORDED) current_link_bw-=current_link_bw*FETCH_UNAVAILABLE_PENALTY;
+        if (block_status == RECORDED) current_link_bw-=current_link_bw*FETCH_UNAVAILABLE_PENALTY;
         if (current_link_bw > link_bw_max) link_bw_max = current_link_bw;
       }
     }

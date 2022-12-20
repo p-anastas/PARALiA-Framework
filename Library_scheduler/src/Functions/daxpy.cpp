@@ -13,6 +13,7 @@
 #include "DataCaching.hpp"
 
 #include <pthread.h>
+
 pthread_barrier_t  SoftCache_alloc_barrier_axpy;
 
 axpy_backend_in_p initial_axpy = NULL;
@@ -196,16 +197,16 @@ void* CoCopeLiaAxpyAgentVoid(void* kernel_pthread_wrapped){
 }
 
 /// An axpy wrapper including auto-tuning of T and cache_size, as well as device management
-ATC_p CoCopeLiaDaxpy(long int N, VALUE_TYPE alpha, VALUE_TYPE* x, long int incx, VALUE_TYPE* y, long int incy)
+ATC_p PARALiaDaxpy(long int N, VALUE_TYPE alpha, VALUE_TYPE* x, long int incx, VALUE_TYPE* y, long int incy)
 {
 	short lvl = 1;
 #ifdef DEBUG
-	lprintf(lvl-1, "|-----> CoCopeLiaDaxpy(%zu,%lf,x=%p(%d),%zu,y=%p(%d),%zu)\n",
+	lprintf(lvl-1, "|-----> PARALiaDaxpy(%zu,%lf,x=%p(%d),%zu,y=%p(%d),%zu)\n",
 		N, alpha, x, CoCoGetPtrLoc(x), incx, y, CoCoGetPtrLoc(y), incy);
 #endif
 
 #ifdef TEST
-	lprintf(lvl-1, "|-----> CoCopeLiaDaxpy\n");
+	lprintf(lvl-1, "|-----> PARALiaDaxpy\n");
 	double cpu_timer = csecond();
 #endif
 #ifdef STEST
@@ -245,7 +246,7 @@ ATC_p CoCopeLiaDaxpy(long int N, VALUE_TYPE alpha, VALUE_TYPE* x, long int incx,
 
 	pthread_attr_t attr;
 	int s = pthread_attr_init(&attr);
-	if (s != 0) error("CoCopeLiaDaxpy: pthread_attr_init failed s=%d\n", s);
+	if (s != 0) error("PARALiaDaxpy: pthread_attr_init failed s=%d\n", s);
 
 	pthread_t asset_thread_id[2];
 	x_asset->prepareAsync(&asset_thread_id[0], attr);
@@ -266,7 +267,7 @@ ATC_p CoCopeLiaDaxpy(long int N, VALUE_TYPE alpha, VALUE_TYPE* x, long int incx,
 	void* res;
 	for(int i=0; i<2;i++){
 		s = pthread_join(asset_thread_id[i], &res);
-		if (s != 0) error("CoCopeLiaDaxpy: pthread_join failed with exit value %d", s);
+		if (s != 0) error("PARALiaDaxpy: pthread_join failed with exit value %d", s);
 		//free(res);      /* Free memory allocated by thread */
 	}
 
@@ -470,13 +471,13 @@ ATC_p CoCopeLiaDaxpy(long int N, VALUE_TYPE alpha, VALUE_TYPE* x, long int incx,
 	return autotune_controller_axpy;
 }
 
-/// A modification of CoCopeLiaDaxpy but with given parameters (mainly for performance/debug purposes)
-ATC_p CoCopeLiaDaxpyControled(long int N, VALUE_TYPE alpha, VALUE_TYPE* x, long int incx, VALUE_TYPE* y, long int incy, ATC_p predef_controller){
+/// A modification of PARALiaDaxpy but with given parameters (mainly for performance/debug purposes)
+ATC_p PARALiaDaxpyControled(long int N, VALUE_TYPE alpha, VALUE_TYPE* x, long int incx, VALUE_TYPE* y, long int incy, ATC_p predef_controller){
 	if (predef_controller == NULL){
-		warning("Calling CoCopeLiaDaxpyControled with empty controller -> falling back to full autotune version \'CoCopeLiaDaxpy\'\n");
-		return CoCopeLiaDaxpy(N, alpha, x, incx, y, incy);
+		warning("Calling PARALiaDaxpyControled with empty controller -> falling back to full autotune version \'PARALiaDaxpy\'\n");
+		return PARALiaDaxpy(N, alpha, x, incx, y, incy);
 	}
 
 	predef_controller_axpy = predef_controller;
-	return CoCopeLiaDaxpy(N, alpha, x, incx, y, incy);
+	return PARALiaDaxpy(N, alpha, x, incx, y, incy);
 }

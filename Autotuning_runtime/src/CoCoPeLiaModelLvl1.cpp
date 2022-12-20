@@ -285,3 +285,7 @@ double PredictBidirectionalHeteroBLAS1(MD_p model, long int T, int used_devs, in
 	else error("CoCopeLiaPredictBidirectionalHeteroBLAS1: Unknown REL_PERF_MODE = %s\n", REL_PERF_MODE);
 	return result;
 }
+
+long int CoCopeLiaGetSKNumBLAS1(MD_p model, int T){
+		return (model->D1/T + ((model->D1%T)? 1:0));
+}

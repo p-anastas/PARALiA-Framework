@@ -184,16 +184,21 @@ double PARALiaPerfPenaltyModifier(MD_p model, long int T, int active_unit_num){
 	if (model->D3 != -1 && model->D3%T) padding_time_multiplier+=TILE_IMBALANCE_PENALTY;
 #endif
 #ifdef REDUCE_PENALTY /// FIXME: questionable in any heterogeneous system, should consider purging it
-	if ((model->D1/T + (model->D1%T)? 1 : 0) *
-			(model->D2/T + (model->D2%T)? 1 : 0) *
-			(model->D3/T + (model->D3%T)? 1 : 0) % active_unit_num) inbalance_time_multiplier+=REDUCE_PENALTY;
+	if ((model->D1/T + ((model->D1%T)? 1 : 0)) *
+			(model->D2/T + ((model->D2%T)? 1 : 0)) *
+			(model->D3/T + ((model->D3%T)? 1 : 0)) % active_unit_num) inbalance_time_multiplier+=REDUCE_PENALTY;
+			
 #endif
+	double not_enough_WR_pieces_multiplier = 1.0; 
+	int temp_pieces = (model->D1/T + ((model->D1%T)? 1 : 0)) * (model->D2/T + ((model->D2%T)? 1 : 0)); 
+	if (temp_pieces < active_unit_num) not_enough_WR_pieces_multiplier *= 1000; 
 #ifdef PDEBUG
-	lprintf(lvl, "PARALiaPerfPenaltyModifier: Penaltize tiles leading to padding -> padding_time_multiplier = %lf\
-		\nPenaltize tiles leading SK num not equally distributed to units -> inbalance_time_multiplier = %lf\n",
-		padding_time_multiplier, inbalance_time_multiplier);
+	lprintf(0, "PARALiaPerfPenaltyModifier: Penaltize unit/tile combination leading to padding -> padding_time_multiplier = %lf\
+		\nPenaltize unit/tile combination leading SK num not equally distributed to units -> inbalance_time_multiplier = %lf\
+		\nPenaltize unit/tile combination with more units than Subkernels -> not_enough_WR_pieces_multiplier = %lf\n",
+		padding_time_multiplier, inbalance_time_multiplier, not_enough_WR_pieces_multiplier);
 #endif
-	return padding_time_multiplier*inbalance_time_multiplier;
+	return padding_time_multiplier*inbalance_time_multiplier*not_enough_WR_pieces_multiplier*not_enough_WR_pieces_multiplier;
 }
 
 double PARALiaPredictLinkHeteroBLAS3(MD_p model, long int T, int active_unit_num, int* active_unit_id_list,
@@ -274,9 +279,9 @@ double PARALiaPredictLinkHeteroBLAS3(MD_p model, long int T, int active_unit_num
 		"\tt_total: %lf ms (%lf GFlops/s)\n\n",
 		model->unit_id, 100*active_unit_score[used_unit_idx], t_recv_full*1000, Gval_per_s(recv_sz,t_recv_full),
 		t_recv_extra*1000, Gval_per_s(recv_sz_extra,t_recv_extra), 100*extra_transfer_ratio,
-		t_exec_full*1000, Gval_per_s(gemm_flops(model->D1,model->D2,model->D3)*active_unit_score[used_unit_idx], t_exec_full),
+		t_exec_full*1000, Gval_per_s(model->getFlops()*active_unit_score[used_unit_idx], t_exec_full),
 		t_send_full*1000, Gval_per_s(send_sz,t_send_full),
-		t_total*1000, Gval_per_s(gemm_flops(model->D1,model->D2,model->D3)*active_unit_score[used_unit_idx], t_total));
+		t_total*1000, Gval_per_s(model->getFlops()*active_unit_score[used_unit_idx], t_total));
 #endif
 
 		return t_total;

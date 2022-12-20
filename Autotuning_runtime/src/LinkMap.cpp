@@ -51,6 +51,25 @@ void LinkMap::reset()
 	for (int i = 0; i < LOC_NUM*LOC_NUM; i++) ESPA_ETA_sorted_dec_ids[i] = i;
 }
 
+
+void LinkMap::reset_links(int unit_id){
+  	for (int i = 0; i < LOC_NUM; i++)
+    	for (int j = 0; j < LOC_NUM; j++) 
+    		if(link_hop_num[i][j])
+    			for (int l = 0; l < MAX_HOP_ROUTES; l++)
+    				for (int k = 0; k < MAX_ALLOWED_HOPS; k++)
+    			 		///terminate all routes for links that (might) use unit_id as an intermediate hop. 
+    	     			if(link_hop_route[i][j][k][l] == unit_id){
+    	     				link_hop_num[i][j] = 0;
+#ifdef PDEBUG
+							lprintf(0, "\n|-----> LinkMap::reset_links(Terminating route [%d][%d] due to link_hop_route[%d][%d][%d][%d] = %d)\n\n",
+								i, j, i, j, k, l, unit_id);
+#endif
+						}    	     				
+    	     			
+}
+
+
 void normalize_2D_LOC_NUM(double link_bw [][LOC_NUM], int dim1, double split_limit){
   int already_normalized[dim1][LOC_NUM] = {{0}};
   for (int i = 0; i < dim1; i++){
@@ -87,7 +106,6 @@ short lvl = 1;
 #ifdef PDEBUG
     lprintf(0, "\n|-----> LinkMap::update_link_weights(list_of_models = %p, T = %d)\n\n",
     list_of_models, T);
-    print_link_bw();
 #endif
   int pred_T_dim = 0;
   if(T < 1) pred_T_dim = 2048;
@@ -449,7 +467,7 @@ void LinkMap::ESPA_init_hop_routes(MD_p* unit_modeler_list, int* active_unit_id_
 
 						double link_hop_ETA = fmax(ESPA_ETA_tmp_1,ESPA_ETA_tmp_2);
 
-						if (hop_bw > max_hop_bw || (hop_bw == max_hop_bw && link_hop_ETA < best_ETA) ){ /// BW-focused
+						if ((hop_bw > max_hop_bw || (hop_bw == max_hop_bw && link_hop_ETA < best_ETA)) && ( hop_bw >= 2*max_hop_bw || link_hop_ETA < ESPA_ETA_max)){ /// BW-focused
 						//if (link_hop_ETA < best_ETA || (hop_bw > max_hop_bw && link_hop_ETA == best_ETA) ){ /// ETA-focused - not sufficient
 								best_hop_idx = hop_idx;
 								best_ETA = link_hop_ETA;
@@ -540,8 +558,8 @@ double LinkMap::ESPA_predict(MD_p unit_modeler, int T, int* active_unit_id_list,
 					src_hop = link_hop_route[global_unit_idx][other_unit_idx][intermediate_hops][0];
 				}
 				tmp_link_cost = fmax(tmp_link_cost, ESPA_ETA[dst_hop][src_hop]);
-				if(0 == init_type || 1 == init_type) t_recv_full+=tmp_link_cost;
-				else if (2 == init_type) t_recv_full = fmax(t_recv_full, tmp_link_cost);
+				if(1 == ESPA_COMMUNICATION_AGGREGATOR) t_recv_full+=tmp_link_cost;
+				else if (0 == ESPA_COMMUNICATION_AGGREGATOR) t_recv_full = fmax(t_recv_full, tmp_link_cost);
 
 				/// t_send_full estimation
 				tmp_link_cost = 0;
@@ -551,8 +569,8 @@ double LinkMap::ESPA_predict(MD_p unit_modeler, int T, int* active_unit_id_list,
 					src_hop = link_hop_route[other_unit_idx][global_unit_idx][intermediate_hops][0];
 				}
 				tmp_link_cost = fmax(tmp_link_cost, ESPA_ETA[dst_hop][src_hop]);
-				if(0 == init_type || 1 == init_type) t_send_full+=tmp_link_cost;
-				else if (2 == init_type) t_send_full = fmax(t_recv_full, tmp_link_cost);
+				if(1 == ESPA_COMMUNICATION_AGGREGATOR) t_send_full+=tmp_link_cost;
+				else if (0 == ESPA_COMMUNICATION_AGGREGATOR) t_send_full = fmax(t_send_full, tmp_link_cost);
 		}
 
 		t_total = fmax(t_exec_full, fmax(t_recv_full, t_send_full));

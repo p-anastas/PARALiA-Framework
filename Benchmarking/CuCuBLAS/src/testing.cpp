@@ -43,7 +43,8 @@ char* CoCoImplementationPrint(){
 	strcat(string_out, string_helper);
 #endif
 #ifdef ENABLE_POWA
-	sprintf(string_helper, "_PW-PRED-%s", PREDICT_OPTIMIZE_TARGET);
+	if(strcmp(PREDICT_OPTIMIZE_TARGET,"PERF-PER-J")) sprintf(string_helper, "_PW-PRED-%s", PREDICT_OPTIMIZE_TARGET);
+	else sprintf(string_helper, "_PW-PRED-%s-%.2lf", PREDICT_OPTIMIZE_TARGET, PERPER_LIMIT);
 	strcat(string_out, string_helper);
 #endif
 //#ifdef DDEBUG

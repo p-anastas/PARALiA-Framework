@@ -34,7 +34,7 @@ do
 	do
 		for TransB in N;
 		do
-			for scenario in "Full_offload" "Partial_offload_result" "Partial_offload_result_mixed_in" "Partial_offload_in" "Partial_offload_mixed" "Device_only_offload" "Device_only_offload_mixed1" "Device_only_offload_mixed2" "Device_only_offload_mixed3" "Device_only_offload_mixed4"
+			for scenario in "Full_offload" "Partial_offload_result" "Partial_offload_result_mixed_in" "Partial_offload_in"  "Partial_offload_mixed" "Device_only_offload" "Device_only_offload_mixed1" "Device_only_offload_mixed2" "Device_only_offload_mixed3" "Device_only_offload_mixed4" #
 			do
 				echo $scenario
 				if [ "$scenario" = "Full_offload" ];
@@ -94,14 +94,14 @@ do
 				do
 					echo "$CoCopelia_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $Sq $Sq $Sq $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
 					$CoCopelia_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $Sq $Sq $Sq $A_loc $B_loc $C_loc $C_loc  &>> $perf_log
-					echo "$CoCopelia_run 8 11111111 -1 -1 $TransA $TransB $alpha $beta $Sq $Sq $Sq $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
-					$CoCopelia_run 8 11111111 -1 -1 $TransA $TransB $alpha $beta $Sq $Sq $Sq $A_loc $B_loc $C_loc $C_loc  &>> $perf_log
-					echo "$CoCopelia_run 4 11110000 -1 -1 $TransA $TransB $alpha $beta $Sq $Sq $Sq $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
-					$CoCopelia_run 4 11110000 -1 -1 $TransA $TransB $alpha $beta $Sq $Sq $Sq $A_loc $B_loc $C_loc $C_loc  &>> $perf_log
-					echo "$CoCopelia_run 4 01100110 -1 -1 $TransA $TransB $alpha $beta $Sq $Sq $Sq $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
-					$CoCopelia_run 4 01100110 -1 -1 $TransA $TransB $alpha $beta $Sq $Sq $Sq $A_loc $B_loc $C_loc $C_loc  &>> $perf_log
-					echo "$CoCopelia_run 6 11101110 -1 -1 $TransA $TransB $alpha $beta $Sq $Sq $Sq $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
-					$CoCopelia_run 6 11101110 -1 -1 $TransA $TransB $alpha $beta $Sq $Sq $Sq $A_loc $B_loc $C_loc $C_loc  &>> $perf_log
+					#echo "$CoCopelia_run 8 11111111 -1 -1 $TransA $TransB $alpha $beta $Sq $Sq $Sq $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
+					#$CoCopelia_run 8 11111111 -1 -1 $TransA $TransB $alpha $beta $Sq $Sq $Sq $A_loc $B_loc $C_loc $C_loc  &>> $perf_log
+					#echo "$CoCopelia_run 4 11110000 -1 -1 $TransA $TransB $alpha $beta $Sq $Sq $Sq $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
+					#$CoCopelia_run 4 11110000 -1 -1 $TransA $TransB $alpha $beta $Sq $Sq $Sq $A_loc $B_loc $C_loc $C_loc  &>> $perf_log
+					#echo "$CoCopelia_run 4 01100110 -1 -1 $TransA $TransB $alpha $beta $Sq $Sq $Sq $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
+					#$CoCopelia_run 4 01100110 -1 -1 $TransA $TransB $alpha $beta $Sq $Sq $Sq $A_loc $B_loc $C_loc $C_loc  &>> $perf_log
+					#echo "$CoCopelia_run 6 11101110 -1 -1 $TransA $TransB $alpha $beta $Sq $Sq $Sq $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
+					#$CoCopelia_run 6 11101110 -1 -1 $TransA $TransB $alpha $beta $Sq $Sq $Sq $A_loc $B_loc $C_loc $C_loc  &>> $perf_log
 					#echo "$cuBLASXt_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $Sq $Sq $Sq $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
 					#$cuBLASXt_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $Sq $Sq $Sq $A_loc $B_loc $C_loc $C_loc &>> $perf_log
 					#echo "$BLASX_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $Sq $Sq $Sq $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
@@ -139,14 +139,14 @@ do
 						K_thin=$((MN/$inbalance_ctr))
 						echo "$CoCopelia_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $MN $MN $K_thin $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
 						$CoCopelia_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $MN $MN $K_thin $A_loc $B_loc $C_loc $C_loc  &>> $perf_log
-						echo "$CoCopelia_run 8 11111111 -1 -1 $TransA $TransB $alpha $beta $MN $MN $K_thin $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
-						$CoCopelia_run 8 11111111 -1 -1 $TransA $TransB $alpha $beta $MN $MN $K_thin $A_loc $B_loc $C_loc $C_loc  &>> $perf_log
-						echo "$CoCopelia_run 4 11110000 -1 -1 $TransA $TransB $alpha $beta $MN $MN $K_thin $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
-						$CoCopelia_run 4 11110000 -1 -1 $TransA $TransB $alpha $beta $MN $MN $K_thin $A_loc $B_loc $C_loc $C_loc  &>> $perf_log
-						echo "$CoCopelia_run 4 01100110 -1 -1 $TransA $TransB $alpha $beta $MN $MN $K_thin $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
-						$CoCopelia_run 4 01100110 -1 -1 $TransA $TransB $alpha $beta $MN $MN $K_thin $A_loc $B_loc $C_loc $C_loc  &>> $perf_log
-						echo "$CoCopelia_run 6 11101110 -1 -1 $TransA $TransB $alpha $beta $MN $MN $K_thin $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
-						$CoCopelia_run 6 11101110 -1 -1 $TransA $TransB $alpha $beta $MN $MN $K_thin $A_loc $B_loc $C_loc $C_loc  &>> $perf_log
+						#echo "$CoCopelia_run 8 11111111 -1 -1 $TransA $TransB $alpha $beta $MN $MN $K_thin $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
+						#$CoCopelia_run 8 11111111 -1 -1 $TransA $TransB $alpha $beta $MN $MN $K_thin $A_loc $B_loc $C_loc $C_loc  &>> $perf_log
+						#echo "$CoCopelia_run 4 11110000 -1 -1 $TransA $TransB $alpha $beta $MN $MN $K_thin $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
+						#$CoCopelia_run 4 11110000 -1 -1 $TransA $TransB $alpha $beta $MN $MN $K_thin $A_loc $B_loc $C_loc $C_loc  &>> $perf_log
+						#echo "$CoCopelia_run 4 01100110 -1 -1 $TransA $TransB $alpha $beta $MN $MN $K_thin $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
+						#$CoCopelia_run 4 01100110 -1 -1 $TransA $TransB $alpha $beta $MN $MN $K_thin $A_loc $B_loc $C_loc $C_loc  &>> $perf_log
+						#echo "$CoCopelia_run 6 11101110 -1 -1 $TransA $TransB $alpha $beta $MN $MN $K_thin $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
+						#$CoCopelia_run 6 11101110 -1 -1 $TransA $TransB $alpha $beta $MN $MN $K_thin $A_loc $B_loc $C_loc $C_loc  &>> $perf_log
 						#echo "$cuBLASXt_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $MN $MN $K_thin $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
 						#$cuBLASXt_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $MN $MN $K_thin $A_loc $B_loc $C_loc $C_loc &>> $perf_log
 						#echo "$BLASX_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $MN $MN $K_thin $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
@@ -166,14 +166,14 @@ do
 						MN_thin=$((MN/$inbalance_ctr))
 						echo "$CoCopelia_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $MN_thin $MN_thin $K_fat $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
 						$CoCopelia_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $MN_thin $MN_thin $K_fat $A_loc $B_loc $C_loc $C_loc  &>> $perf_log
-						echo "$CoCopelia_run 8 11111111 -1 -1 $TransA $TransB $alpha $beta $MN_thin $MN_thin $K_fat $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
-						$CoCopelia_run 8 11111111 -1 -1 $TransA $TransB $alpha $beta $MN_thin $MN_thin $K_fat $A_loc $B_loc $C_loc $C_loc  &>> $perf_log
-						echo "$CoCopelia_run 4 11110000 -1 -1 $TransA $TransB $alpha $beta $MN_thin $MN_thin $K_fat $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
-						$CoCopelia_run 4 11110000 -1 -1 $TransA $TransB $alpha $beta $MN_thin $MN_thin $K_fat $A_loc $B_loc $C_loc $C_loc  &>> $perf_log
-						echo "$CoCopelia_run 4 01100110 -1 -1 $TransA $TransB $alpha $beta $MN_thin $MN_thin $K_fat $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
-						$CoCopelia_run 4 01100110 -1 -1 $TransA $TransB $alpha $beta $MN_thin $MN_thin $K_fat $A_loc $B_loc $C_loc $C_loc  &>> $perf_log
-						echo "$CoCopelia_run 6 11101110 -1 -1 $TransA $TransB $alpha $beta $MN_thin $MN_thin $K_fat $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
-						$CoCopelia_run 6 11101110 -1 -1 $TransA $TransB $alpha $beta $MN_thin $MN_thin $K_fat $A_loc $B_loc $C_loc $C_loc  &>> $perf_log
+						#echo "$CoCopelia_run 8 11111111 -1 -1 $TransA $TransB $alpha $beta $MN_thin $MN_thin $K_fat $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
+						#$CoCopelia_run 8 11111111 -1 -1 $TransA $TransB $alpha $beta $MN_thin $MN_thin $K_fat $A_loc $B_loc $C_loc $C_loc  &>> $perf_log
+						#echo "$CoCopelia_run 4 11110000 -1 -1 $TransA $TransB $alpha $beta $MN_thin $MN_thin $K_fat $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
+						#$CoCopelia_run 4 11110000 -1 -1 $TransA $TransB $alpha $beta $MN_thin $MN_thin $K_fat $A_loc $B_loc $C_loc $C_loc  &>> $perf_log
+						#echo "$CoCopelia_run 4 01100110 -1 -1 $TransA $TransB $alpha $beta $MN_thin $MN_thin $K_fat $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
+						#$CoCopelia_run 4 01100110 -1 -1 $TransA $TransB $alpha $beta $MN_thin $MN_thin $K_fat $A_loc $B_loc $C_loc $C_loc  &>> $perf_log
+						#echo "$CoCopelia_run 6 11101110 -1 -1 $TransA $TransB $alpha $beta $MN_thin $MN_thin $K_fat $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
+						#$CoCopelia_run 6 11101110 -1 -1 $TransA $TransB $alpha $beta $MN_thin $MN_thin $K_fat $A_loc $B_loc $C_loc $C_loc  &>> $perf_log
 						#echo "$cuBLASXt_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $MN_thin $MN_thin $K_fat $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
 						#$cuBLASXt_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $MN_thin $MN_thin $K_fat $A_loc $B_loc $C_loc $C_loc &>> $perf_log
 						#echo "$BLASX_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $MN_thin $MN_thin $K_fat $A_loc $B_loc $C_loc $C_loc &>> $perf_log"

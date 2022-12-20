@@ -63,7 +63,7 @@ do
 done
 echo "Done"
 
-exit 1
+#exit 1
 
 # sgemm micro-benchmark Tile size
 rm $sgemm_log

@@ -118,7 +118,7 @@ long int Modeler::getFlops(){
 long int Modeler::getSKNum(int T){
 	switch(problem){
 		case BLAS1:
-			error("CoCopeLiaGetSKNum: BLAS 1 Not implemented\n");
+			return CoCopeLiaGetSKNumBLAS1(this, T);
 		case BLAS2:
 			error("CoCopeLiaGetSKNum: BLAS 2 Not implemented\n");
 			return 0;
@@ -135,7 +135,14 @@ long int Modeler::getSKNum(int T){
 double Modeler::getGPUexecFull(){
 	switch(problem){
 		case BLAS1:
-			error("getGPUexecFull: BLAS 1 Not implemented\n");
+			{
+				long int maxT = GPUexec1MaxT((GPUexec1Model_p)GPUexec_model_ptr);
+				long int Tbig = GPUexec1NearestT((GPUexec1Model_p)GPUexec_model_ptr,
+					fmin(maxT, D1));
+				//fprintf(stderr, "Tbig = %ld\n", Tbig);
+				return (D1*1.0/Tbig)* // TODO: Something (minor) might be missing here with flags->incx, flags->incy, should keep in mind.
+					GPUexec1Model_predict((GPUexec1Model_p)GPUexec_model_ptr, Tbig);
+			}
 		case BLAS2:
 			error("getGPUexecFull: BLAS 2 Not implemented\n");
 		case BLAS3:

@@ -8,20 +8,28 @@
 
 #include "Autotuning_runtime.hpp"
 
-/// The CoCopeLia Dgemm implementation. A prediction model is used to select a tile from the micro-benchmarked tile candidates with CoCopeLia_optimize3.
-ATC_p CoCopeLiaDgemm(char TransA,  char TransB, long int M, long int N, long int K,
+/// The PARALia Dgemm implementation.
+ATC_p PARALiaDgemm(char TransA,  char TransB, long int M, long int N, long int K,
 	double alpha, double* A, long int ldA, double* B, long int ldB, double beta, double* C, long int ldC);
 
-/// A modification of CoCopeLiaDgemm but with a given T (mainly for performance/debug purposes)
-ATC_p CoCopeLiaDgemmControled(char TransA,  char TransB, long int M, long int N, long int K,
+/// A modification of PARALiaDgemm but with a given T (mainly for performance/debug purposes)
+ATC_p PARALiaDgemmControled(char TransA,  char TransB, long int M, long int N, long int K,
 	double alpha, double* A, long int ldA, double* B, long int ldB, double beta, double* C, long int ldC, ATC_p predef_control_values);
 
-/// The CoCopeLia Dgemm implementation. A prediction model is used to select a tile from the micro-benchmarked tile candidates with CoCopeLia_optimize3.
-ATC_p CoCopeLiaDaxpy(long int N, VALUE_TYPE alpha,
+/// The PARALia Dgemm implementation.
+ATC_p PARALiaSgemm(char TransA,  char TransB, long int M, long int N, long int K,
+	float alpha, float* A, long int ldA, float* B, long int ldB, float beta, float* C, long int ldC);
+
+/// A modification of PARALiaDgemm but with a given T (mainly for performance/debug purposes)
+ATC_p PARALiaSgemmControled(char TransA,  char TransB, long int M, long int N, long int K,
+	float alpha, float* A, long int ldA, float* B, long int ldB, float beta, float* C, long int ldC, ATC_p predef_control_values);
+	
+/// The PARALia Daxpy implementation.
+ATC_p PARALiaDaxpy(long int N, VALUE_TYPE alpha,
 	VALUE_TYPE* x, long int incx, VALUE_TYPE* y, long int incy);
 
-/// A modification of CoCopeLiaDgemm but with a given T (mainly for performance/debug purposes)
-ATC_p CoCopeLiaDaxpyControled(long int N, VALUE_TYPE alpha,
+/// A modification of PARALiaDaxpy but with a given T (mainly for performance/debug purposes)
+ATC_p PARALiaDaxpyControled(long int N, VALUE_TYPE alpha,
 	VALUE_TYPE* x, long int incx, VALUE_TYPE* y, long int incy, ATC_p predef_control_values);
 
 ///Deallocates the GPU-allocated cache buffer at target device
