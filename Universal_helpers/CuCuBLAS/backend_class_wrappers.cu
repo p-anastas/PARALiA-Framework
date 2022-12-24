@@ -84,6 +84,9 @@ CommandQueue::CommandQueue(int dev_id_in)
 			"CommandQueue::CommandQueue(%d): cublasCreate failed\n", dev_id);
 		massert(CUBLAS_STATUS_SUCCESS == cublasSetStream(*((cublasHandle_t*) cqueue_backend_data[par_idx]), stream),
 			"CommandQueue::CommandQueue(%d): cublasSetStream failed\n", dev_id);
+		//warning("FIXME: Running on limited SMs, custom stuff, beware this in not a drill\n");
+		//massert(CUBLAS_STATUS_SUCCESS == cublasSetSmCountTarget(*((cublasHandle_t*) cqueue_backend_data[par_idx]), 1),
+		//	"CommandQueue::CommandQueue(%d): cublasSetSmCountTarget failed\n", dev_id);
 	}
 #else
 #ifdef UDEBUG

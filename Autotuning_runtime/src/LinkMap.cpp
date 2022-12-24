@@ -542,7 +542,11 @@ double LinkMap::ESPA_predict(MD_p unit_modeler, int T, int* active_unit_id_list,
 	}
 	double t_recv_full = 0, t_send_full = 0, t_exec_full = 0, t_total = 0;
 	t_exec_full = ESPA_unit_score[used_unit_idx]*unit_modeler->getGPUexecFull();
-
+	
+	//warning("ESPA_predict is modified for heterogeneous scenario ratios, beware!!1!\n"); 
+	//if(unit_modeler->unit_id == 0 || unit_modeler->unit_id == 1 || unit_modeler->unit_id == 4 || unit_modeler->unit_id == 6) t_exec_full*=7.0/3.0;
+	//else if ( unit_modeler->unit_id == 2 || unit_modeler->unit_id == 3)  t_exec_full*=7.0/5.0;
+	
 	if ( t_exec_full < 0){
 		warning("LinkMap::ESPA_predict: GPUexec3Model_predict submodel returned negative value, abort prediction");
 		return -1.0;

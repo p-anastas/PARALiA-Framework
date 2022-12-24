@@ -28,7 +28,7 @@ add_definitions(-DUNIHELPER_LOCKFREE_ENABLE)
 ## Enable Running multiple backend operations in parallel for each queue
 add_definitions(-DENABLE_PARALLEL_BACKEND)
 ## The maximum allowed parallel backend operations per queue
-add_definitions(-DMAX_BACKEND_L=4)
+add_definitions(-DMAX_BACKEND_L=8)
 
 ## Enable overlapping Send & recv Communication
 add_definitions(-DENABLE_SEND_RECV_OVERLAP)
@@ -62,7 +62,7 @@ add_definitions(-DENABLE_POWA)
 add_definitions(-DCPU_W_PREDEF=300) # TODO: Vulcan CAUTION!!! Define this for your CPU - no CPU power tool installed.
 #add_definitions(-DCPU_W_PREDEF=170) # TODO: silver1 CAUTION!!! Define this for your CPU - no CPU power tool installed.
 ## Choose the Unit combination that maximizes total performance (minimum time).
-#add_definitions(-DPREDICT_OPTIMIZE_TARGET="PERF")
+add_definitions(-DPREDICT_OPTIMIZE_TARGET="PERF")
 ## Choose the Unit combination that minimizes consumed energy (J).
 ## Rarely chooses multi-unit execution, since its almost always less energy-efficient than single-unit.
 #add_definitions(-DPREDICT_OPTIMIZE_TARGET="ENERGY")
@@ -71,13 +71,13 @@ add_definitions(-DCPU_W_PREDEF=300) # TODO: Vulcan CAUTION!!! Define this for yo
 #add_definitions(-DPREDICT_OPTIMIZE_TARGET="POWER-DELAY")
 
 ## Choose the Unit combination that maximizes the energy-delay product - closer to "PERF" but also slightly considering energy.
-add_definitions(-DPREDICT_OPTIMIZE_TARGET="ENERGY-DELAY")
+#add_definitions(-DPREDICT_OPTIMIZE_TARGET="ENERGY-DELAY")
 
 ## Choose the Unit combination based on a configurable minimum acceptable percentile performance-improvement-per-J-increase. 
 ## Example for choosing U1(tpred = X, En = J1) vs U2(tpred = Y, En = J2) units with PERPER_LIMIT: if ( X/Y >= PERPER_LIMIT*J2/J1) U2 else U1
 #add_definitions(-DPREDICT_OPTIMIZE_TARGET="PERF-PER-J")
 ## PERPER_LIMIT higher -> "ENERGY", lower -> "PERF"
-add_definitions(-DPERPER_LIMIT=0.01)
+add_definitions(-DPERPER_LIMIT=0.0)
 
 #add_definitions(-DPREDICT_OPTIMIZE_TARGET="OTHER_TBD")
 
@@ -87,7 +87,7 @@ add_definitions(-DNORMALIZE_NEAR_SPLIT_LIMIT=0.05)
 
 ## Define the minimum allowed percentile contribution in total time from each potential unit
 ## In case of energy, the maximum allowed percentile energy increase by each new unit.
-add_definitions(-DMINIMUM_UNIT_CONTRIBUTION=0.025)
+add_definitions(-DMINIMUM_UNIT_CONTRIBUTION=0.05)
 
 set(SCHEDULE_TYPE 0) # 0 = static, 1 = runtime selection
 
@@ -116,7 +116,6 @@ add_definitions(-DMULTIFETCH_PENALTY=3)
 add_definitions(-DEXSTART_PENALTY=1000) # If this is large : Heuristic -> Prefer SKs you have fetched WR tiles for before selecting new
 add_definitions(-DEXSTEAL_PENALTY=100000) # If this is large : Heuristic -> Only 'steal' SKs others hold WR tiles for if you have no other option
 add_definitions(-DFETCH_UNAVAILABLE_PENALTY=0.1)
-
 
 #Run in testing mode : details about models, decisions and time spend in operations.
 #add_definitions(-DTEST)
@@ -248,6 +247,7 @@ configure_file(${PROJECT_BENCH_DIR}/Test_correctness.in ${CMAKE_INSTALL_PROJECT}
 configure_file(${PROJECT_BENCH_DIR}/Targeted_performance_evaluation.in ${CMAKE_INSTALL_PROJECT}/Targeted_performance_evaluation.sh @ONLY)
 configure_file(${PROJECT_BENCH_DIR}/Full_model_validation.in ${CMAKE_INSTALL_PROJECT}/Full_model_validation.sh @ONLY)
 configure_file(${PROJECT_BENCH_DIR}/Full_performance_evaluation.in ${CMAKE_INSTALL_PROJECT}/Full_performance_evaluation.sh @ONLY)
+configure_file(${PROJECT_BENCH_DIR}/Heterogeneous_performance_estimation.in ${CMAKE_INSTALL_PROJECT}/Heterogeneous_performance_estimation.sh @ONLY)
 
 set(VALUETYPEID 1)
 if (${VALUETYPEID} EQUAL 0)

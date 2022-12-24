@@ -186,6 +186,7 @@ typedef class ATC{
 		int active_unit_num; /// The number of units that will be used in the involving operation.
 		int* active_unit_id_list;	/// The list of ids of said units.
 		double* active_unit_score; /// The 'score' of each said units relative to the total task completion.
+		short split_homogeneously = 0; /// A flag that disables workload ratio selection
 		double pred_t; /// The predicted seconds the whole operation will require using the above parameters.
 		double pred_J; /// The predicted Joules the whole operation will require using the above parameters.
 		double power_delay, energy_delay; /// The predicted power and energy delay products using the above parameters.

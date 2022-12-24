@@ -446,6 +446,8 @@ double ATC::autotune_problem(const char* routine_name, void* initial_problem_wra
     	final_estimated_link_bw[i][j] = linkmap->link_bw_shared[i][j];
 #endif
 		if(initial_T <= 0) tile_selection_t += optimize_tile();
+		// TODO: Must decide if workload ratio should be tuned when there is a predefined number of devices... Currently == off for paper
+		split_homogeneously = 1; 
 		split_selection_t += optimize_split();
 	}
 
@@ -626,7 +628,8 @@ double ATC::optimize_split(){
 		temp_score+= active_unit_score[idx];
 	}
 	for(int idx = 0; idx < active_unit_num; idx++){
-		active_unit_score[idx] /= temp_score;
+		if (split_homogeneously) active_unit_score[idx] = 1.0/active_unit_num; 		
+		else active_unit_score[idx] /= temp_score;
 #ifdef PDEBUG
 		lprintf(lvl, "Calculating Relative score for unit_id = %d (idx = %d ): active_unit_score = %e\n",
 				active_unit_id_list[idx], idx, active_unit_score[idx]);
@@ -710,10 +713,8 @@ double ATC::optimize_split(){
 		else if (!strcmp(PREDICT_OPTIMIZE_TARGET,"ENERGY-DELAY")) active_unit_score_new[idx] = 1/temp_EDP; 
 		else if (!strcmp(PREDICT_OPTIMIZE_TARGET,"PERF-PER-J")) active_unit_score_new[idx] = temp_t;
 		else error("PREDICT_OPTIMIZE_TARGET = %s not implemented\n", PREDICT_OPTIMIZE_TARGET);
-		if (active_unit_score_new[idx] != 0) //active_unit_score_new[idx] = active_unit_score[idx]/active_unit_score_new[idx]; this was wrong?
-			active_unit_score_new[idx] = 1/active_unit_score_new[idx];
-		else warning("ATC::optimize_split: active_unit_score_new[%d] == 0\n", idx);
-		temp_score+= active_unit_score_new[idx];
+		
+		temp_score+= 1/((active_unit_score[idx]) ? active_unit_score_new[idx]/active_unit_score[idx] : 0);
 #endif
 	}
 #ifndef ENABLE_POWA
@@ -726,7 +727,8 @@ double ATC::optimize_split(){
 	energy_delay = (total_flops/temp_overlap_t)*(total_flops/temp_overlap_t)/(total_J/temp_overlap_t);
 #endif
 	for(int idx = 0; idx < active_unit_num; idx++){
-		active_unit_score[idx] = active_unit_score_new[idx]/temp_score;
+		if (split_homogeneously) active_unit_score[idx] = 1.0/active_unit_num;
+		else active_unit_score[idx] = 1/((active_unit_score[idx]) ? active_unit_score_new[idx]/active_unit_score[idx] : 0)/temp_score;
 #ifdef PDEBUG
 		lprintf(lvl, "Recalibrating Relative score for unit_id = %d (idx = %d ): active_unit_score = %e\n",
 				active_unit_id_list[idx], idx, active_unit_score[idx]);

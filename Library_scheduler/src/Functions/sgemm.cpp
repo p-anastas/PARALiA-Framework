@@ -23,7 +23,7 @@ ATC_p predef_controller_sgemm = NULL;
 int MGridSz_sgemm = 0, NGridSz_sgemm = 0, KGridSz_sgemm = 0;
 
 #ifdef STEST
-double gemm_entry_ts;
+double sgemm_entry_ts;
 #endif
 
 Subkernel** Subkernel_list_sgemm;
@@ -303,7 +303,7 @@ ATC_p PARALiaSgemm(char TransA,  char TransB, long int M, long int N, long int K
 		B, CoCoGetPtrLoc(B), ldB, beta, C, CoCoGetPtrLoc(C), ldC);
 #endif
 #ifdef STEST
-	gemm_entry_ts = csecond();
+	sgemm_entry_ts = csecond();
 #endif
 #ifdef TEST
 	lprintf(lvl-1, "|-----> PARALiaSgemm\n");
@@ -512,13 +512,10 @@ ATC_p PARALiaSgemm(char TransA,  char TransB, long int M, long int N, long int K
 
 	// create a barrier object with a count of autotune_controller_sgemm->active_unit_num + 1
 	pthread_barrier_init (&SoftCache_alloc_barrier_sgemm, NULL, autotune_controller_sgemm->active_unit_num + 1);
-
+	for(int d=0; d < LOC_NUM; d++) CoCoEnableLinks(deidxize(d), LOC_NUM);
 	for(int d=0; d < autotune_controller_sgemm->active_unit_num; d++){
 		if(autotune_controller_sgemm->Subkernels_per_unit_num[d] == 0 )
 			error("CoCoPeLiaDgemm: Leftover autotune_controller_sgemm->Subkernels_per_unit_num[%d] == 0", d);
-
-		// Check/Enable peer access between all system units
-		CoCoEnableLinks(idxize(autotune_controller_sgemm->active_unit_id_list[d]), LOC_NUM);
 
 		thread_dev_data[d] = (kernel_pthread_wrap_p) malloc(sizeof(struct kernel_pthread_wrap));
 		thread_dev_data[d]->dev_id = autotune_controller_sgemm->active_unit_id_list[d];
@@ -568,7 +565,7 @@ ATC_p PARALiaSgemm(char TransA,  char TransB, long int M, long int N, long int K
 	#endif
 
 #ifdef STEST
-	STEST_print_SK(thread_dev_data, gemm_entry_ts, autotune_controller_sgemm->active_unit_num);
+	STEST_print_SK(thread_dev_data, sgemm_entry_ts, autotune_controller_sgemm->active_unit_num);
 #endif
 
 #ifdef DDEBUG

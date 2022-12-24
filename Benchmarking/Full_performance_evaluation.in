@@ -19,7 +19,7 @@ mkdir -p "${LIBSC_TEST_LOG_DIR}/exec_logs"
 alpha=1.2345
 beta=1.1154
 
-for FUNC in dgemm sgemm
+for FUNC in dgemm
 do
 	perf_log="${LIBSC_TEST_LOG_DIR}/exec_logs/${FUNC}_perf_eval.log"
 	rm $perf_log
@@ -90,12 +90,12 @@ do
 				fi
 
 				# I) Mid-sized square problems
-				for Sq in {2048..24576..1024}
+				for Sq in {2048..22528..1024}
 				do
 					echo "$CoCopelia_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $Sq $Sq $Sq $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
 					$CoCopelia_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $Sq $Sq $Sq $A_loc $B_loc $C_loc $C_loc  &>> $perf_log
-					#echo "$CoCopelia_run 8 11111111 -1 -1 $TransA $TransB $alpha $beta $Sq $Sq $Sq $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
-					#$CoCopelia_run 8 11111111 -1 -1 $TransA $TransB $alpha $beta $Sq $Sq $Sq $A_loc $B_loc $C_loc $C_loc  &>> $perf_log
+					echo "$CoCopelia_run 8 11111111 -1 -1 $TransA $TransB $alpha $beta $Sq $Sq $Sq $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
+					$CoCopelia_run 8 11111111 -1 -1 $TransA $TransB $alpha $beta $Sq $Sq $Sq $A_loc $B_loc $C_loc $C_loc  &>> $perf_log
 					#echo "$CoCopelia_run 4 11110000 -1 -1 $TransA $TransB $alpha $beta $Sq $Sq $Sq $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
 					#$CoCopelia_run 4 11110000 -1 -1 $TransA $TransB $alpha $beta $Sq $Sq $Sq $A_loc $B_loc $C_loc $C_loc  &>> $perf_log
 					#echo "$CoCopelia_run 4 01100110 -1 -1 $TransA $TransB $alpha $beta $Sq $Sq $Sq $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
@@ -108,8 +108,8 @@ do
 					#$BLASX_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $Sq $Sq $Sq $A_loc $B_loc $C_loc $C_loc &>> $perf_log
 					#echo "$BLASXEX_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $Sq $Sq $Sq $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
 					#$BLASXEX_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $Sq $Sq $Sq $A_loc $B_loc $C_loc $C_loc &>> $perf_log
-					#echo "LD_PRELOAD=/zhome/academic/HLRS/xex/xexpanas/xkblas-basic/install_vulcan_11/lib/libxkblas_blaswrapper.so XKBLAS_GPUSET=255 XKBLAS_CACHE_LIMIT=70  $XKBLAS_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $Sq $Sq $Sq $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
-					#LD_PRELOAD=/zhome/academic/HLRS/xex/xexpanas/xkblas-basic/install_vulcan_11/lib/libxkblas_blaswrapper.so XKBLAS_GPUSET=255 XKBLAS_CACHE_LIMIT=70  $XKBLAS_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $Sq $Sq $Sq $A_loc $B_loc $C_loc $C_loc &>> $perf_log
+					echo "LD_PRELOAD=/zhome/academic/HLRS/xex/xexpanas/xkblas-basic/install_vulcan_11/lib/libxkblas_blaswrapper.so XKBLAS_GPUSET=255 XKBLAS_CACHE_LIMIT=70  $XKBLAS_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $Sq $Sq $Sq $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
+					LD_PRELOAD=/zhome/academic/HLRS/xex/xexpanas/xkblas-basic/install_vulcan_11/lib/libxkblas_blaswrapper.so XKBLAS_GPUSET=255 XKBLAS_CACHE_LIMIT=70  $XKBLAS_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $Sq $Sq $Sq $A_loc $B_loc $C_loc $C_loc &>> $perf_log
 				done
 
 				# II) Large-sized square problems (usually >> GPU memory) XKBLAS fails for loc!= CPU, cache problems, outside scope of current work
@@ -131,16 +131,16 @@ do
 				#done
 
 				# III) Non-square Problems K < M,N
-				for inbalance_ctr in 2 8 32 128;
+				for inbalance_ctr in 2 8 32;
 				do
-					for MN in {8192..28672..4096}
+					for MN in {8192..32768..4096}
 					do
 
-						K_thin=$((MN/$inbalance_ctr))
+						K_thin=$(($MN/$inbalance_ctr))
 						echo "$CoCopelia_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $MN $MN $K_thin $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
 						$CoCopelia_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $MN $MN $K_thin $A_loc $B_loc $C_loc $C_loc  &>> $perf_log
-						#echo "$CoCopelia_run 8 11111111 -1 -1 $TransA $TransB $alpha $beta $MN $MN $K_thin $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
-						#$CoCopelia_run 8 11111111 -1 -1 $TransA $TransB $alpha $beta $MN $MN $K_thin $A_loc $B_loc $C_loc $C_loc  &>> $perf_log
+						echo "$CoCopelia_run 8 11111111 -1 -1 $TransA $TransB $alpha $beta $MN $MN $K_thin $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
+						$CoCopelia_run 8 11111111 -1 -1 $TransA $TransB $alpha $beta $MN $MN $K_thin $A_loc $B_loc $C_loc $C_loc  &>> $perf_log
 						#echo "$CoCopelia_run 4 11110000 -1 -1 $TransA $TransB $alpha $beta $MN $MN $K_thin $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
 						#$CoCopelia_run 4 11110000 -1 -1 $TransA $TransB $alpha $beta $MN $MN $K_thin $A_loc $B_loc $C_loc $C_loc  &>> $perf_log
 						#echo "$CoCopelia_run 4 01100110 -1 -1 $TransA $TransB $alpha $beta $MN $MN $K_thin $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
@@ -153,21 +153,21 @@ do
 						#$BLASX_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $MN $MN $K_thin $A_loc $B_loc $C_loc $C_loc &>> $perf_log
 						#echo "$BLASXEX_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $MN $MN $K_thin $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
 						#$BLASXEX_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $MN $MN $K_thin $A_loc $B_loc $C_loc $C_loc &>> $perf_log
-						#echo "LD_PRELOAD=/zhome/academic/HLRS/xex/xexpanas/xkblas-basic/install_vulcan_11/lib/libxkblas_blaswrapper.so XKBLAS_GPUSET=255 XKBLAS_CACHE_LIMIT=70  $XKBLAS_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $MN $MN $K_thin $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
-						#LD_PRELOAD=/zhome/academic/HLRS/xex/xexpanas/xkblas-basic/install_vulcan_11/lib/libxkblas_blaswrapper.so XKBLAS_GPUSET=255 XKBLAS_CACHE_LIMIT=70  $XKBLAS_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $MN $MN $K_thin $A_loc $B_loc $C_loc $C_loc &>> $perf_log
+						echo "LD_PRELOAD=/zhome/academic/HLRS/xex/xexpanas/xkblas-basic/install_vulcan_11/lib/libxkblas_blaswrapper.so XKBLAS_GPUSET=255 XKBLAS_CACHE_LIMIT=70  $XKBLAS_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $MN $MN $K_thin $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
+						LD_PRELOAD=/zhome/academic/HLRS/xex/xexpanas/xkblas-basic/install_vulcan_11/lib/libxkblas_blaswrapper.so XKBLAS_GPUSET=255 XKBLAS_CACHE_LIMIT=70  $XKBLAS_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $MN $MN $K_thin $A_loc $B_loc $C_loc $C_loc &>> $perf_log
 					done
 				done
 				# IV) Non-square Problems K > M,N
-				for inbalance_ctr in 2 8 32 128;
+				for inbalance_ctr in 2 8 32;
 				do
-					for K_fat in {20480..40960..4096}
+					for K_fat in {12288..36864..4096}
 					do
 
-						MN_thin=$((MN/$inbalance_ctr))
+						MN_thin=$(($K_fat/$inbalance_ctr))
 						echo "$CoCopelia_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $MN_thin $MN_thin $K_fat $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
 						$CoCopelia_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $MN_thin $MN_thin $K_fat $A_loc $B_loc $C_loc $C_loc  &>> $perf_log
-						#echo "$CoCopelia_run 8 11111111 -1 -1 $TransA $TransB $alpha $beta $MN_thin $MN_thin $K_fat $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
-						#$CoCopelia_run 8 11111111 -1 -1 $TransA $TransB $alpha $beta $MN_thin $MN_thin $K_fat $A_loc $B_loc $C_loc $C_loc  &>> $perf_log
+						echo "$CoCopelia_run 8 11111111 -1 -1 $TransA $TransB $alpha $beta $MN_thin $MN_thin $K_fat $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
+						$CoCopelia_run 8 11111111 -1 -1 $TransA $TransB $alpha $beta $MN_thin $MN_thin $K_fat $A_loc $B_loc $C_loc $C_loc  &>> $perf_log
 						#echo "$CoCopelia_run 4 11110000 -1 -1 $TransA $TransB $alpha $beta $MN_thin $MN_thin $K_fat $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
 						#$CoCopelia_run 4 11110000 -1 -1 $TransA $TransB $alpha $beta $MN_thin $MN_thin $K_fat $A_loc $B_loc $C_loc $C_loc  &>> $perf_log
 						#echo "$CoCopelia_run 4 01100110 -1 -1 $TransA $TransB $alpha $beta $MN_thin $MN_thin $K_fat $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
@@ -180,8 +180,8 @@ do
 						#$BLASX_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $MN_thin $MN_thin $K_fat $A_loc $B_loc $C_loc $C_loc &>> $perf_log
 						#echo "$BLASXEX_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $MN_thin $MN_thin $K_fat $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
 						#$BLASXEX_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $MN_thin $MN_thin $K_fat $A_loc $B_loc $C_loc $C_loc &>> $perf_log
-						#echo "LD_PRELOAD=/zhome/academic/HLRS/xex/xexpanas/xkblas-basic/install_vulcan_11/lib/libxkblas_blaswrapper.so XKBLAS_GPUSET=255 XKBLAS_CACHE_LIMIT=70  $XKBLAS_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $MN_thin $MN_thin $K_fat $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
-						#LD_PRELOAD=/zhome/academic/HLRS/xex/xexpanas/xkblas-basic/install_vulcan_11/lib/libxkblas_blaswrapper.so XKBLAS_GPUSET=255 XKBLAS_CACHE_LIMIT=70  $XKBLAS_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $MN_thin $MN_thin $K_fat $A_loc $B_loc $C_loc $C_loc &>> $perf_log
+						echo "LD_PRELOAD=/zhome/academic/HLRS/xex/xexpanas/xkblas-basic/install_vulcan_11/lib/libxkblas_blaswrapper.so XKBLAS_GPUSET=255 XKBLAS_CACHE_LIMIT=70  $XKBLAS_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $MN_thin $MN_thin $K_fat $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
+						LD_PRELOAD=/zhome/academic/HLRS/xex/xexpanas/xkblas-basic/install_vulcan_11/lib/libxkblas_blaswrapper.so XKBLAS_GPUSET=255 XKBLAS_CACHE_LIMIT=70  $XKBLAS_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $MN_thin $MN_thin $K_fat $A_loc $B_loc $C_loc $C_loc &>> $perf_log
 					done
 				done
 			done

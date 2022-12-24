@@ -512,13 +512,10 @@ ATC_p PARALiaDgemm(char TransA,  char TransB, long int M, long int N, long int K
 
 	// create a barrier object with a count of autotune_controller_dgemm->active_unit_num + 1
 	pthread_barrier_init (&SoftCache_alloc_barrier_dgemm, NULL, autotune_controller_dgemm->active_unit_num + 1);
-
+	for(int d=0; d < LOC_NUM; d++) CoCoEnableLinks(deidxize(d), LOC_NUM);
 	for(int d=0; d < autotune_controller_dgemm->active_unit_num; d++){
 		if(autotune_controller_dgemm->Subkernels_per_unit_num[d] == 0 )
 			error("CoCoPeLiaDgemm: Leftover autotune_controller_dgemm->Subkernels_per_unit_num[%d] == 0", d);
-
-		// Check/Enable peer access between all system units
-		CoCoEnableLinks(idxize(autotune_controller_dgemm->active_unit_id_list[d]), LOC_NUM);
 
 		thread_dev_data[d] = (kernel_pthread_wrap_p) malloc(sizeof(struct kernel_pthread_wrap));
 		thread_dev_data[d]->dev_id = autotune_controller_dgemm->active_unit_id_list[d];
