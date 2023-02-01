@@ -405,13 +405,35 @@ ATC_p PARALiaDgemm(char TransA,  char TransB, long int M, long int N, long int K
 		if (C_asset->loc == deidxize(cache_loc)) Native_block_num+=Block_num_C;
 
 		long long max_cache_sz = 0;
-		if(autotune_controller_dgemm->cache_limit > 0) max_cache_sz = autotune_controller_dgemm->cache_limit;
-		else{
-			long long free_dev_mem, max_dev_mem = 0, prev_DevCache_sz = Native_block_num*Block_sz;
+		if(autotune_controller_dgemm->cache_limit > 0) {
+			max_cache_sz = autotune_controller_dgemm->cache_limit;
+			if (max_cache_sz < 3 * Block_sz) error("PARALiaDgemm: Problem cannot run with less memory than %d\n", 3 * Block_sz);
+
+			long long free_dev_mem, max_dev_mem = 0, prev_DevCache_sz = 0;
 			if (Global_Cache[cache_loc] != NULL) prev_DevCache_sz = (long long)
-				fmax(prev_DevCache_sz, Global_Cache[cache_loc]->BlockSize* Global_Cache[cache_loc]->BlockNum);
+				Global_Cache[cache_loc]->BlockSize* Global_Cache[cache_loc]->BlockNum;
 			int prev_dev = CoCoPeLiaGetDevice();
 			CoCoPeLiaSelectDevice(deidxize(cache_loc));
+
+			if(deidxize(cache_loc)!=-1) {
+				CoCoPeLiaDevGetMemInfo(&free_dev_mem, &max_dev_mem);
+				max_cache_sz = (long long) fmin(max_cache_sz, free_dev_mem - ((long long) max_dev_mem*(1-PROBLEM_GPU_PERCENTAGE/100.0)) + prev_DevCache_sz);
+			}
+			else {
+				free_dev_mem = max_dev_mem = 2 * Native_block_num * Block_sz;
+				max_cache_sz = free_dev_mem;
+			}
+
+			CoCoPeLiaSelectDevice(prev_dev);
+			// max_cache_sz = (long long) fmin(max_cache_sz, free_dev_mem - ((long long) max_dev_mem*(1-PROBLEM_GPU_PERCENTAGE/100.0)) + prev_DevCache_sz);
+		}
+		else{
+			long long free_dev_mem, max_dev_mem = 0, prev_DevCache_sz = 0;
+			if (Global_Cache[cache_loc] != NULL) prev_DevCache_sz = (long long)
+				Global_Cache[cache_loc]->BlockSize* Global_Cache[cache_loc]->BlockNum;
+			int prev_dev = CoCoPeLiaGetDevice();
+			CoCoPeLiaSelectDevice(deidxize(cache_loc));
+
 			if(deidxize(cache_loc)!=-1) CoCoPeLiaDevGetMemInfo(&free_dev_mem, &max_dev_mem);
 			else free_dev_mem = max_dev_mem = 100000000000; // TODO: hard coded value, should put something that reads it from system?
 			CoCoPeLiaSelectDevice(prev_dev);

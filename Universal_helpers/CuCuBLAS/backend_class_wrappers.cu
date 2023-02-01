@@ -194,7 +194,10 @@ void CommandQueue::wait_for_event(Event_p Wevent)
 	if (Wevent->query_status() == CHECKED);
 	else{
 		// TODO: New addition (?)
-		if (Wevent->query_status() == UNRECORDED) error("CommandQueue::wait_for_event:: UNRECORDED event\n");
+		if (Wevent->query_status() == UNRECORDED) {
+			warning("CommandQueue::wait_for_event():: UNRECORDED event\n");
+			return;
+		}
 		get_lock();
 #ifdef ENABLE_PARALLEL_BACKEND
 		cudaStream_t stream = *((cudaStream_t*) cqueue_backend_ptr[backend_ctr]);
@@ -447,10 +450,16 @@ void Event::soft_reset(){
 #ifdef UDDEBUG
 	lprintf(lvl, "[dev_id=%3d] |-----> Event(%d)::soft_reset()\n", dev_id, id);
 #endif
-	//sync_barrier();
+	// sync_barrier();
 	get_lock();
-	//event_status prev_status = status;
+	// event_status prev_status = status;
 	status = UNRECORDED;
+#ifdef ENABLE_LAZY_EVENTS
+	if(dev_id >= -1){
+		dev_id = dev_id - 42;
+		event_backend_ptr = malloc(sizeof(cudaEvent_t));
+	}
+#endif
 	release_lock();
 #ifdef UDDEBUG
 	lprintf(lvl, "[dev_id=%3d] <-----| Event(%d)::soft_reset()\n", dev_id, id);
