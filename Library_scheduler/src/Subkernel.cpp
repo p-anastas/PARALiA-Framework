@@ -190,7 +190,7 @@ void Subkernel::request_tile_hops(short TileIdx){
 			int starting_hop = 0;
 			for(int inter_hop = 0 ; inter_hop < inter_hop_num; inter_hop++){
 				test_road->hop_uid_list[1+ inter_hop] = final_estimated_linkmap->link_hop_route[run_dev_id_idx][FetchFromId_idx][selected_route][inter_hop];
-				test_road->hop_ldim_list[1+ inter_hop] = tmp->inc[run_dev_id_idx] * tmp->dim; 
+				test_road->hop_ldim_list[1+ inter_hop] = tmp->inc[run_dev_id_idx] * tmp->dim;
 				test_road->hop_cqueue_list[inter_hop] = recv_queues[idxize(test_road->hop_uid_list[1+inter_hop])][idxize(test_road->hop_uid_list[inter_hop])];
 
 				if (!tmp->W_total && tmp->StoreBlock[idxize(test_road->hop_uid_list[1+inter_hop])] != NULL &&
@@ -203,12 +203,12 @@ void Subkernel::request_tile_hops(short TileIdx){
 					if(tmp->StoreBlock[idxize(test_road->hop_uid_list[1+inter_hop])] != NULL)
 						tmp->StoreBlock[idxize(test_road->hop_uid_list[1+inter_hop])]->Owner_p = NULL;
 					block_ptr[inter_hop] = tmp->StoreBlock[idxize(test_road->hop_uid_list[1+inter_hop])] =
-						Global_Cache[idxize(test_road->hop_uid_list[1+inter_hop])]->assign_Cblock(new_block_state,false);
+						Global_Buffer[idxize(test_road->hop_uid_list[1+inter_hop])]->assign_Cblock(new_block_state,false);
 					block_ptr[inter_hop]->set_owner((void**)&tmp->StoreBlock[idxize(test_road->hop_uid_list[1+inter_hop])],false);
 				}
 				else{
 					new_block_state = EXCLUSIVE;
-					block_ptr[inter_hop] = Global_Cache[idxize(test_road->hop_uid_list[1+inter_hop])]->assign_Cblock(new_block_state,false);
+					block_ptr[inter_hop] = Global_Buffer[idxize(test_road->hop_uid_list[1+inter_hop])]->assign_Cblock(new_block_state,false);
 					/// FIXME: Should never writeback hop-tiles... but what if it tries?
 				  //block_ptr[inter_hop]->init_writeback_info(tmp->WriteBackBlock, &(tmp->RW_master), tmp->dim1, tmp->dim2,
 					//tmp->ldim[idxize(test_road->hop_uid_list[1+inter_hop])], tmp->ldim[idxize(tmp->WriteBackLoc)], tmp->dtypesize(),
@@ -360,12 +360,12 @@ void Subkernel::request_tile_hops(short TileIdx){
 					if(tmp->StoreBlock[idxize(test_road->hop_uid_list[1+inter_hop])] != NULL)
 						tmp->StoreBlock[idxize(test_road->hop_uid_list[1+inter_hop])]->Owner_p = NULL;
 					block_ptr[inter_hop] = tmp->StoreBlock[idxize(test_road->hop_uid_list[1+inter_hop])] =
-						Global_Cache[idxize(test_road->hop_uid_list[1+inter_hop])]->assign_Cblock(new_block_state,false);
+						Global_Buffer[idxize(test_road->hop_uid_list[1+inter_hop])]->assign_Cblock(new_block_state,false);
 					block_ptr[inter_hop]->set_owner((void**)&tmp->StoreBlock[idxize(test_road->hop_uid_list[1+inter_hop])],false);
 				}
 				else{
 					new_block_state = EXCLUSIVE;
-					block_ptr[inter_hop] = Global_Cache[idxize(test_road->hop_uid_list[1+inter_hop])]->assign_Cblock(new_block_state,false);
+					block_ptr[inter_hop] = Global_Buffer[idxize(test_road->hop_uid_list[1+inter_hop])]->assign_Cblock(new_block_state,false);
 					/// FIXME: Should never writeback hop-tiles... but what if it tries?
 				  //block_ptr[inter_hop]->init_writeback_info(tmp->WriteBackBlock, &(tmp->RW_master), tmp->dim1, tmp->dim2,
 					//tmp->ldim[idxize(test_road->hop_uid_list[1+inter_hop])], tmp->ldim[idxize(tmp->WriteBackLoc)], tmp->dtypesize(),
@@ -579,7 +579,7 @@ void Subkernel::request_data(){
 				state new_block_state;
 				if(tmp->W_total) new_block_state = EXCLUSIVE;
 				else new_block_state = SHARABLE;
-				tmp->StoreBlock[run_dev_id_idx] = Global_Cache[run_dev_id_idx]->assign_Cblock(new_block_state,false);
+				tmp->StoreBlock[run_dev_id_idx] = Global_Buffer[run_dev_id_idx]->assign_Cblock(new_block_state,false);
 				tmp->StoreBlock[run_dev_id_idx]->set_owner((void**)&tmp->StoreBlock[run_dev_id_idx],false);
 				if(tmp->W_total) tmp->StoreBlock[run_dev_id_idx]->init_writeback_info(tmp->WriteBackBlock,
 					&(tmp->RW_master), 1, tmp->dim, tmp->dim, tmp->dim,
@@ -646,7 +646,7 @@ void Subkernel::request_data(){
 				state new_block_state;
 				if(tmp->W_total) new_block_state = EXCLUSIVE;
 				else new_block_state = SHARABLE;
-				tmp->StoreBlock[run_dev_id_idx] = Global_Cache[run_dev_id_idx]->assign_Cblock(new_block_state,false);
+				tmp->StoreBlock[run_dev_id_idx] = Global_Buffer[run_dev_id_idx]->assign_Cblock(new_block_state,false);
 				tmp->StoreBlock[run_dev_id_idx]->set_owner((void**)&tmp->StoreBlock[run_dev_id_idx],false);
 				if(tmp->W_total) tmp->StoreBlock[run_dev_id_idx]->init_writeback_info(tmp->WriteBackBlock,
 					&(tmp->RW_master), tmp->dim1, tmp->dim2, tmp->ldim[run_dev_id_idx], tmp->ldim[idxize(tmp->WriteBackLoc)],
@@ -932,7 +932,7 @@ void Subkernel::writeback_data_hops(){
 						test_road->hop_ldim_list[1+ inter_hop] = tmp->inc[run_dev_id_idx] * tmp->dim;
 						test_road->hop_cqueue_list[inter_hop] = wb_queues[idxize(test_road->hop_uid_list[1+inter_hop])]
 							[idxize(test_road->hop_uid_list[inter_hop])];
-						block_ptr[inter_hop] = Global_Cache[idxize(test_road->hop_uid_list[1+inter_hop])]->assign_Cblock(new_block_state,false);
+						block_ptr[inter_hop] = Global_Buffer[idxize(test_road->hop_uid_list[1+inter_hop])]->assign_Cblock(new_block_state,false);
 						//block_ptr[inter_hop]->init_writeback_info(tmp->WriteBackBlock, &(tmp->RW_master), tmp->dim1, tmp->dim2,
 						//	tmp->ldim[idxize(test_road->hop_uid_list[1+inter_hop])], tmp->ldim[idxize(tmp->WriteBackLoc)],
 						//	tmp->dtypesize(), wb_queues[idxize(tmp->getWriteBackLoc())][idxize(test_road->hop_uid_list[1+inter_hop])], false);
@@ -1054,7 +1054,7 @@ void Subkernel::writeback_data_hops(){
 						test_road->hop_ldim_list[1+ inter_hop] = tmp->ldim[run_dev_id_idx];
 						test_road->hop_cqueue_list[inter_hop] = wb_queues[idxize(test_road->hop_uid_list[1+inter_hop])]
 							[idxize(test_road->hop_uid_list[inter_hop])];
-						block_ptr[inter_hop] = Global_Cache[idxize(test_road->hop_uid_list[1+inter_hop])]->assign_Cblock(new_block_state,false);
+						block_ptr[inter_hop] = Global_Buffer[idxize(test_road->hop_uid_list[1+inter_hop])]->assign_Cblock(new_block_state,false);
 						//block_ptr[inter_hop]->init_writeback_info(tmp->WriteBackBlock, &(tmp->RW_master), tmp->dim1, tmp->dim2,
 						//	tmp->ldim[idxize(test_road->hop_uid_list[1+inter_hop])], tmp->ldim[idxize(tmp->WriteBackLoc)],
 						//	tmp->dtypesize(), wb_queues[idxize(tmp->getWriteBackLoc())][idxize(test_road->hop_uid_list[1+inter_hop])], false);
@@ -1556,7 +1556,7 @@ int SubkernelPrefetchCheapRONLYTiles(int numTiles, short dev_id, Subkernel** Sub
 							if(tmp->StoreBlock[dev_id_idx] != NULL) tmp->StoreBlock[dev_id_idx]->Owner_p = NULL;
 							state new_block_state;
 							new_block_state = SHARABLE;
-							tmp->StoreBlock[dev_id_idx] = Global_Cache[dev_id_idx]->assign_Cblock(new_block_state,false);
+							tmp->StoreBlock[dev_id_idx] = Global_Buffer[dev_id_idx]->assign_Cblock(new_block_state,false);
 							tmp->StoreBlock[dev_id_idx]->set_owner((void**)&tmp->StoreBlock[dev_id_idx],false);
 #ifdef DEBUG
 							lprintf(lvl, "SubkernelPrefetchCheapRONLYTiles(dev=%d)-Tile(%d.[%d,%d]): Asigned buffer Block in GPU(%d)= %d\n",
@@ -1787,8 +1787,8 @@ Subkernel* SubkernelSelect(short dev_id, Subkernel** Subkernel_list, long Subker
 }
 
 void CoCopeLiaDevCacheFree(short dev_id){
-	delete Global_Cache[idxize(dev_id)];
-	Global_Cache[idxize(dev_id)] = NULL;
+	delete Global_Buffer[idxize(dev_id)];
+	Global_Buffer[idxize(dev_id)] = NULL;
 }
 
 #ifdef STEST

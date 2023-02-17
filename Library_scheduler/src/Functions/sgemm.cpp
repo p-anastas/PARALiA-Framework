@@ -160,7 +160,7 @@ void* PARALiaSgemmAgentVoid(void* kernel_pthread_wrapped){
 	cpu_timer = csecond();
 #endif
 
-	Global_Cache[idxize(dev_id)]->allocate(true);
+	Global_Buffer[idxize(dev_id)]->allocate(true);
 	//CoCoSyncCheckErr();
 
 #ifdef TEST
@@ -280,7 +280,7 @@ void* PARALiaSgemmAgentVoid(void* kernel_pthread_wrapped){
 
 	CoCoSyncCheckErr();
 #ifdef TEST
-	double total_cache_timer = Global_Cache[idxize(dev_id)]->timer;
+	double total_cache_timer = Global_Buffer[idxize(dev_id)]->timer;
 	lprintf(lvl, "Cache requests total timer (%d): t_cache = %lf ms\n" , dev_id, total_cache_timer*1000);
 	cpu_timer = csecond() - cpu_timer;
 	lprintf(lvl, "Subkernels complete(%d): t_comp = %lf ms\n" , dev_id, cpu_timer*1000);
@@ -408,8 +408,8 @@ ATC_p PARALiaSgemm(char TransA,  char TransB, long int M, long int N, long int K
 		if(autotune_controller_sgemm->cache_limit > 0) max_cache_sz = autotune_controller_sgemm->cache_limit;
 		else{
 			long long free_dev_mem, max_dev_mem = 0, prev_DevCache_sz = Native_block_num*Block_sz;
-			if (Global_Cache[cache_loc] != NULL) prev_DevCache_sz = (long long)
-				fmax(prev_DevCache_sz, Global_Cache[cache_loc]->BlockSize* Global_Cache[cache_loc]->BlockNum);
+			if (Global_Buffer[cache_loc] != NULL) prev_DevCache_sz = (long long)
+				fmax(prev_DevCache_sz, Global_Buffer[cache_loc]->BlockSize* Global_Buffer[cache_loc]->BlockNum);
 			int prev_dev = CoCoPeLiaGetDevice();
 			CoCoPeLiaSelectDevice(deidxize(cache_loc));
 			if(deidxize(cache_loc)!=-1) CoCoPeLiaDevGetMemInfo(&free_dev_mem, &max_dev_mem);
@@ -433,31 +433,31 @@ ATC_p PARALiaSgemm(char TransA,  char TransB, long int M, long int N, long int K
 				error("PARALiaSgemm: Not able to run with < %d blocks per cache due to EX scheduling\n", worst_case_ex_blocks);
 		}
 #ifdef BUFFER_REUSE_ENABLE
-		if(Global_Cache[cache_loc] == NULL) Global_Cache[cache_loc] = new Cache(deidxize(cache_loc), Block_num, Block_sz);
-		else if (Global_Cache[cache_loc]->BlockSize != Block_sz || Global_Cache[cache_loc]->BlockNum < Block_num){
+		if(Global_Buffer[cache_loc] == NULL) Global_Buffer[cache_loc] = new Buffer(deidxize(cache_loc), Block_num, Block_sz);
+		else if (Global_Buffer[cache_loc]->BlockSize != Block_sz || Global_Buffer[cache_loc]->BlockNum < Block_num){
 #ifdef DEBUG
 		lprintf(lvl, "PARALiaSgemm: Previous Cache smaller than requested:\
-		Global_Cache[%d]->BlockSize=%lld vs Block_sz = %lld,\
-		Global_Cache[%d]->BlockNum=%d vs Block_num = %d\n",
-		cache_loc, Global_Cache[cache_loc]->BlockSize, Block_sz,
-		cache_loc, Global_Cache[cache_loc]->BlockNum, Block_num);
+		Global_Buffer[%d]->BlockSize=%lld vs Block_sz = %lld,\
+		Global_Buffer[%d]->BlockNum=%d vs Block_num = %d\n",
+		cache_loc, Global_Buffer[cache_loc]->BlockSize, Block_sz,
+		cache_loc, Global_Buffer[cache_loc]->BlockNum, Block_num);
 #endif
-			delete Global_Cache[cache_loc];
-			Global_Cache[cache_loc] = new Cache(deidxize(cache_loc), Block_num, Block_sz);
+			delete Global_Buffer[cache_loc];
+			Global_Buffer[cache_loc] = new Buffer(deidxize(cache_loc), Block_num, Block_sz);
 		}
 		else{
 			;
 		}
 #else
-			if(Global_Cache[cache_loc]!= NULL) error("PARALiaSgemm: Global_Cache[%d] was not NULL with reuse disabled\n", cache_loc);
-			Global_Cache[cache_loc] = new Cache(deidxize(cache_loc), Block_num, Block_sz);
+			if(Global_Buffer[cache_loc]!= NULL) error("PARALiaSgemm: Global_Buffer[%d] was not NULL with reuse disabled\n", cache_loc);
+			Global_Buffer[cache_loc] = new Buffer(deidxize(cache_loc), Block_num, Block_sz);
 #endif
 	}
 
 	/// TODO: Split each asset to Tiles
-	A_asset->InitTileMap(T, T, Global_Cache);
-	B_asset->InitTileMap(T, T, Global_Cache);
-	C_asset->InitTileMap(T, T, Global_Cache);
+	A_asset->InitTileMap(T, T, Global_Buffer);
+	B_asset->InitTileMap(T, T, Global_Buffer);
+	C_asset->InitTileMap(T, T, Global_Buffer);
 
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer;
@@ -575,16 +575,16 @@ ATC_p PARALiaSgemm(char TransA,  char TransB, long int M, long int N, long int K
 #endif
 
 #ifdef CDEBUG
-	for(int i=0; i<LOC_NUM;i++) Global_Cache[i]->draw_cache(true,true,true);
+	for(int i=0; i<LOC_NUM;i++) Global_Buffer[i]->draw_buffer(true,true,true);
 #endif
 
 #ifndef BUFFER_REUSE_ENABLE
 	for(int i = 0 ; i < LOC_NUM; i++){
-		delete Global_Cache[i];
-		Global_Cache[i] = NULL;
+		delete Global_Buffer[i];
+		Global_Buffer[i] = NULL;
 	}
 #else
-	for(int i=0; i<LOC_NUM;i++) Global_Cache[i]->reset(false,true);
+	for(int i=0; i<LOC_NUM;i++) Global_Buffer[i]->reset(false,true);
 #endif
 
 #ifndef BACKEND_RES_REUSE_ENABLE

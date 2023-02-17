@@ -25,7 +25,7 @@ template<typename dtype> Asset2D<dtype>::Asset2D( void* in_adr, int in_dim1, int
   transpose = in_transpose;
 }
 
-template<typename dtype> void Asset2D<dtype>::InitTileMap(int T1, int T2, Cache_p* init_loc_cache_p){
+template<typename dtype> void Asset2D<dtype>::InitTileMap(int T1, int T2, Buffer_p* init_loc_cache_p){
   short lvl = 2;
 
   #ifdef DEBUG
@@ -78,8 +78,8 @@ template<typename dtype> void Asset2D<dtype>::InitTileMap(int T1, int T2, Cache_
    #endif
 }
 
-template void Asset2D<double>::InitTileMap(int T1, int T2, Cache_p* init_loc_cache_p);
-template void Asset2D<float>::InitTileMap(int T1, int T2, Cache_p* init_loc_cache_p);
+template void Asset2D<double>::InitTileMap(int T1, int T2, Buffer_p* init_loc_cache_p);
+template void Asset2D<float>::InitTileMap(int T1, int T2, Buffer_p* init_loc_cache_p);
 
 template<typename dtype> void Asset2D<dtype>::DestroyTileMap(){
   int current_ctr;

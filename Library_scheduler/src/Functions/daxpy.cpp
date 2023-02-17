@@ -114,7 +114,7 @@ void* CoCopeLiaAxpyAgentVoid(void* kernel_pthread_wrapped){
 	cpu_timer = csecond();
 #endif
 
-	Global_Cache[idxize(dev_id)]->allocate(true);
+	Global_Buffer[idxize(dev_id)]->allocate(true);
 	//CoCoSyncCheckErr();
 
 #ifdef TEST
@@ -184,7 +184,7 @@ void* CoCopeLiaAxpyAgentVoid(void* kernel_pthread_wrapped){
 
 	CoCoSyncCheckErr();
 #ifdef TEST
-	double total_cache_timer = Global_Cache[idxize(dev_id)]->timer;
+	double total_cache_timer = Global_Buffer[idxize(dev_id)]->timer;
 	lprintf(lvl, "Cache requests total timer (%d): t_cache = %lf ms\n" , dev_id, total_cache_timer*1000);
 	cpu_timer = csecond() - cpu_timer;
 	lprintf(lvl, "Subkernels complete(%d): t_comp = %lf ms\n" , dev_id, cpu_timer*1000);
@@ -299,30 +299,30 @@ ATC_p PARALiaDaxpy(long int N, VALUE_TYPE alpha, VALUE_TYPE* x, long int incx, V
 		int curr_block_num = Block_num;
 		if(deidxize(cache_loc)!= -1) curr_block_num = GPU_Block_num;
 #ifdef BUFFER_REUSE_ENABLE
-		if(Global_Cache[cache_loc] == NULL) Global_Cache[cache_loc] = new Cache(deidxize(cache_loc), curr_block_num, Block_sz);
-		else if (Global_Cache[cache_loc]->BlockSize != Block_sz || Global_Cache[cache_loc]->BlockNum < curr_block_num){
+		if(Global_Buffer[cache_loc] == NULL) Global_Buffer[cache_loc] = new Buffer(deidxize(cache_loc), curr_block_num, Block_sz);
+		else if (Global_Buffer[cache_loc]->BlockSize != Block_sz || Global_Buffer[cache_loc]->BlockNum < curr_block_num){
 #ifdef DEBUG
 		lprintf(lvl, "CoCoPeLiaAxpy: Previous Cache smaller than requested:\
-		Global_Cache[%d]->BlockSize=%lld vs Block_sz = %lld,\
-		Global_Cache[%d]->BlockNum=%d vs Block_num = %d\n",
-		cache_loc, Global_Cache[cache_loc]->BlockSize, Block_sz,
-		cache_loc, Global_Cache[cache_loc]->BlockNum, curr_block_num);
+		Global_Buffer[%d]->BlockSize=%lld vs Block_sz = %lld,\
+		Global_Buffer[%d]->BlockNum=%d vs Block_num = %d\n",
+		cache_loc, Global_Buffer[cache_loc]->BlockSize, Block_sz,
+		cache_loc, Global_Buffer[cache_loc]->BlockNum, curr_block_num);
 #endif
-			delete Global_Cache[cache_loc];
-			Global_Cache[cache_loc] = new Cache(deidxize(cache_loc), curr_block_num, Block_sz);
+			delete Global_Buffer[cache_loc];
+			Global_Buffer[cache_loc] = new Buffer(deidxize(cache_loc), curr_block_num, Block_sz);
 		}
 		else{
 			;
 		}
 #else
-			if(Global_Cache[cache_loc]!= NULL) error("CoCoPeLiaAxpy: Global_Cache[%d] was not NULL with reuse disabled\n", cache_loc);
-			Global_Cache[cache_loc] = new Cache(deidxize(cache_loc), curr_block_num, Block_sz);
+			if(Global_Buffer[cache_loc]!= NULL) error("CoCoPeLiaAxpy: Global_Buffer[%d] was not NULL with reuse disabled\n", cache_loc);
+			Global_Buffer[cache_loc] = new Buffer(deidxize(cache_loc), curr_block_num, Block_sz);
 #endif
 	}
 
 	/// TODO: Split each asset to Tiles
-	x_asset->InitTileMap(T, Global_Cache);
-	y_asset->InitTileMap(T, Global_Cache);
+	x_asset->InitTileMap(T, Global_Buffer);
+	y_asset->InitTileMap(T, Global_Buffer);
 
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer;
@@ -407,16 +407,16 @@ ATC_p PARALiaDaxpy(long int N, VALUE_TYPE alpha, VALUE_TYPE* x, long int incx, V
 #ifdef DDEBUG
   x_asset->DrawTileMap();
   y_asset->DrawTileMap();
-	for(int i=0; i<LOC_NUM;i++) Global_Cache[i]->draw_cache(true,true,true);
+	for(int i=0; i<LOC_NUM;i++) Global_Buffer[i]->draw_buffer(true,true,true);
 #endif
 
 #ifndef BUFFER_REUSE_ENABLE
 	for(int i = 0 ; i < LOC_NUM; i++){
-		delete Global_Cache[i];
-		Global_Cache[i] = NULL;
+		delete Global_Buffer[i];
+		Global_Buffer[i] = NULL;
 	}
 #else
-	for(int i=0; i<LOC_NUM;i++) Global_Cache[i]->reset(false,true);
+	for(int i=0; i<LOC_NUM;i++) Global_Buffer[i]->reset(false,true);
 #endif
 
 #ifndef BACKEND_RES_REUSE_ENABLE

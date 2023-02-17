@@ -113,7 +113,7 @@ class Asset2D
 		int in_dim2, int in_ldim, char transpose);
 
 	// General Functions
-	void InitTileMap(int T1, int T2, Cache_p* init_loc_cache_p);
+	void InitTileMap(int T1, int T2, Buffer_p* init_loc_cache_p);
 	void DestroyTileMap();
 	Tile2D<dtype>* getTile(int iloc1, int iloc2);
 	int dtypesize() { return sizeof(dtype); }
@@ -145,7 +145,7 @@ class Asset1D
 	Asset1D<dtype>(void* adrr, int in_dim, int in_inc);
 
 	// General Functions
-	void InitTileMap(int T, Cache_p* init_loc_cache_p);
+	void InitTileMap(int T, Buffer_p* init_loc_cache_p);
 	void DestroyTileMap();
 	Tile1D<dtype>* getTile(int iloc);
 	int dtypesize() { return sizeof(dtype); }

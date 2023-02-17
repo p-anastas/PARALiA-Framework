@@ -21,7 +21,7 @@ template<typename dtype> Asset1D<dtype>::Asset1D(void* in_adr, int in_dim, int i
   inc = in_inc;
 }
 
-template<typename dtype> void Asset1D<dtype>::InitTileMap(int T, Cache_p* init_loc_cache_p){
+template<typename dtype> void Asset1D<dtype>::InitTileMap(int T, Buffer_p* init_loc_cache_p){
   short lvl = 2;
 
   #ifdef DEBUG
@@ -52,8 +52,8 @@ template<typename dtype> void Asset1D<dtype>::InitTileMap(int T, Cache_p* init_l
   #endif
 }
 
-template void Asset1D<double>::InitTileMap(int T, Cache_p* init_loc_cache_p);
-template void Asset1D<float>::InitTileMap(int T, Cache_p* init_loc_cache_p);
+template void Asset1D<double>::InitTileMap(int T, Buffer_p* init_loc_cache_p);
+template void Asset1D<float>::InitTileMap(int T, Buffer_p* init_loc_cache_p);
 
 template<typename dtype> void Asset1D<dtype>::DestroyTileMap(){
   int current_ctr;
