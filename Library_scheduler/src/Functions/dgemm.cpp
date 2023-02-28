@@ -416,13 +416,17 @@ ATC_p PARALiaDgemm(char TransA,  char TransB, long int M, long int N, long int K
 			CoCoPeLiaSelectDevice(deidxize(cache_loc));
 
 			if(deidxize(cache_loc)!=-1) {
+			// if(Native_block_num==0){
 				CoCoPeLiaDevGetMemInfo(&free_dev_mem, &max_dev_mem);
 				max_cache_sz = (long long) fmin(max_cache_sz, free_dev_mem - ((long long) max_dev_mem*(1-PROBLEM_GPU_PERCENTAGE/100.0)) + prev_DevCache_sz);
 			}
 			else {
-				free_dev_mem = max_dev_mem = 2 * Native_block_num * Block_sz;
+				// free_dev_mem = max_dev_mem = 2 * Native_block_num * Block_sz;
+				free_dev_mem = max_dev_mem = (Native_block_num + 3) * Block_sz;
 				max_cache_sz = free_dev_mem;
 			}
+			max_cache_sz = fmax((Native_block_num + 3) * Block_sz, max_cache_sz);
+
 
 			CoCoPeLiaSelectDevice(prev_dev);
 			// max_cache_sz = (long long) fmin(max_cache_sz, free_dev_mem - ((long long) max_dev_mem*(1-PROBLEM_GPU_PERCENTAGE/100.0)) + prev_DevCache_sz);
