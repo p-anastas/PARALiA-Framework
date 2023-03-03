@@ -40,9 +40,8 @@ long int CoCoGetMaxDimAsset1D(short Asset1DNum, short dsize, long int step, shor
 
 short CoCoGetPtrLoc(const void * in_ptr)
 {
-#ifndef CUDA_VER
-#error CUDA_VER Undefined!
-#elif (CUDA_VER == 920)
+// This is legacy code for CUDA 9.2 <<. It should not be used due to CUDA ptr_att back-end struct changes in latest versions
+#ifdef CUDA_9_WRAPPER_MESS
 	short loc = -2;
 	cudaPointerAttributes ptr_att;
 	if (cudaSuccess != cudaPointerGetAttributes(&ptr_att, in_ptr)) warning("CoCoGetPtrLoc(9.2 version, ptr =%p):\
@@ -52,7 +51,7 @@ short CoCoGetPtrLoc(const void * in_ptr)
 	else if (ptr_att.isManaged) loc = ptr_att.device;
 	else error("CoCoGetPtrLoc(9.2 version, ptr =%p): Invalid memory type", in_ptr);
 	return loc;
-#elif (CUDA_VER == 1100)
+#else
 	short loc = -2;
 	cudaPointerAttributes ptr_att;
 	if (cudaSuccess != cudaPointerGetAttributes(&ptr_att, in_ptr)) warning("CoCoGetPtrLoc(11.0 version, ptr =%p):\
@@ -63,8 +62,6 @@ short CoCoGetPtrLoc(const void * in_ptr)
 	else if (ptr_att.type == cudaMemoryTypeManaged) loc = ptr_att.device;
 	else error("CoCoGetPtrLoc(11.0 version, ptr =%p): Invalid memory type", in_ptr);
 	return loc;
-#else
-#error Unknown CUDA_VER!
 #endif
 }
 

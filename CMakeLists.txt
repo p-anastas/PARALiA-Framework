@@ -2,15 +2,15 @@ cmake_minimum_required (VERSION 3.10)
 
 ## Define a name for the backend library wrappers/implementations used in this build, Currently implemented only with CuCuBLAS(==CUDA+CUBLAS)
 set(BACKEND "CuCuBLAS")
-message("CoCopeLia-Framework - BACKEND: " ${BACKEND})
+message("PARALiA-Framework - BACKEND: " ${BACKEND})
 add_definitions(-DBACKEND="${BACKEND}")
 ## Define the project version (used in logfiles for result testing)
 
 set(PROJECT_VERSION "1.5")
-message("CoCopeLia-Framework - PROJECT_VERSION: " ${PROJECT_VERSION})
+message("PARALiA-Framework - PROJECT_VERSION: " ${PROJECT_VERSION})
 add_definitions(-DVERSION="${PROJECT_VERSION}")
 
-## Enable Asynchronous execution for Subkernels - CoCo overlap
+## Enable Asynchronous execution for Subkernels
 add_definitions(-DASYNC_ENABLE)
 
 ## Enable GPU backend resourse reuse (streams, handles)
@@ -51,16 +51,16 @@ add_definitions(-DENABLE_TRANSFER_W_HOPS)
 
 ## Enable using estimated performance aggregation for initializing the link_hop_route
 add_definitions(-DENABLE_ESPA)
-## Define the strategy for agreggating the transfer time of a problem if ESPA is used. 0 = max, 1 = sum. 
+## Define the strategy for agreggating the transfer time of a problem if ESPA is used. 0 = max, 1 = sum.
 add_definitions(-DESPA_COMMUNICATION_AGGREGATOR=0)
 
 ## Enable sharing of bandwidth between links that utilize the same underlying hardware communication resources
 add_definitions(-DENABLE_LINK_BW_SHARING) # by putting them on different queues
 
-## TODO: EXPERMENTAL: Enable power measuring for benchmarks, and energy-related prediction modes for the Autotuner
+## TODO: Enable power measuring for benchmarks, and energy-related prediction modes for the Autotuner
 add_definitions(-DENABLE_POWA)
-add_definitions(-DCPU_W_PREDEF=300) # TODO: Vulcan CAUTION!!! Define this for your CPU - no CPU power tool installed.
-#add_definitions(-DCPU_W_PREDEF=170) # TODO: silver1 CAUTION!!! Define this for your CPU - no CPU power tool installed.
+add_definitions(-DCPU_W_PREDEF=$ENV{PARALIA_W_CPU_PREDEF})
+
 ## Choose the Unit combination that maximizes total performance (minimum time).
 add_definitions(-DPREDICT_OPTIMIZE_TARGET="PERF")
 ## Choose the Unit combination that minimizes consumed energy (J).
@@ -73,7 +73,7 @@ add_definitions(-DPREDICT_OPTIMIZE_TARGET="PERF")
 ## Choose the Unit combination that maximizes the energy-delay product - closer to "PERF" but also slightly considering energy.
 #add_definitions(-DPREDICT_OPTIMIZE_TARGET="ENERGY-DELAY")
 
-## Choose the Unit combination based on a configurable minimum acceptable percentile performance-improvement-per-J-increase. 
+## Choose the Unit combination based on a configurable minimum acceptable percentile performance-improvement-per-J-increase.
 ## Example for choosing U1(tpred = X, En = J1) vs U2(tpred = Y, En = J2) units with PERPER_LIMIT: if ( X/Y >= PERPER_LIMIT*J2/J1) U2 else U1
 #add_definitions(-DPREDICT_OPTIMIZE_TARGET="PERF-PER-J")
 ## PERPER_LIMIT higher -> "ENERGY", lower -> "PERF"
@@ -82,7 +82,6 @@ add_definitions(-DPERPER_LIMIT=0.0)
 #add_definitions(-DPREDICT_OPTIMIZE_TARGET="OTHER_TBD")
 
 ## Define at which percentage to normalize float values for similar data (e.g. costs, splits etc) to avoid empirical errors leaking into decisions
-## For example see Autotuning_runtime->CoCoPeLiaModel->CoCoPeLiaNormalizeSplit
 add_definitions(-DNORMALIZE_NEAR_SPLIT_LIMIT=0.05)
 
 ## Define the minimum allowed percentile contribution in total time from each potential unit
@@ -154,91 +153,84 @@ add_definitions(-DFETCH_UNAVAILABLE_PENALTY=0.1)
 #add_definitions(-DUDDEBUG)
 
 ## Define a name for the testbed, to be used for the whole framework setup
-#set(TESTBED_NAME "silver1") # TODO: silver1
-set(TESTBED_NAME "vulcan")  # TODO: Vulcan
-message("CoCopeLia-Framework - TESTBED_NAME: " ${TESTBED_NAME})
+set(TESTBED_NAME $ENV{PARALIA_SYSTEM})
+message("PARALiA-Framework - TESTBED_NAME: " ${TESTBED_NAME})
 add_definitions(-DTESTBED="${TESTBED_NAME}")
 
 ## Define the (max) number of devices for utilization (0-num_devices)
 #set(NUM_LOCATIONS 4) # TODO: silver1
 set(NUM_LOCATIONS 9) # TODO: Vulcan
-message("CoCopeLia-Framework - NUM_LOCATIONS: " ${NUM_LOCATIONS})
+message("PARALiA-Framework - NUM_LOCATIONS: " ${NUM_LOCATIONS})
 add_definitions(-DLOC_NUM=${NUM_LOCATIONS})
 
 ## Define the max GPU memory percentage (%) a problem can use ( not accounting for streams and other control structs; e.g. only the problem data ).
 set(PROBLEM_GPU_PERCENTAGE 70)
-message("CoCopeLia-Framework - PROBLEM_GPU_PERCENTAGE: " ${PROBLEM_GPU_PERCENTAGE})
+message("PARALiA-Framework - PROBLEM_GPU_PERCENTAGE: " ${PROBLEM_GPU_PERCENTAGE})
 add_definitions(-DPROBLEM_GPU_PERCENTAGE=${PROBLEM_GPU_PERCENTAGE})
 
 ###TODO:Define specific compiler, flags, includes, libs for the target system (IF needed).
 
-## 1) C++
+#-------------------------------------------------CUDA----------------------------------------------------------#
 
-#	a) auto
-
-#	b) compile flags
-set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -fopenmp -lm -Wuninitialized")
-
-message("CoCopeLia-Framework - CMAKE_CXX_FLAGS: " ${CMAKE_CXX_FLAGS})
-
-#	c) auto
-
-#	d) auto
-
-## 2) CUCUBLAS TODO: Other backends?
-#set (CUDA_PREFIX "/usr/local/cuda-11.6") # TODO: Silver1
-add_definitions(-DCUDA_VER=1100)
-#set (CUDA_PREFIX "/usr/local/cuda-9.2")
-#add_definitions(-DCUDA_VER=920)
-set (CUDA_PREFIX "/opt/system/cuda/11.7.0") # TODO: Vulcan
-set (CXX_PREFIX "/opt/hlrs/non-spack/2022-02/compiler/gcc/11.2.0") # TODO: Vulcan
-
+if(NOT $ENV{PARALIA_CUDA_TOOLKIT_PREFIX} STREQUAL "default")
+  set (CUDA_PREFIX $ENV{PARALIA_CUDA_TOOLKIT_PREFIX})
+  set (CMAKE_CUDA_COMPILER ${CUDA_PREFIX}/bin/nvcc)
+endif()
 
 if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
-  set(CMAKE_CUDA_ARCHITECTURES 70) #35 for Tesla K40, 70 for V100, 61 for GTX 1060/70
+  set(CMAKE_CUDA_ARCHITECTURES $ENV{PARALIA_CUDA_ARCH})
 endif()
 
-# 	a) Compiler
-set (CMAKE_CUDA_COMPILER ${CUDA_PREFIX}/bin/nvcc)
-set (CMAKE_CXX_COMPILER ${CXX_PREFIX}/bin/c++) # TODO: Vulcan
-set (CMAKE_C_COMPILER ${CXX_PREFIX}/bin/gcc) # TODO: Vulcan
-
-# 	b) Compile flags
 set (CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -w -O3")
-message("CoCopeLia-Framework - CMAKE_CUDA_FLAGS: " ${CMAKE_CUDA_FLAGS})
-#set(CMAKE_C_FLAGS ${CMAKE_CXX_FLAGS})
+message("PARALiA-Framework - CMAKE_CUDA_FLAGS: " ${CMAKE_CUDA_FLAGS})
 
-
-# 	c) Includes
 set (CUDA_INCLUDE_DIRS ${CUDA_PREFIX}/include ${CUDA_PREFIX}/samples/common/inc)
 include_directories(${CUDA_INCLUDE_DIRS})
-message("CoCopeLia-Framework - CUDA_INCLUDE_DIRS: " ${CUDA_INCLUDE_DIRS})
+message("PARALiA-Framework - CUDA_INCLUDE_DIRS: " ${CUDA_INCLUDE_DIRS})
 
-#set(OPENBLAS_PREFIX "/home/users/panastas/Lib_install/OpenBLAS-gcc93") # TODO: silver1
-set(OPENBLAS_PREFIX "/zhome/academic/HLRS/xex/xexpanas/OpenBLAS_install_vulcan-11.2") # TODO: Vulcan
+set (CUDA_LD ${CUDA_PREFIX}/lib64) # or /lib depending on system
+set (CUDA_LINK "-L${CUDA_LD} -lcudart -lcublas -lcurand -lcuda")
+message("PARALiA-Framework - CUDA_LINK: " ${CUDA_LINK} )
+set (INTERNAL_LINK_LIB "${CUDA_LINK} -lrt -ldl")
+message("PARALiA-Framework - INTERNAL_LINK_LIB: " ${INTERNAL_LINK_LIB})
+
+#-------------------------------------------------C/C++---------------------------------------------------------#
+
+if(NOT $ENV{PARALIA_CXX_PREFIX} STREQUAL "default")
+  set (CXX_PREFIX $ENV{PARALIA_CXX_PREFIX})
+  set (CMAKE_CXX_COMPILER ${CXX_PREFIX}/bin/c++)
+  set (CMAKE_C_COMPILER ${CXX_PREFIX}/bin/gcc)
+endif()
+
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -fopenmp -lm -Wuninitialized")
+message("PARALiA-Framework - CMAKE_CXX_FLAGS: " ${CMAKE_CXX_FLAGS})
+
+#set(CMAKE_C_FLAGS ${CMAKE_CXX_FLAGS})
+
+#-----------------------------------------------OpenBLAS--------------------------------------------------------#
+
+set(OPENBLAS_PREFIX $ENV{PARALIA_OPENBLAS_PREFIX})
+
 set (OPENBLAS_INCLUDE_DIRS ${OPENBLAS_PREFIX}/include)
 include_directories(${OPENBLAS_INCLUDE_DIRS})
-message("CoCopeLia-Framework - OPENBLAS_INCLUDE_DIRS: " ${OPENBLAS_INCLUDE_DIRS})
+message("PARALiA-Framework - OPENBLAS_INCLUDE_DIRS: " ${OPENBLAS_INCLUDE_DIRS})
 
-# 	d) Link Libraries
-set (CUDA_LD ${CUDA_PREFIX}/lib64) # or /lib depending on system
-#set (CUDA_LINK "-L${CUDA_LD} -lcudart -lcublas -lcurand -lcuda") # TODO: silver1
-set (CUDA_LINK "-L${CUDA_LD} -lcudart -lcublas -lcurand ") # TODO: Vulcan /opt/system/nvidia/ALL.ALL.510.73.08/libcuda.so.510.73.08 ?
-message("CoCopeLia-Framework - CUDA_LINK: " ${CUDA_LINK} )
-set (INTERNAL_LINK_LIB "${CUDA_LINK} -lrt -ldl")
-message("CoCopeLia-Framework - INTERNAL_LINK_LIB: " ${INTERNAL_LINK_LIB})
 set (OPENBLAS_LD ${OPENBLAS_PREFIX}/lib)
 set (OPENBLAS_LINK  "-L${OPENBLAS_LD} -lopenblas" )
-message("CoCopeLia-Framework - OPENBLAS_LINK: " ${OPENBLAS_LINK} )
+message("PARALiA-Framework - OPENBLAS_LINK: " ${OPENBLAS_LINK})
 
-project (CoCopeLia-Framework VERSION ${PROJECT_VERSION} DESCRIPTION "The complete CoCoPeLia Framework")
+#---------------------------------------------Start Project-----------------------------------------------------#
 
-if ("${CMAKE_INSTALL_PREFIX}" STREQUAL "/usr/local")
-message("CoCopeLia-Framework - CMAKE_INSTALL_PREFIX not provided (with --install-prefix <directory>) - project will be installed at default build dir.")
- set (CMAKE_INSTALL_PREFIX ${CMAKE_CURRENT_BINARY_DIR}/${TESTBED_NAME}-install)
+project (PARALiA-Framework VERSION ${PROJECT_VERSION} DESCRIPTION "The complete PARALiA Framework")
+
+if($ENV{PARALIA_INSTALL_PREFIX} STREQUAL "default")
+  message("PARALiA-Framework - PARALIA_INSTALL_PREFIX not provided, project will be installed under build dir.")
+  set (CMAKE_INSTALL_PREFIX ${CMAKE_CURRENT_BINARY_DIR}/${TESTBED_NAME}-install)
+else()
+  set (CMAKE_INSTALL_PREFIX $ENV{PARALIA_INSTALL_PREFIX})
 endif()
 set (CMAKE_INSTALL_PROJECT ${CMAKE_INSTALL_PREFIX})
-message("CoCopeLia-Framework - CMAKE_INSTALL_PROJECT: " ${CMAKE_INSTALL_PROJECT})
+message("PARALiA-Framework - CMAKE_INSTALL_PREFIX, CMAKE_INSTALL_PROJECT: " ${CMAKE_INSTALL_PROJECT})
 
 configure_file(${PROJECT_SOURCE_DIR}/Deploy.in ${CMAKE_INSTALL_PROJECT}/Deploy.sh @ONLY)
 
@@ -259,11 +251,10 @@ endif()
 
 ADD_SUBDIRECTORY (Universal_helpers)
 
-ADD_SUBDIRECTORY (Deployment_phase)
+ADD_SUBDIRECTORY (Database_builder)
 add_definitions(-DDEPLOYDB="${DEPLOYMENT_DIR_DB}")
 
-ADD_SUBDIRECTORY (Autotuning_runtime)
+ADD_SUBDIRECTORY (Autotuner)
 ADD_SUBDIRECTORY (Library_scheduler)
-
 
 ADD_SUBDIRECTORY (Benchmarking)

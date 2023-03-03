@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 3.10)
 ### Initialize the project
-project (CoCopeLia-Benchmarks VERSION ${PROJECT_VERSION} DESCRIPTION "Library wrappers for performance comparisson with CoCoPeLia" LANGUAGES CXX CUDA) 
+project (CoCopeLia-Benchmarks VERSION ${PROJECT_VERSION} DESCRIPTION "Library wrappers for performance comparisson with CoCoPeLia" LANGUAGES CXX CUDA)
 message( "------------------------------------------------------------------------------------------------")
 message( "Benchmarking - PROJECT_SOURCE_DIR: " ${PROJECT_SOURCE_DIR} )
 #message( "Library Scheduler - CMAKE_CURRENT_SOURCE_DIR: " ${CMAKE_CURRENT_SOURCE_DIR} )
@@ -43,8 +43,7 @@ file(MAKE_DIRECTORY ${BENCH_INSTALL}/testLogs)
 add_definitions(-DTESTLIBDIR="${BENCH_INSTALL}/testLogs")
 
 #BLASX libs and includes
-set (BLASX_PREFIX "/zhome/academic/HLRS/xex/xexpanas/BLASX-pinned") # TODO: vulcan
-#set (BLASX_PREFIX "/home/users/panastas/PhD_stuff/Other-libs/BLASX-pinned") # TODO: silver1
+set (BLASX_PREFIX $ENV{PARALIA_BLASX_PREFIX} )
 set (BLASX_INCLUDE_DIRS ${BLASX_PREFIX}/include)
 include_directories(${BLASX_INCLUDE_DIRS} )
 message( "Benchmarking - Included BLASx: " ${BLASX_INCLUDE_DIRS} )
@@ -53,15 +52,12 @@ set (BLASX_LINK  "-L${BLASX_LD} -lblasx" )
 message( "Benchmarking - Linking BLASx: " ${BLASX_LINK} )
 
 #XKBLAS libs and includes
-#set (XKBLAS_PREFIX "/zhome/academic/HLRS/xex/xexpanas/xkblas-basic/install_vulcan") # TODO: vulcan cuda 10.1.243
-set (XKBLAS_PREFIX "/zhome/academic/HLRS/xex/xexpanas/xkblas-basic/install_vulcan_11") # TODO: vulcan
-#set (XKBLAS_PREFIX "/home/users/panastas/PhD_stuff/Other-libs/xkblas-silver1/install") # TODO: silver1
+set (XKBLAS_PREFIX $ENV{PARALIA_XKBLAS_PREFIX})
 set (XKBLAS_INCLUDE_DIRS ${XKBLAS_PREFIX}/include)
 include_directories(${XKBLAS_INCLUDE_DIRS} )
 message( "Benchmarking - Included XKBLAS: " ${XKBLAS_INCLUDE_DIRS} )
 set (XKBLAS_LD ${XKBLAS_PREFIX}/lib)
-#set (XKBLAS_LINK  "-L${XKBLAS_LD}  -lm -lpthread -lkaapi -lxkblas -lcuda" )  # TODO: silver1
-set (XKBLAS_LINK  "-L${XKBLAS_LD}  -lm -lpthread -lkaapi -lxkblas /opt/system/nvidia/ALL.ALL.510.73.08/libcuda.so.510.73.08") # TODO: Vulcan   ?
+set (XKBLAS_LINK  "-L${XKBLAS_LD}  -lm -lpthread -lkaapi -lxkblas -lcuda" )
 message( "Benchmarking - Linking XKBLAS: " ${XKBLAS_LINK} )
 
 add_library(benchcocopelia SHARED
@@ -96,7 +92,7 @@ target_link_libraries(BLASx_dgemm_runner ${INTERNAL_LINK_LIB} benchcocopelia uni
 target_link_libraries(BLASxEx_dgemm_runner ${INTERNAL_LINK_LIB} benchcocopelia unihelpers ${BLASX_LINK})
 target_link_libraries(XKBLAS_dgemm_runner ${INTERNAL_LINK_LIB} benchcocopelia unihelpers ${XKBLAS_LINK} )
 
-## PARALia Runners and Testers 
+## PARALia Runners and Testers
 add_executable (dgemm_tester ${BENCH_DIR_SRC}/PARALia/dgemm_tester.cpp )
 add_executable (sgemm_tester ${BENCH_DIR_SRC}/PARALia/sgemm_tester.cpp )
 add_executable (dgemm_runner ${BENCH_DIR_SRC}/PARALia/dgemm_runner.cpp )
