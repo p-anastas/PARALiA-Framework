@@ -1,8 +1,9 @@
 ///
 /// \author Anastasiadis Petros (panastas@cslab.ece.ntua.gr)
 ///
-/// \brief Some CUDA function calls with added error-checking
+/// \brief An implementation of the overlap models used by Werkhoven for comparisson. 
 ///
+
 #ifndef WERKHOVEN_H
 #define WERKHOVEN_H
 

@@ -8,8 +8,8 @@
 #include <math.h>
 
 #include "unihelpers.hpp"
-#include "CoCoPeLiaCoModel.hpp"
-#include "Autotuning_runtime.hpp"
+#include "CoModel.hpp"
+#include "Autotuner.hpp"
 
 CoModel_p CoModel_init(short to, short from)
 {

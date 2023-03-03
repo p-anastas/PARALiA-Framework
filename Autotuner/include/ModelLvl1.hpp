@@ -3,16 +3,17 @@
 ///
 /// \brief Some CUDA function calls with added error-checking
 ///
-#ifndef COCOPELIA_MODEL_LVL1_H
-#define COCOPELIA_MODEL_LVL1_H
+#ifndef MODEL_LVL1_H
+#define MODEL_LVL1_H
 
-#include "CoCoPeLiaCoModel.hpp"
+#include "CoModel.hpp"
 #include "backend_wrappers.hpp"
 
-void CoCoModelFuncInitBLAS1(MD_p out_model, int dev_id, const char* func, void* func_data);
+void ModelFuncInitBLAS1(MD_p out_model, int dev_id, const char* func, void* func_data);
 
-long int CoCopeLiaMinAllowedTBLAS1(MD_p model);
-long int CoCopeLiaMaxAllowedTBLAS1(MD_p model);
+long int MinAllowedTBLAS1(MD_p model);
+long int MaxAllowedTBLAS1(MD_p model);
+long int GetSKNumBLAS1(MD_p model, int T);
 
 /// A naive prediction of the full-overlap (~unreachable) performance of a modeled routine
 double PredictFullOverlapBLAS1(MD_p model);
@@ -28,7 +29,5 @@ double CoCopeLiaPipelineEmulateBLAS1(MD_p model, long int T);
 
 double PredictBidirectionalHeteroBLAS1(MD_p model, long int T, int used_devs, int* used_dev_ids,
 	double* used_dev_relative_scores);
-	
-long int CoCopeLiaGetSKNumBLAS1(MD_p model, int T);
 
 #endif

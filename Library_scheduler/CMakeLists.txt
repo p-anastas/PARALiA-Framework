@@ -55,7 +55,7 @@ ${LIBSC_DIR_SRC}/Functions/sgemm.cpp
 ${LIBSC_DIR_SRC}/Functions/daxpy.cpp
 ${BACKEND_LIBSC_DIR}/Asset_backend.cpp
 )
-target_link_libraries(cocopelia ${INTERNAL_LINK_LIB} autotuning_runtime unihelpers caching)
+target_link_libraries(cocopelia ${INTERNAL_LINK_LIB} autotuner unihelpers caching)
 configure_file(${LIBSC_DIR_INC}/CoCoPeLia.hpp ${LIBSC_INSTALL_INC}/CoCoPeLia.hpp COPYONLY)
 
 set (LIBSC_INSTALL_INC ${LIBSC_INSTALL_INC} PARENT_SCOPE)

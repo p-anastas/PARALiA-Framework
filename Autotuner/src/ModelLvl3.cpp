@@ -7,13 +7,12 @@
 #include <stdlib.h>
 #include <math.h>
 
-#include "CoCoPeLiaCoModel.hpp"
-#include "CoCoPeLiaGPUexec.hpp"
-#include "Autotuning_runtime.hpp"
-#include "CoCoPeLiaModelLvl3.hpp"
+#include "CoModel.hpp"
+#include "GPUexec_lookup.hpp"
+#include "Autotuner.hpp"
+#include "ModelLvl3.hpp"
 #include "unihelpers.hpp"
 #include "Werkhoven.hpp"
-
 
 double PredictFullOverlapBLAS3(MD_p model)
 {
@@ -597,24 +596,24 @@ void CoCoModel_gemm_init(MD_p out_model, int dev_id, const char* func, gemm_back
 #endif
 }
 
-long int CoCopeLiaMinAllowedTBLAS3(MD_p model){
+long int MinAllowedTBLAS3(MD_p model){
 	long int result = GPUexec3MinT((GPUexec3Model_p)model->GPUexec_model_ptr);
 	return std::max(result, (long int) 1024);
 }
 
-long int CoCopeLiaMaxAllowedTBLAS3(MD_p model){
+long int MaxAllowedTBLAS3(MD_p model){
 		return fmin(fmin(model->D1, model->D2),model->D3);
 }
 
-long int CoCopeLiaGetSKNumBLAS3(MD_p model, int T){
+long int GetSKNumBLAS3(MD_p model, int T){
 		return (model->D1/T + ((model->D1%T)? 1:0))
 			*(model->D2/T + ((model->D2%T)? 1:0))
 			*(model->D3/T + ((model->D3%T)? 1:0));
 }
 
 ///  Initializes the model for gemm
-void CoCoModelFuncInitBLAS3(MD_p out_model, int dev_id, const char* func, void* func_data){
+void ModelFuncInitBLAS3(MD_p out_model, int dev_id, const char* func, void* func_data){
 	if ( !strcmp(func, "Dgemm") || !strcmp(func, "Sgemm"))
 		return CoCoModel_gemm_init(out_model, dev_id, func, (gemm_backend_in_p) func_data);
-	else error("CoCoModelFuncInitBLAS3: func %s not implemented\n", func);
+	else error("ModelFuncInitBLAS3: func %s not implemented\n", func);
 }

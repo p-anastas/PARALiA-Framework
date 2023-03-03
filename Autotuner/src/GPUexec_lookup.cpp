@@ -8,7 +8,7 @@
 #include <math.h>
 
 #include "unihelpers.hpp"
-#include "CoCoPeLiaGPUexec.hpp"
+#include "GPUexec_lookup.hpp"
 
 /* ============================BLAS3 Models================================= */
 

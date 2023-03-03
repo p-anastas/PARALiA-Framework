@@ -1,13 +1,13 @@
 ///
 /// \author Anastasiadis Petros (panastas@cslab.ece.ntua.gr)
 ///
-/// \brief Some CUDA function calls with added error-checking
+/// \brief The core header of the autotuner and its components.
 ///
-#ifndef AUTOTUNING_RUNTIME_H
-#define AUTOTUNING_RUNTIME_H
+#ifndef AUTOTUNER_H
+#define AUTOTUNER_H
 
 #include <cstdio>
-#include "CoCoPeLiaCoModel.hpp"
+#include "CoModel.hpp"
 #include "backend_wrappers.hpp"
 
 #ifdef PDEBUG

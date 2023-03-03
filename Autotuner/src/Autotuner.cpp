@@ -1,10 +1,10 @@
 ///
 /// \author Anastasiadis Petros (panastas@cslab.ece.ntua.gr)
 ///
-/// \brief The Autotune controller functions.
+/// \brief The Autotuner controller functions.
 ///
 
-#include "Autotuning_runtime.hpp"
+#include "Autotuner.hpp"
 #include "Subkernel_distributions.hpp"
 
 #include <float.h> /// For DBL_MAX
@@ -263,7 +263,7 @@ double ATC::autotune_problem(const char* routine_name, void* initial_problem_wra
 
 	init_modelers(routine_name, initial_problem_wrap);
 	linkmap->update_link_weights(unit_modeler_list, T);
-	
+
 	int autotune_eval_devices = 0;
 	if (active_unit_num > 0){
 		if (active_unit_id_list){
@@ -305,7 +305,7 @@ double ATC::autotune_problem(const char* routine_name, void* initial_problem_wra
 			temp_controller->linkmap->update_link_shared_weights(temp_controller->unit_modeler_list,
 					temp_controller->active_unit_id_list, temp_controller->active_unit_num);
 			for(int i = 0; i< LOC_NUM; i++)	for(int j = 0; j< LOC_NUM; j++)
-				final_estimated_link_bw[i][j] = temp_controller->linkmap->link_bw_shared[i][j];		
+				final_estimated_link_bw[i][j] = temp_controller->linkmap->link_bw_shared[i][j];
 #ifdef ENABLE_TRANSFER_HOPS
 #ifndef ENABLE_ESPA
 			temp_controller->linkmap->init_hop_routes(temp_controller->unit_modeler_list,
@@ -387,22 +387,22 @@ double ATC::autotune_problem(const char* routine_name, void* initial_problem_wra
 #endif
 			} // Example for choosing U1(tpred = X, En = J1) vs U2(tpred = Y, En = J2) units with PERPER_LIMIT: if ( X/Y >= PERPER_LIMIT*J2/J1) U2 else U1
 			else if(!strcmp(PREDICT_OPTIMIZE_TARGET,"PERF-PER-J")){
-				double PER_score = -42; 
+				double PER_score = -42;
 				if (pred_t == DBL_MAX) mimic_ATC(temp_controller);
-				else if (temp_controller->pred_J == pred_J){ 
+				else if (temp_controller->pred_J == pred_J){
 					if (temp_controller->pred_t < pred_t) mimic_ATC(temp_controller);
 				}
 				else if (temp_controller->pred_t == pred_t){
 					if (temp_controller->pred_J < pred_J) mimic_ATC(temp_controller);
 				}
 				else if (temp_controller->pred_t > pred_t && temp_controller->pred_J > pred_J);
-				else if (temp_controller->pred_t < pred_t && temp_controller->pred_J < pred_J) mimic_ATC(temp_controller);				
+				else if (temp_controller->pred_t < pred_t && temp_controller->pred_J < pred_J) mimic_ATC(temp_controller);
 				else if (temp_controller->pred_t < pred_t && temp_controller->pred_J > pred_J){
-					PER_score = (pred_t/temp_controller->pred_t - 1 )/(temp_controller->pred_J/pred_J - 1); 
+					PER_score = (pred_t/temp_controller->pred_t - 1 )/(temp_controller->pred_J/pred_J - 1);
 					if (PER_score >= PERPER_LIMIT) mimic_ATC(temp_controller);
-				}			
+				}
 				else if (temp_controller->pred_t > pred_t && temp_controller->pred_J < pred_J){
-					PER_score = (temp_controller->pred_t/pred_t - 1 )/(pred_J/temp_controller->pred_J - 1); 
+					PER_score = (temp_controller->pred_t/pred_t - 1 )/(pred_J/temp_controller->pred_J - 1);
 					if (PER_score < PERPER_LIMIT) mimic_ATC(temp_controller);
 				}
 #ifdef SDEBUG
@@ -423,7 +423,7 @@ double ATC::autotune_problem(const char* routine_name, void* initial_problem_wra
 		linkmap->update_link_shared_weights(unit_modeler_list,
 				active_unit_id_list, active_unit_num);
 		for(int i = 0; i< LOC_NUM; i++)	for(int j = 0; j< LOC_NUM; j++)
-			final_estimated_link_bw[i][j] = linkmap->link_bw_shared[i][j];	
+			final_estimated_link_bw[i][j] = linkmap->link_bw_shared[i][j];
 #ifdef ENABLE_TRANSFER_HOPS
 #ifndef ENABLE_ESPA
 		linkmap->init_hop_routes(unit_modeler_list,
@@ -447,7 +447,7 @@ double ATC::autotune_problem(const char* routine_name, void* initial_problem_wra
 #endif
 		if(initial_T <= 0) tile_selection_t += optimize_tile();
 		// TODO: Must decide if workload ratio should be tuned when there is a predefined number of devices... Currently == off for paper
-		split_homogeneously = 1; 
+		split_homogeneously = 1;
 		split_selection_t += optimize_split();
 	}
 
@@ -464,7 +464,7 @@ double ATC::autotune_problem(const char* routine_name, void* initial_problem_wra
 #ifdef ENABLE_TRANSFER_HOPS
   	final_estimated_linkmap->print_link_bw_shared_hops();
 #ifdef ENABLE_ESPA
-	final_estimated_linkmap->print_ESPA(); 
+	final_estimated_linkmap->print_ESPA();
 #endif
 #endif
 #endif
@@ -628,7 +628,7 @@ double ATC::optimize_split(){
 		temp_score+= active_unit_score[idx];
 	}
 	for(int idx = 0; idx < active_unit_num; idx++){
-		if (split_homogeneously) active_unit_score[idx] = 1.0/active_unit_num; 		
+		if (split_homogeneously) active_unit_score[idx] = 1.0/active_unit_num;
 		else active_unit_score[idx] /= temp_score;
 #ifdef PDEBUG
 		lprintf(lvl, "Calculating Relative score for unit_id = %d (idx = %d ): active_unit_score = %e\n",
@@ -710,10 +710,10 @@ double ATC::optimize_split(){
 		if (!strcmp(PREDICT_OPTIMIZE_TARGET,"PERF")) active_unit_score_new[idx] = temp_t;
 		else if (!strcmp(PREDICT_OPTIMIZE_TARGET,"ENERGY")) active_unit_score_new[idx] = temp_J;
 		else if (!strcmp(PREDICT_OPTIMIZE_TARGET,"POWER-DELAY")) active_unit_score_new[idx] = 1/temp_PDP;
-		else if (!strcmp(PREDICT_OPTIMIZE_TARGET,"ENERGY-DELAY")) active_unit_score_new[idx] = 1/temp_EDP; 
+		else if (!strcmp(PREDICT_OPTIMIZE_TARGET,"ENERGY-DELAY")) active_unit_score_new[idx] = 1/temp_EDP;
 		else if (!strcmp(PREDICT_OPTIMIZE_TARGET,"PERF-PER-J")) active_unit_score_new[idx] = temp_t;
 		else error("PREDICT_OPTIMIZE_TARGET = %s not implemented\n", PREDICT_OPTIMIZE_TARGET);
-		
+
 		temp_score+= 1/((active_unit_score[idx]) ? active_unit_score_new[idx]/active_unit_score[idx] : 0);
 #endif
 	}

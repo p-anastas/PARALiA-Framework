@@ -1,7 +1,7 @@
 ///
 /// \author Anastasiadis Petros (panastas@cslab.ece.ntua.gr)
 ///
-/// \brief The 3-way concurency overlap prediction models for BLAS
+/// \brief The 3-way concurency overlap prediction models for BLAS.
 ///
 
 #include <stdlib.h>
@@ -10,11 +10,11 @@
 // for DBL_MAX
 #include <float.h>
 
-#include "CoCoPeLiaCoModel.hpp"
-#include "CoCoPeLiaGPUexec.hpp"
-#include "Autotuning_runtime.hpp"
-#include "CoCoPeLiaModelLvl3.hpp"
-#include "CoCoPeLiaModelLvl1.hpp"
+#include "CoModel.hpp"
+#include "GPUexec_lookup.hpp"
+#include "Autotuner.hpp"
+#include "ModelLvl3.hpp"
+#include "ModelLvl1.hpp"
 #include "unihelpers.hpp"
 #include "Werkhoven.hpp"
 
@@ -187,11 +187,11 @@ double PARALiaPerfPenaltyModifier(MD_p model, long int T, int active_unit_num){
 	if ((model->D1/T + ((model->D1%T)? 1 : 0)) *
 			(model->D2/T + ((model->D2%T)? 1 : 0)) *
 			(model->D3/T + ((model->D3%T)? 1 : 0)) % active_unit_num) inbalance_time_multiplier+=REDUCE_PENALTY;
-			
+
 #endif
-	double not_enough_WR_pieces_multiplier = 1.0; 
-	int temp_pieces = (model->D1/T + ((model->D1%T)? 1 : 0)) * (model->D2/T + ((model->D2%T)? 1 : 0)); 
-	if (temp_pieces < active_unit_num) not_enough_WR_pieces_multiplier *= 1000; 
+	double not_enough_WR_pieces_multiplier = 1.0;
+	int temp_pieces = (model->D1/T + ((model->D1%T)? 1 : 0)) * (model->D2/T + ((model->D2%T)? 1 : 0));
+	if (temp_pieces < active_unit_num) not_enough_WR_pieces_multiplier *= 1000;
 #ifdef PDEBUG
 	lprintf(0, "PARALiaPerfPenaltyModifier: Penaltize unit/tile combination leading to padding -> padding_time_multiplier = %lf\
 		\nPenaltize unit/tile combination leading SK num not equally distributed to units -> inbalance_time_multiplier = %lf\

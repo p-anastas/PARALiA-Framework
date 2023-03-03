@@ -10,7 +10,7 @@
 #include <string>
 #include <mutex> // std::mutex
 
-#include "Autotuning_runtime.hpp"
+#include "Autotuner.hpp"
 #include "DataCaching.hpp"
 #include <atomic>
 

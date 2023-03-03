@@ -7,10 +7,10 @@
 #include <stdlib.h>
 #include <math.h>
 
-#include "CoCoPeLiaCoModel.hpp"
-#include "CoCoPeLiaGPUexec.hpp"
-#include "Autotuning_runtime.hpp"
-#include "CoCoPeLiaModelLvl1.hpp"
+#include "CoModel.hpp"
+#include "GPUexec_lookup.hpp"
+#include "Autotuner.hpp"
+#include "ModelLvl1.hpp"
 #include "unihelpers.hpp"
 #include "Werkhoven.hpp"
 
@@ -63,19 +63,23 @@ void CoCoModel_axpy_init(MD_p out_model, int dev_id, const char* func, axpy_back
 #endif
 }
 
-long int CoCopeLiaMinAllowedTBLAS1(MD_p model){
+long int MinAllowedTBLAS1(MD_p model){
 		return GPUexec1MinT((GPUexec1Model_p)model->GPUexec_model_ptr);
 }
 
-long int CoCopeLiaMaxAllowedTBLAS1(MD_p model){
+long int MaxAllowedTBLAS1(MD_p model){
 		return model->D1;
 }
 
+long int GetSKNumBLAS1(MD_p model, int T){
+		return (model->D1/T + ((model->D1%T)? 1:0));
+}
+
 ///  Initializes the model for gemm
-void CoCoModelFuncInitBLAS1(MD_p out_model, int dev_id, const char* func, void* func_data){
+void ModelFuncInitBLAS1(MD_p out_model, int dev_id, const char* func, void* func_data){
 	if ( !strcmp(func, "Daxpy") || !strcmp(func, "Saxpy"))
 		return CoCoModel_axpy_init(out_model, dev_id, func, (axpy_backend_in_p) func_data);
-	else error("CoCoModelFuncInitBLAS1: func %s not implemented\n", func);
+	else error("ModelFuncInitBLAS1: func %s not implemented\n", func);
 }
 
 double PredictFullOverlapBLAS1(MD_p model)
@@ -83,7 +87,7 @@ double PredictFullOverlapBLAS1(MD_p model)
 	short lvl = 4;
 	double t_recv_full = 0, t_send_full = 0, t_exec_full = 0, t_total = 0;
 	long int maxT = GPUexec1MaxT((GPUexec1Model_p)model->GPUexec_model_ptr);
-	long int minT = CoCopeLiaMinAllowedTBLAS1(model);
+	long int minT = MinAllowedTBLAS1(model);
 	long int Tbig = GPUexec1NearestT((GPUexec1Model_p)model->GPUexec_model_ptr, fmin(maxT, minT));
 	//fprintf(stderr, "Tbig = %ld\n", Tbig);
 	t_exec_full = (model->D1*1.0/Tbig)* GPUexec1Model_predict((GPUexec1Model_p)model->GPUexec_model_ptr, Tbig);
@@ -130,7 +134,7 @@ double PredictZeroOverlapBLAS1(MD_p model)
 	short lvl = 4;
 	double t_recv_full = 0, t_send_full = 0, t_exec_full = 0, t_total = 0;
 	long int maxT = GPUexec1MaxT((GPUexec1Model_p)model->GPUexec_model_ptr);
-	long int minT = CoCopeLiaMinAllowedTBLAS1(model);
+	long int minT = MinAllowedTBLAS1(model);
 	long int Tbig = GPUexec1NearestT((GPUexec1Model_p)model->GPUexec_model_ptr, fmin(maxT, minT));
 	//fprintf(stderr, "Tbig = %ld\n", Tbig);
 	t_exec_full = (model->D1*1.0/Tbig)* GPUexec1Model_predict((GPUexec1Model_p)model->GPUexec_model_ptr, Tbig);
@@ -284,8 +288,4 @@ double PredictBidirectionalHeteroBLAS1(MD_p model, long int T, int used_devs, in
 	}
 	else error("CoCopeLiaPredictBidirectionalHeteroBLAS1: Unknown REL_PERF_MODE = %s\n", REL_PERF_MODE);
 	return result;
-}
-
-long int CoCopeLiaGetSKNumBLAS1(MD_p model, int T){
-		return (model->D1/T + ((model->D1%T)? 1:0));
 }

@@ -1,7 +1,7 @@
 
 #include <iostream>
 
-#include "Autotuning_runtime.hpp"
+#include "Autotuner.hpp"
 #include "Model_functions.hpp"
 #include "unihelpers.hpp"
 
@@ -54,19 +54,19 @@ void LinkMap::reset()
 
 void LinkMap::reset_links(int unit_id){
   	for (int i = 0; i < LOC_NUM; i++)
-    	for (int j = 0; j < LOC_NUM; j++) 
+    	for (int j = 0; j < LOC_NUM; j++)
     		if(link_hop_num[i][j])
     			for (int l = 0; l < MAX_HOP_ROUTES; l++)
     				for (int k = 0; k < MAX_ALLOWED_HOPS; k++)
-    			 		///terminate all routes for links that (might) use unit_id as an intermediate hop. 
+    			 		///terminate all routes for links that (might) use unit_id as an intermediate hop.
     	     			if(link_hop_route[i][j][k][l] == unit_id){
     	     				link_hop_num[i][j] = 0;
 #ifdef PDEBUG
 							lprintf(0, "\n|-----> LinkMap::reset_links(Terminating route [%d][%d] due to link_hop_route[%d][%d][%d][%d] = %d)\n\n",
 								i, j, i, j, k, l, unit_id);
 #endif
-						}    	     				
-    	     			
+						}
+
 }
 
 
@@ -542,11 +542,11 @@ double LinkMap::ESPA_predict(MD_p unit_modeler, int T, int* active_unit_id_list,
 	}
 	double t_recv_full = 0, t_send_full = 0, t_exec_full = 0, t_total = 0;
 	t_exec_full = ESPA_unit_score[used_unit_idx]*unit_modeler->getGPUexecFull();
-	
-	//warning("ESPA_predict is modified for heterogeneous scenario ratios, beware!!1!\n"); 
+
+	//warning("ESPA_predict is modified for heterogeneous scenario ratios, beware!!1!\n");
 	//if(unit_modeler->unit_id == 0 || unit_modeler->unit_id == 1 || unit_modeler->unit_id == 4 || unit_modeler->unit_id == 6) t_exec_full*=7.0/3.0;
 	//else if ( unit_modeler->unit_id == 2 || unit_modeler->unit_id == 3)  t_exec_full*=7.0/5.0;
-	
+
 	if ( t_exec_full < 0){
 		warning("LinkMap::ESPA_predict: GPUexec3Model_predict submodel returned negative value, abort prediction");
 		return -1.0;

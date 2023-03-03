@@ -1,12 +1,12 @@
 ///
 /// \author Anastasiadis Petros (panastas@cslab.ece.ntua.gr)
 ///
-/// \brief Some CUDA function calls with added error-checking
+/// \brief The subkernel distributions implemented for PARALiA
 ///
 #ifndef SUBKERNEL_DIST_H
 #define SUBKERNEL_DIST_H
 
-#include "Autotuning_runtime.hpp"
+#include "Autotuner.hpp"
 
 void CoCoDistributeSubkernelsRoundRobin(ATC_p autotune_controller);
 void CoCoDistributeSubkernelsNaive(ATC_p autotune_controller);

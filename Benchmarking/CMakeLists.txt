@@ -65,7 +65,7 @@ ${BENCH_DIR_SRC}/cuBLASXt/cuBLASWrappers.cpp
 ${BENCH_DIR_SRC}/cuBLASXt/cuBLASXtWrappers.cpp
 ${BENCH_DIR_SRC}/testing.cpp
 )
-target_link_libraries(benchcocopelia cocopelia ${INTERNAL_LINK_LIB} ${OPENBLAS_LINK} cocopelia autotuning_runtime unihelpers )
+target_link_libraries(benchcocopelia cocopelia ${INTERNAL_LINK_LIB} ${OPENBLAS_LINK} cocopelia autotuner unihelpers )
 configure_file(${BENCH_DIR_INC}/BackenedLibsWrapped.hpp ${BENCH_INSTALL_INC}/BackenedLibsWrapped.hpp COPYONLY)
 configure_file(${BENCH_DIR_INC}/BLASxWrapped.hpp ${BENCH_INSTALL_INC}/BLASxWrapped.hpp COPYONLY)
 

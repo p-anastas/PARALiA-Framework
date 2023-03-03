@@ -20,9 +20,9 @@
 #include <stdlib.h>
 #include <math.h>
 
-#include "CoCoPeLiaCoModel.hpp"
-#include "CoCoPeLiaGPUexec.hpp"
-#include "Autotuning_runtime.hpp"
+#include "CoModel.hpp"
+#include "GPUexec_lookup.hpp"
+#include "Autotuner.hpp"
 #include "unihelpers.hpp"
 
 ///  Predicts 3-way overlaped execution time for nStream (equal) data blocks of any kernel using Werkhoven's model.

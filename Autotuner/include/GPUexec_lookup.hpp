@@ -1,5 +1,11 @@
-#ifndef COCOPELIAGPUEXEC_H
-#define COCOPELIAGPUEXEC_H
+///
+/// \author Anastasiadis Petros (panastas@cslab.ece.ntua.gr)
+///
+/// \brief The value lookup for BLAS execution of CoCoPeLiA.
+///
+
+#ifndef GPUEXEC_H
+#define GPUEXEC_H
 
 /* ============================BLAS1 Models================================= */
 

@@ -1,18 +1,18 @@
 ///
 /// \author Anastasiadis Petros (panastas@cslab.ece.ntua.gr)
 ///
-/// \brief The 3-way concurency overlap prediction models for BLAS
+/// \brief The Modeler class definition.
 ///
 
 #include <stdlib.h>
 #include <math.h>
 
-#include "CoCoPeLiaCoModel.hpp"
-#include "CoCoPeLiaGPUexec.hpp"
-#include "Autotuning_runtime.hpp"
+#include "CoModel.hpp"
+#include "GPUexec_lookup.hpp"
+#include "Autotuner.hpp"
 #include "Model_functions.hpp"
-#include "CoCoPeLiaModelLvl3.hpp"
-#include "CoCoPeLiaModelLvl1.hpp"
+#include "ModelLvl3.hpp"
+#include "ModelLvl1.hpp"
 #include "unihelpers.hpp"
 #include "Werkhoven.hpp"
 
@@ -43,7 +43,7 @@ Modeler::Modeler(int dev_id, const char* func, void* func_data){
 	switch(problem){
 		case BLAS1:
 			GPUexec_model_ptr = (void*) GPUexec1Model_init(dev_id, func);
-			CoCoModelFuncInitBLAS1(this, dev_id, func, func_data);
+			ModelFuncInitBLAS1(this, dev_id, func, func_data);
 			break;
 		case BLAS2:
 			error("Modeler::Modeler: GPUexec2Model_init Not Implemented\n");
@@ -51,7 +51,7 @@ Modeler::Modeler(int dev_id, const char* func, void* func_data){
 			break;
 		case BLAS3:
 			GPUexec_model_ptr = (void*) GPUexec3Model_init(dev_id, func);
-			CoCoModelFuncInitBLAS3(this, dev_id, func, func_data);
+			ModelFuncInitBLAS3(this, dev_id, func, func_data);
 			break;
 		default:
 			error("Modeler::Modeler: Unreachable default reached\n");
@@ -81,12 +81,12 @@ void Modeler::print(){
 long int Modeler::getMinT(){
 	switch(problem){
 		case BLAS1:
-			return CoCopeLiaMinAllowedTBLAS1(this);
+			return MinAllowedTBLAS1(this);
 		case BLAS2:
 			error("CoCopeLiaMinT: BLAS 2 Not implemented\n");
 			return 0;
 		case BLAS3:
-			return CoCopeLiaMinAllowedTBLAS3(this);
+			return MinAllowedTBLAS3(this);
 		default:
 			error("CoCopeLiaMinT: Invalid Problem %s", printProblem(problem));
 	}
@@ -96,12 +96,12 @@ long int Modeler::getMinT(){
 long int Modeler::getMaxT(){
 	switch(problem){
 		case BLAS1:
-			return CoCopeLiaMaxAllowedTBLAS1(this);
+			return MaxAllowedTBLAS1(this);
 		case BLAS2:
 			error("CoCopeLiaMaxT: BLAS 2 Not implemented\n");
 			return 0;
 		case BLAS3:
-			return CoCopeLiaMaxAllowedTBLAS3(this);
+			return MaxAllowedTBLAS3(this);
 		default:
 			error("CoCopeLiaMaxT: Invalid Problem %s", printProblem(problem));
 	}
@@ -118,12 +118,12 @@ long int Modeler::getFlops(){
 long int Modeler::getSKNum(int T){
 	switch(problem){
 		case BLAS1:
-			return CoCopeLiaGetSKNumBLAS1(this, T);
+			return GetSKNumBLAS1(this, T);
 		case BLAS2:
 			error("CoCopeLiaGetSKNum: BLAS 2 Not implemented\n");
 			return 0;
 		case BLAS3:
-			return CoCopeLiaGetSKNumBLAS3(this, T);
+			return GetSKNumBLAS3(this, T);
 		default:
 			error("CoCopeLiaGetSKNum: Invalid Problem %s", printProblem(problem));
 	}

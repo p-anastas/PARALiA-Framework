@@ -6,7 +6,7 @@
 #ifndef COCOPELIA_H
 #define COCOPELIA_H
 
-#include "Autotuning_runtime.hpp"
+#include "Autotuner.hpp"
 
 /// The PARALia Dgemm implementation.
 ATC_p PARALiaDgemm(char TransA,  char TransB, long int M, long int N, long int K,
@@ -23,7 +23,7 @@ ATC_p PARALiaSgemm(char TransA,  char TransB, long int M, long int N, long int K
 /// A modification of PARALiaDgemm but with a given T (mainly for performance/debug purposes)
 ATC_p PARALiaSgemmControled(char TransA,  char TransB, long int M, long int N, long int K,
 	float alpha, float* A, long int ldA, float* B, long int ldB, float beta, float* C, long int ldC, ATC_p predef_control_values);
-	
+
 /// The PARALia Daxpy implementation.
 ATC_p PARALiaDaxpy(long int N, VALUE_TYPE alpha,
 	VALUE_TYPE* x, long int incx, VALUE_TYPE* y, long int incy);

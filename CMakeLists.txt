@@ -134,13 +134,13 @@ add_definitions(-DFETCH_UNAVAILABLE_PENALTY=0.1)
 #Run in deep debug mode, for command-to-command debugging
 #add_definitions(-DDDEBUG)
 
-#Run Simple Prediction debug mode (well-presented simple autotuning runtime stuff)
+#Run Simple Prediction debug mode (well-presented simple autotuner stuff)
 #add_definitions(-DSDEBUG)
 
-#Run Prediction debug mode (autotuning runtime stuff)
+#Run Prediction debug mode (autotuner stuff)
 #add_definitions(-DPDEBUG)
 
-#Run Prediction deep debug mode (all autotuning runtime stuff)
+#Run Prediction deep debug mode (all autotuner stuff)
 #add_definitions(-DDPDEBUG)
 
 #Run in caching debug mode, for cache-related debugging
