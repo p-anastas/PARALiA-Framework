@@ -26,5 +26,8 @@ python3 $SCRIPT_DIR/BenchToLookupTables.py -i $RES_DIR -o $OUTDIR -f Sgemm -d $d
 echo "python3 $SCRIPT_DIR/BenchToLookupTables.py -i $RES_DIR -o $OUTDIR -f Daxpy -d $device -l $library_id"
 python3 $SCRIPT_DIR/BenchToLookupTables.py -i $RES_DIR -o $OUTDIR -f Daxpy -d $device -l $library_id
 
+echo "python3 $SCRIPT_DIR/BenchToLookupTables.py -i $RES_DIR -o $OUTDIR -f Ddot -d $device -l $library_id"
+python3 $SCRIPT_DIR/BenchToLookupTables.py -i $RES_DIR -o $OUTDIR -f Ddot -d $device -l $library_id
+
 echo "python3 $SCRIPT_DIR/LinkPreprocessing.py -i $RES_DIR -o $OUTDIR -d $device -l $library_id"
 python3 $SCRIPT_DIR/LinkPreprocessing.py -i $RES_DIR -o $OUTDIR -d $device -l $library_id

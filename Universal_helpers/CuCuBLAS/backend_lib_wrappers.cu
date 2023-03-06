@@ -76,6 +76,22 @@ void backend_run_operation(void* backend_data, const char* opname, CQueue_p run_
     }
     else error("backend_run_operation(axpy): Not implemented for VALUETYPE\n");
   }
+  else if(!strcmp(opname, "dot")){
+  dot_backend_in_p ptr_ker_translate = (dot_backend_in_p) backend_data;
+  if (std::is_same<VALUE_TYPE, double>::value){
+  //if (sizeof(VALUE_TYPE) == sizeof(double)){
+    if(ptr_ker_translate->dev_id == -1) run_queue->add_host_func((void*)&cblas_wrap_ddot, backend_data);
+    else if(ptr_ker_translate->dev_id >= 0) cublas_wrap_ddot(backend_data, run_queue);
+    else error("backend_run_operation(dot,double): Not implemented for dev_id = %d\n", ptr_ker_translate->dev_id);
+  }
+  else error("backend_run_operation(dot): Not implemented for VALUETYPE\n");
+  // else if (std::is_same<VALUE_TYPE, float>::value){
+  // //else if (sizeof(VALUE_TYPE) == sizeof(float)){
+  //   if(ptr_ker_translate->dev_id == -1) run_queue->add_host_func((void*)&cblas_wrap_saxpy, backend_data);
+  //   else if(ptr_ker_translate->dev_id >= 0) cublas_wrap_saxpy(backend_data, run_queue);
+  //   else error("backend_run_operation(dot,float): Not implemented for dev_id = %d\n", ptr_ker_translate->dev_id);
+  // }
+}
   else error("backend_run_operation: unkown/not implemented opname=%s\n", opname);
 }
 

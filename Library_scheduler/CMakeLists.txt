@@ -53,6 +53,7 @@ ${LIBSC_DIR_SRC}/Subkernel.cpp
 ${LIBSC_DIR_SRC}/Functions/dgemm.cpp
 ${LIBSC_DIR_SRC}/Functions/sgemm.cpp
 ${LIBSC_DIR_SRC}/Functions/daxpy.cpp
+${LIBSC_DIR_SRC}/Functions/ddot.cpp
 ${BACKEND_LIBSC_DIR}/Asset_backend.cpp
 )
 target_link_libraries(cocopelia ${INTERNAL_LINK_LIB} autotuner unihelpers caching)

@@ -253,6 +253,14 @@ long long axpy_memory(long int  N, long int x_loc, long int y_loc, short dsize){
 	return (long long) N*(x_loc + y_loc)*dsize;
 }
 
+long long dot_flops(long int  N){
+	return (long long) 2* N;
+}
+
+long long dot_memory(long int  N, long int x_loc, long int y_loc, short dsize){
+	return (long long) N*(x_loc + y_loc)*dsize;
+}
+
 void translate_binary_to_unit_list(int case_id, int* active_unit_num_p, int* active_unit_id_list){
 	int mask;
 	*active_unit_num_p = 0;

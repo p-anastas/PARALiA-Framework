@@ -92,6 +92,13 @@ void cblas_wrap_saxpy(void* backend_data){
     *ptr_ker_translate->y, ptr_ker_translate->incy);
 }
 
+void cblas_wrap_ddot(void* backend_data){
+  dot_backend_in_p ptr_ker_translate = (dot_backend_in_p) backend_data;
+  *ptr_ker_translate->result = cblas_ddot(ptr_ker_translate->N, (double*) *ptr_ker_translate->x,
+  ptr_ker_translate->incx, (double*) *ptr_ker_translate->y,
+  ptr_ker_translate->incy);
+}
+
 void cblas_wrap_dgemm(void* backend_data){
   short lvl = 6;
   gemm_backend_in_p ptr_ker_translate = (gemm_backend_in_p) backend_data;
@@ -134,7 +141,7 @@ void cblas_wrap_dgemm(void* backend_data){
     (float*) *ptr_ker_translate->B, ptr_ker_translate->ldB,
     ptr_ker_translate->beta, (float*) *ptr_ker_translate->C, ptr_ker_translate->ldC);
 #endif
-  float alpha = ptr_ker_translate->alpha, beta = ptr_ker_translate->beta; 
+  float alpha = ptr_ker_translate->alpha, beta = ptr_ker_translate->beta;
   cblas_dgemm(CblasColMajor,
     OpCharToCblas(ptr_ker_translate->TransA), OpCharToCblas(ptr_ker_translate->TransB),
     ptr_ker_translate->M, ptr_ker_translate->N, ptr_ker_translate->K, alpha,
@@ -156,6 +163,21 @@ void cublas_wrap_daxpy(void* backend_data, void* queue_wrap_p){
     ptr_ker_translate->N, (double*) &ptr_ker_translate->alpha, (double*) *ptr_ker_translate->x,
     ptr_ker_translate->incx, (double*) *ptr_ker_translate->y, ptr_ker_translate->incy),
     "cublas_wrap_daxpy failed\n");
+}
+
+void cublas_wrap_ddot(void* backend_data, void* queue_wrap_p){
+  dot_backend_in_p ptr_ker_translate = (dot_backend_in_p) backend_data;
+  CoCoPeLiaSelectDevice(ptr_ker_translate->dev_id);
+#ifdef ENABLE_PARALLEL_BACKEND
+  cublasHandle_t temp_handle = *((cublasHandle_t*)((CQueue_p)queue_wrap_p)->cqueue_backend_data
+    [((CQueue_p)queue_wrap_p)->backend_ctr]);
+#else
+  cublasHandle_t temp_handle = *((cublasHandle_t*)((CQueue_p)queue_wrap_p)->cqueue_backend_data);
+#endif
+  massert(CUBLAS_STATUS_SUCCESS == cublasDdot(temp_handle, ptr_ker_translate->N,
+      (double*) *ptr_ker_translate->x, ptr_ker_translate->incx, (double*) *ptr_ker_translate->y,
+      ptr_ker_translate->incy, (double*) ptr_ker_translate->result),
+    "cublas_wrap_ddot failed\n");
 }
 
 void cublas_wrap_dgemm(void* backend_data, void* queue_wrap_p){
@@ -217,7 +239,7 @@ void cublas_wrap_dgemm(void* backend_data, void* queue_wrap_p){
 #else
   cublasHandle_t temp_handle = *((cublasHandle_t*)((CQueue_p)queue_wrap_p)->cqueue_backend_data);
 #endif
-  float alpha = ptr_ker_translate->alpha, beta = ptr_ker_translate->beta; 
+  float alpha = ptr_ker_translate->alpha, beta = ptr_ker_translate->beta;
   massert(CUBLAS_STATUS_SUCCESS == cublasDgemm(temp_handle,
     OpCharToCublas(ptr_ker_translate->TransA), OpCharToCublas(ptr_ker_translate->TransB),
     ptr_ker_translate->M, ptr_ker_translate->N, ptr_ker_translate->K, &alpha,

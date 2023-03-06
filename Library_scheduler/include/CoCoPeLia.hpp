@@ -32,6 +32,14 @@ ATC_p PARALiaDaxpy(long int N, VALUE_TYPE alpha,
 ATC_p PARALiaDaxpyControled(long int N, VALUE_TYPE alpha,
 	VALUE_TYPE* x, long int incx, VALUE_TYPE* y, long int incy, ATC_p predef_control_values);
 
+/// The PARALia Ddot implementation.
+ATC_p PARALiaDdot(long int N, VALUE_TYPE* x, long int incx,
+	VALUE_TYPE* y, long int incy, VALUE_TYPE* result);
+
+/// A modification of PARALiaDdot but with a given T (mainly for performance/debug purposes)
+ATC_p PARALiaDdotControled(long int N, VALUE_TYPE* x, long int incx,
+	VALUE_TYPE* y, long int incy, VALUE_TYPE* result, ATC_p predef_control_values);
+
 ///Deallocates the GPU-allocated cache buffer at target device
 void CoCopeLiaDevCacheFree(short dev_id);
 

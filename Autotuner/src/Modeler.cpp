@@ -35,7 +35,7 @@ Modeler::Modeler(int dev_id, const char* func, void* func_data){
 	flags = (flagParams_p) malloc(sizeof(struct flagParams));
 	unit_id = dev_id;
 
-	if ( !strcmp(func, "Daxpy") || !strcmp(func, "Saxpy")) problem = BLAS1;
+	if ( !strcmp(func, "Daxpy") || !strcmp(func, "Saxpy") || !strcmp(func, "Ddot")) problem = BLAS1;
 	else if (0) problem = BLAS2;
 	else if ( !strcmp(func, "Dgemm") || !strcmp(func, "Sgemm")) problem = BLAS3;
 	else error("Modeler::Modeler: Problem type for '%s' func not integrated\n", func);

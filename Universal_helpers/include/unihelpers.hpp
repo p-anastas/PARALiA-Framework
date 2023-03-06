@@ -148,7 +148,7 @@ typedef struct link_road{
 	int hop_uid_list[LOC_NUM];
 	void* hop_buf_list[LOC_NUM];
 	int hop_ldim_list[LOC_NUM];
-	int starting_hop = 0; 
+	int starting_hop = 0;
 
 	CQueue_p hop_cqueue_list[LOC_NUM-1];
 	Event_p hop_event_list[LOC_NUM-1];
@@ -219,6 +219,9 @@ long long gemm_memory(long int M, long int N, long int K, long int A_loc, long i
 
 long long axpy_flops(long int  N);
 long long axpy_memory(long int N, long int x_loc, long int y_loc, short dsize);
+
+long long dot_flops(long int  N);
+long long dot_memory(long int N, long int x_loc, long int y_loc, short dsize);
 
 long int count_lines(FILE* fp); // TODO: Where is this used?
 void check_benchmark(char *filename);

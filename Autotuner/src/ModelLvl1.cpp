@@ -63,6 +63,53 @@ void CoCoModel_axpy_init(MD_p out_model, int dev_id, const char* func, axpy_back
 #endif
 }
 
+///  Initializes the model for gemm
+void CoCoModel_dot_init(MD_p out_model, int dev_id, const char* func, dot_backend_in_p func_data){
+	long int N = func_data->N;
+	short x_loc, x_out_loc = x_loc = CoCoGetPtrLoc(*func_data->x),
+				y_loc, y_out_loc = y_loc = CoCoGetPtrLoc(*func_data->y);
+	long int incx = func_data->incx, incy = func_data->incy;
+	short lvl = 3;
+#ifdef DEBUG
+	lprintf(lvl-1, "|-----> CoCoModel_dot_init(model,%ld, %d, %d, %d, %d, %ld, %ld, %d, %s)\n",
+		N, x_loc, y_loc, x_out_loc, y_out_loc, incx, incy, dev_id, func);
+#endif
+	out_model->func = func;
+	// Axpy Routine info
+	out_model->V->numT = 2;
+
+	if (!strcmp(func, "Ddot")) out_model->V->dtype_sz = sizeof(double);
+
+	out_model->V->in[0] = 1;
+	out_model->V->in[1] = 1;
+
+	out_model->V->out[0] = 0;
+	out_model->V->out[1] = 0;
+
+	out_model->D1 = N;
+	out_model->D2 = 1;
+	out_model->D3 = 1;
+
+	out_model->V->Dim1[0] = &out_model->D1;
+	out_model->V->Dim1[1] = &out_model->D1;
+
+	out_model->V->Dim2[0] = &out_model->D2;
+	out_model->V->Dim2[1] = &out_model->D2;
+
+	out_model->V->loc[0] = x_loc;
+	out_model->V->loc[1] = y_loc;
+
+	out_model->V->out_loc[0] = x_out_loc;
+	out_model->V->out_loc[1] = y_out_loc;
+
+#ifdef DEBUG
+	lprintf(lvl, "CoCoModel_dot initalized for %s->\nInitial problem dims: D1 = %ld, D2 = %ld, D3 = %ld\n"
+	"Data tiles : x(%ld), y(%ld), in loc (%d,%d)\n", \
+	func, out_model->D1, out_model->D2, out_model->D3, out_model->D1, out_model->D1, out_model->V->out_loc[0], out_model->V->out_loc[1]);
+	lprintf(lvl-1, "<-----|\n");
+#endif
+}
+
 long int MinAllowedTBLAS1(MD_p model){
 		return GPUexec1MinT((GPUexec1Model_p)model->GPUexec_model_ptr);
 }
@@ -79,6 +126,8 @@ long int GetSKNumBLAS1(MD_p model, int T){
 void ModelFuncInitBLAS1(MD_p out_model, int dev_id, const char* func, void* func_data){
 	if ( !strcmp(func, "Daxpy") || !strcmp(func, "Saxpy"))
 		return CoCoModel_axpy_init(out_model, dev_id, func, (axpy_backend_in_p) func_data);
+	else if ( !strcmp(func, "Ddot"))
+		return CoCoModel_dot_init(out_model, dev_id, func, (dot_backend_in_p) func_data);
 	else error("ModelFuncInitBLAS1: func %s not implemented\n", func);
 }
 

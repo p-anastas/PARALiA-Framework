@@ -28,6 +28,13 @@ typedef struct axpy_backend_in{
 	short dev_id;
 }* axpy_backend_in_p;
 
+typedef struct dot_backend_in{
+	int N, incx, incy;
+	void **x, **y;
+	VALUE_TYPE* result;
+	short dev_id;
+}* dot_backend_in_p;
+
 /// Initalize backend (handle[s]) in dev_id
 void backend_init(short dev_id, CQueue_p h2d_q, CQueue_p d2h_q, CQueue_p exec_q);
 
@@ -98,11 +105,13 @@ void CoCoSetTimerAsync(void* wrapped_timer_Ptr);
 
 void CoCoFreeAllocAsync(void* backend_data);
 
+void cublas_wrap_ddot(void* backend_data, void* queue_wrap_p);
 void cublas_wrap_daxpy(void* backend_data, void* queue_wrap_p);
 void cublas_wrap_saxpy(void* backend_data, void* queue_wrap_p);
 void cublas_wrap_dgemm(void* backend_data, void* queue_wrap_p);
 void cublas_wrap_sgemm(void* backend_data, void* queue_wrap_p);
 
+void cblas_wrap_ddot(void* backend_data);
 void cblas_wrap_daxpy(void* backend_data);
 void cblas_wrap_saxpy(void* backend_data);
 void cblas_wrap_dgemm(void* backend_data);

@@ -22,11 +22,13 @@ transfer_log="${RES_DIR}/microbench_logs/transfer_microbench.log"
 dgemm_log="${RES_DIR}/microbench_logs/dgemm_microbench.log"
 daxpy_log="${RES_DIR}/microbench_logs/daxpy_microbench.log"
 sgemm_log="${RES_DIR}/microbench_logs/sgemm_microbench.log"
+ddot_log="${RES_DIR}/microbench_logs/ddot_microbench.log"
 
 micro_transfer_exec="${BIN_DIR}/RunCuCuBlasLinkBench"
 micro_dgemm_exec="${BIN_DIR}/RunCuCuBlasDgemmBench"
 micro_sgemm_exec="${BIN_DIR}/RunCuCuBlasSgemmBench"
 micro_daxpy_exec="${BIN_DIR}/RunCuCuBlasDaxpyBench"
+micro_ddot_exec="${BIN_DIR}/RunCuCuBlasDdotBench"
 
 echo "Performing microbenchmarks for transfers..."
 rm $transfer_log
@@ -45,6 +47,14 @@ rm $daxpy_log
 echo "Performing microbenchmarks for daxpy..."
 echo "$micro_daxpy_exec $device &>> $daxpy_log"
 $micro_daxpy_exec $device &>> $daxpy_log
+
+echo "Done"
+
+#exit 1
+
+echo "Performing microbenchmarks for ddot..."
+echo "$micro_ddot_exec $device &>> $ddot_log"
+$micro_ddot_exec $device &>> $ddot_log
 
 echo "Done"
 

@@ -15,7 +15,7 @@ double cuBLASXtDgemmWrap(char TransA,  char TransB, long int M, long int N, long
 double cuBLASXtSgemmWrap(char TransA,  char TransB, long int M, long int N, long int K,
   float alpha, float* A, long int ldA, float* B, long int ldB, float beta, float* C,
   long int ldC, long int T, double cpu_ratio, short dev_num, int dev_ids[]);
-  
+
 /// cuBLAS wrappers of Daxpy
 double cuBLASDaxpyWrap(long int N, double alpha, double* x, long int incx,
   double* y, long int incy, double cpu_ratio, short dev_num, int dev_ids[]);
@@ -23,5 +23,8 @@ double cuBLASDaxpyWrap(long int N, double alpha, double* x, long int incx,
 /// cuBLAS wrappers of Saxpy
 double cuBLASDaxpyWrap(long int N, float alpha, float* x, long int incx,
   float* y, long int incy, double cpu_ratio, short dev_num, int dev_ids[]);
-  
+
+/// cuBLAS wrappers of Ddot
+double cuBLASDdotWrap(long int N, double* x, long int incx,
+  double* y, long int incy, double cpu_ratio, short dev_num, int dev_ids[]);
 #endif

@@ -170,10 +170,10 @@ GPUexec1Model_p GPUexec1Model_init(short dev_id, const char* func){
 	double timer = csecond();
 #endif
 	short dsize = 1, matrixNum;
-	if (strcmp(func, "Daxpy") && strcmp(func, "Saxpy") ) error("GPUexec1Model_init: Invalid/Not implemented func");
+	if (strcmp(func, "Daxpy") && strcmp(func, "Saxpy") && strcmp(func, "Ddot")) error("GPUexec1Model_init: Invalid/Not implemented func");
 	else {
 		matrixNum = 3;
-		if (!strcmp(func, "Daxpy")) dsize = sizeof(double);
+		if (!strcmp(func, "Daxpy") || !strcmp(func, "Ddot")) dsize = sizeof(double);
 		else if (!strcmp(func, "Saxpy")) dsize = sizeof(float);
 	}
 	GPUexec1Model_p out_model = (GPUexec1Model_p) malloc(sizeof(struct  BLAS1_data));
