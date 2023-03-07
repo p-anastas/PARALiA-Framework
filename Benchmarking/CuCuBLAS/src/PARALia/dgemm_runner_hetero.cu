@@ -1,7 +1,7 @@
 ///
 /// \author Anastasiadis Petros (panastas@cslab.ece.ntua.gr)
 ///
-/// \brief The start of Zawarudo
+/// \brief This is a special runner used to emulate a GPU load. It loops forever running a specifid dgemm load, and should be used with all locs at the execution device enforced by dev_id_token
 ///
 
 #include "unihelpers.hpp"

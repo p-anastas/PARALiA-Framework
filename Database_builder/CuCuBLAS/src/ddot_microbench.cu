@@ -26,9 +26,6 @@ void report_run(char* filename, long int N, double mean_t, double W_avg, double 
 
 int main(const int argc, const char *argv[]) {
 
-  	double alpha;
-  	alpha = 1.1234;
-
   	int ctr = 1, dev_id;
 
 	long int incx = 1, incy = 1;
@@ -92,8 +89,6 @@ int main(const int argc, const char *argv[]) {
 	fprintf(stderr, "done.\nInit time:\t%lf ms\n\n",  cpu_timer  * 1000);
 
 	fprintf(stderr, "\nTile details: x(inc=%d) y(inc=%d) -> maxDim = %d\n", 1, 1, maxDim);
-
-	fprintf(stderr, "Constants: alpha = %lf\n", alpha);
 
 	// Warmup
 	for ( int itt = 0; itt <1; itt++){

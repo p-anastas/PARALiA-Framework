@@ -158,8 +158,7 @@ message("PARALiA-Framework - TESTBED_NAME: " ${TESTBED_NAME})
 add_definitions(-DTESTBED="${TESTBED_NAME}")
 
 ## Define the (max) number of devices for utilization (0-num_devices)
-#set(NUM_LOCATIONS 4) # TODO: silver1
-set(NUM_LOCATIONS 9) # TODO: Vulcan
+set(NUM_LOCATIONS $ENV{PARALIA_SYSTEM_DEVNUM})
 message("PARALiA-Framework - NUM_LOCATIONS: " ${NUM_LOCATIONS})
 add_definitions(-DLOC_NUM=${NUM_LOCATIONS})
 

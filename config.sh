@@ -9,6 +9,10 @@
 system='system_name'
 export PARALIA_SYSTEM=${system}
 
+
+# CHECKME: The number of devices available to PARALiA for utilization. NOTE: If CPU computation is enabled (CMakefile parameter, default = ON) this number should be equal to system_GPUs + 1 !!!
+export PARALIA_SYSTEM_DEVNUM=1
+
 # CHECKME: Define cuda architecture 80") # (Tesla K40 = 35, GTX 1060/70 = 61,) P100 = 60, V100 = 70, A100 = 80
 export PARALIA_CUDA_ARCH=42
 

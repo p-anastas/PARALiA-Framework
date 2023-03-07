@@ -36,7 +36,7 @@ message( "Autotuner - Included DIR: " ${UNIHELP_INSTALL_INC} )
 set (AUTOTUNE_DIR_SRC ${AUTOTUNE_DIR}/src)
 message( "Autotuner - Source DIR: " ${AUTOTUNE_DIR_SRC} )
 
-set (AUTOTUNE_INSTALL ${CMAKE_INSTALL_PROJECT}/autotuner)
+set (AUTOTUNE_INSTALL ${CMAKE_INSTALL_PROJECT}/Autotuner)
 file(MAKE_DIRECTORY ${AUTOTUNE_INSTALL})
 
 set (AUTOTUNE_INSTALL_INC ${AUTOTUNE_INSTALL}/include)
