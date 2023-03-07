@@ -4,28 +4,28 @@
 /// \brief The "Asset" related function implementations.
 ///
 
-#include "Asset.hpp"
+#include "Decomposer.hpp"
 #include "unihelpers.hpp"
 
-template class Asset1D<double>;
+template class Decom1D<double>;
 
-template<typename dtype> Tile1D<dtype>* Asset1D<dtype>::getTile(int iloc){
-  if(iloc >= GridSz) error("Asset1D::getTile : iloc >= GridSz (%d vs %d)\n", iloc, GridSz);
+template<typename dtype> Tile1D<dtype>* Decom1D<dtype>::getTile(int iloc){
+  if(iloc >= GridSz) error("Decom1D::getTile : iloc >= GridSz (%d vs %d)\n", iloc, GridSz);
   return Tile_map[iloc];
 }
 
-template<typename dtype> Asset1D<dtype>::Asset1D(void* in_adr, int in_dim, int in_inc){
+template<typename dtype> Decom1D<dtype>::Decom1D(void* in_adr, int in_dim, int in_inc){
   dim = in_dim;
   adrs = (dtype*) in_adr;
   loc = CoCoGetPtrLoc(in_adr);
   inc = in_inc;
 }
 
-template<typename dtype> void Asset1D<dtype>::InitTileMap(int T, Buffer_p* init_loc_cache_p){
+template<typename dtype> void Decom1D<dtype>::InitTileMap(int T, Buffer_p* init_loc_cache_p){
   short lvl = 2;
 
   #ifdef DEBUG
-  	lprintf(lvl-1, "|-----> Asset1D<dtype>::InitTileMap(%d)\n", T);
+  	lprintf(lvl-1, "|-----> Decom1D<dtype>::InitTileMap(%d)\n", T);
   #endif
 
   GridSz = dim/T;
@@ -52,10 +52,10 @@ template<typename dtype> void Asset1D<dtype>::InitTileMap(int T, Buffer_p* init_
   #endif
 }
 
-template void Asset1D<double>::InitTileMap(int T, Buffer_p* init_loc_cache_p);
-template void Asset1D<float>::InitTileMap(int T, Buffer_p* init_loc_cache_p);
+template void Decom1D<double>::InitTileMap(int T, Buffer_p* init_loc_cache_p);
+template void Decom1D<float>::InitTileMap(int T, Buffer_p* init_loc_cache_p);
 
-template<typename dtype> void Asset1D<dtype>::DestroyTileMap(){
+template<typename dtype> void Decom1D<dtype>::DestroyTileMap(){
   int current_ctr;
   for (int itt = 0 ; itt < GridSz; itt++){
     current_ctr = itt;
@@ -64,10 +64,10 @@ template<typename dtype> void Asset1D<dtype>::DestroyTileMap(){
   free(Tile_map);
 }
 
-template void Asset1D<double>::DestroyTileMap();
-template void Asset1D<float>::DestroyTileMap();
+template void Decom1D<double>::DestroyTileMap();
+template void Decom1D<float>::DestroyTileMap();
 
-template<typename dtype> void Asset1D<dtype>::DrawTileMap(){
+template<typename dtype> void Decom1D<dtype>::DrawTileMap(){
   fprintf(stderr, " Tile1D representation: \
                  \n ______________________ \
                  \n|      id[GridId]      |\
@@ -127,5 +127,5 @@ template<typename dtype> void Asset1D<dtype>::DrawTileMap(){
   fprintf(stderr, "\n\n");
 }
 
-template void Asset1D<double>::DrawTileMap();
-template void Asset1D<float>::DrawTileMap();
+template void Decom1D<double>::DrawTileMap();
+template void Decom1D<float>::DrawTileMap();

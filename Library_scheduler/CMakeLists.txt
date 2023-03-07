@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 3.10)
 ### Initialize the project
-project (CoCopeLia-Library VERSION ${PROJECT_VERSION} DESCRIPTION "Experiments for advancing Library wrappers & Tile scheduler for CoCoPeLia" LANGUAGES CXX CUDA)
+project (PARALiA-Library VERSION ${PROJECT_VERSION} DESCRIPTION "Experiments for advancing Library wrappers & Tile scheduler for PARALiA" LANGUAGES CXX CUDA)
 message( "------------------------------------------------------------------------------------------------")
 message( "Library Scheduler - PROJECT_SOURCE_DIR: " ${PROJECT_SOURCE_DIR} )
 #message( "Library Scheduler - CMAKE_CURRENT_SOURCE_DIR: " ${CMAKE_CURRENT_SOURCE_DIR} )
@@ -28,7 +28,7 @@ message( "Library Scheduler - BACKEND_LIBSC_DIR: " ${BACKEND_LIBSC_DIR} )
 #include_directories(${BACKEND_LIBSC_DIR})
 #message( "Library Scheduler - Included DIR: " ${BACKEND_LIBSC_DIR} )
 
-set (LIBSC_INSTALL ${CMAKE_INSTALL_PROJECT}/Library_scheduler_exp)
+set (LIBSC_INSTALL ${CMAKE_INSTALL_PROJECT}/Library_scheduler)
 file(MAKE_DIRECTORY ${LIBSC_INSTALL})
 
 set (LIBSC_INSTALL_INC ${LIBSC_INSTALL}/include)
@@ -44,9 +44,9 @@ ADD_SUBDIRECTORY (Software_caching)
 include_directories(${CACHING_INSTALL_INC})
 message( "Library Scheduler - Included DIR: " ${CACHING_INSTALL_INC} )
 
-add_library(cocopelia SHARED
-${LIBSC_DIR_SRC}/Asset1D.cpp
-${LIBSC_DIR_SRC}/Asset2D.cpp
+add_library(paralia SHARED
+${LIBSC_DIR_SRC}/Decom1D.cpp
+${LIBSC_DIR_SRC}/Decom2D.cpp
 ${LIBSC_DIR_SRC}/Tile1D.cpp
 ${LIBSC_DIR_SRC}/Tile2D.cpp
 ${LIBSC_DIR_SRC}/Subkernel.cpp
@@ -54,10 +54,10 @@ ${LIBSC_DIR_SRC}/Functions/dgemm.cpp
 ${LIBSC_DIR_SRC}/Functions/sgemm.cpp
 ${LIBSC_DIR_SRC}/Functions/daxpy.cpp
 ${LIBSC_DIR_SRC}/Functions/ddot.cpp
-${BACKEND_LIBSC_DIR}/Asset_backend.cpp
+${BACKEND_LIBSC_DIR}/Decom_backend.cpp
 )
-target_link_libraries(cocopelia ${INTERNAL_LINK_LIB} autotuner unihelpers caching)
-configure_file(${LIBSC_DIR_INC}/CoCoPeLia.hpp ${LIBSC_INSTALL_INC}/CoCoPeLia.hpp COPYONLY)
+target_link_libraries(paralia ${INTERNAL_LINK_LIB} autotuner unihelpers caching)
+configure_file(${LIBSC_DIR_INC}/PARALiA.hpp ${LIBSC_INSTALL_INC}/PARALiA.hpp COPYONLY)
 
 set (LIBSC_INSTALL_INC ${LIBSC_INSTALL_INC} PARENT_SCOPE)
 message( "->\nLibrary Scheduler - Shared Library: " ${CMAKE_LIBRARY_OUTPUT_DIRECTORY} )

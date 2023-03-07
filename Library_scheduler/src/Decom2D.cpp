@@ -4,19 +4,19 @@
 /// \brief The "Asset" related function implementations.
 ///
 
-#include "Asset.hpp"
+#include "Decomposer.hpp"
 #include "unihelpers.hpp"
 
-template class Asset2D<double>;
-template class Asset2D<float>;
+template class Decom2D<double>;
+template class Decom2D<float>;
 
-template<typename dtype> Tile2D<dtype>* Asset2D<dtype>::getTile(int iloc1, int iloc2){
-  if(iloc1 >= GridSz1) error("Asset2D::getTile : iloc1 >= GridSz1 (%d vs %d)\n", iloc1, GridSz1);
-  else if(iloc2 >= GridSz2) error("Asset2D::getTile : iloc2 >= GridSz2 (%d vs %d)\n", iloc2, GridSz2);
+template<typename dtype> Tile2D<dtype>* Decom2D<dtype>::getTile(int iloc1, int iloc2){
+  if(iloc1 >= GridSz1) error("Decom2D::getTile : iloc1 >= GridSz1 (%d vs %d)\n", iloc1, GridSz1);
+  else if(iloc2 >= GridSz2) error("Decom2D::getTile : iloc2 >= GridSz2 (%d vs %d)\n", iloc2, GridSz2);
   return Tile_map[iloc1*GridSz2 + iloc2];
 }
 
-template<typename dtype> Asset2D<dtype>::Asset2D( void* in_adr, int in_dim1, int in_dim2, int in_ldim, char in_transpose){
+template<typename dtype> Decom2D<dtype>::Decom2D( void* in_adr, int in_dim1, int in_dim2, int in_ldim, char in_transpose){
   ldim = in_ldim;
   dim1 = in_dim1;
   dim2 = in_dim2;
@@ -25,11 +25,11 @@ template<typename dtype> Asset2D<dtype>::Asset2D( void* in_adr, int in_dim1, int
   transpose = in_transpose;
 }
 
-template<typename dtype> void Asset2D<dtype>::InitTileMap(int T1, int T2, Buffer_p* init_loc_cache_p){
+template<typename dtype> void Decom2D<dtype>::InitTileMap(int T1, int T2, Buffer_p* init_loc_cache_p){
   short lvl = 2;
 
   #ifdef DEBUG
-  	lprintf(lvl-1, "|-----> Asset2D<dtype>::InitTileMap(%d,%d)\n", T1, T2);
+  	lprintf(lvl-1, "|-----> Decom2D<dtype>::InitTileMap(%d,%d)\n", T1, T2);
   #endif
 
   GridSz1 = dim1/T1;
@@ -69,7 +69,7 @@ template<typename dtype> void Asset2D<dtype>::InitTileMap(int T1, int T2, Buffer
         Tile_map[current_ctr] = new Tile2D<dtype>(tile_addr, T2tmp, T1tmp, ldim, itt2, itt1,
            init_loc_cache_p[loc_idx]->assign_Cblock(NATIVE, true));
       }
-      else error("Asset2D<dtype>::InitTileMap: Unknown transpose type\n");
+      else error("Decom2D<dtype>::InitTileMap: Unknown transpose type\n");
 
      }
    }
@@ -78,10 +78,10 @@ template<typename dtype> void Asset2D<dtype>::InitTileMap(int T1, int T2, Buffer
    #endif
 }
 
-template void Asset2D<double>::InitTileMap(int T1, int T2, Buffer_p* init_loc_cache_p);
-template void Asset2D<float>::InitTileMap(int T1, int T2, Buffer_p* init_loc_cache_p);
+template void Decom2D<double>::InitTileMap(int T1, int T2, Buffer_p* init_loc_cache_p);
+template void Decom2D<float>::InitTileMap(int T1, int T2, Buffer_p* init_loc_cache_p);
 
-template<typename dtype> void Asset2D<dtype>::DestroyTileMap(){
+template<typename dtype> void Decom2D<dtype>::DestroyTileMap(){
   int current_ctr;
   for (int itt1 = 0; itt1 < GridSz1; itt1++)
     for (int itt2 = 0 ; itt2 < GridSz2; itt2++){
@@ -91,10 +91,10 @@ template<typename dtype> void Asset2D<dtype>::DestroyTileMap(){
   free(Tile_map);
 }
 
-template void Asset2D<double>::DestroyTileMap();
-template void Asset2D<float>::DestroyTileMap();
+template void Decom2D<double>::DestroyTileMap();
+template void Decom2D<float>::DestroyTileMap();
 
-template<typename dtype> void Asset2D<dtype>::DrawTileMap(){
+template<typename dtype> void Decom2D<dtype>::DrawTileMap(){
   fprintf(stderr, " Tile2D representation: \
                  \n ______________________ \
                  \n| id[GridId1, GridId2] |\
@@ -158,5 +158,5 @@ template<typename dtype> void Asset2D<dtype>::DrawTileMap(){
   }
 }
 
-template void Asset2D<double>::DrawTileMap();
-template void Asset2D<float>::DrawTileMap();
+template void Decom2D<double>::DrawTileMap();
+template void Decom2D<float>::DrawTileMap();

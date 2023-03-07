@@ -65,8 +65,8 @@ typedef struct kernel_pthread_wrap{
 	int SubkernelNumDev;
 }* kernel_pthread_wrap_p;
 
-//Subkernel** CoCoAsignTilesToSubkernelsGemm(Asset2D<double>* A_asset, Asset2D<double>* B_asset,
-//Asset2D<double>* C_asset, int T, int* kernelNum);
+//Subkernel** CoCoAsignTilesToSubkernelsGemm(Decom2D<double>* A_asset, Decom2D<double>* B_asset,
+//Decom2D<double>* C_asset, int T, int* kernelNum);
 
 void 	CoCoPeLiaInitResources(short dev_id);
 void 	CoCoPeLiaFreeResources(short dev_id);

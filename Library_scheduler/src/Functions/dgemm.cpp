@@ -6,9 +6,9 @@
 
 #include "backend_wrappers.hpp"
 #include "Autotuner.hpp"
-#include "CoCoPeLia.hpp"
+#include "PARALiA.hpp"
 #include "unihelpers.hpp"
-#include "Asset.hpp"
+#include "Decomposer.hpp"
 #include "Subkernel.hpp"
 #include "DataCaching.hpp"
 
@@ -38,8 +38,8 @@ int curr_sk_dgemm_unit_list[LOC_NUM], curr_sk_dgemm_unit_num;
 
 int Sk_select_lock_dgemm = 0;
 
-Subkernel** CoCoAsignTilesToSubkernelsDgemm(Asset2D<double>* A_asset, Asset2D<double>* B_asset,
-	Asset2D<double>* C_asset, int T, int* kernelNum){
+Subkernel** CoCoAsignTilesToSubkernelsDgemm(Decom2D<double>* A_asset, Decom2D<double>* B_asset,
+	Decom2D<double>* C_asset, int T, int* kernelNum){
 
 	short lvl = 2;
 	/// Check Assets satisfy GEMM dim criteria for N, N transpose
@@ -351,12 +351,12 @@ ATC_p PARALiaDgemm(char TransA,  char TransB, long int M, long int N, long int K
 	initial_dgemm->ldC = ldC;
 	initial_dgemm->dev_id = -1;
 
-	Asset2D<double>* A_asset, *B_asset, *C_asset;
+	Decom2D<double>* A_asset, *B_asset, *C_asset;
 	/// Prepare Assets in parallel( e.g. initialize asset classes, pin memory with pthreads)
 	/// return: A_asset, B_asset, C_asset initialized and pinned
-	A_asset = new Asset2D<double>( A, M, K, ldA, TransA);
-	B_asset = new Asset2D<double>( B, K, N, ldB, TransB);
-	C_asset = new Asset2D<double>( C, M, N, ldC, 'N');
+	A_asset = new Decom2D<double>( A, M, K, ldA, TransA);
+	B_asset = new Decom2D<double>( B, K, N, ldB, TransB);
+	C_asset = new Decom2D<double>( C, M, N, ldC, 'N');
 
 	pthread_attr_t attr;
 	int s = pthread_attr_init(&attr);

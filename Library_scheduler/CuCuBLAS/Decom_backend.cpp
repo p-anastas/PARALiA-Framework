@@ -6,7 +6,7 @@
 
 #include <cblas.h>
 
-#include "Asset.hpp"
+#include "Decomposer.hpp"
 #include "unihelpers.hpp"
 
 #include "backend_wrappers.hpp"
@@ -32,7 +32,7 @@ void* prepareAsync_backend(void* compressed_data){
 	return NULL;
 }
 
-template<typename dtype> void Asset2D<dtype>::prepareAsync(pthread_t* thread_id, pthread_attr_t attr){
+template<typename dtype> void Decom2D<dtype>::prepareAsync(pthread_t* thread_id, pthread_attr_t attr){
 	pthread_data_in_p prep_data = (pthread_data_in_p) malloc(sizeof(struct pthread_data_in));
 	prep_data->adrs = adrs;
 	// FIXME: is dim2*ldim correct in cases where part of the Asset is used in a mission (rare). Assuming col major anyway?
@@ -44,20 +44,20 @@ template<typename dtype> void Asset2D<dtype>::prepareAsync(pthread_t* thread_id,
 	prep_data->pin_internally = pin_internally;
 	cudaGetLastError();
 	int s = pthread_create(thread_id, &attr, &prepareAsync_backend, (void*) prep_data);
-	if (s != 0) error("Asset2D::prepareAsync: pthread_create failed s=%d\n", s);
+	if (s != 0) error("Decom2D::prepareAsync: pthread_create failed s=%d\n", s);
 }
 
-template void Asset2D<double>::prepareAsync(pthread_t* thread_id, pthread_attr_t attr);
-template void Asset2D<float>::prepareAsync(pthread_t* thread_id, pthread_attr_t attr);
+template void Decom2D<double>::prepareAsync(pthread_t* thread_id, pthread_attr_t attr);
+template void Decom2D<float>::prepareAsync(pthread_t* thread_id, pthread_attr_t attr);
 
-template<typename dtype> void Asset2D<dtype>::resetProperties(){
+template<typename dtype> void Decom2D<dtype>::resetProperties(){
 	if (pin_internally) cudaHostUnregister(adrs);
 }
 
-template void Asset2D<double>::resetProperties();
-template void Asset2D<float>::resetProperties();
+template void Decom2D<double>::resetProperties();
+template void Decom2D<float>::resetProperties();
 
-template<typename dtype> void Asset1D<dtype>::prepareAsync(pthread_t* thread_id, pthread_attr_t attr){
+template<typename dtype> void Decom1D<dtype>::prepareAsync(pthread_t* thread_id, pthread_attr_t attr){
 	pthread_data_in_p prep_data = (pthread_data_in_p) malloc(sizeof(struct pthread_data_in));
 	prep_data->adrs = adrs;
 	prep_data->pin_bytes = dim*inc*dtypesize();
@@ -69,15 +69,15 @@ template<typename dtype> void Asset1D<dtype>::prepareAsync(pthread_t* thread_id,
 	cudaGetLastError();
 
 	int s = pthread_create(thread_id, &attr, &prepareAsync_backend, (void*) prep_data);
-	if (s != 0) error("Asset2D::prepareAsync: pthread_create failed s=%d\n", s);
+	if (s != 0) error("Decom2D::prepareAsync: pthread_create failed s=%d\n", s);
 }
 
-template void Asset1D<double>::prepareAsync(pthread_t* thread_id, pthread_attr_t attr);
-template void Asset1D<float>::prepareAsync(pthread_t* thread_id, pthread_attr_t attr);
+template void Decom1D<double>::prepareAsync(pthread_t* thread_id, pthread_attr_t attr);
+template void Decom1D<float>::prepareAsync(pthread_t* thread_id, pthread_attr_t attr);
 
-template<typename dtype> void Asset1D<dtype>::resetProperties(){
+template<typename dtype> void Decom1D<dtype>::resetProperties(){
 	if (pin_internally) cudaHostUnregister(adrs);
 }
 
-template void Asset1D<double>::resetProperties();
-template void Asset1D<float>::resetProperties();
+template void Decom1D<double>::resetProperties();
+template void Decom1D<float>::resetProperties();

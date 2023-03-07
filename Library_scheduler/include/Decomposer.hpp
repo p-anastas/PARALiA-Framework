@@ -3,8 +3,8 @@
 /// \brief The header containing the "Asset" definition for data scheduling and management in heterogeneous multi-device systems.
 ///
 
-#ifndef ASSET_H
-#define ASSET_H
+#ifndef DECOM_H
+#define DECOM_H
 
 #include<iostream>
 #include <string>
@@ -93,7 +93,7 @@ class Tile2D
 };
 
 template <typename dtype>
-class Asset2D
+class Decom2D
 {
 	// Variables
 	private:
@@ -109,7 +109,7 @@ class Asset2D
 	Tile2D<dtype> **Tile_map;
 
 	// Constructor, sets dim1, dim2, ldim, adrs and derives loc from get_loc(adr)
-	Asset2D<dtype>(void* adrr, int in_dim1,
+	Decom2D<dtype>(void* adrr, int in_dim1,
 		int in_dim2, int in_ldim, char transpose);
 
 	// General Functions
@@ -127,7 +127,7 @@ class Asset2D
 };
 
 template <typename dtype>
-class Asset1D
+class Decom1D
 {
 	// Variables
 	private:
@@ -142,7 +142,7 @@ class Asset1D
 	Tile1D<dtype> **Tile_map;
 
 	// Constructor, sets dim1, dim2, ldim, adrs and derives loc from get_loc(adr)
-	Asset1D<dtype>(void* adrr, int in_dim, int in_inc);
+	Decom1D<dtype>(void* adrr, int in_dim, int in_inc);
 
 	// General Functions
 	void InitTileMap(int T, Buffer_p* init_loc_cache_p);

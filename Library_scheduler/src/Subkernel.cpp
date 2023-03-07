@@ -6,7 +6,7 @@
 
 #include "Subkernel.hpp"
 #include "unihelpers.hpp"
-#include "Asset.hpp"
+#include "Decomposer.hpp"
 #include "DataCaching.hpp"
 #include "backend_wrappers.hpp"
 

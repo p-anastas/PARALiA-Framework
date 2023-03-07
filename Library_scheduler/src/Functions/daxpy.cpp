@@ -6,9 +6,9 @@
 
 #include "backend_wrappers.hpp"
 #include "Autotuner.hpp"
-#include "CoCoPeLia.hpp"
+#include "PARALiA.hpp"
 #include "unihelpers.hpp"
-#include "Asset.hpp"
+#include "Decomposer.hpp"
 #include "Subkernel.hpp"
 #include "DataCaching.hpp"
 
@@ -32,7 +32,7 @@ int remaining_Subkernels_axpy;
 
 int Sk_select_lock_axpy = 0;
 
-Subkernel** CoCoAsignTilesToSubkernelsDaxpy(Asset1D<VALUE_TYPE>* x_asset, Asset1D<VALUE_TYPE>* y_asset,
+Subkernel** CoCoAsignTilesToSubkernelsDaxpy(Decom1D<VALUE_TYPE>* x_asset, Decom1D<VALUE_TYPE>* y_asset,
 	int T, int* kernelNum){
 
 	short lvl = 2;
@@ -238,11 +238,11 @@ ATC_p PARALiaDaxpy(long int N, VALUE_TYPE alpha, VALUE_TYPE* x, long int incx, V
 	initial_axpy->incy = incy;
 	initial_axpy->dev_id = -1;
 
-	Asset1D<VALUE_TYPE>* x_asset, *y_asset;
+	Decom1D<VALUE_TYPE>* x_asset, *y_asset;
 	/// Prepare Assets in parallel( e.g. initialize asset classes, pin memory with pthreads)
 	/// return: x_asset, y_asset initialized and pinned
-	x_asset = new Asset1D<VALUE_TYPE>( x, N, incx);
-	y_asset = new Asset1D<VALUE_TYPE>( y, N, incy);
+	x_asset = new Decom1D<VALUE_TYPE>( x, N, incx);
+	y_asset = new Decom1D<VALUE_TYPE>( y, N, incy);
 
 	pthread_attr_t attr;
 	int s = pthread_attr_init(&attr);

@@ -4,7 +4,7 @@
 /// \brief The "Asset" related function implementations.
 ///
 
-#include "Asset.hpp"
+#include "Decomposer.hpp"
 #include "unihelpers.hpp"
 
 int Tile1D_num = 0;
@@ -95,11 +95,11 @@ template<typename dtype> short Tile1D<dtype>::getClosestReadLoc(short dev_id_in)
     state temp = StoreBlock[pos]->State;
     if (temp == AVAILABLE || temp == SHARABLE || temp == NATIVE){
       event_status block_status = StoreBlock[pos]->Available->query_status();
-#ifdef ALLOW_FETCH_RECORDED      
+#ifdef ALLOW_FETCH_RECORDED
       if(block_status == COMPLETE || block_status == CHECKED || block_status == RECORDED){
 #else
       if(block_status == COMPLETE || block_status == CHECKED){
-#endif      
+#endif
         double current_link_bw = final_estimated_link_bw[dev_id_in_idx][pos];
         if (block_status == RECORDED) current_link_bw-=current_link_bw*FETCH_UNAVAILABLE_PENALTY;
         if (current_link_bw > link_bw_max){
@@ -126,7 +126,7 @@ template<typename dtype> short Tile1D<dtype>::getClosestReadLoc(short dev_id_in)
     state temp = temp_outblock->State;
     event_status block_status = temp_outblock->Available->query_status();
     if ((temp == AVAILABLE || temp == SHARABLE || temp == NATIVE) &&
-#ifdef ALLOW_FETCH_RECORDED      
+#ifdef ALLOW_FETCH_RECORDED
     (block_status == COMPLETE || block_status == CHECKED|| block_status == RECORDED)){
 #else
     (block_status == COMPLETE || block_status == CHECKED)){
@@ -159,11 +159,11 @@ template<typename dtype> double Tile1D<dtype>::getMinLinkCost(short dev_id_in){
     state temp = temp_outblock->State;
     if (temp == AVAILABLE || temp == SHARABLE || temp == NATIVE){
       event_status block_status = temp_outblock->Available->query_status();
-#ifdef ALLOW_FETCH_RECORDED      
+#ifdef ALLOW_FETCH_RECORDED
     if(block_status == COMPLETE || block_status == CHECKED || block_status == RECORDED){
 #else
     if(block_status == COMPLETE || block_status == CHECKED){
-#endif  
+#endif
         double current_link_bw = final_estimated_link_bw[dev_id_in_idx][pos];
 
         if (block_status == RECORDED) current_link_bw-=current_link_bw*FETCH_UNAVAILABLE_PENALTY;
