@@ -176,7 +176,7 @@ void cublas_wrap_ddot(void* backend_data, void* queue_wrap_p){
 #endif
   massert(CUBLAS_STATUS_SUCCESS == cublasDdot(temp_handle, ptr_ker_translate->N,
       (double*) *ptr_ker_translate->x, ptr_ker_translate->incx, (double*) *ptr_ker_translate->y,
-      ptr_ker_translate->incy, (double*) ptr_ker_translate->result),
+      ptr_ker_translate->incy, (double*)ptr_ker_translate->result),
     "cublas_wrap_ddot failed\n");
 }
 

@@ -58,8 +58,8 @@ int current_ctr = 0;
 			kernels[current_ctr]->TileList[1] = y_asset->getTile(ni);
 			((Tile1D<VALUE_TYPE>*)kernels[current_ctr]->TileList[0])->R_flag = 1;
 			((Tile1D<VALUE_TYPE>*)kernels[current_ctr]->TileList[1])->R_flag = 1;
-			((Tile1D<VALUE_TYPE>*)kernels[current_ctr]->TileList[1])->W_flag = 1;
-			((Tile1D<VALUE_TYPE>*)kernels[current_ctr]->TileList[1])->W_total = 1;
+			//((Tile1D<VALUE_TYPE>*)kernels[current_ctr]->TileList[1])->W_flag = 1;
+			//((Tile1D<VALUE_TYPE>*)kernels[current_ctr]->TileList[1])->W_total = 1;
 			kernels[current_ctr]->operation_params = (void*) malloc(sizeof(struct dot_backend_in));
 			dot_backend_in_p ptr_ker_translate = (dot_backend_in_p) kernels[current_ctr]->operation_params;
 			ptr_ker_translate->N = ((Tile1D<VALUE_TYPE>*) kernels[current_ctr]->TileList[0])->dim;
@@ -67,7 +67,7 @@ int current_ctr = 0;
 			ptr_ker_translate->y = NULL;
 			ptr_ker_translate->incx = initial_dot->incx;
 			ptr_ker_translate->incy = initial_dot->incy;
-			ptr_ker_translate->result = NULL;
+			ptr_ker_translate->result = (VALUE_TYPE*) calloc(1, sizeof(VALUE_TYPE));
 			// No interal dims for dot to reduce
 			kernels[current_ctr]->WR_first = 0;
 			kernels[current_ctr]->WR_last = (short*) calloc (2, sizeof(short));
@@ -332,7 +332,7 @@ ATC_p PARALiaDdot(long int N, VALUE_TYPE* x, long int incx, VALUE_TYPE* y, long 
 	Subkernel_list_dot = CoCoAsignTilesToSubkernelsDdot(x_asset, y_asset, T,
 		&Subkernel_num_dot);
 
-	// if(!reuse_model_flag) autotune_controller_dot->update_sk_num(Subkernel_num_dot);
+	if(!reuse_model_flag) autotune_controller_dot->update_sk_num(Subkernel_num_dot);
 
 #ifdef DEBUG
 	lprintf(lvl, "Subkernel_num_dot = %d {N}GridSz = {%d}, num_devices = %d\n\n",
@@ -428,6 +428,7 @@ ATC_p PARALiaDdot(long int N, VALUE_TYPE* x, long int incx, VALUE_TYPE* y, long 
 	cpu_timer = csecond();
 #endif
 
+	for(int i=0; i<Subkernel_num_dot; i++) *(initial_dot->result)+= *((dot_backend_in_p) Subkernel_list_dot[i]->operation_params)->result;
 	for(int i=0; i<Subkernel_num_dot; i++) delete Subkernel_list_dot[i];
 	//delete [] Subkernel_list_dot;
 

@@ -42,7 +42,7 @@ int main(const int argc, const char *argv[]) {
 	fprintf(stderr, "\nAllocating memory...");
 
 	double *x, *y;
-	double result;
+	double result[1] = {0};
 	// allocate in device if loc = 0, otherwise allocate in pinned memory for benchmarks
 	x = (double*) CoCoMalloc(N * incx *sizeof(double), x_loc);
 	y = (double*) CoCoMalloc(N * incy *sizeof(double), y_loc);
@@ -71,7 +71,7 @@ int main(const int argc, const char *argv[]) {
 	CoCoMemcpy(y, y_buf, N * incy *sizeof(double), y_loc, -2);
 
 	// Call for Validate
-	if (predef_control_values!= NULL) return_values = PARALiaDdotControled(N, x, incx, y, incy, &result, predef_control_values);
+	if (predef_control_values!= NULL) return_values = PARALiaDdotControled(N, x, incx, y, incy, result, predef_control_values);
 	else error("Autotuning parameters for dot not implemented.\n");//return_values = PARALiaDdot(N, x, incx, y, incy);
 	CoCoSyncCheckErr();
 	for (int i = 0; i< LOC_NUM; i++) CoCopeLiaDevCacheFree(deidxize(i));
@@ -83,7 +83,7 @@ int main(const int argc, const char *argv[]) {
 	int dev_ids[1] = {0};
 
 	double *x_dev, *y_dev;
-	double result_dev;
+	double result_dev[1] = {0};
 	if (x_loc == 0) x_dev = x;
 	else {
 		x_dev = (double*) CoCoMalloc(N * incx *sizeof(double), 0);
@@ -95,7 +95,7 @@ int main(const int argc, const char *argv[]) {
 		CoCoMemcpy(y_dev, y,  N * incy *sizeof(double), 0, y_loc);
 	}
 
-	cuBLASDdotWrap(N, x_dev, incx, y_dev, incy, &result_dev, 0 , 1, dev_ids);
+	cuBLASDdotWrap(N, x_dev, incx, y_dev, incy, result_dev, 0 , 1, dev_ids);
 	CoCoSyncCheckErr();
 	if(Dtest_equality(result, result_dev, 1) < 9) error("Insufficient accuracy for benchmarks\n");
 
@@ -110,13 +110,13 @@ int main(const int argc, const char *argv[]) {
 
 	// Warmup
 	for(int it = 0; it < 10; it++){
-		if (predef_control_values!= NULL)  return_values = PARALiaDdotControled(N, x, incx, y, incy, &result, predef_control_values);
+		if (predef_control_values!= NULL)  return_values = PARALiaDdotControled(N, x, incx, y, incy, result, predef_control_values);
 		else  error("Autotuning parameters for dot not implemented.\n");//return_values = PARALiaDdot(N, x, incx, y, incy);
 		CoCoSyncCheckErr();
 	}
 
 	cpu_timer  = csecond();
-	if (predef_control_values!= NULL)  return_values = PARALiaDdotControled(N, x, incx, y, incy, &result, predef_control_values);
+	if (predef_control_values!= NULL)  return_values = PARALiaDdotControled(N, x, incx, y, incy, result, predef_control_values);
 	else  error("Autotuning parameters for dot not implemented.\n");//return_values = PARALiaDdot(N, x, incx, y, incy);
 	CoCoSyncCheckErr();
 	cpu_timer  = csecond() - cpu_timer;
@@ -135,7 +135,7 @@ int main(const int argc, const char *argv[]) {
 	if ( N >= 8192*8192 ) bench_it = 10;
 	for(int it = 0; it < bench_it; it++){
 		cpu_timer = csecond();
-		if (predef_control_values!= NULL) return_values = PARALiaDdotControled(N, x, incx, y, incy, &result, predef_control_values);
+		if (predef_control_values!= NULL) return_values = PARALiaDdotControled(N, x, incx, y, incy, result, predef_control_values);
 		else  error("Autotuning parameters for dot not implemented.\n");//return_values = PARALiaDdot(N, alpha, x, incx, y, incy);
 		CoCoSyncCheckErr();
 		cpu_timer = csecond() - cpu_timer;
