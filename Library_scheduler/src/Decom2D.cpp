@@ -7,29 +7,27 @@
 #include "Decomposer.hpp"
 #include "unihelpers.hpp"
 
-template class Decom2D<double>;
-template class Decom2D<float>;
-
-template<typename dtype> Tile2D<dtype>* Decom2D<dtype>::getTile(int iloc1, int iloc2){
+Tile2D* Decom2D::getTile(int iloc1, int iloc2){
   if(iloc1 >= GridSz1) error("Decom2D::getTile : iloc1 >= GridSz1 (%d vs %d)\n", iloc1, GridSz1);
   else if(iloc2 >= GridSz2) error("Decom2D::getTile : iloc2 >= GridSz2 (%d vs %d)\n", iloc2, GridSz2);
   return Tile_map[iloc1*GridSz2 + iloc2];
 }
 
-template<typename dtype> Decom2D<dtype>::Decom2D( void* in_adr, int in_dim1, int in_dim2, int in_ldim, char in_transpose){
+Decom2D::Decom2D( void* in_adr, int in_dim1, int in_dim2, int in_ldim, char in_transpose, dtype_enum dtype_in){
   ldim = in_ldim;
   dim1 = in_dim1;
   dim2 = in_dim2;
-  adrs = (dtype*) in_adr;
+  adrs = in_adr;
   loc = CoCoGetPtrLoc(in_adr);
   transpose = in_transpose;
+  dtype = dtype_in;
 }
 
-template<typename dtype> void Decom2D<dtype>::InitTileMap(int T1, int T2, Buffer_p* init_loc_cache_p){
+void Decom2D::InitTileMap(int T1, int T2, Buffer_p* init_loc_cache_p){
   short lvl = 2;
 
   #ifdef DEBUG
-  	lprintf(lvl-1, "|-----> Decom2D<dtype>::InitTileMap(%d,%d)\n", T1, T2);
+  	lprintf(lvl-1, "|-----> Decom2D::InitTileMap(%d,%d)\n", T1, T2);
   #endif
 
   GridSz1 = dim1/T1;
@@ -46,7 +44,7 @@ template<typename dtype> void Decom2D<dtype>::InitTileMap(int T1, int T2, Buffer
   //if (T2Last > T2/4) GridSz2++;
   //else T2Last+=T2;
 
-  Tile_map = (Tile2D<dtype>**) malloc(sizeof(Tile2D<dtype>*)*GridSz1*GridSz2);
+  Tile_map = (Tile2D**) malloc(sizeof(Tile2D*)*GridSz1*GridSz2);
 
   int current_ctr, T1tmp, T2tmp;
   void* tile_addr = NULL;
@@ -60,16 +58,18 @@ template<typename dtype> void Decom2D<dtype>::InitTileMap(int T1, int T2, Buffer
       current_ctr = itt1*GridSz2 + itt2;
       /// For column major format assumed with T1tmp = rows and T2tmp = cols
       if (transpose == 'N'){
-         tile_addr = adrs + itt1*T1 + itt2*T2*ldim;
-         Tile_map[current_ctr] = new Tile2D<dtype>(tile_addr, T1tmp, T2tmp, ldim, itt1, itt2,
-           init_loc_cache_p[loc_idx]->assign_Cblock(NATIVE, true));
+         if (dtype == DOUBLE) tile_addr = ((double*)adrs) + (itt1*T1 + itt2*T2*ldim);
+         else if(dtype == FLOAT) tile_addr = ((float*)adrs) + (itt1*T1 + itt2*T2*ldim);
+         else error("Decom2D::InitTileMap: dtype not implemented");
+         Tile_map[current_ctr] = new Tile2D(tile_addr, T1tmp, T2tmp, ldim, itt1, itt2, dtype, init_loc_cache_p[loc_idx]->assign_Cblock(NATIVE, true));
        }
       else if (transpose == 'T'){
-        tile_addr = adrs + itt1*T1*ldim + itt2*T2;
-        Tile_map[current_ctr] = new Tile2D<dtype>(tile_addr, T2tmp, T1tmp, ldim, itt2, itt1,
-           init_loc_cache_p[loc_idx]->assign_Cblock(NATIVE, true));
+        if (dtype == DOUBLE) tile_addr = ((double*)adrs) + (itt1*T1*ldim + itt2*T2);
+         else if(dtype == FLOAT)  tile_addr = ((float*)adrs) + (itt1*T1*ldim + itt2*T2);
+        else error("Decom2D::InitTileMap: dtype not implemented");
+        Tile_map[current_ctr] = new Tile2D(tile_addr, T2tmp, T1tmp, ldim, itt2, itt1, dtype, init_loc_cache_p[loc_idx]->assign_Cblock(NATIVE, true));
       }
-      else error("Decom2D<dtype>::InitTileMap: Unknown transpose type\n");
+      else error("Decom2D::InitTileMap: Unknown transpose type\n");
 
      }
    }
@@ -78,10 +78,7 @@ template<typename dtype> void Decom2D<dtype>::InitTileMap(int T1, int T2, Buffer
    #endif
 }
 
-template void Decom2D<double>::InitTileMap(int T1, int T2, Buffer_p* init_loc_cache_p);
-template void Decom2D<float>::InitTileMap(int T1, int T2, Buffer_p* init_loc_cache_p);
-
-template<typename dtype> void Decom2D<dtype>::DestroyTileMap(){
+void Decom2D::DestroyTileMap(){
   int current_ctr;
   for (int itt1 = 0; itt1 < GridSz1; itt1++)
     for (int itt2 = 0 ; itt2 < GridSz2; itt2++){
@@ -91,10 +88,7 @@ template<typename dtype> void Decom2D<dtype>::DestroyTileMap(){
   free(Tile_map);
 }
 
-template void Decom2D<double>::DestroyTileMap();
-template void Decom2D<float>::DestroyTileMap();
-
-template<typename dtype> void Decom2D<dtype>::DrawTileMap(){
+void Decom2D::DrawTileMap(){
   fprintf(stderr, " Tile2D representation: \
                  \n ______________________ \
                  \n| id[GridId1, GridId2] |\
@@ -157,6 +151,3 @@ template<typename dtype> void Decom2D<dtype>::DrawTileMap(){
     fprintf(stderr, "\n\n");
   }
 }
-
-template void Decom2D<double>::DrawTileMap();
-template void Decom2D<float>::DrawTileMap();

@@ -8,7 +8,7 @@
 #include <cblas.h>
 #include <cuda_runtime.h>
 
-#include "CoCoPeLia.hpp"
+#include "PARALiA.hpp"
 #include "unihelpers.hpp"
 #include "backend_wrappers.hpp"
 
@@ -131,4 +131,3 @@ double cuBLASXtSgemmWrap(char TransA, char TransB, long int M, long int N, long 
 	return total_t;
 
 }
-

@@ -13,27 +13,30 @@
 
 #include <unihelpers.hpp>
 
-typedef struct gemm_backend_in{
+template<typename VALUETYPE> class gemm_backend_in{
+public:
 	char TransA,  TransB;
 	int M, N, K, ldA, ldB, ldC;
-	VALUE_TYPE alpha,beta;
+	VALUETYPE alpha,beta;
 	void **A, **B, **C;
 	short dev_id;
-}* gemm_backend_in_p;
+};
 
-typedef struct axpy_backend_in{
-	int N, incx, incy;
-	VALUE_TYPE alpha;
+template<typename VALUETYPE> class axpy_backend_in{
+public:
+		int N, incx, incy;
+	VALUETYPE alpha;
 	void **x, **y;
 	short dev_id;
-}* axpy_backend_in_p;
+};
 
-typedef struct dot_backend_in{
+template<typename VALUETYPE> class dot_backend_in{
+public:
 	int N, incx, incy;
 	void **x, **y;
-	VALUE_TYPE* result;
+	VALUETYPE* result;
 	short dev_id;
-}* dot_backend_in_p;
+};
 
 /// Initalize backend (handle[s]) in dev_id
 void backend_init(short dev_id, CQueue_p h2d_q, CQueue_p d2h_q, CQueue_p exec_q);

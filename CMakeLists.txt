@@ -6,6 +6,8 @@ message("PARALiA-Framework - BACKEND: " ${BACKEND})
 add_definitions(-DBACKEND="${BACKEND}")
 ## Define the project version (used in logfiles for result testing)
 
+execute_process ( COMMAND bash -c "source ${CMAKE_CURRENT_BINARY_DIR}/../config_silver1.sh")
+
 set(PROJECT_VERSION "1.5")
 message("PARALiA-Framework - PROJECT_VERSION: " ${PROJECT_VERSION})
 add_definitions(-DVERSION="${PROJECT_VERSION}")
@@ -240,13 +242,13 @@ configure_file(${PROJECT_BENCH_DIR}/Full_model_validation.in ${CMAKE_INSTALL_PRO
 configure_file(${PROJECT_BENCH_DIR}/Full_performance_evaluation.in ${CMAKE_INSTALL_PROJECT}/Full_performance_evaluation.sh @ONLY)
 configure_file(${PROJECT_BENCH_DIR}/Heterogeneous_performance_estimation.in ${CMAKE_INSTALL_PROJECT}/Heterogeneous_performance_estimation.sh @ONLY)
 
-set(VALUETYPEID 1)
-if (${VALUETYPEID} EQUAL 0)
-  add_definitions(-DVALUE_TYPE=float)
-elseif(${VALUETYPEID} EQUAL 1)
-  add_definitions(-DVALUE_TYPE=double)
-else()
-endif()
+#set(VALUETYPEID 1)
+#if (${VALUETYPEID} EQUAL 0)
+#  add_definitions(-DVALUE_TYPE=float)
+#elseif(${VALUETYPEID} EQUAL 1)
+#  add_definitions(-DVALUE_TYPE=double)
+#else()
+#endif()
 
 ADD_SUBDIRECTORY (Universal_helpers)
 

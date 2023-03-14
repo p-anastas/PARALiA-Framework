@@ -5,7 +5,7 @@
 ///
 
 #include "unihelpers.hpp"
-#include "CoCoPeLia.hpp"
+#include "PARALiA.hpp"
 #include "BackenedLibsWrapped.hpp"
 #include "Testing.hpp"
 
@@ -77,10 +77,10 @@ int main(const int argc, const char *argv[]) {
 	CoCoMemcpy(C_buf, C,  M * N *sizeof(double), -2, C_loc);
 
 	// Call for Validate
-	if (predef_control_values!= NULL) return_values = PARALiaDgemmControled(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC, predef_control_values);
-	else return_values = PARALiaDgemm(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC);
+	if (predef_control_values!= NULL) return_values = PARALiADgemmControled(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC, predef_control_values);
+	else return_values = PARALiADgemm(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC);
 	CoCoSyncCheckErr();
-	for (int i = 0; i< LOC_NUM; i++) CoCopeLiaDevCacheFree(deidxize(i));
+	for (int i = 0; i< LOC_NUM; i++) PARALiADevCacheFree(deidxize(i));
 
  	CoCoMemcpy(C_out, C,  M * N *sizeof(double), -2, C_loc);
  	CoCoMemcpy(C, C_buf,  M * N *sizeof(double), C_loc, -2);
@@ -99,8 +99,8 @@ int main(const int argc, const char *argv[]) {
 #endif
 
 	cpu_timer = csecond();
-	if (predef_control_values!= NULL) return_values = PARALiaDgemmControled(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC, predef_control_values);
-	else return_values = PARALiaDgemm(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC);
+	if (predef_control_values!= NULL) return_values = PARALiADgemmControled(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC, predef_control_values);
+	else return_values = PARALiADgemm(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC);
 	CoCoSyncCheckErr();
 	cpu_timer  = csecond() - cpu_timer;
 
@@ -115,19 +115,19 @@ int main(const int argc, const char *argv[]) {
 	short warmup_bench_it = 10;
 	if ( M >= 20000 && N >= 20000 && K >= 20000) warmup_bench_it = 2;
 	for(int it = 0; it < warmup_bench_it; it++){
-		if (predef_control_values!= NULL) return_values = PARALiaDgemmControled(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC, predef_control_values);
-		else return_values = PARALiaDgemm(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC);
+		if (predef_control_values!= NULL) return_values = PARALiADgemmControled(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC, predef_control_values);
+		else return_values = PARALiADgemm(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC);
 	}
 	CoCoSyncCheckErr();
-	
+
 	double min_t = first_over_t, max_t = 0, avg_t = 0;
 	cpu_timer = csecond();
 	short bench_it = 100;
 	if ( M >= 20000 && N >= 20000 && K >= 20000) bench_it = 20;
 	for(int it = 0; it < bench_it; it++){
 		cpu_timer = csecond();
-		if (predef_control_values!= NULL) return_values = PARALiaDgemmControled(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC, predef_control_values);
-		else return_values = PARALiaDgemm(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC);
+		if (predef_control_values!= NULL) return_values = PARALiADgemmControled(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC, predef_control_values);
+		else return_values = PARALiADgemm(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC);
 		CoCoSyncCheckErr();
 		cpu_timer = csecond() - cpu_timer;
 		StoreLogLvl3(filename, return_values, TransA, TransB, alpha, beta, M, N, K, A_loc, B_loc, C_loc, C_out_loc, cpu_timer, return_values->pred_t, return_values->pred_J);
@@ -143,7 +143,7 @@ int main(const int argc, const char *argv[]) {
 	min_t  * 1000, Gval_per_s(gemm_flops(M,N,K),min_t),
 	max_t  * 1000, Gval_per_s(gemm_flops(M,N,K),max_t));
 
-	for (int i = 0; i< LOC_NUM; i++) CoCopeLiaDevCacheFree(deidxize(i));
+	for (int i = 0; i< LOC_NUM; i++) PARALiADevCacheFree(deidxize(i));
 
 	CoCoSyncCheckErr();
 	CoCoFree(A, A_loc);

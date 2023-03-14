@@ -6,7 +6,7 @@
 
 #include "backend_wrappers.hpp"
 #include "unihelpers.hpp"
-#include "CoCoPeLia.hpp"
+#include "PARALiA.hpp"
 #include "BackenedLibsWrapped.hpp"
 #include "Testing.hpp"
 
@@ -31,7 +31,7 @@ int main(const int argc, const char *argv[]) {
 
 	/// Local Timers
 	double cpu_timer = csecond();
-	fprintf(stderr, "CoCoPeLiaDgemmTester: Initallizing tests for PARALiaDgemmTile with\
+	fprintf(stderr, "CoCoPeLiaDgemmTester: Initallizing tests for PARALiADgemmTile with\
 		run_cpu_mem = %d, run_gpu_mem = %d, run_large = %d\n", run_cpu_mem, run_gpu_mem, run_large);
 
 #ifndef DEV_NUM
@@ -75,7 +75,7 @@ int main(const int argc, const char *argv[]) {
 		beta = 0.9876;
 		for (int dim = 256; dim <= M; dim*=2){
 			cpu_timer = csecond();
-			ret_autotune_val = PARALiaDgemm(TransA, TransB, dim, dim, dim, alpha, A, ldA, B, ldB, beta, C , ldC);
+			ret_autotune_val = PARALiADgemm(TransA, TransB, dim, dim, dim, alpha, A, ldA, B, ldB, beta, C , ldC);
 			CoCoSyncCheckErr();
 			cpu_timer  = csecond() - cpu_timer;
 			double comp_flops = Gval_per_s(gemm_flops(dim,dim,dim),cpu_timer);
@@ -104,7 +104,7 @@ int main(const int argc, const char *argv[]) {
 		beta = 0.9876;
 		for (int dim1 = 256; dim1 <= M; dim1*=4) for (int dim2 = 256; dim2 <= N; dim2*=4) for (int dim3 = 256; dim3 <= K; dim3*=4) if ( dim1 != dim2 || dim2 != dim3 || dim1!= dim3){
 			cpu_timer = csecond();
-			ret_autotune_val = PARALiaDgemm(TransA, TransB, dim1, dim2, dim3, alpha, A, ldA, B, ldB, beta, C , ldC);
+			ret_autotune_val = PARALiADgemm(TransA, TransB, dim1, dim2, dim3, alpha, A, ldA, B, ldB, beta, C , ldC);
 			CoCoSyncCheckErr();
 			cpu_timer  = csecond() - cpu_timer;
 			double comp_flops =  Gval_per_s(gemm_flops(dim1,dim2,dim3),cpu_timer);
@@ -132,7 +132,7 @@ int main(const int argc, const char *argv[]) {
 		beta = 0.9876;
 		for (int dim1 = 289; dim1 <= M; dim1*=4) for (int dim2 = 353; dim2 <= N; dim2*=4) for (int dim3 = 307; dim3 <= K; dim3*=4) if ( dim1 != dim2 || dim2 != dim3 || dim1!= dim3){
 			cpu_timer = csecond();
-			ret_autotune_val = PARALiaDgemm(TransA, TransB, dim1, dim2, dim3, alpha, A, ldA, B, ldB, beta, C , ldC);
+			ret_autotune_val = PARALiADgemm(TransA, TransB, dim1, dim2, dim3, alpha, A, ldA, B, ldB, beta, C , ldC);
 			CoCoSyncCheckErr();
 			cpu_timer  = csecond() - cpu_timer;
 			double comp_flops =  Gval_per_s(gemm_flops(dim1,dim2,dim3),cpu_timer);
@@ -161,7 +161,7 @@ int main(const int argc, const char *argv[]) {
 		beta = 0.9876;
 		for  (int dim1 = 289; dim1 <= M; dim1*=4) for (int dim2 = 353; dim2 <= N; dim2*=4) for (int dim3 = 307; dim3 <= K; dim3*=4){
 			cpu_timer = csecond();
-			ret_autotune_val = PARALiaDgemm(TransA, TransB, dim1, dim2, dim3, alpha, A, ldA, B, ldB, beta, C , ldC);
+			ret_autotune_val = PARALiADgemm(TransA, TransB, dim1, dim2, dim3, alpha, A, ldA, B, ldB, beta, C , ldC);
 			CoCoSyncCheckErr();
 			cpu_timer  = csecond() - cpu_timer;
 			double comp_flops =  Gval_per_s(gemm_flops(dim1,dim2,dim3),cpu_timer);
@@ -224,7 +224,7 @@ int main(const int argc, const char *argv[]) {
 			beta = 0.9876;
 			for (int dim1 = 289; dim1 <= M; dim1*=4) for (int dim2 = 353; dim2 <= N; dim2*=4) for (int dim3 = 307; dim3 <= K; dim3*=4){
 				cpu_timer = csecond();
-				ret_autotune_val = PARALiaDgemm(TransA, TransB, dim1, dim2, dim3, alpha, A, ldA, B, ldB, beta, C , ldC);
+				ret_autotune_val = PARALiADgemm(TransA, TransB, dim1, dim2, dim3, alpha, A, ldA, B, ldB, beta, C , ldC);
 				CoCoSyncCheckErr();
 				cpu_timer  = csecond() - cpu_timer;
 				double comp_flops =  Gval_per_s(gemm_flops(dim1,dim2,dim3),cpu_timer);
@@ -252,7 +252,7 @@ int main(const int argc, const char *argv[]) {
 			beta = 0.9876;
 			for (int dim1 = 289; dim1 <= M; dim1*=4) for (int dim2 = 353; dim2 <= N; dim2*=4) for (int dim3 = 307; dim3 <= K; dim3*=4){
 				cpu_timer = csecond();
-				ret_autotune_val = PARALiaDgemm(TransA, TransB, dim1, dim2, dim3, alpha, A, ldA, B, ldB, beta, C , ldC);
+				ret_autotune_val = PARALiADgemm(TransA, TransB, dim1, dim2, dim3, alpha, A, ldA, B, ldB, beta, C , ldC);
 				CoCoSyncCheckErr();
 				cpu_timer  = csecond() - cpu_timer;
 				double comp_flops =  Gval_per_s(gemm_flops(dim1,dim2,dim3),cpu_timer);
@@ -315,10 +315,10 @@ int main(const int argc, const char *argv[]) {
 		alpha = 1.23;
 		beta = 0.9876;
 		cpu_timer = csecond();
-		ret_autotune_val = PARALiaDgemm(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC);
+		ret_autotune_val = PARALiADgemm(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC);
 		CoCoSyncCheckErr();
 		cpu_timer  = csecond() - cpu_timer;
-		for (int i = 0; i< LOC_NUM; i++) CoCopeLiaDevCacheFree(deidxize(i));
+		for (int i = 0; i< LOC_NUM; i++) PARALiADevCacheFree(deidxize(i));
 		CoCoSyncCheckErr();
 		double comp_flops = Gval_per_s(gemm_flops(M,N,K),cpu_timer);
 		fprintf(stderr, "M=%zu, N=%zu, K=%zu: Gflops/s -> ", M, N, K);
@@ -346,10 +346,10 @@ int main(const int argc, const char *argv[]) {
 		alpha = 1.23;
 		beta = 0.9876;
 		cpu_timer = csecond();
-		ret_autotune_val = PARALiaDgemm(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC);
+		ret_autotune_val = PARALiADgemm(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC);
 		CoCoSyncCheckErr();
 		cpu_timer  = csecond() - cpu_timer;
-		for (int i = 0; i< LOC_NUM; i++) CoCopeLiaDevCacheFree(deidxize(i));
+		for (int i = 0; i< LOC_NUM; i++) PARALiADevCacheFree(deidxize(i));
 		CoCoSyncCheckErr();
 		comp_flops = Gval_per_s(gemm_flops(M,N,K),cpu_timer);
 		fprintf(stderr, "M=%zu, N=%zu, K=%zu: Gflops/s -> ", M, N, K);
@@ -375,10 +375,10 @@ int main(const int argc, const char *argv[]) {
 		alpha = 1.23;
 		beta = 0.9876;
 		cpu_timer = csecond();
-		ret_autotune_val = PARALiaDgemm(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC);
+		ret_autotune_val = PARALiADgemm(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC);
 		CoCoSyncCheckErr();
 		cpu_timer  = csecond() - cpu_timer;
-		for (int i = 0; i< LOC_NUM; i++) CoCopeLiaDevCacheFree(deidxize(i));
+		for (int i = 0; i< LOC_NUM; i++) PARALiADevCacheFree(deidxize(i));
 		CoCoSyncCheckErr();
 		comp_flops = Gval_per_s(gemm_flops(M,N,K),cpu_timer);
 		fprintf(stderr, "M=%zu, N=%zu, K=%zu: Gflops/s -> ", M, N, K);
@@ -451,10 +451,10 @@ int main(const int argc, const char *argv[]) {
 		alpha = 1.23;
 		beta = 0.9876;
 		cpu_timer = csecond();
-		ret_autotune_val = PARALiaDgemm(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC);
+		ret_autotune_val = PARALiADgemm(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC);
 		CoCoSyncCheckErr();
 		cpu_timer  = csecond() - cpu_timer;
-		for (int i = 0; i< LOC_NUM; i++) CoCopeLiaDevCacheFree(deidxize(i));
+		for (int i = 0; i< LOC_NUM; i++) PARALiADevCacheFree(deidxize(i));
 		CoCoSyncCheckErr();
 		double comp_flops =  Gval_per_s(gemm_flops(M,N,K),cpu_timer);
 		fprintf(stderr, "M=%zu,N=%zu,K=%zu: Gflops/s -> ", M, N, K);
@@ -479,10 +479,10 @@ int main(const int argc, const char *argv[]) {
 		alpha = 1.23;
 		beta = 0.9876;
 		cpu_timer = csecond();
-		ret_autotune_val = PARALiaDgemm(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC);
+		ret_autotune_val = PARALiADgemm(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC);
 		CoCoSyncCheckErr();
 		cpu_timer  = csecond() - cpu_timer;
-		for (int i = 0; i< LOC_NUM; i++) CoCopeLiaDevCacheFree(deidxize(i));
+		for (int i = 0; i< LOC_NUM; i++) PARALiADevCacheFree(deidxize(i));
 		CoCoSyncCheckErr();
 		comp_flops =  Gval_per_s(gemm_flops(M,N,K),cpu_timer);
 		fprintf(stderr, "M=%zu,N=%zu,K=%zu: Gflops/s -> ", M, N, K);

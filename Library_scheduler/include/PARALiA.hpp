@@ -25,20 +25,20 @@ ATC_p PARALiASgemmControled(char TransA,  char TransB, long int M, long int N, l
 	float alpha, float* A, long int ldA, float* B, long int ldB, float beta, float* C, long int ldC, ATC_p predef_control_values);
 
 /// The PARALiA Daxpy implementation.
-ATC_p PARALiADaxpy(long int N, VALUE_TYPE alpha,
-	VALUE_TYPE* x, long int incx, VALUE_TYPE* y, long int incy);
+ATC_p PARALiADaxpy(long int N, double alpha,
+	double* x, long int incx, double* y, long int incy);
 
 /// A modification of PARALiADaxpy but with a given T (mainly for performance/debug purposes)
-ATC_p PARALiADaxpyControled(long int N, VALUE_TYPE alpha,
-	VALUE_TYPE* x, long int incx, VALUE_TYPE* y, long int incy, ATC_p predef_control_values);
+ATC_p PARALiADaxpyControled(long int N, double alpha,
+	double* x, long int incx, double* y, long int incy, ATC_p predef_control_values);
 
 /// The PARALiA Ddot implementation.
-ATC_p PARALiADdot(long int N, VALUE_TYPE* x, long int incx,
-	VALUE_TYPE* y, long int incy, VALUE_TYPE* result);
+ATC_p PARALiADdot(long int N, double* x, long int incx,
+	double* y, long int incy, double* result);
 
 /// A modification of PARALiADdot but with a given T (mainly for performance/debug purposes)
-ATC_p PARALiADdotControled(long int N, VALUE_TYPE* x, long int incx,
-	VALUE_TYPE* y, long int incy, VALUE_TYPE* result, ATC_p predef_control_values);
+ATC_p PARALiADdotControled(long int N, double* x, long int incx,
+	double* y, long int incy, double* result, ATC_p predef_control_values);
 
 ///Deallocates the GPU-allocated cache buffer at target device
 void PARALiADevCacheFree(short dev_id);

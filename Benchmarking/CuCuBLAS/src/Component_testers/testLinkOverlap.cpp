@@ -5,7 +5,7 @@
 ///
 
 #include "unihelpers.hpp"
-#include "CoCoPeLia.hpp"
+#include "PARALiA.hpp"
 #include "BackenedLibsWrapped.hpp"
 #include "Testing.hpp"
 

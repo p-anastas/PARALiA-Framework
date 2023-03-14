@@ -9,11 +9,8 @@
 
 int Tile2D_num = 0;
 
-template class Tile2D<double>;
-template class Tile2D<float>;
-
-template<typename dtype>  Tile2D<dtype>::Tile2D(void * in_addr, int in_dim1, int in_dim2,
-  int in_ldim, int inGrid1, int inGrid2, CBlock_p init_loc_block_p)
+Tile2D::Tile2D(void * in_addr, int in_dim1, int in_dim2,
+  int in_ldim, int inGrid1, int inGrid2, dtype_enum dtype_in, CBlock_p init_loc_block_p)
 {
   short lvl = 3;
 
@@ -21,7 +18,7 @@ template<typename dtype>  Tile2D<dtype>::Tile2D(void * in_addr, int in_dim1, int
     lprintf(lvl-1, "|-----> Tile2D(%d)::Tile2D(in_addr(%d),%d,%d,%d, %d, %d)\n",
       Tile2D_num, CoCoGetPtrLoc(in_addr), in_dim1, in_dim2, in_ldim, inGrid1, inGrid2);
   #endif
-
+  dtype = dtype_in;
   dim1 = in_dim1;
   dim2 = in_dim2;
   GridId1 = inGrid1;
@@ -57,17 +54,17 @@ template<typename dtype>  Tile2D<dtype>::Tile2D(void * in_addr, int in_dim1, int
   #endif
 }
 
-template<typename dtype>  Tile2D<dtype>::~Tile2D()
+Tile2D::~Tile2D()
 {
   short lvl = 3;
   Tile2D_num--;
 }
 
-template<typename dtype> short Tile2D<dtype>::getWriteBackLoc(){
+short Tile2D::getWriteBackLoc(){
   return WriteBackLoc;
 }
 
-template<typename dtype> short Tile2D<dtype>::isLocked(){
+short Tile2D::isLocked(){
 #ifdef ENABLE_MUTEX_LOCKING
 		error("Not sure how to do this correctly\n");
     return 0;
@@ -77,7 +74,7 @@ template<typename dtype> short Tile2D<dtype>::isLocked(){
 #endif
 }
 
-template<typename dtype> short Tile2D<dtype>::getClosestReadLoc(short dev_id_in){
+short Tile2D::getClosestReadLoc(short dev_id_in){
   short lvl = 5;
 #ifdef DDEBUG
   lprintf(lvl-1, "|-----> Tile2D(%d)::getClosestReadLoc(%d)\n", id, dev_id_in);
@@ -148,7 +145,7 @@ template<typename dtype> short Tile2D<dtype>::getClosestReadLoc(short dev_id_in)
   return -666;
 }
 
-template<typename dtype> double Tile2D<dtype>::getMinLinkCost(short dev_id_in){
+double Tile2D::getMinLinkCost(short dev_id_in){
   short lvl = 5;
   int dev_id_in_idx = idxize(dev_id_in);
   double link_bw_max = 0;

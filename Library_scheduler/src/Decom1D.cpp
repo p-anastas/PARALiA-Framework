@@ -7,25 +7,24 @@
 #include "Decomposer.hpp"
 #include "unihelpers.hpp"
 
-template class Decom1D<double>;
-
-template<typename dtype> Tile1D<dtype>* Decom1D<dtype>::getTile(int iloc){
+Tile1D* Decom1D::getTile(int iloc){
   if(iloc >= GridSz) error("Decom1D::getTile : iloc >= GridSz (%d vs %d)\n", iloc, GridSz);
   return Tile_map[iloc];
 }
 
-template<typename dtype> Decom1D<dtype>::Decom1D(void* in_adr, int in_dim, int in_inc){
+Decom1D::Decom1D(void* in_adr, int in_dim, int in_inc, dtype_enum dtype_in){
   dim = in_dim;
-  adrs = (dtype*) in_adr;
+  adrs = in_adr;
   loc = CoCoGetPtrLoc(in_adr);
   inc = in_inc;
+  dtype = dtype_in;
 }
 
-template<typename dtype> void Decom1D<dtype>::InitTileMap(int T, Buffer_p* init_loc_cache_p){
+void Decom1D::InitTileMap(int T, Buffer_p* init_loc_cache_p){
   short lvl = 2;
 
   #ifdef DEBUG
-  	lprintf(lvl-1, "|-----> Decom1D<dtype>::InitTileMap(%d)\n", T);
+  	lprintf(lvl-1, "|-----> Decom1D::InitTileMap(%d)\n", T);
   #endif
 
   GridSz = dim/T;
@@ -35,7 +34,7 @@ template<typename dtype> void Decom1D<dtype>::InitTileMap(int T, Buffer_p* init_
   if (TLast > 0) GridSz++;
   else TLast=T;
 
-  Tile_map = (Tile1D<dtype>**) malloc(sizeof(Tile1D<dtype>*)*GridSz);
+  Tile_map = (Tile1D**) malloc(sizeof(Tile1D*)*GridSz);
 
   int current_ctr, Ttmp;
   void* tile_addr = NULL;
@@ -43,19 +42,18 @@ template<typename dtype> void Decom1D<dtype>::InitTileMap(int T, Buffer_p* init_
     if ( itt == GridSz - 1) Ttmp = TLast;
     else  Ttmp = T;
     current_ctr = itt;
-    tile_addr = adrs + itt*T*inc;
-    Tile_map[current_ctr] = new Tile1D<dtype>(tile_addr, Ttmp, inc, itt,
-      init_loc_cache_p[idxize(CoCoGetPtrLoc(adrs))]->assign_Cblock(NATIVE, true));
+    if (dtype == DOUBLE) tile_addr = ((double*)adrs) + itt*T*inc;
+    else if(dtype == FLOAT) tile_addr = ((float*)adrs) + itt*T*inc;
+    else error("Decom1D::InitTileMap: dtype not implemented");
+    Tile_map[current_ctr] = new Tile1D(tile_addr, Ttmp, inc, itt, dtype, init_loc_cache_p[idxize(CoCoGetPtrLoc(adrs))]->assign_Cblock(NATIVE, true));
   }
   #ifdef DEBUG
   	lprintf(lvl-1, "<-----|\n");
   #endif
 }
 
-template void Decom1D<double>::InitTileMap(int T, Buffer_p* init_loc_cache_p);
-template void Decom1D<float>::InitTileMap(int T, Buffer_p* init_loc_cache_p);
 
-template<typename dtype> void Decom1D<dtype>::DestroyTileMap(){
+void Decom1D::DestroyTileMap(){
   int current_ctr;
   for (int itt = 0 ; itt < GridSz; itt++){
     current_ctr = itt;
@@ -64,10 +62,7 @@ template<typename dtype> void Decom1D<dtype>::DestroyTileMap(){
   free(Tile_map);
 }
 
-template void Decom1D<double>::DestroyTileMap();
-template void Decom1D<float>::DestroyTileMap();
-
-template<typename dtype> void Decom1D<dtype>::DrawTileMap(){
+void Decom1D::DrawTileMap(){
   fprintf(stderr, " Tile1D representation: \
                  \n ______________________ \
                  \n|      id[GridId]      |\
@@ -126,6 +121,3 @@ template<typename dtype> void Decom1D<dtype>::DrawTileMap(){
    fprintf(stderr, "|______________________|");
   fprintf(stderr, "\n\n");
 }
-
-template void Decom1D<double>::DrawTileMap();
-template void Decom1D<float>::DrawTileMap();

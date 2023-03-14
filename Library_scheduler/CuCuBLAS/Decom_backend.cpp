@@ -32,7 +32,7 @@ void* prepareAsync_backend(void* compressed_data){
 	return NULL;
 }
 
-template<typename dtype> void Decom2D<dtype>::prepareAsync(pthread_t* thread_id, pthread_attr_t attr){
+void Decom2D::prepareAsync(pthread_t* thread_id, pthread_attr_t attr){
 	pthread_data_in_p prep_data = (pthread_data_in_p) malloc(sizeof(struct pthread_data_in));
 	prep_data->adrs = adrs;
 	// FIXME: is dim2*ldim correct in cases where part of the Asset is used in a mission (rare). Assuming col major anyway?
@@ -47,17 +47,12 @@ template<typename dtype> void Decom2D<dtype>::prepareAsync(pthread_t* thread_id,
 	if (s != 0) error("Decom2D::prepareAsync: pthread_create failed s=%d\n", s);
 }
 
-template void Decom2D<double>::prepareAsync(pthread_t* thread_id, pthread_attr_t attr);
-template void Decom2D<float>::prepareAsync(pthread_t* thread_id, pthread_attr_t attr);
 
-template<typename dtype> void Decom2D<dtype>::resetProperties(){
+void Decom2D::resetProperties(){
 	if (pin_internally) cudaHostUnregister(adrs);
 }
 
-template void Decom2D<double>::resetProperties();
-template void Decom2D<float>::resetProperties();
-
-template<typename dtype> void Decom1D<dtype>::prepareAsync(pthread_t* thread_id, pthread_attr_t attr){
+void Decom1D::prepareAsync(pthread_t* thread_id, pthread_attr_t attr){
 	pthread_data_in_p prep_data = (pthread_data_in_p) malloc(sizeof(struct pthread_data_in));
 	prep_data->adrs = adrs;
 	prep_data->pin_bytes = dim*inc*dtypesize();
@@ -72,12 +67,6 @@ template<typename dtype> void Decom1D<dtype>::prepareAsync(pthread_t* thread_id,
 	if (s != 0) error("Decom2D::prepareAsync: pthread_create failed s=%d\n", s);
 }
 
-template void Decom1D<double>::prepareAsync(pthread_t* thread_id, pthread_attr_t attr);
-template void Decom1D<float>::prepareAsync(pthread_t* thread_id, pthread_attr_t attr);
-
-template<typename dtype> void Decom1D<dtype>::resetProperties(){
+void Decom1D::resetProperties(){
 	if (pin_internally) cudaHostUnregister(adrs);
 }
-
-template void Decom1D<double>::resetProperties();
-template void Decom1D<float>::resetProperties();

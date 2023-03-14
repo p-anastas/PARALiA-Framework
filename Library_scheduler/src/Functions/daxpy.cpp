@@ -16,7 +16,7 @@
 
 pthread_barrier_t  SoftCache_alloc_barrier_axpy;
 
-axpy_backend_in_p initial_axpy = NULL;
+axpy_backend_in<double>* initial_axpy = NULL;
 ATC_p autotune_controller_axpy = NULL;
 ATC_p predef_controller_axpy = NULL;
 
@@ -32,7 +32,7 @@ int remaining_Subkernels_axpy;
 
 int Sk_select_lock_axpy = 0;
 
-Subkernel** CoCoAsignTilesToSubkernelsDaxpy(Decom1D<VALUE_TYPE>* x_asset, Decom1D<VALUE_TYPE>* y_asset,
+Subkernel** CoCoAsignTilesToSubkernelsDaxpy(Decom1D* x_asset, Decom1D* y_asset,
 	int T, int* kernelNum){
 
 	short lvl = 2;
@@ -50,18 +50,18 @@ Subkernel** kernels = (Subkernel**) malloc(*kernelNum*sizeof(Subkernel*));
 int current_ctr = 0;
 		for (int ni = 0; ni < NGridSz_axpy; ni++){
       current_ctr = ni;
-			kernels[current_ctr] = new Subkernel(2,"axpy");
+			kernels[current_ctr] = new Subkernel(2,"Daxpy");
 			kernels[current_ctr]->iloc1 = ni;
 			kernels[current_ctr]->TileDimlist[0] = kernels[current_ctr]->TileDimlist[1] = 1;
 			kernels[current_ctr]->TileList[0] = x_asset->getTile(ni);
 			kernels[current_ctr]->TileList[1] = y_asset->getTile(ni);
-			((Tile1D<VALUE_TYPE>*)kernels[current_ctr]->TileList[0])->R_flag = 1;
-			((Tile1D<VALUE_TYPE>*)kernels[current_ctr]->TileList[1])->R_flag = 1;
-			((Tile1D<VALUE_TYPE>*)kernels[current_ctr]->TileList[1])->W_flag = 1;
-			((Tile1D<VALUE_TYPE>*)kernels[current_ctr]->TileList[1])->W_total = 1;
-			kernels[current_ctr]->operation_params = (void*) malloc(sizeof(struct axpy_backend_in));
-			axpy_backend_in_p ptr_ker_translate = (axpy_backend_in_p) kernels[current_ctr]->operation_params;
-			ptr_ker_translate->N = ((Tile1D<VALUE_TYPE>*) kernels[current_ctr]->TileList[0])->dim;
+			((Tile1D*)kernels[current_ctr]->TileList[0])->R_flag = 1;
+			((Tile1D*)kernels[current_ctr]->TileList[1])->R_flag = 1;
+			((Tile1D*)kernels[current_ctr]->TileList[1])->W_flag = 1;
+			((Tile1D*)kernels[current_ctr]->TileList[1])->W_total = 1;
+			kernels[current_ctr]->operation_params = (void*) malloc(sizeof(struct axpy_backend_in<double>));
+			axpy_backend_in<double>* ptr_ker_translate = (axpy_backend_in<double>*) kernels[current_ctr]->operation_params;
+			ptr_ker_translate->N = ((Tile1D*) kernels[current_ctr]->TileList[0])->dim;
 			ptr_ker_translate->x = NULL;
 			ptr_ker_translate->y = NULL;
 			ptr_ker_translate->alpha = initial_axpy->alpha;
@@ -78,18 +78,18 @@ int current_ctr = 0;
 }
 
 void CoCoDaxpyUpdateDevice(Subkernel* ker, short dev_id){
-	axpy_backend_in_p ptr_ker_translate = (axpy_backend_in_p) ker->operation_params;
+	axpy_backend_in<double>* ptr_ker_translate = (axpy_backend_in<double>*) ker->operation_params;
 	ker->run_dev_id = ptr_ker_translate->dev_id = dev_id;
 	short dev_id_idx = (dev_id == -1) ? LOC_NUM - 1: dev_id;
-	ptr_ker_translate->incx = ((Tile1D<VALUE_TYPE>*) ker->TileList[0])->inc[dev_id_idx];
-	ptr_ker_translate->incy = ((Tile1D<VALUE_TYPE>*) ker->TileList[1])->inc[dev_id_idx];
+	ptr_ker_translate->incx = ((Tile1D*) ker->TileList[0])->inc[dev_id_idx];
+	ptr_ker_translate->incy = ((Tile1D*) ker->TileList[1])->inc[dev_id_idx];
 }
 
 void CoCoDaxpyUpdatePointers(Subkernel* ker){
-	axpy_backend_in_p ptr_ker_translate = (axpy_backend_in_p) ker->operation_params;
+	axpy_backend_in<double>* ptr_ker_translate = (axpy_backend_in<double>*) ker->operation_params;
 	short dev_id_idx = idxize(ker->run_dev_id);
-	ptr_ker_translate->x = &((Tile1D<VALUE_TYPE>*) ker->TileList[0])->StoreBlock[dev_id_idx]->Adrs;
-	ptr_ker_translate->y = &((Tile1D<VALUE_TYPE>*) ker->TileList[1])->StoreBlock[dev_id_idx]->Adrs;
+	ptr_ker_translate->x = &((Tile1D*) ker->TileList[0])->StoreBlock[dev_id_idx]->Adrs;
+	ptr_ker_translate->y = &((Tile1D*) ker->TileList[1])->StoreBlock[dev_id_idx]->Adrs;
 }
 
 void* CoCopeLiaAxpyAgentVoid(void* kernel_pthread_wrapped){
@@ -197,16 +197,16 @@ void* CoCopeLiaAxpyAgentVoid(void* kernel_pthread_wrapped){
 }
 
 /// An axpy wrapper including auto-tuning of T and cache_size, as well as device management
-ATC_p PARALiaDaxpy(long int N, VALUE_TYPE alpha, VALUE_TYPE* x, long int incx, VALUE_TYPE* y, long int incy)
+ATC_p PARALiADaxpy(long int N, double alpha, double* x, long int incx, double* y, long int incy)
 {
 	short lvl = 1;
 #ifdef DEBUG
-	lprintf(lvl-1, "|-----> PARALiaDaxpy(%zu,%lf,x=%p(%d),%zu,y=%p(%d),%zu)\n",
+	lprintf(lvl-1, "|-----> PARALiADaxpy(%zu,%lf,x=%p(%d),%zu,y=%p(%d),%zu)\n",
 		N, alpha, x, CoCoGetPtrLoc(x), incx, y, CoCoGetPtrLoc(y), incy);
 #endif
 
 #ifdef TEST
-	lprintf(lvl-1, "|-----> PARALiaDaxpy\n");
+	lprintf(lvl-1, "|-----> PARALiADaxpy\n");
 	double cpu_timer = csecond();
 #endif
 #ifdef STEST
@@ -216,7 +216,7 @@ ATC_p PARALiaDaxpy(long int N, VALUE_TYPE alpha, VALUE_TYPE* x, long int incx, V
 
 	short reuse_model_flag = 1;
 	if(!initial_axpy){
-		initial_axpy = (axpy_backend_in_p) malloc(sizeof(struct axpy_backend_in));
+		initial_axpy = (axpy_backend_in<double>*) malloc(sizeof(struct axpy_backend_in<double>));
 		reuse_model_flag = 0;
 	}
 
@@ -238,15 +238,15 @@ ATC_p PARALiaDaxpy(long int N, VALUE_TYPE alpha, VALUE_TYPE* x, long int incx, V
 	initial_axpy->incy = incy;
 	initial_axpy->dev_id = -1;
 
-	Decom1D<VALUE_TYPE>* x_asset, *y_asset;
+	Decom1D* x_asset, *y_asset;
 	/// Prepare Assets in parallel( e.g. initialize asset classes, pin memory with pthreads)
 	/// return: x_asset, y_asset initialized and pinned
-	x_asset = new Decom1D<VALUE_TYPE>( x, N, incx);
-	y_asset = new Decom1D<VALUE_TYPE>( y, N, incy);
+	x_asset = new Decom1D( x, N, incx, DOUBLE);
+	y_asset = new Decom1D( y, N, incy, DOUBLE);
 
 	pthread_attr_t attr;
 	int s = pthread_attr_init(&attr);
-	if (s != 0) error("PARALiaDaxpy: pthread_attr_init failed s=%d\n", s);
+	if (s != 0) error("PARALiADaxpy: pthread_attr_init failed s=%d\n", s);
 
 	pthread_t asset_thread_id[2];
 	x_asset->prepareAsync(&asset_thread_id[0], attr);
@@ -267,7 +267,7 @@ ATC_p PARALiaDaxpy(long int N, VALUE_TYPE alpha, VALUE_TYPE* x, long int incx, V
 	void* res;
 	for(int i=0; i<2;i++){
 		s = pthread_join(asset_thread_id[i], &res);
-		if (s != 0) error("PARALiaDaxpy: pthread_join failed with exit value %d", s);
+		if (s != 0) error("PARALiADaxpy: pthread_join failed with exit value %d", s);
 		//free(res);      /* Free memory allocated by thread */
 	}
 
@@ -281,7 +281,7 @@ ATC_p PARALiaDaxpy(long int N, VALUE_TYPE alpha, VALUE_TYPE* x, long int incx, V
 
 	int GPU_Block_num, Block_num = 1 + (x_asset->dim/T + ((x_asset->dim%T)? 1 : 0)) +
 		 (y_asset->dim/T + ((y_asset->dim%T)? 1 : 0));
-	long long Block_sz = 	T*sizeof(VALUE_TYPE);
+	long long Block_sz = 	T*sizeof(double);
 	GPU_Block_num = Block_num;
 	if(autotune_controller_axpy->cache_limit > 0){
 		int max_block_num = autotune_controller_axpy->cache_limit/Block_sz;
@@ -468,13 +468,13 @@ ATC_p PARALiaDaxpy(long int N, VALUE_TYPE alpha, VALUE_TYPE* x, long int incx, V
 	return autotune_controller_axpy;
 }
 
-/// A modification of PARALiaDaxpy but with given parameters (mainly for performance/debug purposes)
-ATC_p PARALiaDaxpyControled(long int N, VALUE_TYPE alpha, VALUE_TYPE* x, long int incx, VALUE_TYPE* y, long int incy, ATC_p predef_controller){
+/// A modification of PARALiADaxpy but with given parameters (mainly for performance/debug purposes)
+ATC_p PARALiADaxpyControled(long int N, double alpha, double* x, long int incx, double* y, long int incy, ATC_p predef_controller){
 	if (predef_controller == NULL){
-		warning("Calling PARALiaDaxpyControled with empty controller -> falling back to full autotune version \'PARALiaDaxpy\'\n");
-		return PARALiaDaxpy(N, alpha, x, incx, y, incy);
+		warning("Calling PARALiADaxpyControled with empty controller -> falling back to full autotune version \'PARALiADaxpy\'\n");
+		return PARALiADaxpy(N, alpha, x, incx, y, incy);
 	}
 
 	predef_controller_axpy = predef_controller;
-	return PARALiaDaxpy(N, alpha, x, incx, y, incy);
+	return PARALiADaxpy(N, alpha, x, incx, y, incy);
 }

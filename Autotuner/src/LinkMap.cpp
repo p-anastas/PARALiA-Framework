@@ -113,8 +113,8 @@ short lvl = 1;
   for (int i = 0; i < LOC_NUM; i++){
     for(int j = 0; j < LOC_NUM; j++){
       if(i == j) link_bw[i][j] = 0;
-      else link_bw[i][j] = Gval_per_s(pred_T_dim*pred_T_dim*sizeof(VALUE_TYPE),
-      t_com_predict(list_of_models[i]->revlink[j], pred_T_dim*pred_T_dim*sizeof(VALUE_TYPE)));
+      else link_bw[i][j] = Gval_per_s(pred_T_dim*pred_T_dim*8, // TODO: assuming a tile2D double transfer (inconsequential since its a BW estimation)
+      t_com_predict(list_of_models[i]->revlink[j], pred_T_dim*pred_T_dim*8));
     }
   }
   normalize_2D_LOC_NUM(link_bw, LOC_NUM, NORMALIZE_NEAR_SPLIT_LIMIT);
@@ -153,8 +153,6 @@ void LinkMap::update_link_shared_weights(MD_p* unit_modeler_list,
     for(int j = 0; j < LOC_NUM; j++){
       if(i == j) link_bw_shared[i][j] = 0;
       else{
-        //link_bw_shared[i][j] = Gval_per_s(pred_T_dim*pred_T_dim*sizeof(VALUE_TYPE),
-        //t_com_predict(unit_modeler_list[i]->revlink[j], pred_T_dim*pred_T_dim*sizeof(VALUE_TYPE)));
         double link_slowdown_multiplier = 1.0;
         for (int k = 0; k < LOC_NUM; k++){
           for(int l = 0; l < LOC_NUM; l++){
@@ -533,8 +531,8 @@ double LinkMap::ESPA_predict(MD_p unit_modeler, int T, int* active_unit_id_list,
 
 	double* ESPA_unit_score = NULL;
 	if (init_type && active_unit_score) ESPA_unit_score = active_unit_score;
-	else if((init_type && !active_unit_score) || !init_type && active_unit_score) error("link_map::ESPA_predict() called with init_type = %d and active_unit_score\n",
-	init_type, active_unit_score);
+	else if((init_type && !active_unit_score) || !init_type && active_unit_score) error("link_map::ESPA_predict() called with init_type = %d and active_unit_score = %s\n",
+	init_type, printlist<double>(active_unit_score,active_unit_num));
 	else{
 	//TODO: Assume an equal problem data distribution if none given (yet)
 	ESPA_unit_score = (double*) malloc(active_unit_num*sizeof(double));

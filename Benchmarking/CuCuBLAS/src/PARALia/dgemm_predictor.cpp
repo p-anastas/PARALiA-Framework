@@ -5,7 +5,7 @@
 ///
 
 #include "unihelpers.hpp"
-#include "CoCoPeLia.hpp"
+#include "PARALiA.hpp"
 #include "BackenedLibsWrapped.hpp"
 #include "Testing.hpp"
 
@@ -56,7 +56,7 @@ int main(const int argc, const char *argv[]) {
 	B_ptr = (double*) CoCoMalloc(sizeof(double), B_loc);
 	C_ptr = (double*) CoCoMalloc(sizeof(double), C_loc);
 
-	gemm_backend_in_p initial_gemm = (gemm_backend_in_p) malloc(sizeof(struct gemm_backend_in));
+	gemm_backend_in<double>* initial_gemm = (gemm_backend_in<double>*) malloc(sizeof(struct gemm_backend_in<double>));
 
 	initial_gemm->TransA = TransA;
 	initial_gemm->TransB = TransB;

@@ -16,11 +16,30 @@
 
 
 ///  Initializes the model for gemm
-void CoCoModel_axpy_init(MD_p out_model, int dev_id, const char* func, axpy_backend_in_p func_data){
-	long int N = func_data->N;
-	short x_loc, x_out_loc = x_loc = CoCoGetPtrLoc(*func_data->x),
-				y_loc, y_out_loc = y_loc = CoCoGetPtrLoc(*func_data->y);
-	long int incx = func_data->incx, incy = func_data->incy;
+void CoCoModel_axpy_init(MD_p out_model, int dev_id, const char* func, void* func_data_wrapped){
+
+	long int N;
+	short x_loc, x_out_loc,y_loc, y_out_loc;
+	long int incx , incy;
+
+	if (!strcmp(func, "Daxpy")) {
+			axpy_backend_in<double>* func_data = (axpy_backend_in<double>*) func_data_wrapped;
+			out_model->V->dtype_sz = sizeof(double);
+			N = func_data->N;
+			x_out_loc = x_loc = CoCoGetPtrLoc(*func_data->x);
+			y_out_loc = y_loc = CoCoGetPtrLoc(*func_data->y);
+			incx = func_data->incx;
+			incy = func_data->incy;
+	}
+	else if (!strcmp(func, "Saxpy")){
+		axpy_backend_in<float>* func_data = (axpy_backend_in<float>*) func_data_wrapped;
+		out_model->V->dtype_sz = sizeof(float);
+		N = func_data->N;
+		x_out_loc = x_loc = CoCoGetPtrLoc(*func_data->x);
+		y_out_loc = y_loc = CoCoGetPtrLoc(*func_data->y);
+		incx = func_data->incx;
+		incy = func_data->incy;
+	}
 	short lvl = 3;
 #ifdef DEBUG
 	lprintf(lvl-1, "|-----> CoCoModel_axpy_init(model,%ld, %d, %d, %d, %d, %ld, %ld, %d, %s)\n",
@@ -30,8 +49,6 @@ void CoCoModel_axpy_init(MD_p out_model, int dev_id, const char* func, axpy_back
 	// Axpy Routine info
 	out_model->V->numT = 2;
 
-	if (!strcmp(func, "Daxpy")) out_model->V->dtype_sz = sizeof(double);
-	else if (!strcmp(func, "Saxpy")) out_model->V->dtype_sz = sizeof(float);
 
 	out_model->V->in[0] = 1;
 	out_model->V->in[1] = 1;
@@ -64,11 +81,29 @@ void CoCoModel_axpy_init(MD_p out_model, int dev_id, const char* func, axpy_back
 }
 
 ///  Initializes the model for gemm
-void CoCoModel_dot_init(MD_p out_model, int dev_id, const char* func, dot_backend_in_p func_data){
-	long int N = func_data->N;
-	short x_loc, x_out_loc = x_loc = CoCoGetPtrLoc(*func_data->x),
-				y_loc, y_out_loc = y_loc = CoCoGetPtrLoc(*func_data->y);
-	long int incx = func_data->incx, incy = func_data->incy;
+void CoCoModel_dot_init(MD_p out_model, int dev_id, const char* func, void* func_data_wrapped){
+	long int N;
+	short x_loc, x_out_loc, y_loc, y_out_loc;
+	long int incx, incy;
+	if (!strcmp(func, "Ddot")) {
+		dot_backend_in<double>* func_data = (dot_backend_in<double>*) func_data_wrapped;
+		out_model->V->dtype_sz = sizeof(double);
+		N = func_data->N;
+		x_out_loc = x_loc = CoCoGetPtrLoc(*func_data->x);
+		y_out_loc = y_loc = CoCoGetPtrLoc(*func_data->y);
+		incx = func_data->incx;
+		incy = func_data->incy;
+	}
+	else if (!strcmp(func, "Sdot")){
+		dot_backend_in<float>* func_data = (dot_backend_in<float>*) func_data_wrapped;
+		out_model->V->dtype_sz = sizeof(float);
+		N = func_data->N;
+		x_out_loc = x_loc = CoCoGetPtrLoc(*func_data->x);
+		y_out_loc = y_loc = CoCoGetPtrLoc(*func_data->y);
+		incx = func_data->incx;
+		incy = func_data->incy;
+	}
+
 	short lvl = 3;
 #ifdef DEBUG
 	lprintf(lvl-1, "|-----> CoCoModel_dot_init(model,%ld, %d, %d, %d, %d, %ld, %ld, %d, %s)\n",
@@ -77,8 +112,6 @@ void CoCoModel_dot_init(MD_p out_model, int dev_id, const char* func, dot_backen
 	out_model->func = func;
 	// Axpy Routine info
 	out_model->V->numT = 2;
-
-	if (!strcmp(func, "Ddot")) out_model->V->dtype_sz = sizeof(double);
 
 	out_model->V->in[0] = 1;
 	out_model->V->in[1] = 1;
@@ -125,9 +158,9 @@ long int GetSKNumBLAS1(MD_p model, int T){
 ///  Initializes the model for gemm
 void ModelFuncInitBLAS1(MD_p out_model, int dev_id, const char* func, void* func_data){
 	if ( !strcmp(func, "Daxpy") || !strcmp(func, "Saxpy"))
-		return CoCoModel_axpy_init(out_model, dev_id, func, (axpy_backend_in_p) func_data);
+		return CoCoModel_axpy_init(out_model, dev_id, func, func_data);
 	else if ( !strcmp(func, "Ddot"))
-		return CoCoModel_dot_init(out_model, dev_id, func, (dot_backend_in_p) func_data);
+		return CoCoModel_dot_init(out_model, dev_id, func, func_data);
 	else error("ModelFuncInitBLAS1: func %s not implemented\n", func);
 }
 

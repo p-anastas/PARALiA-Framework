@@ -538,13 +538,42 @@ double PredictReuseHeteroBLAS3(MD_p model, long int T, int used_devs, int* used_
 }
 
 ///  Initializes the model for gemm
-void CoCoModel_gemm_init(MD_p out_model, int dev_id, const char* func, gemm_backend_in_p func_data){
-	char TransA = func_data->TransA, TransB = func_data->TransB;
-	long int M = func_data->M, N = func_data->N, K = func_data->K;
-	short A_loc, A_out_loc = A_loc = CoCoGetPtrLoc(*func_data->A),
-				B_loc, B_out_loc = B_loc = CoCoGetPtrLoc(*func_data->B),
-				C_loc, C_out_loc = C_loc = CoCoGetPtrLoc(*func_data->C);
-	long int ldA = func_data->ldA, ldB = func_data->ldB, ldC = func_data->ldC;
+void CoCoModel_gemm_init(MD_p out_model, int dev_id, const char* func, void* func_data_wrapped){
+	char TransA, TransB;
+	long int M, N, K;
+	short A_loc, A_out_loc, B_loc, B_out_loc, C_loc, C_out_loc;
+	long int ldA, ldB, ldC;
+	if (!strcmp(func, "Dgemm")) {
+			gemm_backend_in<double>* func_data = (gemm_backend_in<double>*) func_data_wrapped;
+			out_model->V->dtype_sz = sizeof(double);
+			TransA = func_data->TransA;
+			TransB = func_data->TransB;
+			M = func_data->M;
+			N = func_data->N;
+			K = func_data->K;
+			A_out_loc = A_loc = CoCoGetPtrLoc(*func_data->A);
+			B_out_loc = B_loc = CoCoGetPtrLoc(*func_data->B);
+			C_out_loc = C_loc = CoCoGetPtrLoc(*func_data->C);
+			ldA = func_data->ldA;
+			ldB = func_data->ldB;
+			ldC = func_data->ldC;
+	}
+	else if (!strcmp(func, "Sgemm")){
+		gemm_backend_in<float>* func_data = (gemm_backend_in<float>*) func_data_wrapped;
+		out_model->V->dtype_sz = sizeof(float);
+		TransA = func_data->TransA;
+		TransB = func_data->TransB;
+		M = func_data->M;
+		N = func_data->N;
+		K = func_data->K;
+		A_out_loc = A_loc = CoCoGetPtrLoc(*func_data->A);
+		B_out_loc = B_loc = CoCoGetPtrLoc(*func_data->B);
+		C_out_loc = C_loc = CoCoGetPtrLoc(*func_data->C);
+		ldA = func_data->ldA;
+		ldB = func_data->ldB;
+		ldC = func_data->ldC;
+	}
+	else error("CoCoModel_gemm_init: Unsupported function type %s", func); 
 	short lvl = 3;
 #ifdef DEBUG
 	lprintf(lvl-1, "|-----> CoCoModel_gemm_init(model, %c, %c, %ld, %ld, %ld, %d, %d, %d, %d, %d, %d, %ld, %ld, %ld, %d, %s)\n", TransA, TransB, M, N, K, A_loc, B_loc, C_loc, A_out_loc, B_out_loc, C_out_loc, ldA, ldB, ldC, dev_id, func);
@@ -552,9 +581,6 @@ void CoCoModel_gemm_init(MD_p out_model, int dev_id, const char* func, gemm_back
 	out_model->func = func;
 	// Gemm Routine info
 	out_model->V->numT = 3;
-
-	if (!strcmp(func, "Dgemm")) out_model->V->dtype_sz = sizeof(double);
-	else if (!strcmp(func, "Sgemm")) out_model->V->dtype_sz = sizeof(float);
 
 	out_model->V->in[0] = 1;
 	out_model->V->in[1] = 1;
@@ -614,6 +640,6 @@ long int GetSKNumBLAS3(MD_p model, int T){
 ///  Initializes the model for gemm
 void ModelFuncInitBLAS3(MD_p out_model, int dev_id, const char* func, void* func_data){
 	if ( !strcmp(func, "Dgemm") || !strcmp(func, "Sgemm"))
-		return CoCoModel_gemm_init(out_model, dev_id, func, (gemm_backend_in_p) func_data);
+		return CoCoModel_gemm_init(out_model, dev_id, func, func_data);
 	else error("ModelFuncInitBLAS3: func %s not implemented\n", func);
 }

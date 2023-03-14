@@ -17,7 +17,7 @@
 
 pthread_barrier_t  SoftCache_alloc_barrier_dot;
 
-dot_backend_in_p initial_dot = NULL;
+dot_backend_in<double>* initial_dot = NULL;
 ATC_p autotune_controller_dot = NULL;
 ATC_p predef_controller_dot = NULL;
 
@@ -33,7 +33,7 @@ int remaining_Subkernels_dot;
 
 int Sk_select_lock_dot = 0;
 
-Subkernel** CoCoAsignTilesToSubkernelsDdot(Decom1D<VALUE_TYPE>* x_asset, Decom1D<VALUE_TYPE>* y_asset,
+Subkernel** CoCoAsignTilesToSubkernelsDdot(Decom1D* x_asset, Decom1D* y_asset,
 	int T, int* kernelNum){
 
 	short lvl = 2;
@@ -51,23 +51,23 @@ Subkernel** kernels = (Subkernel**) malloc(*kernelNum*sizeof(Subkernel*));
 int current_ctr = 0;
 		for (int ni = 0; ni < NGridSz_dot; ni++){
             current_ctr = ni;
-			kernels[current_ctr] = new Subkernel(2,"dot");
+			kernels[current_ctr] = new Subkernel(2,"Ddot");
 			kernels[current_ctr]->iloc1 = ni;
 			kernels[current_ctr]->TileDimlist[0] = kernels[current_ctr]->TileDimlist[1] = 1;
 			kernels[current_ctr]->TileList[0] = x_asset->getTile(ni);
 			kernels[current_ctr]->TileList[1] = y_asset->getTile(ni);
-			((Tile1D<VALUE_TYPE>*)kernels[current_ctr]->TileList[0])->R_flag = 1;
-			((Tile1D<VALUE_TYPE>*)kernels[current_ctr]->TileList[1])->R_flag = 1;
-			//((Tile1D<VALUE_TYPE>*)kernels[current_ctr]->TileList[1])->W_flag = 1;
-			//((Tile1D<VALUE_TYPE>*)kernels[current_ctr]->TileList[1])->W_total = 1;
-			kernels[current_ctr]->operation_params = (void*) malloc(sizeof(struct dot_backend_in));
-			dot_backend_in_p ptr_ker_translate = (dot_backend_in_p) kernels[current_ctr]->operation_params;
-			ptr_ker_translate->N = ((Tile1D<VALUE_TYPE>*) kernels[current_ctr]->TileList[0])->dim;
+			((Tile1D*)kernels[current_ctr]->TileList[0])->R_flag = 1;
+			((Tile1D*)kernels[current_ctr]->TileList[1])->R_flag = 1;
+			//((Tile1D*)kernels[current_ctr]->TileList[1])->W_flag = 1;
+			//((Tile1D*)kernels[current_ctr]->TileList[1])->W_total = 1;
+			kernels[current_ctr]->operation_params = (void*) malloc(sizeof(struct dot_backend_in<double>));
+			dot_backend_in<double>* ptr_ker_translate = (dot_backend_in<double>*) kernels[current_ctr]->operation_params;
+			ptr_ker_translate->N = ((Tile1D*) kernels[current_ctr]->TileList[0])->dim;
 			ptr_ker_translate->x = NULL;
 			ptr_ker_translate->y = NULL;
 			ptr_ker_translate->incx = initial_dot->incx;
 			ptr_ker_translate->incy = initial_dot->incy;
-			ptr_ker_translate->result = (VALUE_TYPE*) calloc(1, sizeof(VALUE_TYPE));
+			ptr_ker_translate->result = (double*) calloc(1, sizeof(double));
 			// No interal dims for dot to reduce
 			kernels[current_ctr]->WR_first = 0;
 			kernels[current_ctr]->WR_last = (short*) calloc (2, sizeof(short));
@@ -79,18 +79,18 @@ int current_ctr = 0;
 }
 
 void CoCoDdotUpdateDevice(Subkernel* ker, short dev_id){
-	dot_backend_in_p ptr_ker_translate = (dot_backend_in_p) ker->operation_params;
+	dot_backend_in<double>* ptr_ker_translate = (dot_backend_in<double>*) ker->operation_params;
 	ker->run_dev_id = ptr_ker_translate->dev_id = dev_id;
 	short dev_id_idx = (dev_id == -1) ? LOC_NUM - 1: dev_id;
-	ptr_ker_translate->incx = ((Tile1D<VALUE_TYPE>*) ker->TileList[0])->inc[dev_id_idx];
-	ptr_ker_translate->incy = ((Tile1D<VALUE_TYPE>*) ker->TileList[1])->inc[dev_id_idx];
+	ptr_ker_translate->incx = ((Tile1D*) ker->TileList[0])->inc[dev_id_idx];
+	ptr_ker_translate->incy = ((Tile1D*) ker->TileList[1])->inc[dev_id_idx];
 }
 
 void CoCoDdotUpdatePointers(Subkernel* ker){
-	dot_backend_in_p ptr_ker_translate = (dot_backend_in_p) ker->operation_params;
+	dot_backend_in<double>* ptr_ker_translate = (dot_backend_in<double>*) ker->operation_params;
 	short dev_id_idx = idxize(ker->run_dev_id);
-	ptr_ker_translate->x = &((Tile1D<VALUE_TYPE>*) ker->TileList[0])->StoreBlock[dev_id_idx]->Adrs;
-	ptr_ker_translate->y = &((Tile1D<VALUE_TYPE>*) ker->TileList[1])->StoreBlock[dev_id_idx]->Adrs;
+	ptr_ker_translate->x = &((Tile1D*) ker->TileList[0])->StoreBlock[dev_id_idx]->Adrs;
+	ptr_ker_translate->y = &((Tile1D*) ker->TileList[1])->StoreBlock[dev_id_idx]->Adrs;
 }
 
 void* CoCopeLiaDotAgentVoid(void* kernel_pthread_wrapped){
@@ -198,16 +198,16 @@ void* CoCopeLiaDotAgentVoid(void* kernel_pthread_wrapped){
 }
 
 /// A dot wrapper including auto-tuning of T and cache_size, as well as device management
-ATC_p PARALiaDdot(long int N, VALUE_TYPE* x, long int incx, VALUE_TYPE* y, long int incy, VALUE_TYPE* result)
+ATC_p PARALiADdot(long int N, double* x, long int incx, double* y, long int incy, double* result)
 {
 	short lvl = 1;
 #ifdef DEBUG
-	lprintf(lvl-1, "|-----> PARALiaDdot(%zu,x=%p(%d),%zu,y=%p(%d),%zu)\n",
+	lprintf(lvl-1, "|-----> PARALiADdot(%zu,x=%p(%d),%zu,y=%p(%d),%zu)\n",
 		N, x, CoCoGetPtrLoc(x), incx, y, CoCoGetPtrLoc(y), incy);
 #endif
 
 #ifdef TEST
-	lprintf(lvl-1, "|-----> PARALiaDdot\n");
+	lprintf(lvl-1, "|-----> PARALiADdot\n");
 	double cpu_timer = csecond();
 #endif
 #ifdef STEST
@@ -217,7 +217,7 @@ ATC_p PARALiaDdot(long int N, VALUE_TYPE* x, long int incx, VALUE_TYPE* y, long 
 
 	short reuse_model_flag = 1;
 	if(!initial_dot){
-		initial_dot = (dot_backend_in_p) malloc(sizeof(struct dot_backend_in));
+		initial_dot = (dot_backend_in<double>*) malloc(sizeof(struct dot_backend_in<double>));
 		reuse_model_flag = 0;
 	}
 
@@ -238,15 +238,15 @@ ATC_p PARALiaDdot(long int N, VALUE_TYPE* x, long int incx, VALUE_TYPE* y, long 
 	initial_dot->result = result;
 	initial_dot->dev_id = -1;
 
-	Decom1D<VALUE_TYPE>* x_asset, *y_asset;
+	Decom1D* x_asset, *y_asset;
 	/// Prepare Assets in parallel( e.g. initialize asset classes, pin memory with pthreads)
 	/// return: x_asset, y_asset initialized and pinned
-	x_asset = new Decom1D<VALUE_TYPE>( x, N, incx);
-	y_asset = new Decom1D<VALUE_TYPE>( y, N, incy);
+	x_asset = new Decom1D( x, N, incx, DOUBLE);
+	y_asset = new Decom1D( y, N, incy, DOUBLE);
 
 	pthread_attr_t attr;
 	int s = pthread_attr_init(&attr);
-	if (s != 0) error("PARALiaDdot: pthread_attr_init failed s=%d\n", s);
+	if (s != 0) error("PARALiADdot: pthread_attr_init failed s=%d\n", s);
 
 	pthread_t asset_thread_id[2];
 	x_asset->prepareAsync(&asset_thread_id[0], attr);
@@ -267,7 +267,7 @@ ATC_p PARALiaDdot(long int N, VALUE_TYPE* x, long int incx, VALUE_TYPE* y, long 
 	void* res;
 	for(int i=0; i<2;i++){
 		s = pthread_join(asset_thread_id[i], &res);
-		if (s != 0) error("PARALiaDdot: pthread_join failed with exit value %d", s);
+		if (s != 0) error("PARALiADdot: pthread_join failed with exit value %d", s);
 		//free(res);      /* Free memory allocated by thread */
 	}
 
@@ -280,7 +280,7 @@ ATC_p PARALiaDdot(long int N, VALUE_TYPE* x, long int incx, VALUE_TYPE* y, long 
 
 	int GPU_Block_num, Block_num = 1 + (x_asset->dim/T + ((x_asset->dim%T)? 1 : 0)) +
 		 (y_asset->dim/T + ((y_asset->dim%T)? 1 : 0));
-	long long Block_sz = 	T*sizeof(VALUE_TYPE);
+	long long Block_sz = 	T*sizeof(double);
 	GPU_Block_num = Block_num;
 	if(autotune_controller_dot->cache_limit > 0){
 		int max_block_num = autotune_controller_dot->cache_limit/Block_sz;
@@ -428,7 +428,7 @@ ATC_p PARALiaDdot(long int N, VALUE_TYPE* x, long int incx, VALUE_TYPE* y, long 
 	cpu_timer = csecond();
 #endif
 
-	for(int i=0; i<Subkernel_num_dot; i++) *(initial_dot->result)+= *((dot_backend_in_p) Subkernel_list_dot[i]->operation_params)->result;
+	for(int i=0; i<Subkernel_num_dot; i++) *(initial_dot->result)+= *((dot_backend_in<double>*) Subkernel_list_dot[i]->operation_params)->result;
 	for(int i=0; i<Subkernel_num_dot; i++) delete Subkernel_list_dot[i];
 	//delete [] Subkernel_list_dot;
 
@@ -468,13 +468,13 @@ ATC_p PARALiaDdot(long int N, VALUE_TYPE* x, long int incx, VALUE_TYPE* y, long 
 	return autotune_controller_dot;
 }
 
-/// A modification of PARALiaDdot but with given parameters (mainly for performance/debug purposes)
-ATC_p PARALiaDdotControled(long int N, VALUE_TYPE* x, long int incx, VALUE_TYPE* y, long int incy, VALUE_TYPE* result, ATC_p predef_controller){
+/// A modification of PARALiADdot but with given parameters (mainly for performance/debug purposes)
+ATC_p PARALiADdotControled(long int N, double* x, long int incx, double* y, long int incy, double* result, ATC_p predef_controller){
 	if (predef_controller == NULL){
-		warning("Calling PARALiaDdotControled with empty controller -> falling back to full autotune version \'PARALiaDdot\'\n");
-		return PARALiaDdot(N, x, incx, y, incy, result);
+		warning("Calling PARALiADdotControled with empty controller -> falling back to full autotune version \'PARALiADdot\'\n");
+		return PARALiADdot(N, x, incx, y, incy, result);
 	}
 
 	predef_controller_dot = predef_controller;
-	return PARALiaDdot(N, x, incx, y, incy, result);
+	return PARALiADdot(N, x, incx, y, incy, result);
 }

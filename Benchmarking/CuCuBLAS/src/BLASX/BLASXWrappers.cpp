@@ -9,7 +9,7 @@
 
 #include "backend_wrappers.hpp"
 #include <BLASxModifiedcblas.h>
-#include "CoCoPeLia.hpp"
+#include "PARALiA.hpp"
 #include "unihelpers.hpp"
 
 void BLASxFlushGPUBuf(short dev_num, int dev_ids[] ){

@@ -7,7 +7,7 @@
 #include <cstdlib>
 #include <cmath>
 #include "unihelpers.hpp"
-#include "CoCoPeLia.hpp"
+#include "PARALiA.hpp"
 
 char* CoCoImplementationPrint(){
 	char* string_out = (char*) malloc (1024*sizeof(char));

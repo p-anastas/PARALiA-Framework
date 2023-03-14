@@ -5,7 +5,7 @@
 ///
 
 #include "unihelpers.hpp"
-#include "CoCoPeLia.hpp"
+#include "PARALiA.hpp"
 #include "BackenedLibsWrapped.hpp"
 #include "Testing.hpp"
 
@@ -69,10 +69,10 @@ int main(const int argc, const char *argv[]) {
 	CoCoMemcpy(y, y_buf, N * incy *sizeof(double), y_loc, -2);
 
 	// Call for Validate
-	if (predef_control_values!= NULL) return_values = PARALiaDaxpyControled(N, alpha, x, incx, y, incy, predef_control_values);
-	else return_values = PARALiaDaxpy(N, alpha, x, incx, y, incy);
+	if (predef_control_values!= NULL) return_values = PARALiADaxpyControled(N, alpha, x, incx, y, incy, predef_control_values);
+	else return_values = PARALiADaxpy(N, alpha, x, incx, y, incy);
 	CoCoSyncCheckErr();
-	for (int i = 0; i< LOC_NUM; i++) CoCopeLiaDevCacheFree(deidxize(i));
+	for (int i = 0; i< LOC_NUM; i++) PARALiADevCacheFree(deidxize(i));
 
 	CoCoMemcpy(y_out, y, N * incy *sizeof(double), -2, y_loc);
 	CoCoMemcpy(y, y_buf, N * incy *sizeof(double), y_loc, -2);
@@ -108,14 +108,14 @@ int main(const int argc, const char *argv[]) {
 
 	// Warmup
 	for(int it = 0; it < 10; it++){
-		if (predef_control_values!= NULL)  return_values = PARALiaDaxpyControled(N, alpha, x, incx, y, incy, predef_control_values);
-		else return_values = PARALiaDaxpy(N, alpha, x, incx, y, incy);
+		if (predef_control_values!= NULL)  return_values = PARALiADaxpyControled(N, alpha, x, incx, y, incy, predef_control_values);
+		else return_values = PARALiADaxpy(N, alpha, x, incx, y, incy);
 		CoCoSyncCheckErr();
 	}
 
 	cpu_timer  = csecond();
-	if (predef_control_values!= NULL)  return_values = PARALiaDaxpyControled(N, alpha, x, incx, y, incy, predef_control_values);
-	else return_values = PARALiaDaxpy(N, alpha, x, incx, y, incy);
+	if (predef_control_values!= NULL)  return_values = PARALiADaxpyControled(N, alpha, x, incx, y, incy, predef_control_values);
+	else return_values = PARALiADaxpy(N, alpha, x, incx, y, incy);
 	CoCoSyncCheckErr();
 	cpu_timer  = csecond() - cpu_timer;
 
@@ -133,8 +133,8 @@ int main(const int argc, const char *argv[]) {
 	if ( N >= 8192*8192 ) bench_it = 10;
 	for(int it = 0; it < bench_it; it++){
 		cpu_timer = csecond();
-		if (predef_control_values!= NULL) return_values = PARALiaDaxpyControled(N, alpha, x, incx, y, incy, predef_control_values);
-		else return_values = PARALiaDaxpy(N, alpha, x, incx, y, incy);
+		if (predef_control_values!= NULL) return_values = PARALiADaxpyControled(N, alpha, x, incx, y, incy, predef_control_values);
+		else return_values = PARALiADaxpy(N, alpha, x, incx, y, incy);
 		CoCoSyncCheckErr();
 		cpu_timer = csecond() - cpu_timer;
 		StoreLogLvl1(filename, predef_control_values, alpha, N, incx, incy, x_loc, y_loc, x_out_loc, y_out_loc, cpu_timer);
@@ -150,7 +150,7 @@ int main(const int argc, const char *argv[]) {
 	min_t  * 1000, Gval_per_s(axpy_flops(N),min_t),
 	max_t  * 1000, Gval_per_s(axpy_flops(N),max_t));
 
-	for (int i = 0; i< LOC_NUM; i++) CoCopeLiaDevCacheFree(deidxize(i));
+	for (int i = 0; i< LOC_NUM; i++) PARALiADevCacheFree(deidxize(i));
 
 	CoCoSyncCheckErr();
 	CoCoFree(x, x_loc);

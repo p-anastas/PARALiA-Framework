@@ -79,21 +79,21 @@ void CoCoSetTimerAsync(void* wrapped_timer_Ptr){
 }
 
 void cblas_wrap_daxpy(void* backend_data){
-  axpy_backend_in_p ptr_ker_translate = (axpy_backend_in_p) backend_data;
+  axpy_backend_in<double>* ptr_ker_translate = (axpy_backend_in<double>*) backend_data;
   cblas_daxpy(ptr_ker_translate->N, ptr_ker_translate->alpha,
     (double*) *ptr_ker_translate->x, ptr_ker_translate->incx, (double*)
     *ptr_ker_translate->y, ptr_ker_translate->incy);
 }
 
 void cblas_wrap_saxpy(void* backend_data){
-  axpy_backend_in_p ptr_ker_translate = (axpy_backend_in_p) backend_data;
+  axpy_backend_in<float>* ptr_ker_translate = (axpy_backend_in<float>*) backend_data;
   cblas_saxpy(ptr_ker_translate->N, ptr_ker_translate->alpha,
     (float*) *ptr_ker_translate->x, ptr_ker_translate->incx, (float*)
     *ptr_ker_translate->y, ptr_ker_translate->incy);
 }
 
 void cblas_wrap_ddot(void* backend_data){
-  dot_backend_in_p ptr_ker_translate = (dot_backend_in_p) backend_data;
+  dot_backend_in<double>* ptr_ker_translate = (dot_backend_in<double>*) backend_data;
   *ptr_ker_translate->result = cblas_ddot(ptr_ker_translate->N, (double*) *ptr_ker_translate->x,
   ptr_ker_translate->incx, (double*) *ptr_ker_translate->y,
   ptr_ker_translate->incy);
@@ -101,7 +101,7 @@ void cblas_wrap_ddot(void* backend_data){
 
 void cblas_wrap_dgemm(void* backend_data){
   short lvl = 6;
-  gemm_backend_in_p ptr_ker_translate = (gemm_backend_in_p) backend_data;
+  gemm_backend_in<double>* ptr_ker_translate = (gemm_backend_in<double>*) backend_data;
 #ifdef DDEBUG
   if (ptr_ker_translate->dev_id != -1)
     warning("cblas_wrap_dgemm: Suspicious device %d instead of -1\n", ptr_ker_translate->dev_id);
@@ -124,34 +124,33 @@ void cblas_wrap_dgemm(void* backend_data){
     ptr_ker_translate->beta, (double*) *ptr_ker_translate->C, ptr_ker_translate->ldC);
 }
 
-/*void cblas_wrap_sgemm(void* backend_data){
+void cblas_wrap_sgemm(void* backend_data){
   short lvl = 6;
-  gemm_backend_in_p ptr_ker_translate = (gemm_backend_in_p) backend_data;
+  gemm_backend_in<float>* ptr_ker_translate = (gemm_backend_in<float>*) backend_data;
 #ifdef DDEBUG
   if (ptr_ker_translate->dev_id != -1)
     warning("cblas_wrap_sgemm: Suspicious device %d instead of -1\n", ptr_ker_translate->dev_id);
 #endif
 #ifdef DDEBUG
   lprintf(lvl, "cblas_wrap_sgemm: cblas_dgemm(dev_id = %d, TransA = %c, TransB = %c,\
-    M = %d, N = %d, K = %d, alpha = %f, A = %p, lda = %d, \n\
-    B = %p, ldb = %d, beta = %f, C = %p, ldC = %d)\n",
+    M = %d, N = %d, K = %d, alpha = %lf, A = %p, lda = %d, \n\
+    B = %p, ldb = %d, beta = %lf, C = %p, ldC = %d)\n",
     ptr_ker_translate->dev_id, ptr_ker_translate->TransA, ptr_ker_translate->TransB,
     ptr_ker_translate->M, ptr_ker_translate->N, ptr_ker_translate->K, ptr_ker_translate->alpha,
     (float*) *ptr_ker_translate->A, ptr_ker_translate->ldA,
     (float*) *ptr_ker_translate->B, ptr_ker_translate->ldB,
     ptr_ker_translate->beta, (float*) *ptr_ker_translate->C, ptr_ker_translate->ldC);
 #endif
-  float alpha = ptr_ker_translate->alpha, beta = ptr_ker_translate->beta;
-  cblas_dgemm(CblasColMajor,
+  cblas_sgemm(CblasColMajor,
     OpCharToCblas(ptr_ker_translate->TransA), OpCharToCblas(ptr_ker_translate->TransB),
-    ptr_ker_translate->M, ptr_ker_translate->N, ptr_ker_translate->K, alpha,
+    ptr_ker_translate->M, ptr_ker_translate->N, ptr_ker_translate->K, ptr_ker_translate->alpha,
     (float*) *ptr_ker_translate->A, ptr_ker_translate->ldA,
     (float*) *ptr_ker_translate->B, ptr_ker_translate->ldB,
-    beta, (float*) *ptr_ker_translate->C, ptr_ker_translate->ldC);
-}*/
+    ptr_ker_translate->beta, (float*) *ptr_ker_translate->C, ptr_ker_translate->ldC);
+}
 
 void cublas_wrap_daxpy(void* backend_data, void* queue_wrap_p){
-  axpy_backend_in_p ptr_ker_translate = (axpy_backend_in_p) backend_data;
+  axpy_backend_in<double>* ptr_ker_translate = (axpy_backend_in<double>*) backend_data;
   CoCoPeLiaSelectDevice(ptr_ker_translate->dev_id);
 #ifdef ENABLE_PARALLEL_BACKEND
   cublasHandle_t temp_handle = *((cublasHandle_t*)((CQueue_p)queue_wrap_p)->cqueue_backend_data
@@ -166,7 +165,7 @@ void cublas_wrap_daxpy(void* backend_data, void* queue_wrap_p){
 }
 
 void cublas_wrap_ddot(void* backend_data, void* queue_wrap_p){
-  dot_backend_in_p ptr_ker_translate = (dot_backend_in_p) backend_data;
+  dot_backend_in<double>* ptr_ker_translate = (dot_backend_in<double>*) backend_data;
   CoCoPeLiaSelectDevice(ptr_ker_translate->dev_id);
 #ifdef ENABLE_PARALLEL_BACKEND
   cublasHandle_t temp_handle = *((cublasHandle_t*)((CQueue_p)queue_wrap_p)->cqueue_backend_data
@@ -182,7 +181,7 @@ void cublas_wrap_ddot(void* backend_data, void* queue_wrap_p){
 
 void cublas_wrap_dgemm(void* backend_data, void* queue_wrap_p){
   short lvl = 6;
-  gemm_backend_in_p ptr_ker_translate = (gemm_backend_in_p) backend_data;
+  gemm_backend_in<double>* ptr_ker_translate = (gemm_backend_in<double>*) backend_data;
 #ifdef DDEBUG
   int cur_dev_id = CoCoPeLiaGetDevice();
   if (ptr_ker_translate->dev_id != cur_dev_id)
@@ -214,9 +213,9 @@ void cublas_wrap_dgemm(void* backend_data, void* queue_wrap_p){
     "cublas_wrap_dgemm: cublasDgemm failed\n");
 }
 
-/*void cublas_wrap_sgemm(void* backend_data, void* queue_wrap_p){
+void cublas_wrap_sgemm(void* backend_data, void* queue_wrap_p){
   short lvl = 6;
-  gemm_backend_in_p ptr_ker_translate = (gemm_backend_in_p) backend_data;
+  gemm_backend_in<float>* ptr_ker_translate = (gemm_backend_in<float>*) backend_data;
 #ifdef DDEBUG
   int cur_dev_id = CoCoPeLiaGetDevice();
   if (ptr_ker_translate->dev_id != cur_dev_id)
@@ -225,10 +224,10 @@ void cublas_wrap_dgemm(void* backend_data, void* queue_wrap_p){
   CoCoPeLiaSelectDevice(ptr_ker_translate->dev_id);
 #ifdef DDEBUG
   lprintf(lvl, "cublas_wrap_sgemm: cublasDgemm(dev_id = %d, TransA = %c, TransB = %c,\
-    M = %d, N = %d, K = %d, alpha = %f, A = %p, lda = %d, \n\
-    B = %p, ldb = %d, beta = %f, C = %p, ldC = %d)\n",
+    M = %d, N = %d, K = %d, alpha = %lf, A = %p, lda = %d, \n\
+    B = %p, ldb = %d, beta = %lf, C = %p, ldC = %d)\n",
     ptr_ker_translate->dev_id, ptr_ker_translate->TransA, ptr_ker_translate->TransB,
-    ptr_ker_translate->M, ptr_ker_translate->N, ptr_ker_translate->K, (float) ptr_ker_translate->alpha,
+    ptr_ker_translate->M, ptr_ker_translate->N, ptr_ker_translate->K, ptr_ker_translate->alpha,
     (float*) *ptr_ker_translate->A, ptr_ker_translate->ldA,
     (float*) *ptr_ker_translate->B, ptr_ker_translate->ldB,
     ptr_ker_translate->beta, (float*) *ptr_ker_translate->C, ptr_ker_translate->ldC);
@@ -239,12 +238,11 @@ void cublas_wrap_dgemm(void* backend_data, void* queue_wrap_p){
 #else
   cublasHandle_t temp_handle = *((cublasHandle_t*)((CQueue_p)queue_wrap_p)->cqueue_backend_data);
 #endif
-  float alpha = ptr_ker_translate->alpha, beta = ptr_ker_translate->beta;
-  massert(CUBLAS_STATUS_SUCCESS == cublasDgemm(temp_handle,
+  massert(CUBLAS_STATUS_SUCCESS == cublasSgemm(temp_handle,
     OpCharToCublas(ptr_ker_translate->TransA), OpCharToCublas(ptr_ker_translate->TransB),
-    ptr_ker_translate->M, ptr_ker_translate->N, ptr_ker_translate->K, &alpha,
+    ptr_ker_translate->M, ptr_ker_translate->N, ptr_ker_translate->K, &ptr_ker_translate->alpha,
     (float*) *ptr_ker_translate->A, ptr_ker_translate->ldA,
     (float*) *ptr_ker_translate->B, ptr_ker_translate->ldB,
-    &beta, (float*) *ptr_ker_translate->C, ptr_ker_translate->ldC),
+    &ptr_ker_translate->beta, (float*) *ptr_ker_translate->C, ptr_ker_translate->ldC),
     "cublas_wrap_dgemm: cublasDgemm failed\n");
-}*/
+}

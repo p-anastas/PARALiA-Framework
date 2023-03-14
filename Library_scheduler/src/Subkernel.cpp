@@ -57,11 +57,11 @@ void Subkernel::sync_request_data_RONLY(){
 	short run_dev_id_idx = idxize(run_dev_id);
 	for (int j = 0; j < TileNum; j++){
 		if (TileDimlist[j] == 1){
-				Tile1D<VALUE_TYPE>* tmp = (Tile1D<VALUE_TYPE>*) TileList[j];
+				Tile1D* tmp = (Tile1D*) TileList[j];
 				if (!tmp->W_flag && tmp->R_flag) tmp->StoreBlock[run_dev_id_idx]->Available->sync_barrier();
 		}
 		else if (TileDimlist[j] == 2){
-				Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) TileList[j];
+				Tile2D* tmp = (Tile2D*) TileList[j];
 				if (!tmp->W_flag && tmp->R_flag) tmp->StoreBlock[run_dev_id_idx]->Available->sync_barrier();
 		}
 	}
@@ -81,11 +81,11 @@ void Subkernel::sync_request_data(){
 	short run_dev_id_idx = idxize(run_dev_id);
 	for (int j = 0; j < TileNum; j++){
 		if (TileDimlist[j] == 1){
-				Tile1D<VALUE_TYPE>* tmp = (Tile1D<VALUE_TYPE>*) TileList[j];
+				Tile1D* tmp = (Tile1D*) TileList[j];
 				if (tmp->R_flag) tmp->StoreBlock[run_dev_id_idx]->Available->sync_barrier();
 		}
 		else if (TileDimlist[j] == 2){
-				Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) TileList[j];
+				Tile2D* tmp = (Tile2D*) TileList[j];
 				if (tmp->R_flag) tmp->StoreBlock[run_dev_id_idx]->Available->sync_barrier();
 		}
 	}
@@ -113,7 +113,7 @@ void Subkernel::request_tile_hops(short TileIdx){
 	short lvl = 5;
 	short run_dev_id_idx = idxize(run_dev_id);
 	if (TileDimlist[TileIdx] == 1){
-			Tile1D<VALUE_TYPE>* tmp = (Tile1D<VALUE_TYPE>*) TileList[TileIdx];
+			Tile1D* tmp = (Tile1D*) TileList[TileIdx];
 #ifdef DEBUG
 		lprintf(lvl-1, "|-----> Subkernel(dev=%d,id=%d)::request_tile_hops(Tile(%d.[%d]))\n",
 			run_dev_id, id, tmp->id, tmp->GridId);
@@ -270,7 +270,7 @@ void Subkernel::request_tile_hops(short TileIdx){
 		tmp->StoreBlock[run_dev_id_idx]->Available->record_to_queue(used_queue);
 	}
 	else if (TileDimlist[TileIdx] == 2){
-			Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) TileList[TileIdx];
+			Tile2D* tmp = (Tile2D*) TileList[TileIdx];
 #ifdef DEBUG
 		lprintf(lvl-1, "|-----> Subkernel(dev=%d,id=%d)::request_tile_hops(Tile(%d.[%d,%d]))\n",
 			run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2);
@@ -436,7 +436,7 @@ void Subkernel::request_tile(short TileIdx){
 	short lvl = 5;
 	short run_dev_id_idx = idxize(run_dev_id);
 	if (TileDimlist[TileIdx] == 1){
-			Tile1D<VALUE_TYPE>* tmp = (Tile1D<VALUE_TYPE>*) TileList[TileIdx];
+			Tile1D* tmp = (Tile1D*) TileList[TileIdx];
 #ifdef DEBUG
 		lprintf(lvl-1, "|-----> Subkernel(dev=%d,id=%d)::request_tile(Tile(%d.[%d]))\n",
 			run_dev_id, id, tmp->id, tmp->GridId);
@@ -493,7 +493,7 @@ void Subkernel::request_tile(short TileIdx){
 		tmp->StoreBlock[run_dev_id_idx]->Available->record_to_queue(recv_queues[run_dev_id_idx][FetchFromId_idx]);
 	}
 	else if (TileDimlist[TileIdx] == 2){
-			Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) TileList[TileIdx];
+			Tile2D* tmp = (Tile2D*) TileList[TileIdx];
 #ifdef DEBUG
 		lprintf(lvl-1, "|-----> Subkernel(dev=%d,id=%d)::request_tile(Tile(%d.[%d,%d]))\n",
 			run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2);
@@ -572,7 +572,7 @@ void Subkernel::request_data(){
 	short run_dev_id_idx = idxize(run_dev_id);
 	for (int j = 0; j < TileNum; j++){
 		if (TileDimlist[j] == 1){
-			Tile1D<VALUE_TYPE>* tmp = (Tile1D<VALUE_TYPE>*) TileList[j];
+			Tile1D* tmp = (Tile1D*) TileList[j];
 			if (tmp->StoreBlock[run_dev_id_idx] == NULL ||
 				tmp->StoreBlock[run_dev_id_idx]->State == INVALID) {
 				if(tmp->StoreBlock[run_dev_id_idx] != NULL) tmp->StoreBlock[run_dev_id_idx]->Owner_p = NULL;
@@ -639,7 +639,7 @@ void Subkernel::request_data(){
 			}
 		}
 		else if (TileDimlist[j] == 2){
-			Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) TileList[j];
+			Tile2D* tmp = (Tile2D*) TileList[j];
 			if (tmp->StoreBlock[run_dev_id_idx] == NULL ||
 				tmp->StoreBlock[run_dev_id_idx]->State == INVALID) {
 				if(tmp->StoreBlock[run_dev_id_idx] != NULL) tmp->StoreBlock[run_dev_id_idx]->Owner_p = NULL;
@@ -739,11 +739,11 @@ void Subkernel::run_operation(){
 	if(is_RW_lock_master(run_dev_id) > 1){
 		for (int j = 0; j < TileNum; j++){ /// Method only works for max 1 W(rite) Tile.
 			if (TileDimlist[j] == 1){
-					Tile1D<VALUE_TYPE>* tmp = (Tile1D<VALUE_TYPE>*) TileList[j];
+					Tile1D* tmp = (Tile1D*) TileList[j];
 					if(tmp->W_total) RW_parallel_backend_ctr = tmp->RW_Master_backend_ctr;
 			}
 			else if (TileDimlist[j] == 2){
-					Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) TileList[j];
+					Tile2D* tmp = (Tile2D*) TileList[j];
 					if(tmp->W_total) RW_parallel_backend_ctr = tmp->RW_Master_backend_ctr;
 			}
 		}
@@ -755,7 +755,7 @@ void Subkernel::run_operation(){
 #endif
 	for (int j = 0; j < TileNum; j++){
 		if (TileDimlist[j] == 1){
-				Tile1D<VALUE_TYPE>* tmp = (Tile1D<VALUE_TYPE>*) TileList[j];
+				Tile1D* tmp = (Tile1D*) TileList[j];
 				if (tmp->StoreBlock[run_dev_id_idx] == NULL ||
   tmp->StoreBlock[run_dev_id_idx]->State == INVALID)
 					error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d])::run_operation: Tile(j=%d) Storeblock is NULL\n",
@@ -766,7 +766,7 @@ void Subkernel::run_operation(){
 				#endif
 		}
 		else if (TileDimlist[j] == 2){
-				Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) TileList[j];
+				Tile2D* tmp = (Tile2D*) TileList[j];
 				if (tmp->StoreBlock[run_dev_id_idx] == NULL ||
   tmp->StoreBlock[run_dev_id_idx]->State == INVALID)
 					error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::run_operation: Tile(j=%d) Storeblock is NULL\n",
@@ -796,7 +796,7 @@ void Subkernel::run_operation(){
 #endif
 	for (int j = 0; j < TileNum; j++){
 		if (TileDimlist[j] == 1){
-			Tile1D<VALUE_TYPE>* tmp = (Tile1D<VALUE_TYPE>*) TileList[j];
+			Tile1D* tmp = (Tile1D*) TileList[j];
 			if (tmp->StoreBlock[run_dev_id_idx] == NULL ||
   tmp->StoreBlock[run_dev_id_idx]->State == INVALID)
 				error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d])::run_operation: Tile(j=%d) Storeblock is NULL\n",
@@ -822,7 +822,7 @@ void Subkernel::run_operation(){
 
 		}
 		else if (TileDimlist[j] == 2){
-			Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) TileList[j];
+			Tile2D* tmp = (Tile2D*) TileList[j];
 			if (tmp->StoreBlock[run_dev_id_idx] == NULL ||
   tmp->StoreBlock[run_dev_id_idx]->State == INVALID)
 				error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::run_operation: Tile(j=%d) Storeblock is NULL\n",
@@ -870,7 +870,7 @@ void Subkernel::writeback_data_hops(){
 	short Writeback_id_idx, Writeback_id;
 	for (int j = 0; j < TileNum; j++) if (WR_last[j]){
 		if (TileDimlist[j] == 1){
-			Tile1D<VALUE_TYPE>* tmp = (Tile1D<VALUE_TYPE>*) TileList[j];
+			Tile1D* tmp = (Tile1D*) TileList[j];
 			if (tmp->StoreBlock[run_dev_id_idx] == NULL || tmp->StoreBlock[run_dev_id_idx]->State == INVALID)
 				error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d])::writeback_data_hops: Tile(j=%d) Storeblock is NULL\n",
 					run_dev_id, id, tmp->id, tmp->GridId, j);
@@ -990,7 +990,7 @@ void Subkernel::writeback_data_hops(){
 			}
 		}
 		else if (TileDimlist[j] == 2){
-			Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) TileList[j];
+			Tile2D* tmp = (Tile2D*) TileList[j];
 			if (tmp->StoreBlock[run_dev_id_idx] == NULL ||
   tmp->StoreBlock[run_dev_id_idx]->State == INVALID)
 				error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::writeback_data_hops: Tile(j=%d) Storeblock is NULL\n",
@@ -1145,7 +1145,7 @@ void Subkernel::writeback_data(){
 	short Writeback_id_idx, Writeback_id;
 	for (int j = 0; j < TileNum; j++) if (WR_last[j]){
 		if (TileDimlist[j] == 1){
-			Tile1D<VALUE_TYPE>* tmp = (Tile1D<VALUE_TYPE>*) TileList[j];
+			Tile1D* tmp = (Tile1D*) TileList[j];
 			if (tmp->StoreBlock[run_dev_id_idx] == NULL ||
   tmp->StoreBlock[run_dev_id_idx]->State == INVALID)
 				error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d])::writeback_data: Tile(j=%d) Storeblock is NULL\n",
@@ -1195,7 +1195,7 @@ void Subkernel::writeback_data(){
 			}
 		}
 		else if (TileDimlist[j] == 2){
-			Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) TileList[j];
+			Tile2D* tmp = (Tile2D*) TileList[j];
 			if (tmp->StoreBlock[run_dev_id_idx] == NULL ||
   tmp->StoreBlock[run_dev_id_idx]->State == INVALID)
 				error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::writeback_data: Tile(j=%d) Storeblock is NULL\n",
@@ -1399,7 +1399,7 @@ void Subkernel::prepare_launch(short dev_id){
 
 	for (int j = 0; j < TileNum; j++){
 		if (TileDimlist[j] == 1){
-			Tile1D<VALUE_TYPE>* tmp = (Tile1D<VALUE_TYPE>*) TileList[j];
+			Tile1D* tmp = (Tile1D*) TileList[j];
 			if(tmp->W_flag) {
 				if(tmp->RW_lock_holders.load() > 0 && tmp->RW_lock != dev_id)
 					error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d])::prepare_launch: Tile(j=%d) has RW_lock = %d with RW_lock_holders = %d\n",
@@ -1417,7 +1417,7 @@ void Subkernel::prepare_launch(short dev_id){
 			}
 		}
 		else if (TileDimlist[j] == 2){
-			Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) TileList[j];
+			Tile2D* tmp = (Tile2D*) TileList[j];
 			if(tmp->W_flag) {
 				if(tmp->RW_lock_holders.load() > 0 && tmp->RW_lock != dev_id)
 					error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::prepare_launch: Tile(j=%d) has RW_lock = %d with RW_lock_holders = %d\n",
@@ -1443,11 +1443,11 @@ void Subkernel::prepare_launch(short dev_id){
 short Subkernel::no_locked_tiles(){
 	for (int j = 0; j < TileNum; j++){
 		if (TileDimlist[j] == 1){
-			Tile1D<VALUE_TYPE>* tmp = (Tile1D<VALUE_TYPE>*) TileList[j];
+			Tile1D* tmp = (Tile1D*) TileList[j];
 			if(tmp->RW_lock_holders.load() > 0 ) return 0;
 		}
 		else if (TileDimlist[j] == 2){
-			Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) TileList[j];
+			Tile2D* tmp = (Tile2D*) TileList[j];
 			if(tmp->RW_lock_holders.load() > 0) return 0;
 		}
 		else error("Subkernel(dev=%d,id=%d)::no_locked_tiles: Not implemented for TileDim=%d\n", run_dev_id, id, TileDimlist[j]);
@@ -1460,12 +1460,12 @@ short Subkernel::is_RW_lock_master(short dev_id){
 	short RW_lock_Hos = 0;
 	for (int j = 0; j < TileNum; j++){
 		if (TileDimlist[j] == 1){
-			Tile1D<VALUE_TYPE>* tmp = (Tile1D<VALUE_TYPE>*) TileList[j];
+			Tile1D* tmp = (Tile1D*) TileList[j];
 			if(tmp->W_flag && /*tmp->W_total != tmp->W_flag &&*/ tmp->RW_lock!=dev_id) return 0;
 			else if(tmp->W_flag && tmp->RW_lock==dev_id) RW_lock_Hos = tmp->RW_lock_holders.load();
 		}
 		else if (TileDimlist[j] == 2){
-			Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) TileList[j];
+			Tile2D* tmp = (Tile2D*) TileList[j];
 			if(tmp->W_flag && /*tmp->W_total != tmp->W_flag &&*/ tmp->RW_lock!=dev_id) return 0;
 			else if(tmp->W_flag && tmp->RW_lock==dev_id) RW_lock_Hos = tmp->RW_lock_holders.load();
 		}
@@ -1477,11 +1477,11 @@ short Subkernel::is_RW_lock_master(short dev_id){
 short Subkernel::RW_lock_initialized(){
 	for (int j = 0; j < TileNum; j++){
 		if (TileDimlist[j] == 1){
-			Tile1D<VALUE_TYPE>* tmp = (Tile1D<VALUE_TYPE>*) TileList[j];
+			Tile1D* tmp = (Tile1D*) TileList[j];
 			if(tmp->W_total && /*tmp->W_total != tmp->W_flag &&*/ tmp->RW_lock!=-42) return 1;
 		}
 		else if (TileDimlist[j] == 2){
-			Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) TileList[j];
+			Tile2D* tmp = (Tile2D*) TileList[j];
 			if(tmp->W_total && /*tmp->W_total != tmp->W_flag &&*/ tmp->RW_lock!=-42) return 1;
 		}
 	}
@@ -1525,10 +1525,10 @@ int SubkernelPrefetchCheapRONLYTiles(int numTiles, short dev_id, Subkernel** Sub
 		for (int j = 0; j < curr_sk->TileNum; j++){
 			if (curr_sk->TileDimlist[j] == 1){
 				error("Prefetching in 1D Tiles not implemented\n");
-				Tile1D<VALUE_TYPE>* tmp = (Tile1D<VALUE_TYPE>*) curr_sk->TileList[j];
+				Tile1D* tmp = (Tile1D*) curr_sk->TileList[j];
 			}
 			else if (curr_sk->TileDimlist[j] == 2){
-				Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) curr_sk->TileList[j];
+				Tile2D* tmp = (Tile2D*) curr_sk->TileList[j];
 				if(!tmp->W_total){
 					long double temp_fetch_cost = tmp->getMinLinkCost(dev_id);
 					if(temp_fetch_cost < min_fetch_cost && temp_fetch_cost!= 0 && temp_fetch_cost < 1) min_fetch_cost = temp_fetch_cost;
@@ -1543,10 +1543,10 @@ int SubkernelPrefetchCheapRONLYTiles(int numTiles, short dev_id, Subkernel** Sub
 		for (int j = 0; j < curr_sk->TileNum; j++){
 			if (curr_sk->TileDimlist[j] == 1){
 				error("Prefetching in 1D Tiles not implemented\n");
-				Tile1D<VALUE_TYPE>* tmp = (Tile1D<VALUE_TYPE>*) curr_sk->TileList[j];
+				Tile1D* tmp = (Tile1D*) curr_sk->TileList[j];
 			}
 			else if (curr_sk->TileDimlist[j] == 2){
-				Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) curr_sk->TileList[j];
+				Tile2D* tmp = (Tile2D*) curr_sk->TileList[j];
 				if(!tmp->W_total){
 					long double temp_fetch_cost = tmp->getMinLinkCost(dev_id);
 					if(temp_fetch_cost == min_fetch_cost){
@@ -1615,7 +1615,7 @@ long double Subkernel::opt_fetch_score(short dev_id){
 	short simultaneous_fetch = 0, prefetched;
 	for (int j = 0; j < TileNum; j++){
 		if (TileDimlist[j] == 1){
-			Tile1D<VALUE_TYPE>* tmp = (Tile1D<VALUE_TYPE>*) TileList[j];
+			Tile1D* tmp = (Tile1D*) TileList[j];
 			long double temp_fetch_score = tmp->getMinLinkCost(dev_id);
 			inter_fetch_score = simultaneous_fetch = prefetched = 0;
 			for(int loc_idx = 0; loc_idx < LOC_NUM; loc_idx++){
@@ -1632,7 +1632,7 @@ long double Subkernel::opt_fetch_score(short dev_id){
 											else fetch_score+= temp_fetch_score;
 		}
 		else if (TileDimlist[j] == 2){
-			Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) TileList[j];
+			Tile2D* tmp = (Tile2D*) TileList[j];
 			long double temp_fetch_score = tmp->getMinLinkCost(dev_id);
 			inter_fetch_score = simultaneous_fetch = prefetched = 0;
 			for(int loc_idx = 0; loc_idx < LOC_NUM; loc_idx++){
@@ -1705,7 +1705,7 @@ long double Subkernel::opt_fetch_cost(short dev_id){
 	short prefetched = 0;
 	for (int j = 0; j < TileNum; j++){
 		if (TileDimlist[j] == 1){
-			Tile1D<VALUE_TYPE>* tmp = (Tile1D<VALUE_TYPE>*) TileList[j];
+			Tile1D* tmp = (Tile1D*) TileList[j];
 			long double temp_fetch_cost = tmp->getMinLinkCost(dev_id);
 			inter_fetch_cost = prefetched = 0;
 			for(int loc_idx = 0; loc_idx < LOC_NUM; loc_idx++){
@@ -1723,7 +1723,7 @@ long double Subkernel::opt_fetch_cost(short dev_id){
 			if(!prefetched) fetch_cost+= (inter_fetch_cost + temp_fetch_cost);
 		}
 		else if (TileDimlist[j] == 2){
-			Tile2D<VALUE_TYPE>* tmp = (Tile2D<VALUE_TYPE>*) TileList[j];
+			Tile2D* tmp = (Tile2D*) TileList[j];
 			long double temp_fetch_cost = tmp->getMinLinkCost(dev_id);
 			inter_fetch_cost = prefetched = 0;
 			for(int loc_idx = 0; loc_idx < LOC_NUM; loc_idx++){
@@ -1786,7 +1786,7 @@ Subkernel* SubkernelSelect(short dev_id, Subkernel** Subkernel_list, long Subker
 	return min_fetch_cost_sk;
 }
 
-void CoCopeLiaDevCacheFree(short dev_id){
+void PARALiADevCacheFree(short dev_id){
 	delete Global_Buffer[idxize(dev_id)];
 	Global_Buffer[idxize(dev_id)] = NULL;
 }
@@ -1849,9 +1849,9 @@ void STEST_print_SK(kernel_pthread_wrap_p* thread_dev_data_list, double routine_
 #ifdef DSTEST
 					if(d < dev_num)
 					lprintf(0, " RCV_T( T(%3d.[%2d,%2d]) Dev (%2d)->(%2d) ) (%3.1lf: %3.1lf->%3.1lf) = %3.1lf ms (%3.1lf Gb\\s) |",
-						(Tiledim == 2)? ((Tile2D<VALUE_TYPE>*) TilePtr)->id : ((Tile1D<VALUE_TYPE>*) TilePtr)->id,
-						(Tiledim == 2)? ((Tile2D<VALUE_TYPE>*) TilePtr)->GridId1 : ((Tile1D<VALUE_TYPE>*) TilePtr)->GridId,
-						(Tiledim == 2)? ((Tile2D<VALUE_TYPE>*) TilePtr)->GridId2 : -1,
+						(Tiledim == 2)? ((Tile2D*) TilePtr)->id : ((Tile1D*) TilePtr)->id,
+						(Tiledim == 2)? ((Tile2D*) TilePtr)->GridId1 : ((Tile1D*) TilePtr)->GridId,
+						(Tiledim == 2)? ((Tile2D*) TilePtr)->GridId2 : -1,
 						thread_dev_data_list[d]->SubkernelListDev[keri]->dev_in_from[tileidx],
 						thread_dev_data_list[d]->SubkernelListDev[keri]->dev_in_to[tileidx],
 						(request_tile_ms[d][tileidx])? (thread_dev_data_list[d]->SubkernelListDev[keri]->reqT_fire_ts[tileidx]-routine_entry_ts)*1000 : 0,
@@ -1862,8 +1862,8 @@ void STEST_print_SK(kernel_pthread_wrap_p* thread_dev_data_list, double routine_
 #endif
 					short dev_from = thread_dev_data_list[d]->SubkernelListDev[keri]->dev_in_from[tileidx],
 						dev_to = thread_dev_data_list[d]->SubkernelListDev[keri]->dev_in_to[tileidx];
-					short is_reader = (Tiledim == 2)? ((Tile2D<VALUE_TYPE>*) TilePtr)->R_flag : ((Tile1D<VALUE_TYPE>*) TilePtr)->R_flag;
-					short is_writer = (Tiledim == 2)? ((Tile2D<VALUE_TYPE>*) TilePtr)->W_total : ((Tile1D<VALUE_TYPE>*) TilePtr)->W_total;
+					short is_reader = (Tiledim == 2)? ((Tile2D*) TilePtr)->R_flag : ((Tile1D*) TilePtr)->R_flag;
+					short is_writer = (Tiledim == 2)? ((Tile2D*) TilePtr)->W_total : ((Tile1D*) TilePtr)->W_total;
 					if (dev_from != -2 && dev_to != -2){
 						transfer_map[idxize(dev_to)][idxize(dev_from)]++;
 						transfer_map_bw[idxize(dev_to)][idxize(dev_from)]+=
@@ -1906,15 +1906,15 @@ void STEST_print_SK(kernel_pthread_wrap_p* thread_dev_data_list, double routine_
 		for (int tileidx = 0; tileidx < thread_dev_data_list[0]->SubkernelListDev[0]->TileNum; tileidx++){
 			short Tiledim = thread_dev_data_list[0]->SubkernelListDev[0]->TileDimlist[tileidx];
 			void* TilePtr = thread_dev_data_list[0]->SubkernelListDev[0]->TileList[tileidx];
-			short is_writer = (Tiledim == 2)? ((Tile2D<VALUE_TYPE>*) TilePtr)->W_total : ((Tile1D<VALUE_TYPE>*) TilePtr)->W_total;
+			short is_writer = (Tiledim == 2)? ((Tile2D*) TilePtr)->W_total : ((Tile1D*) TilePtr)->W_total;
 			if(is_writer){
 				for (int d = 0; d < dev_num; d++) if(keri < thread_dev_data_list[d]->SubkernelNumDev){
 #ifdef DSTEST
 					if(d < dev_num)
 					lprintf(0, " WB_T( T(%3d.[%2d,%2d]) Dev (%2d)->(%2d) ) (%3.1lf: %3.1lf->%3.1lf) = %3.1lf ms  (%3.1lf Gb\\s) |",
-						(Tiledim == 2)? ((Tile2D<VALUE_TYPE>*) TilePtr)->id : ((Tile1D<VALUE_TYPE>*) TilePtr)->id,
-						(Tiledim == 2)? ((Tile2D<VALUE_TYPE>*) TilePtr)->GridId1 : ((Tile1D<VALUE_TYPE>*) TilePtr)->GridId,
-						(Tiledim == 2)? ((Tile2D<VALUE_TYPE>*) TilePtr)->GridId2 : -1,
+						(Tiledim == 2)? ((Tile2D*) TilePtr)->id : ((Tile1D*) TilePtr)->id,
+						(Tiledim == 2)? ((Tile2D*) TilePtr)->GridId1 : ((Tile1D*) TilePtr)->GridId,
+						(Tiledim == 2)? ((Tile2D*) TilePtr)->GridId2 : -1,
 						thread_dev_data_list[d]->SubkernelListDev[keri]->dev_out_from[tileidx],
 						thread_dev_data_list[d]->SubkernelListDev[keri]->dev_out_to[tileidx],
 						(writeback_t_ms[d]) ? (thread_dev_data_list[d]->SubkernelListDev[keri]->wbT_fire_ts[tileidx]-routine_entry_ts)*1000 : 0,
@@ -1924,8 +1924,8 @@ void STEST_print_SK(kernel_pthread_wrap_p* thread_dev_data_list, double routine_
 #endif
 						short dev_from = thread_dev_data_list[d]->SubkernelListDev[keri]->dev_out_from[tileidx],
 							dev_to = thread_dev_data_list[d]->SubkernelListDev[keri]->dev_out_to[tileidx];
-						short is_reader = (Tiledim == 2)? ((Tile2D<VALUE_TYPE>*) TilePtr)->R_flag : ((Tile1D<VALUE_TYPE>*) TilePtr)->R_flag;
-						short is_writer = (Tiledim == 2)? ((Tile2D<VALUE_TYPE>*) TilePtr)->W_total : ((Tile1D<VALUE_TYPE>*) TilePtr)->W_total;
+						short is_reader = (Tiledim == 2)? ((Tile2D*) TilePtr)->R_flag : ((Tile1D*) TilePtr)->R_flag;
+						short is_writer = (Tiledim == 2)? ((Tile2D*) TilePtr)->W_total : ((Tile1D*) TilePtr)->W_total;
 						if (dev_from != -2 && dev_to != -2){
 							transfer_map[idxize(dev_to)][idxize(dev_from)]++;
 							transfer_map_bw[idxize(dev_to)][idxize(dev_from)]+=

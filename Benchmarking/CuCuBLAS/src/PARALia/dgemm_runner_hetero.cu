@@ -5,7 +5,7 @@
 ///
 
 #include "unihelpers.hpp"
-#include "CoCoPeLia.hpp"
+#include "PARALiA.hpp"
 #include "BackenedLibsWrapped.hpp"
 #include "Testing.hpp"
 
@@ -43,19 +43,19 @@ int main(const int argc, const char *argv[]) {
 	CoCoVecInit(B, K * N, 43, B_loc);
 	CoCoVecInit(C, M * N, 44, C_loc);
 	CoCoSyncCheckErr();
-	if (predef_control_values!= NULL) return_values = PARALiaDgemmControled(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC, predef_control_values);
-	else return_values = PARALiaDgemm(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC);
+	if (predef_control_values!= NULL) return_values = PARALiADgemmControled(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC, predef_control_values);
+	else return_values = PARALiADgemm(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC);
 	CoCoSyncCheckErr();
 
 	int bench_it = 1;
 	for(int it = 0; it < bench_it; it=it){
-		if (predef_control_values!= NULL) return_values = PARALiaDgemmControled(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC, predef_control_values);
-		else return_values = PARALiaDgemm(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC);
+		if (predef_control_values!= NULL) return_values = PARALiADgemmControled(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC, predef_control_values);
+		else return_values = PARALiADgemm(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC);
 		CoCoSyncCheckErr();
 	}
 
 
-	for (int i = 0; i< LOC_NUM; i++) CoCopeLiaDevCacheFree(deidxize(i));
+	for (int i = 0; i< LOC_NUM; i++) PARALiADevCacheFree(deidxize(i));
 
 	CoCoSyncCheckErr();
 	CoCoFree(A, A_loc);
