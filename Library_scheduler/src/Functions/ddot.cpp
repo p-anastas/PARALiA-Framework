@@ -60,7 +60,7 @@ int current_ctr = 0;
 			((Tile1D*)kernels[current_ctr]->TileList[1])->R_flag = 1;
 			//((Tile1D*)kernels[current_ctr]->TileList[1])->W_flag = 1;
 			//((Tile1D*)kernels[current_ctr]->TileList[1])->W_total = 1;
-			kernels[current_ctr]->operation_params = (void*) malloc(sizeof(struct dot_backend_in<double>));
+			kernels[current_ctr]->operation_params = (void*) malloc(sizeof( dot_backend_in<double>));
 			dot_backend_in<double>* ptr_ker_translate = (dot_backend_in<double>*) kernels[current_ctr]->operation_params;
 			ptr_ker_translate->N = ((Tile1D*) kernels[current_ctr]->TileList[0])->dim;
 			ptr_ker_translate->x = NULL;
@@ -217,7 +217,7 @@ ATC_p PARALiADdot(long int N, double* x, long int incx, double* y, long int incy
 
 	short reuse_model_flag = 1;
 	if(!initial_dot){
-		initial_dot = (dot_backend_in<double>*) malloc(sizeof(struct dot_backend_in<double>));
+		initial_dot = (dot_backend_in<double>*) malloc(sizeof( dot_backend_in<double>));
 		reuse_model_flag = 0;
 	}
 

@@ -93,7 +93,7 @@ int current_ctr = 0;
 				((Tile2D*)kernels[current_ctr]->TileList[2])->R_flag = KGridSz_dgemm;
 				((Tile2D*)kernels[current_ctr]->TileList[2])->W_flag = KGridSz_dgemm;
 				((Tile2D*)kernels[current_ctr]->TileList[2])->W_total = KGridSz_dgemm;
-				kernels[current_ctr]->operation_params = (void*) malloc(sizeof(struct gemm_backend_in<double>));
+				kernels[current_ctr]->operation_params = (void*) malloc(sizeof( gemm_backend_in<double>));
 				gemm_backend_in<double>*  ptr_ker_translate = (gemm_backend_in<double>*) kernels[current_ctr]->operation_params;
 				ptr_ker_translate->TransA = initial_dgemm->TransA;
 				ptr_ker_translate->TransB = initial_dgemm->TransB;
@@ -314,7 +314,7 @@ ATC_p PARALiADgemm(char TransA,  char TransB, long int M, long int N, long int K
 
 	int reuse_model_flag = 1;
 	if(!initial_dgemm){
-		initial_dgemm = (gemm_backend_in<double>* ) malloc(sizeof(struct gemm_backend_in<double>));
+		initial_dgemm = (gemm_backend_in<double>* ) malloc(sizeof( gemm_backend_in<double>));
 		reuse_model_flag = 0;
 	}
 	if(reuse_model_flag && initial_dgemm->TransA != TransA)

@@ -59,7 +59,7 @@ int current_ctr = 0;
 			((Tile1D*)kernels[current_ctr]->TileList[1])->R_flag = 1;
 			((Tile1D*)kernels[current_ctr]->TileList[1])->W_flag = 1;
 			((Tile1D*)kernels[current_ctr]->TileList[1])->W_total = 1;
-			kernels[current_ctr]->operation_params = (void*) malloc(sizeof(struct axpy_backend_in<double>));
+			kernels[current_ctr]->operation_params = (void*) malloc(sizeof( axpy_backend_in<double>));
 			axpy_backend_in<double>* ptr_ker_translate = (axpy_backend_in<double>*) kernels[current_ctr]->operation_params;
 			ptr_ker_translate->N = ((Tile1D*) kernels[current_ctr]->TileList[0])->dim;
 			ptr_ker_translate->x = NULL;
@@ -216,7 +216,7 @@ ATC_p PARALiADaxpy(long int N, double alpha, double* x, long int incx, double* y
 
 	short reuse_model_flag = 1;
 	if(!initial_axpy){
-		initial_axpy = (axpy_backend_in<double>*) malloc(sizeof(struct axpy_backend_in<double>));
+		initial_axpy = (axpy_backend_in<double>*) malloc(sizeof( axpy_backend_in<double>));
 		reuse_model_flag = 0;
 	}
 
