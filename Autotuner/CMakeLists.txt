@@ -60,6 +60,7 @@ ${AUTOTUNE_DIR_SRC}/CoModel.cpp
 ${AUTOTUNE_DIR_SRC}/GPUexec_lookup.cpp
 ${AUTOTUNE_DIR_SRC}/Model_functions.cpp
 ${AUTOTUNE_DIR_SRC}/ModelLvl1.cpp
+${AUTOTUNE_DIR_SRC}/ModelLvl2.cpp
 ${AUTOTUNE_DIR_SRC}/ModelLvl3.cpp
 ${AUTOTUNE_DIR_SRC}/WerkhovenModel.cpp
 ${AUTOTUNE_DIR_SRC}/Subkernel_distributions.cpp

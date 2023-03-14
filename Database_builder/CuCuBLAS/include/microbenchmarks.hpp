@@ -28,6 +28,10 @@
 #define STEP_BLAS3 256
 #define MAX_DIM_BLAS3 10000
 
+#define MIN_DIM_BLAS2 256
+#define STEP_BLAS2 256
+#define MAX_DIM_BLAS2 10000
+
 #define MIN_DIM_BLAS1 4096
 #define STEP_BLAS1 4096
 

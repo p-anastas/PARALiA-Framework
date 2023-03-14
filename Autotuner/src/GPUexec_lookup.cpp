@@ -129,10 +129,122 @@ double GPUexec3Model_predict(GPUexec3Model_p model, long int T, char TransA, cha
 }
 
 /* ============================BLAS2 Models================================= */
-GPUexec2Model_p GPUexec2Model_init(short dev_id, const char* func){
-	error("GPUexec2Model_init: Not implemented\n");
-	return NULL;
+
+long int GPUexec2MinT(GPUexec2Model_p model){
+	long int result = model->T_lookup_buf[0];
+	for (long int ctr = 0; ctr < model->lines; ctr++)
+		if (model->T_lookup_buf[ctr] < result) result = model->T_lookup_buf[ctr];
+	return result;
 }
+
+long int GPUexec2MaxT(GPUexec2Model_p model){
+	long int result = model->T_lookup_buf[0];
+	for (long int ctr = 0; ctr < model->lines; ctr++)
+		if (model->T_lookup_buf[ctr] > result) result = model->T_lookup_buf[ctr];
+	return result;
+}
+
+long int GPUexec2NearestT(GPUexec2Model_p model, long int Tin){
+	//TODO: Assumes sorted, must fix at some point
+	if (Tin < model->T_lookup_buf[0]) return  model->T_lookup_buf[0];
+	long int ctr = 0, result =  model->T_lookup_buf[ctr++], prev = 0;
+	while(result <= Tin){
+		if (result == Tin) return result;
+		prev = result;
+		result = model->T_lookup_buf[ctr++];
+	}
+	return prev;
+}
+
+GPUexec2Model_p GPUexec2Model_init(short dev_id, const char* func){
+	short lvl = 3;
+#ifdef DEBUG
+	lprintf(lvl-1, "|-----> GPUexec2Model_init(func=%s)\n", func);
+#endif
+#ifdef TEST
+	lprintf(lvl-1, "|-----> GPUexec2Model_init\n");
+	double timer = csecond();
+#endif
+	short dsize = 1;//, matrixNum;
+	if (strcmp(func, "Dgemv")) error("GPUexec2Model_init: Invalid/Not implemented func");
+	else {
+		//matrixNum = 3;
+		if (!strcmp(func, "Dgemv")) dsize = sizeof(double);
+
+	}
+	GPUexec2Model_p out_model = (GPUexec2Model_p) malloc(sizeof(struct  BLAS2_data));
+	char filename[1024];
+	sprintf(filename, "%s/Processed/%s_lookup-table_dev-%d.log", DEPLOYDB, func, dev_id);
+	FILE* fp = fopen(filename,"r");
+	if (!fp) {
+		fprintf(stderr, "GPUexec2Model_init: Logfile = %s\n", filename);
+		error("GPUexec2Model_init: t_exec3 LogFile not generated");
+	}
+	long int bench_lines = count_lines(fp);
+	out_model->lines = bench_lines;
+	out_model->T_lookup_buf = (long int*) malloc( bench_lines* sizeof(long int));
+	out_model->av_time_buf = (double*) malloc( bench_lines* sizeof(double));
+	out_model->av_W_buf = (double*) malloc( bench_lines* sizeof(double));
+	out_model->TransA_buf = (char*) malloc( bench_lines* sizeof(char));
+#ifdef PDEBUG
+	lprintf(lvl, "Reading %ld lines from %s\n", bench_lines, filename);
+#endif
+	int items;
+	long int trashdata, trashdata2, conv_itter;
+	double error_margin, Dtrashdata, Joules;
+	for (int i = 0; i < bench_lines; i++){
+		items = fscanf(fp, "%c,%ld,%ld,%ld,%lf,%lf,%lf,%lf,%ld,%lf\n",
+			&out_model->TransA_buf[i], &out_model->T_lookup_buf[i],
+			&trashdata, &trashdata2, &out_model->av_time_buf[i], &out_model->av_W_buf[i], &Joules, &error_margin, &conv_itter, &Dtrashdata);
+		if (items != 11) error("GPUexec2Model_init: Problem in reading model");
+#ifdef DPDEBUG
+		lprintf(lvl, "Scanned entry %d: T = %ld, TransA = %c -> t_av = %lf ms, W_av = %lf W, J_total = %lf J\n",
+		i, out_model->T_lookup_buf[i], out_model->TransA_buf[i],
+		out_model->av_time_buf[i]*1000, out_model->av_W_buf[i], Joules);
+#endif
+  }
+	fclose(fp);
+	out_model->dev_id = dev_id;
+	out_model->func = func;
+#ifdef TEST
+	timer = csecond() - timer;
+	lprintf(lvl, "Initialization time:%lf ms\n", timer*1000);
+	lprintf(lvl-1, "<-----|\n");
+#endif
+#ifdef DEBUG
+	lprintf(lvl-1, "<-----|\n");
+#endif
+	return out_model;
+}
+
+double GPUexec2Model_predict(GPUexec2Model_p model, long int T, char TransA){
+	double result = -1;
+	//TODO: Ultra naive, not (currently) important for performance but come on mate...
+	for (int i = 0; i < model->lines; i++)
+		if(model->T_lookup_buf[i] == T && model->TransA_buf[i] == TransA){
+#ifdef DPDEBUG
+			lprintf(4, "GPUexec3Model_predict: Found T = %ld, TransA = %c in loc %d -> t_av = %lf ms\n",
+				model->T_lookup_buf[i], model->TransA_buf[i], i, model->av_time_buf[i]*1000);
+#endif
+			return model->av_time_buf[i];
+	}
+#ifdef PDEBUG
+	if (result == -1) warning("GPUexec2Model_predict: Performing Linear regression for prediction of exec_t of T_in=%ld based on T=%ld\n",
+		T, GPUexec2NearestT(model, T));
+#endif
+	long int nearest_T = GPUexec2NearestT(model, T);
+	long double reg_t = 0;
+	for (int i = 0; i < model->lines; i++)
+		if(model->T_lookup_buf[i] == nearest_T && model->TransA_buf[i] == TransA){
+			reg_t = model->av_time_buf[i];
+			break;
+		}
+	if(reg_t == 0) error("Failed to find nearest_T = %ld for regression\n", nearest_T);
+	// Cheat for gemv, not generic (?)
+	result = (double) (reg_t*pow(T,3)/(pow(nearest_T,3)));
+	return result;
+}
+
 /* ============================BLAS1 Models================================= */
 
 long int GPUexec1MinT(GPUexec1Model_p model){

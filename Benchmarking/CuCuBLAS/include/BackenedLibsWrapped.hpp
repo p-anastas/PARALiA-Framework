@@ -27,4 +27,8 @@ double cuBLASDaxpyWrap(long int N, float alpha, float* x, long int incx,
 /// cuBLAS wrappers of Ddot
 double cuBLASDdotWrap(long int N, double* x, long int incx,
   double* y, long int incy, double* result, double cpu_ratio, short dev_num, int dev_ids[]);
+
+double cuBLASDgemvWrap(char TransA, long int M, long int N, double alpha, double *A, long int lda,
+		double* x, long int incx, double beta, double* y, long int incy, double cpu_ratio, short dev_num, int dev_ids[] );
+
 #endif

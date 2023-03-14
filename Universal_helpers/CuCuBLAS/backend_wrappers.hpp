@@ -22,6 +22,15 @@ public:
 	short dev_id;
 };
 
+template<typename VALUETYPE> class gemv_backend_in{
+public:
+	char TransA,  incx, incy;
+	int M, N, ldA;
+	VALUETYPE alpha,beta;
+	void **A, **x, **y;
+	short dev_id;
+};
+
 template<typename VALUETYPE> class axpy_backend_in{
 public:
 		int N, incx, incy;
@@ -37,6 +46,7 @@ public:
 	VALUETYPE* result;
 	short dev_id;
 };
+
 
 /// Initalize backend (handle[s]) in dev_id
 void backend_init(short dev_id, CQueue_p h2d_q, CQueue_p d2h_q, CQueue_p exec_q);

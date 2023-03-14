@@ -217,6 +217,9 @@ double Gval_per_s(long long value, double time);
 long long gemm_flops(long int M, long int N, long int K);
 long long gemm_memory(long int M, long int N, long int K, long int A_loc, long int B_loc, long int C_loc, short dsize);
 
+long long gemv_flops(long int M, long int N);
+long long gemv_memory(long int M, long int N, long int A_loc, long int x_loc, long int y_loc, short dsize);
+
 long long axpy_flops(long int  N);
 long long axpy_memory(long int N, long int x_loc, long int y_loc, short dsize);
 

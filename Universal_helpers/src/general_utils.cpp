@@ -245,6 +245,14 @@ long long gemm_memory(long int M, long int N, long int K, long int A_loc, long i
 	return (M * K * A_loc + K * N * B_loc + M * N * C_loc)*dsize;
 }
 
+long long gemv_flops(long int M, long int N){
+	return (long long) M * (2 * N + 1);
+}
+
+long long gemv_memory(long int M, long int N, long int A_loc, long int x_loc, long int y_loc, short dsize){
+	return (M * N * A_loc + N * x_loc + M * y_loc)*dsize;
+}
+
 long long axpy_flops(long int  N){
 	return (long long) 2* N;
 }

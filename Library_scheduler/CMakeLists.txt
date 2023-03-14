@@ -52,6 +52,7 @@ ${LIBSC_DIR_SRC}/Tile2D.cpp
 ${LIBSC_DIR_SRC}/Subkernel.cpp
 ${LIBSC_DIR_SRC}/Functions/dgemm.cpp
 ${LIBSC_DIR_SRC}/Functions/sgemm.cpp
+${LIBSC_DIR_SRC}/Functions/dgemv.cpp
 ${LIBSC_DIR_SRC}/Functions/daxpy.cpp
 ${LIBSC_DIR_SRC}/Functions/ddot.cpp
 ${BACKEND_LIBSC_DIR}/Decom_backend.cpp

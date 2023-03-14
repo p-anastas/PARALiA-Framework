@@ -36,7 +36,7 @@ Modeler::Modeler(int dev_id, const char* func, void* func_data){
 	unit_id = dev_id;
 
 	if ( !strcmp(func, "Daxpy") || !strcmp(func, "Saxpy") || !strcmp(func, "Ddot")) problem = BLAS1;
-	else if (0) problem = BLAS2;
+	else if (!strcmp(func, "Dgemv")) problem = BLAS2;
 	else if ( !strcmp(func, "Dgemm") || !strcmp(func, "Sgemm")) problem = BLAS3;
 	else error("Modeler::Modeler: Problem type for '%s' func not integrated\n", func);
 
@@ -46,7 +46,6 @@ Modeler::Modeler(int dev_id, const char* func, void* func_data){
 			ModelFuncInitBLAS1(this, dev_id, func, func_data);
 			break;
 		case BLAS2:
-			error("Modeler::Modeler: GPUexec2Model_init Not Implemented\n");
 		 	GPUexec_model_ptr = (void*) GPUexec2Model_init(dev_id, func);
 			break;
 		case BLAS3:

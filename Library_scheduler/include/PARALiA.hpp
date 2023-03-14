@@ -24,6 +24,13 @@ ATC_p PARALiASgemm(char TransA,  char TransB, long int M, long int N, long int K
 ATC_p PARALiASgemmControled(char TransA,  char TransB, long int M, long int N, long int K,
 	float alpha, float* A, long int ldA, float* B, long int ldB, float beta, float* C, long int ldC, ATC_p predef_control_values);
 
+ATC_p PARALiADgemv(char TransA, long int M, long int N,	double alpha, double* A, long int ldA,
+	double* x, long int incx, double beta, double* y, long int incy);
+
+/// A modification of PARALiADgemv but with a given T (mainly for performance/debug purposes)
+ATC_p PARALiADgemvControled(char TransA, long int M, long int N, double alpha, double* A, long int ldA,
+	double* x, long int incx, double beta, double* y, long int incy, ATC_p predef_control_values);
+
 /// The PARALiA Daxpy implementation.
 ATC_p PARALiADaxpy(long int N, double alpha,
 	double* x, long int incx, double* y, long int incy);
