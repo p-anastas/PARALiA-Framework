@@ -220,6 +220,9 @@ set (OPENBLAS_LD ${OPENBLAS_PREFIX}/lib)
 set (OPENBLAS_LINK  "-L${OPENBLAS_LD} -lopenblas" )
 message("PARALiA-Framework - OPENBLAS_LINK: " ${OPENBLAS_LINK})
 
+#Used for defining Universal_helpers subdir setup mode. Always one for PARALiA
+set (BUILD_BLAS_WRAPPERS_FLAG 1)
+
 #---------------------------------------------Start Project-----------------------------------------------------#
 
 project (PARALiA-Framework VERSION ${PROJECT_VERSION} DESCRIPTION "The complete PARALiA Framework")
