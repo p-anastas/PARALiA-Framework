@@ -7,3 +7,6 @@
 [submodule "Database_builder/CuCuBLAS/nvidia-energy-measure"]
 	path = Database_builder/CuCuBLAS/nvidia-energy-measure
 	url = git@github.com:p-anastas/nvidia-energy-measure.git
+[submodule "Universal_helpers"]
+	path = Universal_helpers
+	url = git@github.com:p-anastas/Universal_helpers.git
