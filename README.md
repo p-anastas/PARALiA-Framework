@@ -8,18 +8,19 @@ It performs microbenchmarks during installation, uses these for constructing BLA
 ## Software/Compiler requirements
  - Python 3.x (packages: argsparse, os, fnmatch, pandas, sklearn. Additionally for plotting: math, numpy, scipy, matplotlib, seaborn)
  - CUDA toolkit 10+ (tested with multiple 11.x versions on Tesla V100, A100 and GTX GPUs)
- - A gcc/g++ compiler compatible with the above CUDA (tested with 8, 11). 
+ - A gcc/g++ compiler compatible with the above CUDA (tested with 8, 11).
  - OpenBLAS, installed (preferably) with the same gcc compiler.
 
 ## Installation
 PARALiA installation consists of 5 easy steps:
  - Duplicate *config.sh* and fill *config_sysname.sh* with deployed system details for each different system.
  - source *config_sysname.sh*
+ - (Optional - for some systems) Modify *Deploy.in* with any module loads/link paths etc required for building the DB (gcc, CUDA/CUBLAS, OpenBLAS, python)  
  - mkdir *sysname-build* && cd *sysname-build*
  - cmake ../ && make -j
  - Run *Deploy.sh* in the installation dir (default: *sysname-build/sysname-install*) to perform microbenchmarks and build the database (will take a while to complete).
 
-## Usage 
+## Usage
 After a succesful installation, PARALiA should provide:
   - **paralia.so**, a shared library in *sysname-install/Library_scheduler/lib* containing all PARALiA BLAS functions.
   - **PARALiA.hpp**, in *sysname-install/Library_scheduler/include* which contains the headers for the aforementioned functions.
@@ -33,5 +34,5 @@ PARALiA BLAS functions accept usual BLAS paramaters in a similar way to OpenBLAS
 ## Prebuild Benchmarks
  - TBD
 
-## Related Publications: 
+## Related Publications:
  - CoCoPeLia: Communication-Computation Overlap Prediction for Efficient Linear Algebra on GPUs (https://ieeexplore.ieee.org/document/9408195)
