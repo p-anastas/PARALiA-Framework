@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 3.10)
 ### Initialize the project
-project (CoCopeLia-Deployment VERSION ${PROJECT_VERSION} DESCRIPTION "The Deployment component of the CoCoPeLia framework" LANGUAGES CXX CUDA)
+project (PARALiA-Deployment VERSION ${PROJECT_VERSION} DESCRIPTION "The Deployment component of the PARALiA framework" LANGUAGES CXX CUDA)
 message( "------------------------------------------------------------------------------------------------")
 message( "Database Builder - PROJECT_SOURCE_DIR: " ${PROJECT_SOURCE_DIR} )
 
@@ -45,7 +45,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${DEPLOYMENT_DIR_BIN})
 
 set (DEPLOYMENT_DIR_DB ${DEPLOYMENT_INSTALL_PREFIX}/Database )
 file(MAKE_DIRECTORY ${DEPLOYMENT_DIR_DB})
-## Database location variable set at CoCoPeLia-Framework Project (parent) scope for result input.
+## Database location variable set at PARALiA-Framework Project (parent) scope for result input.
 set (DEPLOYMENT_DIR_DB ${DEPLOYMENT_DIR_DB} PARENT_SCOPE)
 message( "Database Builder - Database DIR: " ${DEPLOYMENT_DIR_DB} )
 
