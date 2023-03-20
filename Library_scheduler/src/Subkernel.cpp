@@ -780,13 +780,17 @@ void Subkernel::run_operation(){
 #ifdef STEST
 		exec_queue[run_dev_id_idx]->add_host_func(
 				(void*)&CoCoSetTimerAsync, (void*) &op_start_ts);
-		if (!strcmp(op_name,"gemm")){
-			gemm_backend_in_p ptr_ker_translate = (gemm_backend_in_p) operation_params;
+		if (!strcmp(op_name,"dgemm")){
+			gemm_backend_in<double>* ptr_ker_translate = (gemm_backend_in<double>*) operation_params;
 			flops = gemm_flops(ptr_ker_translate->M, ptr_ker_translate->N, ptr_ker_translate->K);
 		}
-		if (!strcmp(op_name,"axpy")){
-			axpy_backend_in_p ptr_ker_translate = (axpy_backend_in_p) operation_params;
+		if (!strcmp(op_name,"daxpy")){
+			axpy_backend_in<double>* ptr_ker_translate = (axpy_backend_in<double>*) operation_params;
 			flops = axpy_flops(ptr_ker_translate->N);
+		}
+		if (!strcmp(op_name,"ddot")){
+			dot_backend_in<double>* ptr_ker_translate = (dot_backend_in<double>*) operation_params;
+			flops = dot_flops(ptr_ker_translate->N);
 		}
 #endif
 	backend_run_operation(operation_params, op_name, exec_queue[run_dev_id_idx]);

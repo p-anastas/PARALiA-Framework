@@ -109,8 +109,9 @@ long int Modeler::getMaxT(){
 }
 
 long int Modeler::getFlops(){
-	if (strcmp(func,"gemm")) return gemm_flops(D1,D2,D3);
-	else if (strcmp(func,"axpy")) return axpy_flops(D1);
+	if (!strcmp(func,"Dgemm") || !strcmp(func,"Sgemm")) return gemm_flops(D1,D2,D3);
+	else if (!strcmp(func,"Daxpy") || !strcmp(func,"Saxpy")) return axpy_flops(D1);
+	else if (!strcmp(func,"Ddot")) return dot_flops(D1);
 	else error("Modeler::getFlops() not implemented for %s\n", func);
 	return -1;
 }
