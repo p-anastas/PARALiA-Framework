@@ -72,7 +72,7 @@ int main(const int argc, const char *argv[]) {
 
 	// Call for Validate
 	if (predef_control_values!= NULL) return_values = PARALiADdotControled(N, x, incx, y, incy, result, predef_control_values);
-	else error("Autotuning parameters for dot not implemented.\n");//return_values = PARALiADdot(N, x, incx, y, incy);
+	else return_values = PARALiADdot(N, x, incx, y, incy, result);
 	CoCoSyncCheckErr();
 	for (int i = 0; i< LOC_NUM; i++) PARALiADevCacheFree(deidxize(i));
 
@@ -111,13 +111,13 @@ int main(const int argc, const char *argv[]) {
 	// Warmup
 	for(int it = 0; it < 10; it++){
 		if (predef_control_values!= NULL)  return_values = PARALiADdotControled(N, x, incx, y, incy, result, predef_control_values);
-		else  error("Autotuning parameters for dot not implemented.\n");//return_values = PARALiADdot(N, x, incx, y, incy);
+		else return_values = PARALiADdot(N, x, incx, y, incy, result);
 		CoCoSyncCheckErr();
 	}
 
 	cpu_timer  = csecond();
 	if (predef_control_values!= NULL)  return_values = PARALiADdotControled(N, x, incx, y, incy, result, predef_control_values);
-	else  error("Autotuning parameters for dot not implemented.\n");//return_values = PARALiADdot(N, x, incx, y, incy);
+	else return_values = PARALiADdot(N, x, incx, y, incy, result);
 	CoCoSyncCheckErr();
 	cpu_timer  = csecond() - cpu_timer;
 
@@ -136,7 +136,7 @@ int main(const int argc, const char *argv[]) {
 	for(int it = 0; it < bench_it; it++){
 		cpu_timer = csecond();
 		if (predef_control_values!= NULL) return_values = PARALiADdotControled(N, x, incx, y, incy, result, predef_control_values);
-		else  error("Autotuning parameters for dot not implemented.\n");//return_values = PARALiADdot(N, alpha, x, incx, y, incy);
+		else return_values = PARALiADdot(N, x, incx, y, incy, result);
 		CoCoSyncCheckErr();
 		cpu_timer = csecond() - cpu_timer;
 		StoreLogLvl1(filename, predef_control_values, 0, N, incx, incy, x_loc, y_loc, x_out_loc, y_out_loc, cpu_timer);
