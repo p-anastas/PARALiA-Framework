@@ -21,10 +21,16 @@ fi
 
 echo "python3 $SCRIPT_DIR/BenchToLookupTables.py -i $RES_DIR -o $OUTDIR -f Dgemm -d $device -l $library_id"
 python3 $SCRIPT_DIR/BenchToLookupTables.py -i $RES_DIR -o $OUTDIR -f Dgemm -d $device -l $library_id
+
+echo "python3 $SCRIPT_DIR/BenchToLookupTables.py -i $RES_DIR -o $OUTDIR -f Sgemm -d $device -l $library_id"
 python3 $SCRIPT_DIR/BenchToLookupTables.py -i $RES_DIR -o $OUTDIR -f Sgemm -d $device -l $library_id
 
 echo "python3 $SCRIPT_DIR/BenchToLookupTables.py -i $RES_DIR -o $OUTDIR -f Dsyrk -d $device -l $library_id"
 python3 $SCRIPT_DIR/BenchToLookupTables.py -i $RES_DIR -o $OUTDIR -f Dsyrk -d $device -l $library_id
+
+echo "python3 $SCRIPT_DIR/BenchToLookupTables.py -i $RES_DIR -o $OUTDIR -f Dgemv -d $device -l $library_id"
+python3 $SCRIPT_DIR/BenchToLookupTables.py -i $RES_DIR -o $OUTDIR -f Dgemv -d $device -l $library_id
+
 
 echo "python3 $SCRIPT_DIR/BenchToLookupTables.py -i $RES_DIR -o $OUTDIR -f Daxpy -d $device -l $library_id"
 python3 $SCRIPT_DIR/BenchToLookupTables.py -i $RES_DIR -o $OUTDIR -f Daxpy -d $device -l $library_id

@@ -49,17 +49,17 @@ int main(const int argc, const char *argv[]) {
 		massert(cudaSuccess == cudaMemGetInfo(&free_cuda_mem, &max_cuda_mem),
 			"dgemm_microbench_gpu: cudaMemGetInfo failed");
 		if (free_cuda_mem < 1.0*PROBLEM_GPU_PERCENTAGE/100*max_cuda_mem)
-			error("dgemm_microbench_gpu: Free memory is much less than max ( Free: %zu, Max: %zu ),\
+			error("dgemv_microbench_gpu: Free memory is much less than max ( Free: %zu, Max: %zu ),\
 			device under utilization\n", free_cuda_mem, max_cuda_mem);
 	}
 
 	char *filename = (char *) malloc(1024* sizeof(char));
-	sprintf(filename, "%s/Benchmark-Results/cublasDgemm_dev-%d_TransA-%c_%s.log",
+	sprintf(filename, "%s/Benchmark-Results/cublasDgemv_dev-%d_TransA-%c_%s.log",
 		DEPLOYDB, dev_id, TransA, VERSION);
 	check_benchmark(filename);
 
 	// Define the max size of a benchmark kernel to run on this machine.
-	long int maxDim = CoCoGetMaxDimSqAsset2D(3, sizeof(double), STEP_TRANS, dev_id);
+	long int maxDim = CoCoGetMaxDimSqAsset2D(2, sizeof(double), STEP_TRANS, dev_id);
 
 	long int ldA = maxDim;
 
@@ -95,8 +95,8 @@ int main(const int argc, const char *argv[]) {
 	cpu_timer = csecond();
 
 	CoCoVecInit(A_buf, maxDim * maxDim, 42, dev_id);
-	CoCoVecInit(x_buf, maxDim * maxDim, 42, dev_id);
-	CoCoVecInit(y_buf, maxDim * maxDim, 42, dev_id);
+	CoCoVecInit(x_buf, maxDim, 42, dev_id);
+	CoCoVecInit(y_buf, maxDim, 42, dev_id);
 
 
 	CoCoSyncCheckErr();

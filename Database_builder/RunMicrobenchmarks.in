@@ -20,6 +20,7 @@ mkdir -p "${RES_DIR}/microbench_logs"
 
 transfer_log="${RES_DIR}/microbench_logs/transfer_microbench.log"
 dgemm_log="${RES_DIR}/microbench_logs/dgemm_microbench.log"
+dgemv_log="${RES_DIR}/microbench_logs/dgemv_microbench.log"
 daxpy_log="${RES_DIR}/microbench_logs/daxpy_microbench.log"
 dsyrk_log="${RES_DIR}/microbench_logs/dsyrk_microbench.log"
 sgemm_log="${RES_DIR}/microbench_logs/sgemm_microbench.log"
@@ -29,6 +30,7 @@ micro_transfer_exec="${BIN_DIR}/RunCuCuBlasLinkBench"
 micro_dgemm_exec="${BIN_DIR}/RunCuCuBlasDgemmBench"
 micro_sgemm_exec="${BIN_DIR}/RunCuCuBlasSgemmBench"
 micro_dsyrk_exec="${BIN_DIR}/RunCuCuBlasDsyrkBench"
+micro_dgemv_exec="${BIN_DIR}/RunCuCuBlasDgemvBench"
 micro_daxpy_exec="${BIN_DIR}/RunCuCuBlasDaxpyBench"
 micro_ddot_exec="${BIN_DIR}/RunCuCuBlasDdotBench"
 
@@ -99,3 +101,12 @@ do
 		echo "Done"
 	done
 done
+
+rm $dgemv_log
+echo "Performing microbenchmarks for dgemv..."
+for TransA in N T;
+do
+	echo "$micro_dgemv_exec $device $TransA &>> $dgemv_log"
+	$micro_dgemv_exec $device $TransA &>> $dgemv_log
+done
+echo "Done"
