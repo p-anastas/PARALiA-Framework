@@ -37,7 +37,7 @@ Modeler::Modeler(int dev_id, const char* func, void* func_data){
 
 	if ( !strcmp(func, "Daxpy") || !strcmp(func, "Saxpy") || !strcmp(func, "Ddot")) problem = BLAS1;
 	else if (!strcmp(func, "Dgemv")) problem = BLAS2;
-	else if ( !strcmp(func, "Dgemm") || !strcmp(func, "Sgemm")) problem = BLAS3;
+	else if ( !strcmp(func, "Dgemm") || !strcmp(func, "Sgemm") || !strcmp(func, "Dsyrk")) problem = BLAS3;
 	else error("Modeler::Modeler: Problem type for '%s' func not integrated\n", func);
 
 	switch(problem){
@@ -47,6 +47,7 @@ Modeler::Modeler(int dev_id, const char* func, void* func_data){
 			break;
 		case BLAS2:
 		 	GPUexec_model_ptr = (void*) GPUexec2Model_init(dev_id, func);
+			// ModelFuncInitBLAS2(this, dev_id, func, func_data);
 			break;
 		case BLAS3:
 			GPUexec_model_ptr = (void*) GPUexec3Model_init(dev_id, func);
