@@ -21,12 +21,14 @@ mkdir -p "${RES_DIR}/microbench_logs"
 transfer_log="${RES_DIR}/microbench_logs/transfer_microbench.log"
 dgemm_log="${RES_DIR}/microbench_logs/dgemm_microbench.log"
 daxpy_log="${RES_DIR}/microbench_logs/daxpy_microbench.log"
+dsyrk_log="${RES_DIR}/microbench_logs/dsyrk_microbench.log"
 sgemm_log="${RES_DIR}/microbench_logs/sgemm_microbench.log"
 ddot_log="${RES_DIR}/microbench_logs/ddot_microbench.log"
 
 micro_transfer_exec="${BIN_DIR}/RunCuCuBlasLinkBench"
 micro_dgemm_exec="${BIN_DIR}/RunCuCuBlasDgemmBench"
 micro_sgemm_exec="${BIN_DIR}/RunCuCuBlasSgemmBench"
+micro_dsyrk_exec="${BIN_DIR}/RunCuCuBlasDsyrkBench"
 micro_daxpy_exec="${BIN_DIR}/RunCuCuBlasDaxpyBench"
 micro_ddot_exec="${BIN_DIR}/RunCuCuBlasDdotBench"
 
@@ -70,6 +72,16 @@ do
 		echo "$micro_dgemm_exec $device $TransA $TransB &>> $dgemm_log"
 		$micro_dgemm_exec $device $TransA $TransB &>> $dgemm_log
 	done
+done
+echo "Done"
+
+# dsyrk micro-benchmark Tile size
+rm $dsyrk_log
+echo "Performing microbenchmarks for dsyrk..."
+for TransA in N T;
+do
+	echo "$micro_dsyrk_exec $device $TransA &>> $dsyrk_log"
+	$micro_dsyrk_exec $device $TransA &>> $dsyrk_log
 done
 echo "Done"
 
