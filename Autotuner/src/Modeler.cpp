@@ -12,6 +12,7 @@
 #include "Autotuner.hpp"
 #include "Model_functions.hpp"
 #include "ModelLvl3.hpp"
+#include "ModelLvl2.hpp"
 #include "ModelLvl1.hpp"
 #include "unihelpers.hpp"
 #include "Werkhoven.hpp"
@@ -47,7 +48,7 @@ Modeler::Modeler(int dev_id, const char* func, void* func_data){
 			break;
 		case BLAS2:
 		 	GPUexec_model_ptr = (void*) GPUexec2Model_init(dev_id, func);
-			// ModelFuncInitBLAS2(this, dev_id, func, func_data);
+			ModelFuncInitBLAS2(this, dev_id, func, func_data);
 			break;
 		case BLAS3:
 			GPUexec_model_ptr = (void*) GPUexec3Model_init(dev_id, func);
@@ -83,8 +84,7 @@ long int Modeler::getMinT(){
 		case BLAS1:
 			return MinAllowedTBLAS1(this);
 		case BLAS2:
-			error("CoCopeLiaMinT: BLAS 2 Not implemented\n");
-			return 0;
+			return MinAllowedTBLAS2(this);
 		case BLAS3:
 			return MinAllowedTBLAS3(this);
 		default:
@@ -98,8 +98,7 @@ long int Modeler::getMaxT(){
 		case BLAS1:
 			return MaxAllowedTBLAS1(this);
 		case BLAS2:
-			error("CoCopeLiaMaxT: BLAS 2 Not implemented\n");
-			return 0;
+			return MaxAllowedTBLAS2(this);
 		case BLAS3:
 			return MaxAllowedTBLAS3(this);
 		default:
@@ -110,6 +109,7 @@ long int Modeler::getMaxT(){
 
 long int Modeler::getFlops(){
 	if (!strcmp(func,"Dgemm") || !strcmp(func,"Sgemm")) return gemm_flops(D1,D2,D3);
+	if (!strcmp(func,"Dgemv") || !strcmp(func,"Sgemv")) return gemv_flops(D1,D2);
 	else if (!strcmp(func,"Daxpy") || !strcmp(func,"Saxpy")) return axpy_flops(D1);
 	else if (!strcmp(func,"Ddot")) return dot_flops(D1);
 	else error("Modeler::getFlops() not implemented for %s\n", func);
@@ -121,7 +121,7 @@ long int Modeler::getSKNum(int T){
 		case BLAS1:
 			return GetSKNumBLAS1(this, T);
 		case BLAS2:
-			error("CoCopeLiaGetSKNum: BLAS 2 Not implemented\n");
+			return GetSKNumBLAS2(this, T);
 			return 0;
 		case BLAS3:
 			return GetSKNumBLAS3(this, T);
@@ -145,7 +145,14 @@ double Modeler::getGPUexecFull(){
 					GPUexec1Model_predict((GPUexec1Model_p)GPUexec_model_ptr, Tbig);
 			}
 		case BLAS2:
-			error("getGPUexecFull: BLAS 2 Not implemented\n");
+			{
+				long int maxT = GPUexec2MaxT((GPUexec2Model_p)GPUexec_model_ptr);
+				long int Tbig = GPUexec2NearestT((GPUexec2Model_p)GPUexec_model_ptr,
+					fmin(maxT, fmin(D1,D2)));
+					//fprintf(stderr, "Tbig = %ld\n", Tbig);
+				return (D1*1.0/Tbig * D2*1.0/Tbig)*
+					GPUexec2Model_predict((GPUexec2Model_p)GPUexec_model_ptr, Tbig, flags->TransA);
+			}
 		case BLAS3:
 			{
 				long int maxT = GPUexec3MaxT((GPUexec3Model_p)GPUexec_model_ptr);

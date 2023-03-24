@@ -193,10 +193,10 @@ GPUexec2Model_p GPUexec2Model_init(short dev_id, const char* func){
 	long int trashdata, trashdata2, conv_itter;
 	double error_margin, Dtrashdata, Joules;
 	for (int i = 0; i < bench_lines; i++){
-		items = fscanf(fp, "%c,%ld,%ld,%ld,%lf,%lf,%lf,%lf,%ld,%lf\n",
+		items = fscanf(fp, "%c,%ld,%ld,%lf,%lf,%lf,%lf,%ld,%lf\n",
 			&out_model->TransA_buf[i], &out_model->T_lookup_buf[i],
-			&trashdata, &trashdata2, &out_model->av_time_buf[i], &out_model->av_W_buf[i], &Joules, &error_margin, &conv_itter, &Dtrashdata);
-		if (items != 11) error("GPUexec2Model_init: Problem in reading model");
+			&trashdata, &out_model->av_time_buf[i], &out_model->av_W_buf[i], &Joules, &error_margin, &conv_itter, &Dtrashdata);
+		if (items != 9) error("GPUexec2Model_init: Problem in reading model");
 #ifdef DPDEBUG
 		lprintf(lvl, "Scanned entry %d: T = %ld, TransA = %c -> t_av = %lf ms, W_av = %lf W, J_total = %lf J\n",
 		i, out_model->T_lookup_buf[i], out_model->TransA_buf[i],

@@ -51,7 +51,7 @@ void CoCoModel_gemv_init(MD_p out_model, int dev_id, const char* func, void* fun
 	short lvl = 3;
 #ifdef DEBUG
 	lprintf(lvl-1, "|-----> CoCoModel_gemv_init(model,%c, %ld, %ld, %d, %d, %d, %d, %d, %d, %ld, %ld, %ld, %d, %s)\n",
-		TransA, M, N, A_loc, x_loc, y_loc, A_out_loc, x_out_loc, y_out_loc, incx, incy, lda, dev_id, func);
+		TransA, M, N, A_loc, x_loc, y_loc, A_out_loc, x_out_loc, y_out_loc, incx, incy, ldA, dev_id, func);
 #endif
 	out_model->func = func;
 	// Gemv Routine info

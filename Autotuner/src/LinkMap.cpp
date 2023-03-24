@@ -447,7 +447,7 @@ void LinkMap::ESPA_init_hop_routes(MD_p* unit_modeler_list, int* active_unit_id_
 				link_hop_route[unit_idx][unit_idy][rt][hops] = -42;
 			link_hop_num[unit_idx][unit_idy] = 0;
 			link_hop_route_num[unit_idx][unit_idy] = 0;
-			int best_hop_idx = -1;
+			int best_hop_idx = -42;
 			double max_hop_bw = link_bw_shared[unit_idx][unit_idy];
 			double best_ETA = ESPA_ETA[unit_idx][unit_idy];
 			long long prev_bytes = ESPA_bytes[unit_idx][unit_idy];
@@ -474,10 +474,10 @@ void LinkMap::ESPA_init_hop_routes(MD_p* unit_modeler_list, int* active_unit_id_
 
 					}
 
-				if(best_hop_idx!= -1){
+				if(best_hop_idx!= -42){
 					link_hop_route_num[unit_idx][unit_idy] = 1;
 					link_hop_num[unit_idx][unit_idy] = 1;
-					link_hop_route[unit_idx][unit_idy][link_hop_route_num[unit_idx][unit_idy]-1][0] = best_hop_idx;
+					link_hop_route[unit_idx][unit_idy][link_hop_route_num[unit_idx][unit_idy]-1][0] = deidxize(best_hop_idx);
 
 					ESPA_bytes[unit_idx][unit_idy] = 0;
 					ESPA_ETA[unit_idx][unit_idy] = 0;
@@ -497,7 +497,7 @@ void LinkMap::ESPA_init_hop_routes(MD_p* unit_modeler_list, int* active_unit_id_
 					link_bw_shared_hops[unit_idx][unit_idy]-= safe_hop_penalty*link_bw_shared_hops[unit_idx][unit_idy];
 	#ifdef PDEBUG
 			  		lprintf(0, "LinkMap::ESPA_init_hop_routes: %d -> %d transfer sequence -> [ %d ] => ", unit_idy, unit_idx,
-			  			best_hop_idx);
+			  			deidxize(best_hop_idx));
 			  		lprintf(0, "Cost No-hop = %lf, Hop-adjusted = %lf (%3lf times faster)\n", link_bw_shared[unit_idx][unit_idy],
 						link_bw_shared_hops[unit_idx][unit_idy], link_bw_shared_hops[unit_idx][unit_idy]/link_bw_shared[unit_idx][unit_idy]);
 	#endif

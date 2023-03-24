@@ -43,25 +43,13 @@ Subkernel** CoCoAsignTilesToSubkernelsDgemv(Decom2D* A_asset, Decom1D* x_asset,
 	Decom1D* y_asset, int T, int* kernelNum){
 
 	short lvl = 2;
-	// TODO TODO TODO
 	/// Check Assets satisfy GEMV dim criteria for N, N transpose
-	if (A_asset->transpose == 'N'){
-		massert(A_asset->GridSz1 == y_asset->GridSz &&
-				A_asset->Tile_map[0]->dim1 == y_asset->Tile_map[0]->dim &&
-				A_asset->Tile_map[A_asset->GridSz1*A_asset->GridSz2-1]->dim1
-				== y_asset->Tile_map[y_asset->GridSz-1]->dim,
-				"M dim does not mach between assets for GEMV\n");
-		massert(A_asset->GridSz2 == x_asset->GridSz &&
-				A_asset->Tile_map[0]->dim2 == x_asset->Tile_map[0]->dim &&
-				A_asset->Tile_map[A_asset->GridSz1*A_asset->GridSz2-1]->dim2
-				== x_asset->Tile_map[x_asset->GridSz-1]->dim,
-				"N dim does not mach between assets for GEMV\n");
-	}
+	/// Harder for gemv (since TransA does not effect A dims, but x, y dims instead), skip, just do it right 
 	MGridSz_dgemv = A_asset->GridSz1;
 	NGridSz_dgemv = A_asset->GridSz2;
 	*kernelNum = MGridSz_dgemv*NGridSz_dgemv;
 #ifdef DEBUG
-	lprintf(lvl-1, "|-----> CoCoAsignTilesToSubkernelsDgemv(A_asset,B_asset,%d,%d)\n", T, *kernelNum);
+	lprintf(lvl-1, "|-----> CoCoAsignTilesToSubkernelsDgemv(A_asset,x_asset,y_asset,%d,%d)\n", T, *kernelNum);
 	lprintf(lvl,"MgridSz = %d, NgridSz = %d\n", MGridSz_dgemv, NGridSz_dgemv);
 	lprintf(lvl,"Mlast = %d, Nlast = %d\n",
 	A_asset->Tile_map[A_asset->GridSz1*A_asset->GridSz2-1]->dim1,
@@ -79,20 +67,30 @@ int current_ctr = 0;
 			kernels[current_ctr]->TileDimlist[0] = 2;
 			kernels[current_ctr]->TileDimlist[1]  = kernels[current_ctr]->TileDimlist[2] = 1;
 			kernels[current_ctr]->TileList[0] = A_asset->getTile(mi,ni);
-			kernels[current_ctr]->TileList[1] = x_asset->getTile(ni);
-			kernels[current_ctr]->TileList[2] = y_asset->getTile(mi);
 			((Tile2D*)kernels[current_ctr]->TileList[0])->R_flag = 1;
-			((Tile1D*)kernels[current_ctr]->TileList[1])->R_flag = MGridSz_dgemv;
-			((Tile1D*)kernels[current_ctr]->TileList[2])->R_flag = MGridSz_dgemv;
-			((Tile1D*)kernels[current_ctr]->TileList[2])->W_flag = MGridSz_dgemv;
-			((Tile1D*)kernels[current_ctr]->TileList[2])->W_total = MGridSz_dgemv;
+
 			kernels[current_ctr]->operation_params = (void*) malloc(sizeof(gemv_backend_in<double>));
 			gemv_backend_in<double>* ptr_ker_translate = (gemv_backend_in<double>*) kernels[current_ctr]->operation_params;
 			ptr_ker_translate->TransA = initial_dgemv->TransA;
-			ptr_ker_translate->M = ((Tile1D*) kernels[current_ctr]->TileList[2])->dim;
-			if (ptr_ker_translate->TransA == 'N') ptr_ker_translate->N = ((Tile2D*) kernels[current_ctr]->TileList[0])->dim2;
-			else if (ptr_ker_translate->TransA == 'T') ptr_ker_translate->N = ((Tile2D*) kernels[current_ctr]->TileList[0])->dim1;
-			else error("CoCoAsignTilesToSubkernelsDgemv: Unknown transpose type\n");
+
+			if (ptr_ker_translate->TransA == 'N'){
+				kernels[current_ctr]->TileList[1] = x_asset->getTile(ni);
+				kernels[current_ctr]->TileList[2] = y_asset->getTile(mi);
+				((Tile1D*)kernels[current_ctr]->TileList[1])->R_flag = MGridSz_dgemv;
+				((Tile1D*)kernels[current_ctr]->TileList[2])->R_flag = NGridSz_dgemv;
+				((Tile1D*)kernels[current_ctr]->TileList[2])->W_flag = NGridSz_dgemv;
+				((Tile1D*)kernels[current_ctr]->TileList[2])->W_total = NGridSz_dgemv;
+			}
+			else{
+				kernels[current_ctr]->TileList[1] = x_asset->getTile(mi);
+				kernels[current_ctr]->TileList[2] = y_asset->getTile(ni);
+				((Tile1D*)kernels[current_ctr]->TileList[1])->R_flag = NGridSz_dgemv;
+				((Tile1D*)kernels[current_ctr]->TileList[2])->R_flag = MGridSz_dgemv;
+				((Tile1D*)kernels[current_ctr]->TileList[2])->W_flag = MGridSz_dgemv;
+				((Tile1D*)kernels[current_ctr]->TileList[2])->W_total = MGridSz_dgemv;			
+			}
+			ptr_ker_translate->M = ((Tile2D*) kernels[current_ctr]->TileList[0])->dim1;
+			ptr_ker_translate->N = ((Tile2D*) kernels[current_ctr]->TileList[0])->dim2;
 			ptr_ker_translate->A = NULL;
 			ptr_ker_translate->x = NULL;
 			ptr_ker_translate->y = NULL;
@@ -291,8 +289,8 @@ ATC_p PARALiADgemv(char TransA,  long int M, long int N, double alpha, double* A
 {
 	short lvl = 1;
 #ifdef DEBUG
-	lprintf(lvl-1, "|-----> PARALiADgemv(%c,%c,%zu,%zu,%lf,A=%p(%d),%zu,x=%p(%d),%zu,%lf,y=%p(%d),%zu)\n",
-		TransA, TransB, M, N, alpha, A, CoCoGetPtrLoc(A), ldA,
+	lprintf(lvl-1, "|-----> PARALiADgemv(%c,%zu,%zu,%lf,A=%p(%d),%zu,x=%p(%d),%zu,%lf,y=%p(%d),%zu)\n",
+		TransA, M, N, alpha, A, CoCoGetPtrLoc(A), ldA,
 		x, CoCoGetPtrLoc(x), incx, beta, y, CoCoGetPtrLoc(y), incy);
 #endif
 #ifdef STEST
@@ -340,10 +338,16 @@ ATC_p PARALiADgemv(char TransA,  long int M, long int N, double alpha, double* A
 	Decom2D* A_asset;
     Decom1D* x_asset, *y_asset;
 	/// Prepare Assets in parallel( e.g. initialize asset classes, pin memory with pthreads)
-	/// return: A_asset, B_asset, C_asset initialized and pinned
-	A_asset = new Decom2D( A, M, N, ldA, TransA, DOUBLE);
-    x_asset = new Decom1D( x, N, incx, DOUBLE);
-	y_asset = new Decom1D( y, N, incy, DOUBLE);
+	/// return: A_asset, x_asset, y_asset initialized and pinned
+	A_asset = new Decom2D( A, M, N, ldA, 'N', DOUBLE);
+    if (TransA == 'N'){
+		x_asset = new Decom1D( x, N, incx, DOUBLE);
+		y_asset = new Decom1D( y, M, incy, DOUBLE);
+	}
+	else{
+		x_asset = new Decom1D( x, M, incx, DOUBLE);
+		y_asset = new Decom1D( y, N, incy, DOUBLE);	
+	}
 
 	pthread_attr_t attr;
 	int s = pthread_attr_init(&attr);
