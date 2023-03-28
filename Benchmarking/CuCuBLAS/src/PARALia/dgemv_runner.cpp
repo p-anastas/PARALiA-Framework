@@ -92,7 +92,7 @@ int main(const int argc, const char *argv[]) {
 
 	// Call for Validate
 	if (predef_control_values!= NULL) return_values = PARALiADgemvControled(TransA, M_in, N_in, alpha, A, ldA, x, incx, beta, y, incy, predef_control_values);
-	else error("Autotuning parameters for dgemv not implemented.\n");//return_values = PARALiADgemv(TransA, M, N, alpha, A, ldA, x, incx, beta, y, incy);
+	else return_values = PARALiADgemv(TransA, M_in, N_in, alpha, A, ldA, x, incx, beta, y, incy);
 	CoCoSyncCheckErr();
 	for (int i = 0; i< LOC_NUM; i++) PARALiADevCacheFree(deidxize(i));
 
@@ -134,7 +134,7 @@ int main(const int argc, const char *argv[]) {
 
 	cpu_timer = csecond();
 	if (predef_control_values!= NULL) return_values = PARALiADgemvControled(TransA, M_in, N_in, alpha, A, ldA, x, incx, beta, y, incy, predef_control_values);
-	else error("Autotuning parameters for dgemv not implemented.\n");//return_values = PARALiADgemv(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC);
+	else return_values = PARALiADgemv(TransA, M_in, N_in, alpha, A, ldA, x, incx, beta, y, incy);
 	CoCoSyncCheckErr();
 	cpu_timer  = csecond() - cpu_timer;
 
@@ -150,7 +150,7 @@ int main(const int argc, const char *argv[]) {
 	if ( M_in >= 20000 && N_in >= 20000 ) warmup_bench_it = 20;
 	for(int it = 0; it < warmup_bench_it; it++){
 		if (predef_control_values!= NULL) return_values = PARALiADgemvControled(TransA, M_in, N_in, alpha, A, ldA, x, incx, beta, y, incy, predef_control_values);
-		else error("Autotuning parameters for dgemv not implemented.\n");//return_values = PARALiADgemv(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC);
+		else return_values = PARALiADgemv(TransA, M_in, N_in, alpha, A, ldA, x, incx, beta, y, incy);
 	}
 	CoCoSyncCheckErr();
 
@@ -161,7 +161,7 @@ int main(const int argc, const char *argv[]) {
 	for(int it = 0; it < bench_it; it++){
 		cpu_timer = csecond();
 		if (predef_control_values!= NULL) return_values = PARALiADgemvControled(TransA, M_in, N_in, alpha, A, ldA, x, incx, beta, y, incy, predef_control_values);
-		else error("Autotuning parameters for dgemv not implemented.\n");//return_values = PARALiADgemv(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC);
+		else return_values = PARALiADgemv(TransA, M_in, N_in, alpha, A, ldA, x, incx, beta, y, incy);
 		CoCoSyncCheckErr();
 		cpu_timer = csecond() - cpu_timer;
 		StoreLogLvl2(filename, return_values, TransA, alpha, beta, M_in, N_in, incx, incy, A_loc, x_loc, y_loc, y_out_loc, cpu_timer, return_values->pred_t, return_values->pred_J);
