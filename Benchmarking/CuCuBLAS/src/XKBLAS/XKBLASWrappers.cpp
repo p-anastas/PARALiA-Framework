@@ -10,6 +10,7 @@
 #include "unihelpers.hpp"
 #include "xkblas.h" // Must be put after unihelpers cause of cblas def clashes...
 
+void xkHopMemcpyPrint(); 
 
 double XKBLASDgemmWrap(char TransA,  char TransB, long int M, long int N, long int K, double alpha, double* A, long int ldA, double* B, long int ldB, double beta, double* C, long int ldC, long int T, double cpu_ratio, short dev_num, int dev_ids[]){
 	short lvl = 1;
@@ -31,9 +32,12 @@ double XKBLASDgemmWrap(char TransA,  char TransB, long int M, long int N, long i
 	cpu_timer = csecond() - cpu_timer;
 	lprintf(lvl, "XKBLAS execution time -> t_kernel = %lf ms\n", cpu_timer*1000);
 #endif
-
 	cudaCheckErrors();
 	total_t = csecond() - total_t;
+#ifdef TTEST
+	xkHopMemcpyPrint();
+#endif
+
 	return total_t;
 
 }

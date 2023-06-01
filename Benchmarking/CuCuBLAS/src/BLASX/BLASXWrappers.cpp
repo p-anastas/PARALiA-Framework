@@ -81,6 +81,10 @@ void b_HopMemcpyPrint(){
 
 #endif 
 void BLASxFlushGPUBuf(short dev_num, int dev_ids[] ){
+	for(int i=0; i<dev_num;i++){ 
+		CoCoPeLiaSelectDevice(deidxize(i));
+		CoCoSyncCheckErr();
+	}
 	BLASx_LRU_free(dev_num, dev_ids);
 }
 

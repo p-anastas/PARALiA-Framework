@@ -22,6 +22,75 @@ extern "C"{
 
 #define CBLASXT_MAX_SAFE_TILE 10000
 
+#ifdef TTEST /// C programmers hate him PETROFIX
+extern int xktrans_ctr;
+extern long long xkbytes[100000];
+extern int xklocs[10000][2];
+extern double xktimers[100000][3];
+extern int xktimer_ctr[LOC_NUM][LOC_NUM];
+extern double xklink_gbytes_s[LOC_NUM][LOC_NUM];
+
+void xkreseTTEST(){
+	for(int k = 0; k < xktrans_ctr; k++){
+		xkbytes[k] = 0;
+		for(int m = 0; m < 3; m++) xktimers[k][m] = 0;
+	}
+	xktrans_ctr = 0;
+	for (int d1 = 0; d1 < LOC_NUM; d1++)
+		for (int d2 = 0; d2 < LOC_NUM; d2++){
+			xktimer_ctr[d1][d2] = 0; 
+			xklink_gbytes_s[d1][d2] = 0; 
+		}
+}
+
+void xkHopMemcpyPrint(){
+	printf("\n Tranfers Full:\n");
+	FILE* fp = fopen("temp_xkblas_trans.log", "w+");
+	for(int k = 0; k < xktrans_ctr; k++){
+		int src = xklocs[k][0], dest = xklocs[k][1];
+		xktimer_ctr[idxize(dest)][idxize(src)]++;
+		double time = (xktimers[k][2] - xktimers[k][1]), pipe_time = (xktimers[k][2] - xktimers[k][0]);
+		xklink_gbytes_s[idxize(dest)][idxize(src)]+=Gval_per_s(xkbytes[k], time);
+		printf( "Normal 2D Trasfer %d->%d : total_t = %lf ms ( %.3lf Gb/s ), pipelined_t = %lf ms ( %.3lf Gb/s )\n", 
+			src, dest, 1000*time, Gval_per_s(xkbytes[k], time), 1000*pipe_time, Gval_per_s(xkbytes[k], pipe_time));
+		fprintf(fp, "%d,%d,[ %d %d ],%ld,%lf,%lf\n", src, dest, src, dest, xkbytes[k], time, pipe_time);
+	}
+		
+	printf("\n Full Tranfer Map:\n   |");
+	for (int d2 = 0; d2 < LOC_NUM; d2++)
+		printf( "  %2d  |", deidxize(d2));
+	printf( "\n   |");
+	for (int d2 = 0; d2 < LOC_NUM; d2++)
+		printf( "-------");
+	printf( "\n");
+	for (int d1 = 0; d1 < LOC_NUM; d1++){
+		printf( "%2d | ", deidxize(d1));
+		for (int d2 = 0; d2 < LOC_NUM; d2++){
+			printf( "%4d | ", xktimer_ctr[d1][d2]);
+		}
+		printf( "\n");
+	}
+
+	printf("\n Full Tranfer Map Achieved Bandwidths (GB/s):\n   |");
+	for (int d2 = 0; d2 < LOC_NUM; d2++)
+		printf( "  %2d   |", deidxize(d2));
+	printf( "\n   |");
+	for (int d2 = 0; d2 < LOC_NUM; d2++)
+		printf( "--------");
+	printf( "\n");
+	for (int d1 = 0; d1 < LOC_NUM; d1++){
+		printf( "%2d | ", deidxize(d1));
+		for (int d2 = 0; d2 < LOC_NUM; d2++)
+			if (xktimer_ctr[d1][d2]) printf( "%.2lf | ", xklink_gbytes_s[d1][d2]/xktimer_ctr[d1][d2]);
+			else printf( "  -   | ");
+		printf( "\n");
+	}
+	fclose(fp);
+	xkreseTTEST();
+}
+
+#endif
+
 double XKBLASDgemmWrap(char TransA,  char TransB, long int M, long int N, long int K, double alpha, double* A, long int ldA, double* B, long int ldB, double beta, double* C, long int ldC, long int T, double cache_limit, short dev_num, int dev_ids[]){
 	short lvl = 1;
 	double total_t = csecond();
@@ -45,9 +114,10 @@ double XKBLASDgemmWrap(char TransA,  char TransB, long int M, long int N, long i
 	cpu_timer = csecond() - cpu_timer;
 	lprintf(lvl, "XKBLAS execution time -> t_kernel = %lf ms\n", cpu_timer*1000);
 #endif
-
-	CoCoSyncCheckErr();
 	total_t = csecond() - total_t;
+#ifdef TTEST
+	xkHopMemcpyPrint();
+#endif
 	return total_t;
 
 }
