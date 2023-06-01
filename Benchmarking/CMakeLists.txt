@@ -43,22 +43,26 @@ file(MAKE_DIRECTORY ${BENCH_INSTALL}/testLogs)
 add_definitions(-DTESTLIBDIR="${BENCH_INSTALL}/testLogs")
 
 #BLASX libs and includes
-set (BLASX_PREFIX $ENV{PARALIA_BLASX_PREFIX} )
-set (BLASX_INCLUDE_DIRS ${BLASX_PREFIX}/include)
-include_directories(${BLASX_INCLUDE_DIRS} )
-message( "Benchmarking - Included BLASx: " ${BLASX_INCLUDE_DIRS} )
-set (BLASX_LD ${BLASX_PREFIX}/lib)
-set (BLASX_LINK  "-L${BLASX_LD} -lblasx" )
-message( "Benchmarking - Linking BLASx: " ${BLASX_LINK} )
+if ($ENV{PARALIA_BLASX_BENCH})
+    set (BLASX_PREFIX $ENV{PARALIA_BLASX_PREFIX} )
+    set (BLASX_INCLUDE_DIRS ${BLASX_PREFIX}/include)
+    include_directories(${BLASX_INCLUDE_DIRS} )
+    message( "Benchmarking - Included BLASx: " ${BLASX_INCLUDE_DIRS} )
+    set (BLASX_LD ${BLASX_PREFIX}/lib)
+    set (BLASX_LINK  "-L${BLASX_LD} -lblasx" )
+    message( "Benchmarking - Linking BLASx: " ${BLASX_LINK} )
+endif()
 
 #XKBLAS libs and includes
-set (XKBLAS_PREFIX $ENV{PARALIA_XKBLAS_PREFIX})
-set (XKBLAS_INCLUDE_DIRS ${XKBLAS_PREFIX}/include)
-include_directories(${XKBLAS_INCLUDE_DIRS} )
-message( "Benchmarking - Included XKBLAS: " ${XKBLAS_INCLUDE_DIRS} )
-set (XKBLAS_LD ${XKBLAS_PREFIX}/lib)
-set (XKBLAS_LINK  "-L${XKBLAS_LD}  -lm -lpthread -lkaapi -lxkblas -lcuda" )
-message( "Benchmarking - Linking XKBLAS: " ${XKBLAS_LINK} )
+if ($ENV{PARALIA_XKBLAS_BENCH})
+    set (XKBLAS_PREFIX $ENV{PARALIA_XKBLAS_PREFIX})
+    set (XKBLAS_INCLUDE_DIRS ${XKBLAS_PREFIX}/include)
+    include_directories(${XKBLAS_INCLUDE_DIRS} )
+    message( "Benchmarking - Included XKBLAS: " ${XKBLAS_INCLUDE_DIRS} )
+    set (XKBLAS_LD ${XKBLAS_PREFIX}/lib)
+    set (XKBLAS_LINK  "-L${XKBLAS_LD}  -lm -lpthread -lkaapi -lxkblas $ENV{PARALIA_CUDA_LOAD_COMMAND}" )
+    message( "Benchmarking - Linking XKBLAS: " ${XKBLAS_LINK} )
+endif()
 
 add_library(benchparalia SHARED
 ${BENCH_DIR_SRC}/cuBLASXt/cuBLASWrappers.cpp
@@ -67,7 +71,10 @@ ${BENCH_DIR_SRC}/testing.cpp
 )
 target_link_libraries(benchparalia paralia ${INTERNAL_LINK_LIB} ${OPENBLAS_LINK} paralia autotuner unihelpers )
 configure_file(${BENCH_DIR_INC}/BackenedLibsWrapped.hpp ${BENCH_INSTALL_INC}/BackenedLibsWrapped.hpp COPYONLY)
-configure_file(${BENCH_DIR_INC}/BLASxWrapped.hpp ${BENCH_INSTALL_INC}/BLASxWrapped.hpp COPYONLY)
+
+if ($ENV{PARALIA_BLASX_BENCH})
+    configure_file(${BENCH_DIR_INC}/BLASxWrapped.hpp ${BENCH_INSTALL_INC}/BLASxWrapped.hpp COPYONLY)
+endif()
 
 #Enable results validation in "Runner" scripts (adds extra overhead, "Tester" scripts should be used for result validation)
 add_definitions(-DRUNVALIDATION)
@@ -83,14 +90,22 @@ target_link_libraries(testFasTransfer ${INTERNAL_LINK_LIB} benchparalia unihelpe
 
 ## Runners for SotA
 add_executable (cuBLASXt_dgemm_runner ${BENCH_DIR_SRC}/cuBLASXt/cuBLASXt_dgemm_runner.cpp )
-add_executable (BLASx_dgemm_runner ${BENCH_DIR_SRC}/BLASX/BLASx_dgemm_runner.cpp ${BENCH_DIR_SRC}/BLASX/BLASXWrappers.cpp)
-add_executable (BLASxEx_dgemm_runner ${BENCH_DIR_SRC}/BLASX/BLASxEx_dgemm_runner.cpp ${BENCH_DIR_SRC}/BLASX/BLASXWrappers.cpp)
-add_executable (XKBLAS_dgemm_runner ${BENCH_DIR_SRC}/XKBLAS/XKBLAS_dgemm_runner.cpp)
+if ($ENV{PARALIA_BLASX_BENCH})
+    add_executable (BLASx_dgemm_runner ${BENCH_DIR_SRC}/BLASX/BLASx_dgemm_runner.cpp ${BENCH_DIR_SRC}/BLASX/BLASXWrappers.cpp)
+    add_executable (BLASxEx_dgemm_runner ${BENCH_DIR_SRC}/BLASX/BLASxEx_dgemm_runner.cpp ${BENCH_DIR_SRC}/BLASX/BLASXWrappers.cpp)
+endif()
+if ($ENV{PARALIA_XKBLAS_BENCH})
+    add_executable (XKBLAS_dgemm_runner ${BENCH_DIR_SRC}/XKBLAS/XKBLAS_dgemm_runner.cpp)
+endif()
 
 target_link_libraries(cuBLASXt_dgemm_runner ${INTERNAL_LINK_LIB} benchparalia unihelpers)
-target_link_libraries(BLASx_dgemm_runner ${INTERNAL_LINK_LIB} benchparalia unihelpers ${BLASX_LINK})
-target_link_libraries(BLASxEx_dgemm_runner ${INTERNAL_LINK_LIB} benchparalia unihelpers ${BLASX_LINK})
-target_link_libraries(XKBLAS_dgemm_runner ${INTERNAL_LINK_LIB} benchparalia unihelpers ${XKBLAS_LINK} )
+if ($ENV{PARALIA_BLASX_BENCH})
+    target_link_libraries(BLASx_dgemm_runner ${INTERNAL_LINK_LIB} benchparalia unihelpers ${BLASX_LINK})
+    target_link_libraries(BLASxEx_dgemm_runner ${INTERNAL_LINK_LIB} benchparalia unihelpers ${BLASX_LINK})
+endif()
+if ($ENV{PARALIA_XKBLAS_BENCH})
+    target_link_libraries(XKBLAS_dgemm_runner ${INTERNAL_LINK_LIB} benchparalia unihelpers ${XKBLAS_LINK} )
+endif()
 
 ## PARALia Runners and Testers
 add_executable (dgemm_tester ${BENCH_DIR_SRC}/PARALia/dgemm_tester.cpp )

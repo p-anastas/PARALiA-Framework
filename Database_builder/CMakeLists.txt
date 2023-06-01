@@ -56,7 +56,7 @@ add_executable (RunCuCuBlasDaxpyBench ${DEPLOYMENT_DIR_SRC}/daxpy_microbench.cu 
 add_executable (RunCuCuBlasDgemvBench ${DEPLOYMENT_DIR_SRC}/dgemv_microbench.cu )
 add_executable (RunCuCuBlasDgemmBench ${DEPLOYMENT_DIR_SRC}/dgemm_microbench.cu )
 add_executable (RunCuCuBlasSgemmBench ${DEPLOYMENT_DIR_SRC}/sgemm_microbench.cu )
-add_executable (RunCuCuBlasLinkBench ${DEPLOYMENT_DIR_SRC}/transfer_link_microbench.cpp )
+add_executable (RunCuCuBlasLinkBench ${DEPLOYMENT_DIR_SRC}/transfer_link_microbench.cu )
 
 target_link_libraries(RunCuCuBlasDdotBench ${INTERNAL_LINK_LIB} unihelpers nvidia_powa)
 target_link_libraries(RunCuCuBlasDaxpyBench ${INTERNAL_LINK_LIB} unihelpers nvidia_powa)

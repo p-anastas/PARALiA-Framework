@@ -271,7 +271,8 @@ void* PARALiADgemvAgentVoid(void* kernel_pthread_wrapped){
 
 	CoCoSyncCheckErr();
 #ifdef TEST
-	double total_cache_timer = Global_Buffer[idxize(dev_id)]->timer;
+	double total_cache_timer = Global_Buffer_2D[idxize(dev_id)]->timer;
+	total_cache_timer += Global_Buffer_1D[idxize(dev_id)]->timer;
 	lprintf(lvl, "Cache requests total timer (%d): t_cache = %lf ms\n" , dev_id, total_cache_timer*1000);
 	cpu_timer = csecond() - cpu_timer;
 	lprintf(lvl, "Subkernels complete(%d): t_comp = %lf ms\n" , dev_id, cpu_timer*1000);
