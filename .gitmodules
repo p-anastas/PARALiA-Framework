@@ -4,9 +4,6 @@
 [submodule "Database_builder/CuCuBLAS/nvidia-energy-measure"]
 	path = Database_builder/CuCuBLAS/nvidia-energy-measure
 	url = git@github.com:p-anastas/nvidia-energy-measure.git
-[submodule "Universal_helpers"]
-	path = Universal_helpers
-	url = git@github.com:p-anastas/Universal_helpers.git
 [submodule "Software_caching"]
 	path = Library_scheduler/Software_caching
 	url = git@github.com:aristomenisTheod/Software-assisted_Memory_Buffer.git
