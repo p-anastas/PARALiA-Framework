@@ -43,7 +43,7 @@ void b_HopMemcpyPrint(){
 		b_link_gbytes_s[idxize(dest)][idxize(src)]+=Gval_per_s(b_bytes[k], time);
 		printf( "Normal 2D Trasfer %d->%d : total_t = %lf ms ( %.3lf Gb/s ), pipelined_t = %lf ms ( %.3lf Gb/s )\n", 
 			src, dest, 1000*time, Gval_per_s(b_bytes[k], time), 1000*pipe_time, Gval_per_s(b_bytes[k], pipe_time));
-		fprintf(fp, "%d,%d,[ %d %d ],%ld,%lf,%lf\n", src, dest, src, dest, b_bytes[k], time, pipe_time);
+		fprintf(fp, "%d,%d,[ %d %d ],%ld,%lf,%lf,%lf\n", src, dest, src, dest, b_bytes[k], b_timers[k][0], b_timers[k][1], b_timers[k][2]);
 	}
 		
 	printf("\n Full Tranfer Map:\n   |");
@@ -104,12 +104,10 @@ double BLASxDgemmWrap(char TransA, char TransB, long int M, long int N, long int
 	CBLAS_TRANSPOSE cpu_op_A = OpCharToCblas(TransA), cpu_op_B = OpCharToCblas(TransB);
 	BLASx_dgemm(CblasColMajor,cpu_op_A,cpu_op_B,M,N,K,alpha,A,ldA, B,ldB, beta,C, ldC, T, dev_num, dev_ids);
 	CoCoSyncCheckErr();
-	BLASx_LRU_flush(dev_num, dev_ids);
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer;
 	lprintf(lvl, "BLASx execution time -> t_kernel = %lf ms\n", cpu_timer*1000);
 #endif
-	CoCoSyncCheckErr();
 #ifdef TTEST
 	b_HopMemcpyPrint();
 #endif	
@@ -134,12 +132,10 @@ double BLASxExDgemmWrap(char TransA, char TransB, long int M, long int N, long i
 	CBLAS_TRANSPOSE cpu_op_A = OpCharToCblas(TransA), cpu_op_B = OpCharToCblas(TransB);
 	BLASx_gpubuf_dgemm(CblasColMajor,cpu_op_A,cpu_op_B,M,N,K,alpha,A,ldA, B,ldB, beta,C, ldC, T, dev_num, dev_ids);
 	CoCoSyncCheckErr();
-	BLASx_LRU_flush(dev_num, dev_ids);
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer;
 	lprintf(lvl, "BLASx execution time -> t_kernel = %lf ms\n", cpu_timer*1000);
 #endif
-	CoCoSyncCheckErr();
 	total_t = csecond() - total_t;
 #ifdef TTEST
 	b_HopMemcpyPrint();

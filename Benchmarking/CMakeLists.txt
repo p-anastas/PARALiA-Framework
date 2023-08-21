@@ -77,7 +77,7 @@ if ($ENV{PARALIA_BLASX_BENCH})
 endif()
 
 #Enable results validation in "Runner" scripts (adds extra overhead, "Tester" scripts should be used for result validation)
-add_definitions(-DRUNVALIDATION)
+#add_definitions(-DRUNVALIDATION)
 #Enable checking the existing logs for each benchmark before executing it, to avoid running the same exact test multiple times.
 #add_definitions(-DCHECKLOG)
 

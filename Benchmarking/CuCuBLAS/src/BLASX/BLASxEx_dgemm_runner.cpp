@@ -158,7 +158,7 @@ int main(const int argc, const char *argv[]) {
 	max_t  * 1000, Gval_per_s(gemm_flops(M,N,K),max_t));
 
 	CoCoSyncCheckErr();
-	BLASxFlushGPUBuf(dev_num, dev_ids);
+	//BLASxFlushGPUBuf(dev_num, dev_ids);
 	CoCoFree(A, A_loc);
 	CoCoFree(B, B_loc);
 	CoCoFree(C, C_loc);

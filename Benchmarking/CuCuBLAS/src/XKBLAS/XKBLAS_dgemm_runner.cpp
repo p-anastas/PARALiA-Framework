@@ -53,7 +53,7 @@ void xkHopMemcpyPrint(){
 		xklink_gbytes_s[idxize(dest)][idxize(src)]+=Gval_per_s(xkbytes[k], time);
 		printf( "Normal 2D Trasfer %d->%d : total_t = %lf ms ( %.3lf Gb/s ), pipelined_t = %lf ms ( %.3lf Gb/s )\n", 
 			src, dest, 1000*time, Gval_per_s(xkbytes[k], time), 1000*pipe_time, Gval_per_s(xkbytes[k], pipe_time));
-		fprintf(fp, "%d,%d,[ %d %d ],%ld,%lf,%lf\n", src, dest, src, dest, xkbytes[k], time, pipe_time);
+				fprintf(fp, "%d,%d,[ %d %d ],%ld,%lf,%lf,%lf\n", src, dest, src, dest, xkbytes[k], xktimers[k][0], xktimers[k][1], xktimers[k][2]);
 	}
 		
 	printf("\n Full Tranfer Map:\n   |");
