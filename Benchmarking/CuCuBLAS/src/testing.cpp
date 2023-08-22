@@ -6,7 +6,7 @@
 
 #include <cstdlib>
 #include <cmath>
-#include "unihelpers.hpp"
+#include "linkmap.hpp"
 #include "PARALiA.hpp"
 
 char* CoCoImplementationPrint(){

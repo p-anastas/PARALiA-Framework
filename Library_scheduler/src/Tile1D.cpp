@@ -5,7 +5,7 @@
 ///
 
 #include "Decomposer.hpp"
-#include "unihelpers.hpp"
+#include "linkmap.hpp"
 
 int Tile1D_num = 0;
 

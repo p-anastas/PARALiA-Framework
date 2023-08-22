@@ -1,12 +1,6 @@
-[submodule "Deployment_phase/CuCuBLAS/nvidia-energy-measure"]
-	path = Deployment_phase/CuCuBLAS/nvidia-energy-measure
-	url = git@github.com:p-anastas/nvidia-energy-measure.git
 [submodule "Database_builder/CuCuBLAS/nvidia-energy-measure"]
 	path = Database_builder/CuCuBLAS/nvidia-energy-measure
 	url = git@github.com:p-anastas/nvidia-energy-measure.git
-[submodule "Software_caching"]
-	path = Library_scheduler/Software_caching
-	url = git@github.com:aristomenisTheod/Software-assisted_Memory_Buffer.git
-[submodule "Universal_helpers"]
-	path = Universal_helpers
-	url = git@github.com:p-anastas/Universal_helpers.git
+[submodule "Extended_LinkMap"]
+	path = Extended_LinkMap
+	url = git@github.com:p-anastas/Extended_LinkMap.git

@@ -9,7 +9,7 @@
 #include <cuda_runtime.h>
 
 #include "PARALiA.hpp"
-#include "unihelpers.hpp"
+#include "linkmap.hpp"
 #include "backend_wrappers.hpp"
 
 void cblas_dgemm_wrap_for_cublasXt(char* gpu_op_A, char* gpu_op_B, int* M, int* N, int* K, double* alpha, double* A, int* ldA, double* B, int* ldB, double* beta, double* C, int* ldC){

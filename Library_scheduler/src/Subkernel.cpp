@@ -5,7 +5,7 @@
 ///
 
 #include "Subkernel.hpp"
-#include "unihelpers.hpp"
+#include "linkmap.hpp"
 #include "Decomposer.hpp"
 #include "DataCaching.hpp"
 #include "backend_wrappers.hpp"

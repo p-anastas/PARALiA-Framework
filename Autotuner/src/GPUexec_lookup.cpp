@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <math.h>
 
-#include "unihelpers.hpp"
+#include "linkmap.hpp"
 #include "GPUexec_lookup.hpp"
 
 /* ============================BLAS3 Models================================= */

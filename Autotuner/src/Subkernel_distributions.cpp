@@ -4,7 +4,7 @@
 /// \brief The possible subkernel distributions to different execution units.
 ///
 
-#include "unihelpers.hpp"
+#include "linkmap.hpp"
 #include "Autotuner.hpp"
 
 void CoCoDistributeSubkernelsRoundRobin(ATC_p autotune_controller){

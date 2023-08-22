@@ -9,7 +9,7 @@
 #include<iostream>
 #include <string>
 
-#include "unihelpers.hpp"
+#include "linkmap.hpp"
 
 class Subkernel
 {

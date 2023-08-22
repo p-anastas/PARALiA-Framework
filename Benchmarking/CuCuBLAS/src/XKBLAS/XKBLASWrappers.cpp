@@ -7,7 +7,7 @@
 #include <cublasXt.h>
 
 #include "CoCoPeLiaLibBackened.hpp"
-#include "unihelpers.hpp"
+#include "linkmap.hpp"
 #include "xkblas.h" // Must be put after unihelpers cause of cblas def clashes...
 
 void xkHopMemcpyPrint(); 

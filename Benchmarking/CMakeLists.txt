@@ -13,8 +13,8 @@ set (BENCH_DIR_INC ${BENCH_DIR}/include)
 include_directories( ${BENCH_DIR_INC})
 message( "Benchmarking - Included DIR: " ${BENCH_DIR_INC} )
 
-include_directories(${UNIHELP_INSTALL_INC})
-message( "Benchmarking - Included DIR: " ${UNIHELP_INSTALL_INC} )
+include_directories(${LINKMAP_INSTALL_INC})
+message( "Benchmarking - Included DIR: " ${LINKMAP_INSTALL_INC} )
 
 include_directories(${AUTOTUNE_INSTALL_INC})
 message( "Benchmarking - Included DIR: " ${AUTOTUNE_INSTALL_INC} )
@@ -69,7 +69,7 @@ ${BENCH_DIR_SRC}/cuBLASXt/cuBLASWrappers.cpp
 ${BENCH_DIR_SRC}/cuBLASXt/cuBLASXtWrappers.cpp
 ${BENCH_DIR_SRC}/testing.cpp
 )
-target_link_libraries(benchparalia paralia ${INTERNAL_LINK_LIB} ${OPENBLAS_LINK} paralia autotuner unihelpers )
+target_link_libraries(benchparalia paralia ${INTERNAL_LINK_LIB} ${OPENBLAS_LINK} paralia autotuner linkmap )
 configure_file(${BENCH_DIR_INC}/BackenedLibsWrapped.hpp ${BENCH_INSTALL_INC}/BackenedLibsWrapped.hpp COPYONLY)
 
 if ($ENV{PARALIA_BLASX_BENCH})
@@ -85,8 +85,8 @@ endif()
 add_executable (testLinkOverlap ${BENCH_DIR_SRC}/Component_testers/testLinkOverlap.cpp)
 add_executable (testFasTransfer ${BENCH_DIR_SRC}/Component_testers/testFasTransfer.cpp)
 
-target_link_libraries(testLinkOverlap ${INTERNAL_LINK_LIB} benchparalia unihelpers )
-target_link_libraries(testFasTransfer ${INTERNAL_LINK_LIB} benchparalia unihelpers )
+target_link_libraries(testLinkOverlap ${INTERNAL_LINK_LIB} benchparalia linkmap )
+target_link_libraries(testFasTransfer ${INTERNAL_LINK_LIB} benchparalia linkmap )
 
 ## Runners for SotA
 add_executable (cuBLASXt_dgemm_runner ${BENCH_DIR_SRC}/cuBLASXt/cuBLASXt_dgemm_runner.cpp )
@@ -98,13 +98,13 @@ if ($ENV{PARALIA_XKBLAS_BENCH})
     add_executable (XKBLAS_dgemm_runner ${BENCH_DIR_SRC}/XKBLAS/XKBLAS_dgemm_runner.cpp)
 endif()
 
-target_link_libraries(cuBLASXt_dgemm_runner ${INTERNAL_LINK_LIB} benchparalia unihelpers)
+target_link_libraries(cuBLASXt_dgemm_runner ${INTERNAL_LINK_LIB} benchparalia linkmap)
 if ($ENV{PARALIA_BLASX_BENCH})
-    target_link_libraries(BLASx_dgemm_runner ${INTERNAL_LINK_LIB} benchparalia unihelpers ${BLASX_LINK})
-    target_link_libraries(BLASxEx_dgemm_runner ${INTERNAL_LINK_LIB} benchparalia unihelpers ${BLASX_LINK})
+    target_link_libraries(BLASx_dgemm_runner ${INTERNAL_LINK_LIB} benchparalia linkmap ${BLASX_LINK})
+    target_link_libraries(BLASxEx_dgemm_runner ${INTERNAL_LINK_LIB} benchparalia linkmap ${BLASX_LINK})
 endif()
 if ($ENV{PARALIA_XKBLAS_BENCH})
-    target_link_libraries(XKBLAS_dgemm_runner ${INTERNAL_LINK_LIB} benchparalia unihelpers ${XKBLAS_LINK} )
+    target_link_libraries(XKBLAS_dgemm_runner ${INTERNAL_LINK_LIB} benchparalia linkmap ${XKBLAS_LINK} )
 endif()
 
 ## PARALia Runners and Testers
@@ -121,12 +121,12 @@ add_executable (ddot_runner ${BENCH_DIR_SRC}/PARALia/ddot_runner.cpp )
 
 target_link_libraries(dgemm_tester ${INTERNAL_LINK_LIB} benchparalia)
 target_link_libraries(sgemm_tester ${INTERNAL_LINK_LIB} benchparalia)
-target_link_libraries(dgemm_runner ${INTERNAL_LINK_LIB} benchparalia unihelpers)
-target_link_libraries(dgemm_runner_hetero ${INTERNAL_LINK_LIB} benchparalia unihelpers)
-target_link_libraries(dgemm_predictor ${INTERNAL_LINK_LIB} benchparalia unihelpers)
-target_link_libraries(dgemv_runner ${INTERNAL_LINK_LIB} benchparalia unihelpers)
-target_link_libraries(daxpy_runner ${INTERNAL_LINK_LIB} benchparalia unihelpers)
-target_link_libraries(ddot_runner ${INTERNAL_LINK_LIB} benchparalia unihelpers)
+target_link_libraries(dgemm_runner ${INTERNAL_LINK_LIB} benchparalia linkmap)
+target_link_libraries(dgemm_runner_hetero ${INTERNAL_LINK_LIB} benchparalia linkmap)
+target_link_libraries(dgemm_predictor ${INTERNAL_LINK_LIB} benchparalia linkmap)
+target_link_libraries(dgemv_runner ${INTERNAL_LINK_LIB} benchparalia linkmap)
+target_link_libraries(daxpy_runner ${INTERNAL_LINK_LIB} benchparalia linkmap)
+target_link_libraries(ddot_runner ${INTERNAL_LINK_LIB} benchparalia linkmap)
 
 set (BENCH_INSTALL_INC ${BENCH_INSTALL_INC} PARENT_SCOPE)
 #message( "->\nBenchmarking - Shared Library: " ${CMAKE_LIBRARY_OUTPUT_DIRECTORY} )

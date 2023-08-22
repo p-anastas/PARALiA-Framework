@@ -8,7 +8,7 @@
 #include <cuda_runtime.h>
 
 #include "PARALiA.hpp"
-#include "unihelpers.hpp"
+#include "linkmap.hpp"
 #include "backend_wrappers.hpp"
 
 // Level 1

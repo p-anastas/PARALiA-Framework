@@ -5,7 +5,7 @@
 ///
 
 #include "Decomposer.hpp"
-#include "unihelpers.hpp"
+#include "linkmap.hpp"
 
 Tile1D* Decom1D::getTile(int iloc){
   if(iloc >= GridSz) error("Decom1D::getTile : iloc >= GridSz (%d vs %d)\n", iloc, GridSz);

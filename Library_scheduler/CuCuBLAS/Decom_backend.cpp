@@ -7,7 +7,7 @@
 #include <cblas.h>
 
 #include "Decomposer.hpp"
-#include "unihelpers.hpp"
+#include "linkmap.hpp"
 
 #include "backend_wrappers.hpp"
 

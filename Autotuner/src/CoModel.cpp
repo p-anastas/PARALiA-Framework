@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <math.h>
 
-#include "unihelpers.hpp"
+#include "linkmap.hpp"
 #include "CoModel.hpp"
 #include "Autotuner.hpp"
 

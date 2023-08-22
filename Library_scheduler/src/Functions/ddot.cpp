@@ -8,7 +8,7 @@
 #include "backend_wrappers.hpp"
 #include "Autotuner.hpp"
 #include "PARALiA.hpp"
-#include "unihelpers.hpp"
+#include "linkmap.hpp"
 #include "Decomposer.hpp"
 #include "Subkernel.hpp"
 #include "DataCaching.hpp"

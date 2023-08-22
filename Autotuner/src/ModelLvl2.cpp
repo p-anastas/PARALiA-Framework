@@ -11,7 +11,7 @@
 #include "GPUexec_lookup.hpp"
 #include "Autotuner.hpp"
 #include "ModelLvl1.hpp"
-#include "unihelpers.hpp"
+#include "linkmap.hpp"
 #include "Werkhoven.hpp"
 
 

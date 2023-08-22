@@ -10,7 +10,7 @@
 #include "backend_wrappers.hpp"
 #include <BLASxModifiedcblas.h>
 #include "PARALiA.hpp"
-#include "unihelpers.hpp"
+#include "linkmap.hpp"
 
 #ifdef TTEST /// C programmers hate him PETROFIX
 extern int b_trans_ctr;

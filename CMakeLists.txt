@@ -122,13 +122,13 @@ add_definitions(-DFETCH_UNAVAILABLE_PENALTY=0.1)
 #add_definitions(-DTEST)
 
 #Run in Subkernel testing mode : details about time spend in subkernel operations.
-add_definitions(-DSTEST)
+#add_definitions(-DSTEST)
 
 #Run in Deep Subkernel testing mode : many details about time spend in subkernel operations.
 #add_definitions(-DDSTEST)
 
 #Run in Link Hop testing mode; transfers using link hops are logged and timed.
-add_definitions(-DTTEST)
+#add_definitions(-DTTEST)
 
 #Run in debug mode, which includes detailed function calls and info for error-checking
 #add_definitions(-DDEBUG)
@@ -148,10 +148,10 @@ add_definitions(-DTTEST)
 #Run in caching debug mode, for cache-related debugging
 #add_definitions(-DCDEBUG)
 
-#Run in unihelper debug mode, for unihelper-related debugging
+#Run in linkmap debug mode, for linkmap-related debugging
 #add_definitions(-DUDEBUG)
 
-#Run in unihelper deep debug mode, for unihelper-related debugging
+#Run in linkmap deep debug mode, for linkmap-related debugging
 #add_definitions(-DUDDEBUG)
 
 ## Define a name for the testbed, to be used for the whole framework setup
@@ -255,7 +255,7 @@ configure_file(${PROJECT_BENCH_DIR}/Heterogeneous_performance_estimation.in ${CM
 set (BUILD_BLAS_WRAPPERS_FLAG 1)
 add_definitions(-DBUILD_BLAS_WRAPPERS_FLAG)
 
-ADD_SUBDIRECTORY (Universal_helpers)
+ADD_SUBDIRECTORY (Extended_LinkMap)
 
 ADD_SUBDIRECTORY (Database_builder)
 add_definitions(-DDEPLOYDB="${DEPLOYMENT_DIR_DB}")

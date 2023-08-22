@@ -11,7 +11,7 @@
 #include "GPUexec_lookup.hpp"
 #include "Autotuner.hpp"
 #include "ModelLvl3.hpp"
-#include "unihelpers.hpp"
+#include "linkmap.hpp"
 #include "Werkhoven.hpp"
 
 double PredictFullOverlapBLAS3(MD_p model)

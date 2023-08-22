@@ -14,7 +14,7 @@
 #include "ModelLvl3.hpp"
 #include "ModelLvl2.hpp"
 #include "ModelLvl1.hpp"
-#include "unihelpers.hpp"
+#include "linkmap.hpp"
 #include "Werkhoven.hpp"
 
 /********************** Initialization/Modification ***************************/

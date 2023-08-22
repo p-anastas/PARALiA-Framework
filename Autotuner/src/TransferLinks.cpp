@@ -2,7 +2,7 @@
 #include <iostream>
 
 #include "Autotuner.hpp"
-#include "unihelpers.hpp"
+#include "linkmap.hpp"
 
 double link_bw[LOC_NUM][LOC_NUM];
 double link_shared_bw[LOC_NUM][LOC_NUM];

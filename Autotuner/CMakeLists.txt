@@ -30,8 +30,8 @@ set (AUTOTUNE_DIR_INC ${AUTOTUNE_DIR}/include)
 include_directories( ${AUTOTUNE_DIR_INC})
 message( "Autotuner - Included DIR: " ${AUTOTUNE_DIR_INC} )
 
-include_directories(${UNIHELP_INSTALL_INC})
-message( "Autotuner - Included DIR: " ${UNIHELP_INSTALL_INC} )
+include_directories(${LINKMAP_INSTALL_INC})
+message( "Autotuner - Included DIR: " ${LINKMAP_INSTALL_INC} )
 
 set (AUTOTUNE_DIR_SRC ${AUTOTUNE_DIR}/src)
 message( "Autotuner - Source DIR: " ${AUTOTUNE_DIR_SRC} )
@@ -67,12 +67,12 @@ ${AUTOTUNE_DIR_SRC}/Subkernel_distributions.cpp
 ${AUTOTUNE_DIR_SRC}/Autotuner.cpp
 ${AUTOTUNE_DIR_SRC}/Modeler.cpp
 )
-target_link_libraries(autotuner ${INTERNAL_LINK_LIB} unihelpers)
+target_link_libraries(autotuner ${INTERNAL_LINK_LIB} linkmap)
 configure_file(${AUTOTUNE_DIR_INC}/CoModel.hpp ${AUTOTUNE_INSTALL_INC}/CoModel.hpp COPYONLY)
 configure_file(${AUTOTUNE_DIR_INC}/Autotuner.hpp ${AUTOTUNE_INSTALL_INC}/Autotuner.hpp COPYONLY)
 
 #add_executable (CoCoPeLiaPredictTileTester ${AUTOTUNE_DIR}/testing/CoCoPeLiaPredictTileTester.cpp )
-#target_link_libraries(CoCoPeLiaPredictTileTester ${INTERNAL_LINK_LIB} autotuner unihelpers)
+#target_link_libraries(CoCoPeLiaPredictTileTester ${INTERNAL_LINK_LIB} autotuner linkmap)
 
 set (AUTOTUNE_INSTALL_INC ${AUTOTUNE_INSTALL_INC} PARENT_SCOPE)
 message( "->\nAutotuner - Shared Library: " ${CMAKE_LIBRARY_OUTPUT_DIRECTORY} )

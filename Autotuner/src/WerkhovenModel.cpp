@@ -23,7 +23,7 @@
 #include "CoModel.hpp"
 #include "GPUexec_lookup.hpp"
 #include "Autotuner.hpp"
-#include "unihelpers.hpp"
+#include "linkmap.hpp"
 
 ///  Predicts 3-way overlaped execution time for nStream (equal) data blocks of any kernel using Werkhoven's model.
 double WerkhovenModelInternal(MD_p model, long long h2d_bytes, long long d2h_bytes, double nStreams, double kernel_time_0, double kernel_time_1)
