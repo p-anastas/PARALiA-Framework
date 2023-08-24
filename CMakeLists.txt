@@ -8,7 +8,7 @@ add_definitions(-DBACKEND="${BACKEND}")
 
 execute_process ( COMMAND bash -c "source ${CMAKE_CURRENT_BINARY_DIR}/../config_silver1.sh")
 
-set(PROJECT_VERSION "1.5")
+set(PROJECT_VERSION "2.0")
 message("PARALiA-Framework - PROJECT_VERSION: " ${PROJECT_VERSION})
 add_definitions(-DVERSION="${PROJECT_VERSION}")
 
@@ -119,7 +119,7 @@ add_definitions(-DEXSTEAL_PENALTY=100000) # If this is large : Heuristic -> Only
 add_definitions(-DFETCH_UNAVAILABLE_PENALTY=0.1)
 
 #Run in testing mode : details about models, decisions and time spend in operations.
-#add_definitions(-DTEST)
+add_definitions(-DTEST)
 
 #Run in Subkernel testing mode : details about time spend in subkernel operations.
 #add_definitions(-DSTEST)
@@ -148,10 +148,10 @@ add_definitions(-DFETCH_UNAVAILABLE_PENALTY=0.1)
 #Run in caching debug mode, for cache-related debugging
 #add_definitions(-DCDEBUG)
 
-#Run in linkmap debug mode, for linkmap-related debugging
+#Run in extended_linkmap debug mode
 #add_definitions(-DUDEBUG)
 
-#Run in linkmap deep debug mode, for linkmap-related debugging
+#Run in extended_linkmap deep debug mode, for linkmap-related debugging
 #add_definitions(-DUDDEBUG)
 
 ## Define a name for the testbed, to be used for the whole framework setup

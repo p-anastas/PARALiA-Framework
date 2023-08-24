@@ -94,9 +94,9 @@ void Decom2D::SyncTileMap(){
     for (int itt2 = 0 ; itt2 < GridSz2; itt2++)
       Tile_map[itt1*GridSz2 + itt2]->writeback();
 
-  //for (int itt1 = 0; itt1 < GridSz1; itt1++)
-  //  for (int itt2 = 0 ; itt2 < GridSz2; itt2++)
-  //    Tile_map[itt1*GridSz2 + itt2]->StoreBlock[idxize(Tile_map[itt1*GridSz2 + itt2]->get_initial_location())]->Available->sync_barrier();
+  for (int itt1 = 0; itt1 < GridSz1; itt1++)
+    for (int itt2 = 0 ; itt2 < GridSz2; itt2++)
+      Tile_map[itt1*GridSz2 + itt2]->StoreBlock[idxize(Tile_map[itt1*GridSz2 + itt2]->get_initial_location())]->Available->sync_barrier();
 }
 
 void Decom2D::DrawTileMap(){

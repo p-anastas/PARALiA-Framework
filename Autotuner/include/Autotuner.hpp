@@ -67,7 +67,6 @@ typedef struct flagParams{
 	//TODO: Add all flags used in BLAS, only applicable initialized/used for each routine.
 }* flagParams_p;
 
-
 typedef class Modeler{
 	public:
 		Vdata_p V; /// The CoCoPeLia Modeling data struct.
@@ -111,81 +110,6 @@ typedef class Modeler{
 /******************************************************************************/
 
 }* MD_p;
-
-/*****************************************************/
-/// LinkMap stuff
-
-#define MAX_ALLOWED_HOPS 1
-#define MAX_HOP_ROUTES 1
-#define HOP_PENALTY 0.2
-
-typedef class LinkMap{
-	public:
-		// Empirically obtained values for links if used independently
-		double link_lat[LOC_NUM][LOC_NUM] = {{0}};
-		double link_bw[LOC_NUM][LOC_NUM] = {{0}};
-
-		// Estimated bandwidth values for links if used silmuntaniously for a given problem
-		double link_bw_shared[LOC_NUM][LOC_NUM] = {{0}};
-		double link_bw_shared_hops[LOC_NUM][LOC_NUM] = {{0}};
-
-		// Number of current link uses. TODO: For runtime optimization, not implemented
-		long long link_uses[LOC_NUM][LOC_NUM] = {{0}};
-
-		// The backend hop route used for each transfer.
-		short link_hop_route[LOC_NUM][LOC_NUM][MAX_ALLOWED_HOPS][MAX_HOP_ROUTES] = {{{{0}}}};
-		// The number of intermediate hops between unit memories each link utilizes.
-		short link_hop_num[LOC_NUM][LOC_NUM] = {{0}};
-
-		// The number of different available routes for each link. TODO: Not implemented
-		short link_hop_route_num[LOC_NUM][LOC_NUM] = {{0}};
-
-		/// ESPA stuff
-		long double ESPA_bytes[LOC_NUM][LOC_NUM] = {{0}};
-		double ESPA_ETA[LOC_NUM][LOC_NUM] = {{0}};
-		int ESPA_ETA_sorted_dec_ids[LOC_NUM*LOC_NUM] = {0};
-
-		double ESPA_ETA_max, ESPA_ETA_mean, ESPA_ETA_var = 0;
-
-/********************** Initialization/Modification ***************************/
-		LinkMap();
-		~LinkMap();
-/******************************************************************************/
-/**************************** Helper Fuctions *********************************/
-		void print_link_bw();
-		void print_link_bw_shared();
-		void print_link_bw_shared_hops();
-		void copy(class LinkMap* other_linkmap);
-		void reset(); // Resets all but the initial link_lat and link_bw to zero.
-		void reset_links(int unit_id); // Resets all link(s) related with unit_id (the initial link and all passing through it)
-
-/******************************************************************************/
-/************************ Class main Functions ********************************/
-		void update_link_weights(MD_p* list_of_models, int T);
-		void update_link_shared_weights(MD_p* list_of_models,
-			int* active_unit_id_list, int active_unit_num);
-		void init_hop_routes(MD_p* list_of_models, int* active_unit_id_list, int unit_num);
-
-/******************************************************************************/
-/************************ Class ESPA Functions ********************************/
-
-		double update_ESPA_ETA_max();
-		double update_ESPA_ETA_mean();
-		double update_ESPA_ETA_mean_and_var();
-		double update_ESPA_ETA_idx(MD_p* unit_modeler_list, int idxi, int idxj);
-		void update_ESPA_ETA_sorted_dec_ids();
-
-		void ESPA_init(MD_p* unit_modeler_list, int* active_unit_id_list,
-			double* active_unit_score, int active_unit_num, int init_type);
-		void ESPA_init_hop_routes(MD_p* unit_modeler_list, int* active_unit_id_list,
-			double* active_unit_score, int active_unit_num, int init_type);
-		double ESPA_predict(MD_p unit_modeler, int T, int* active_unit_id_list,
-			double* active_unit_score, int active_unit_num, int init_type);
-
-		void print_ESPA();
-/******************************************************************************/
-}* LinkMap_p;
-
 
 typedef class ATC{
 	public:
@@ -232,7 +156,5 @@ typedef class ATC{
 /******************************************************************************/
 
 }* ATC_p;
-
-extern LinkMap_p final_estimated_linkmap;
 
 #endif

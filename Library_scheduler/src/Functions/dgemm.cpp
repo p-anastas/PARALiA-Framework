@@ -282,6 +282,7 @@ ATC_p PARALiADgemm(char TransA,  char TransB, long int M, long int N, long int K
 	fprintf(stderr, "|-----> PARALiADgemm\n");
 	double cpu_timer = csecond();
 #endif
+  	signal(SIGSEGV, handler);   // install segfault handler
 
 	int prev_dev_id = CoCoPeLiaGetDevice();
 
