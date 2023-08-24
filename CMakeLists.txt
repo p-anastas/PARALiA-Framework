@@ -24,32 +24,27 @@ add_definitions(-DBUFFER_REUSE_ENABLE)
 ## Enable lock-free versions of event & Queue management in Universal_helpers
 add_definitions(-DUNIHELPER_LOCKFREE_ENABLE)
 
-## Enable Locking with mutexes instead of busy-waiting
-#add_definitions(-DENABLE_MUTEX_LOCKING)
-
 ## Enable Running multiple backend operations in parallel for each queue
 add_definitions(-DENABLE_PARALLEL_BACKEND)
 ## The maximum allowed parallel backend operations per queue
 add_definitions(-DMAX_BACKEND_L=8)
 
-## Enable overlapping Send & recv Communication
+## Enable overlapping Send & recv Communication FIXME: Not implemented
 add_definitions(-DENABLE_SEND_RECV_OVERLAP)
 
 ## Enable using the CPU as an extra device for part of the total workload, if applicable
 add_definitions(-DENABLE_CPU_WORKLOAD)
 
-## Enable using a different parallel worker for scheduling each tile request
-#add_definitions(-DENABLE_PTHREAD_TILE_REQUEST)
-
-## Enable pre-fetching (cheap) tiles for future subkernels TODO: DONT
-#add_definitions(-DENABLE_TILE_PREFETCH)
-
 ## Enable using transfer hops for faster transfers between multiple links
 add_definitions(-DENABLE_TRANSFER_HOPS)
 ## Enable using transfer hops for W tiles as well (no data reuse, but potentially better BW)
 add_definitions(-DENABLE_TRANSFER_W_HOPS)
-## Enable using heuristic-based W-hops (and Send-Recv Over) activation
-#add_definitions(-DENABLE_PREDICT_HOP_MODE)
+
+## The number of sub-buffers FasTCoCoMemcpy2DAsync will use to increase effective BW
+## In general effective_trans_time = max_trans_time(route[]) + 1/SBO * sub_trans_time(route_minus_max[])
+## Rule of thumb: large SBO -> increased transfer latency, small SBO -> decreased bandwidth
+add_definitions(-DSTREAMING_BUFFER_OVERLAP=8)
+## TODO: Route chains could be implemented later (e.g. instead of 1->2->3 to use 1->2 parallel to 1->3)
 
 ## Enable using estimated performance aggregation for initializing the link_hop_route
 add_definitions(-DENABLE_ESPA)
@@ -119,7 +114,7 @@ add_definitions(-DEXSTEAL_PENALTY=100000) # If this is large : Heuristic -> Only
 add_definitions(-DFETCH_UNAVAILABLE_PENALTY=0.1)
 
 #Run in testing mode : details about models, decisions and time spend in operations.
-#add_definitions(-DTEST)
+add_definitions(-DTEST)
 
 #Run in Subkernel testing mode : details about time spend in subkernel operations.
 #add_definitions(-DSTEST)
@@ -128,7 +123,7 @@ add_definitions(-DFETCH_UNAVAILABLE_PENALTY=0.1)
 #add_definitions(-DDSTEST)
 
 #Run in Link Hop testing mode; transfers using link hops are logged and timed.
-#add_definitions(-DTTEST)
+add_definitions(-DTTEST)
 
 #Run in debug mode, which includes detailed function calls and info for error-checking
 #add_definitions(-DDEBUG)

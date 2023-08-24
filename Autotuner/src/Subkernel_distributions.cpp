@@ -365,6 +365,10 @@ void CoCoDistributeSubkernels2DBlockCyclic(ATC_p autotune_controller, int D1Grid
     //if (g==0) { D1_parts = 1; D2_parts = autotune_controller->active_unit_num; }
     else { D1_parts = g; D2_parts = autotune_controller->active_unit_num/g; }
   }
+  //TODO: reverse layout
+  //int tmp = D1_parts;
+  //D1_parts = D2_parts;
+  //D2_parts = tmp;
   if(D1GridSz < D1_parts || D2GridSz < D2_parts){
     warning("CoCoDistributeSubkernels2DBlockCyclic:\nGrid(%d,%d) smaller than {D1,D2}_parts = (%d,%d)\
     using CoCoDistributeSubkernelsRoundRobinChunk instead\n", D1GridSz, D2GridSz, D1_parts, D2_parts);

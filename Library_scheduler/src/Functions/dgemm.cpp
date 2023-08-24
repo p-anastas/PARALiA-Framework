@@ -30,7 +30,7 @@ Subkernel** Subkernel_list_dgemm;
 int Subkernel_num_dgemm;
 int remaining_Subkernels_dgemm;
 
-//#define GEMM_FIRE_SK_DEV_ORDER
+#define GEMM_FIRE_SK_DEV_ORDER
 #ifdef GEMM_FIRE_SK_DEV_ORDER
 int curr_sk_idx_dgemm = 0;
 int curr_sk_dgemm_unit_list[LOC_NUM], curr_sk_dgemm_unit_num;
@@ -502,6 +502,15 @@ ATC_p PARALiADgemm(char TransA,  char TransB, long int M, long int N, long int K
 	curr_sk_idx_dgemm = 0;
 	curr_sk_dgemm_unit_num = autotune_controller_dgemm->active_unit_num;
 	for(int i = 0; i < curr_sk_dgemm_unit_num; i ++) curr_sk_dgemm_unit_list[i] = autotune_controller_dgemm->active_unit_id_list[i];
+	curr_sk_dgemm_unit_list[0] = 0;
+	curr_sk_dgemm_unit_list[1] = 2;
+	curr_sk_dgemm_unit_list[2] = 4;
+	curr_sk_dgemm_unit_list[3] = 6;
+	curr_sk_dgemm_unit_list[4] = 1;
+	curr_sk_dgemm_unit_list[5] = 3;
+	curr_sk_dgemm_unit_list[6] = 5;
+	curr_sk_dgemm_unit_list[7] = 7;
+
 #endif
 
 	pthread_t thread_id[autotune_controller_dgemm->active_unit_num];
@@ -566,7 +575,7 @@ ATC_p PARALiADgemm(char TransA,  char TransB, long int M, long int N, long int K
 
 #ifdef TTEST
 	HopMemcpyPrint();
-	n_HopMemcpyPrint();
+	//n_HopMemcpyPrint();
 #endif
 
 #ifdef DDEBUG
