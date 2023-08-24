@@ -119,7 +119,7 @@ add_definitions(-DEXSTEAL_PENALTY=100000) # If this is large : Heuristic -> Only
 add_definitions(-DFETCH_UNAVAILABLE_PENALTY=0.1)
 
 #Run in testing mode : details about models, decisions and time spend in operations.
-add_definitions(-DTEST)
+#add_definitions(-DTEST)
 
 #Run in Subkernel testing mode : details about time spend in subkernel operations.
 #add_definitions(-DSTEST)

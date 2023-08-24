@@ -30,7 +30,7 @@ Subkernel** Subkernel_list_dgemm;
 int Subkernel_num_dgemm;
 int remaining_Subkernels_dgemm;
 
-#define GEMM_FIRE_SK_DEV_ORDER
+//#define GEMM_FIRE_SK_DEV_ORDER
 #ifdef GEMM_FIRE_SK_DEV_ORDER
 int curr_sk_idx_dgemm = 0;
 int curr_sk_dgemm_unit_list[LOC_NUM], curr_sk_dgemm_unit_num;
@@ -197,7 +197,7 @@ void* PARALiADgemmAgentVoid(void* kernel_pthread_wrapped){
 	cpu_timer = csecond();
 #endif
 
-	Subkernel * curr = NULL, *prev = NULL;
+	Subkernel * curr = NULL;
 	int remaining_Subkernels_dgemm = gemm_subkernel_data->SubkernelNumDev;
 	while (remaining_Subkernels_dgemm){
 		while(__sync_lock_test_and_set(&Sk_select_lock_dgemm, 1));
@@ -208,7 +208,7 @@ void* PARALiADgemmAgentVoid(void* kernel_pthread_wrapped){
 	  continue;
 		}
 #endif
-		curr = SubkernelSelect(dev_id, gemm_subkernel_data->SubkernelListDev, gemm_subkernel_data->SubkernelNumDev);
+		curr = SubkernelSelect(dev_id, &(gemm_subkernel_data->SubkernelListDev[gemm_subkernel_data->SubkernelNumDev-remaining_Subkernels_dgemm]), remaining_Subkernels_dgemm);
 		if (!curr){
 #ifdef DEBUG
 		fprintf(stderr, "PARALiADgemmAgentVoid(%d): Got curr = NULL, repeating search\n", dev_id);
@@ -224,14 +224,12 @@ void* PARALiADgemmAgentVoid(void* kernel_pthread_wrapped){
 			continue;
 		}
 		remaining_Subkernels_dgemm--;
-		for (int keri = 0; keri < gemm_subkernel_data->SubkernelNumDev; keri++)
-			if (curr == gemm_subkernel_data->SubkernelListDev[keri]){
-				gemm_subkernel_data->SubkernelListDev[keri] = gemm_subkernel_data->SubkernelListDev[remaining_Subkernels_dgemm];
-				gemm_subkernel_data->SubkernelListDev[remaining_Subkernels_dgemm] = curr;
-				break;
-			}
-		curr->prev = prev;
-		if(prev) prev->next = curr;
+		//for (int keri = 0; keri < gemm_subkernel_data->SubkernelNumDev; keri++)
+		//	if (curr == gemm_subkernel_data->SubkernelListDev[keri]){
+		//		gemm_subkernel_data->SubkernelListDev[keri] = gemm_subkernel_data->SubkernelListDev[remaining_Subkernels_dgemm];
+		//		gemm_subkernel_data->SubkernelListDev[remaining_Subkernels_dgemm] = curr;
+		//		break;
+		//	}
 		curr->init_events();
 		DgemmPrepareLaunch(curr, dev_id);
 		curr->request_data();
@@ -252,8 +250,8 @@ void* PARALiADgemmAgentVoid(void* kernel_pthread_wrapped){
 			else curr_sk_idx_dgemm++; // Fire all rounds in device order
 		}
 #endif
-		curr->run_operation();
 		__sync_lock_release(&Sk_select_lock_dgemm);
+		curr->run_operation(); // Above or bellow?
 	}
 #ifdef TEST
 	double total_cache_timer = Global_Buffer_2D[idxize(dev_id)]->timer;
@@ -541,26 +539,34 @@ ATC_p PARALiADgemm(char TransA,  char TransB, long int M, long int N, long int K
 		if (s != 0) error("PARALiADgemm: pthread_join failed with exit value %d", s);
 		//free(res);      /* Free memory allocated by thread */
 	}
+#ifdef TEST
+	cpu_timer = csecond() - cpu_timer;
+	fprintf(stderr, "Fire and gather pthreads for all devices -> t_parallel_fire = %lf ms\n", cpu_timer*1000);
+	cpu_timer = csecond() - cpu_timer;
+#endif
 	C_asset->SyncTileMap();
 	int prev_dev = CoCoPeLiaGetDevice();
 
-	/// Small fix since host functions triggered after the last WB belong to a different device,
-	/// resulting in warning if reset cache was reached prior. If it leads to slowdown will be exterminated.
 	for(int i=0; i<LOC_NUM;i++){
 		CoCoPeLiaSelectDevice(deidxize(i));
 		CoCoSyncCheckErr();
 	}
 	CoCoPeLiaSelectDevice(prev_dev);
-	#ifdef TEST
-		cpu_timer = csecond() - cpu_timer;
-		fprintf(stderr, "Fire and gather pthreads for all devices -> t_exec_full = %lf ms\n", cpu_timer*1000);
-		fprintf(stderr, "t_predicted for T=%zu was %.2lf ms : %lf percentile error\n", T, autotune_controller_dgemm->pred_t*1000,
-		(autotune_controller_dgemm->pred_t==0)? 0.0: (autotune_controller_dgemm->pred_t - cpu_timer )/autotune_controller_dgemm->pred_t*100);
-		cpu_timer = csecond();
-	#endif
+#ifdef TEST
+	cpu_timer = csecond() - cpu_timer;
+	fprintf(stderr, "Synced result -> t_exec_full = %lf ms\n", cpu_timer*1000);
+	fprintf(stderr, "t_predicted for T=%zu was %.2lf ms : %lf percentile error\n", T, autotune_controller_dgemm->pred_t*1000,
+	(autotune_controller_dgemm->pred_t==0)? 0.0: (autotune_controller_dgemm->pred_t - cpu_timer )/autotune_controller_dgemm->pred_t*100);
+	cpu_timer = csecond();
+#endif
 
 #ifdef STEST
 	STEST_print_SK(thread_dev_data, gemm_entry_ts, autotune_controller_dgemm->active_unit_num);
+#endif
+
+#ifdef TTEST
+	HopMemcpyPrint();
+	n_HopMemcpyPrint();
 #endif
 
 #ifdef DDEBUG
