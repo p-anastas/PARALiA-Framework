@@ -44,6 +44,7 @@ void Decom2D::InitTileMap(int T1, int T2, Buffer_p* init_loc_cache_p){
   //if (T2Last > T2/4) GridSz2++;
   //else T2Last+=T2;
 
+
   Tile_map = (Tile2D**) malloc(sizeof(Tile2D*)*GridSz1*GridSz2);
 
   int current_ctr, T1tmp, T2tmp;
@@ -95,13 +96,10 @@ void Decom2D::DrawTileMap(){
                  \n| - - - - - - - - - - -|\
                  \n|    (dim1 X dim2)     |\
                  \n| - - - - - - - - - - -|\
-                 \n| Read | Write | RW_M  |\n");
-  for(int loctr = 0; loctr < LOC_NUM; loctr++)
-    fprintf(stderr, "| - - - - - - - - - - -|\
-                   \n| loc: %2d | CLI | RTM  |\n",
-                   (loctr == LOC_NUM - 1) ? -1 : loctr );
-
-  fprintf(stderr, "|______________________|\n\n");
+                 \n| - - WR_properties - -|\
+                 \n| - - - - - - - - - - -|\
+                 \n| - - - loc_list  - - -|\
+                 \n|______________________|\n\n");
 
   for (int itt1 = 0; itt1 < GridSz1; itt1++){
     for (int itt2 = 0 ; itt2 < GridSz2; itt2++)
@@ -125,25 +123,14 @@ void Decom2D::DrawTileMap(){
       fprintf(stderr, "| - - - - - - - - - - -|");
     fprintf(stderr, "\n");
     for (int itt2 = 0 ; itt2 < GridSz2; itt2++)
-      fprintf(stderr, "| R:%1d | W:%1d | WR_M:%3d |",
-      Tile_map[itt1*GridSz2 + itt2]->R_flag,
-      Tile_map[itt1*GridSz2 + itt2]->W_flag,
-      Tile_map[itt1*GridSz2 + itt2]->RW_master);
+      fprintf(stderr, "%s", Tile_map[itt1*GridSz2 + itt2]->get_WRP_string());
     fprintf(stderr, "\n");
     for(int loctr = 0; loctr < LOC_NUM; loctr++){
       for (int itt2 = 0 ; itt2 < GridSz2; itt2++)
         fprintf(stderr, "| - - - - - - - - - - -|");
       fprintf(stderr, "\n");
-      for (int itt2 = 0 ; itt2 < GridSz2; itt2++){
-        if(Tile_map[itt1*GridSz2 + itt2]->StoreBlock[loctr])
-          fprintf(stderr, "| loc: %2d | %3d | %3d  |",
-                     (loctr == LOC_NUM - 1) ? -1 : loctr,
-                     Tile_map[itt1*GridSz2 + itt2]->StoreBlock[loctr]->id,
-                     Tile_map[itt1*GridSz2 + itt2]->RunTileMap[loctr]);
-        else fprintf(stderr, "| loc: %2d | NaN | %3d  |",
-                     (loctr == LOC_NUM - 1) ? -1 : loctr,
-                     Tile_map[itt1*GridSz2 + itt2]->RunTileMap[loctr]);
-      }
+      for (int itt2 = 0 ; itt2 < GridSz2; itt2++)
+        fprintf(stderr, "%s", printlist<int>(Tile_map[itt1*GridSz2 + itt2]->loc_map, LOC_NUM));
       fprintf(stderr, "\n");
     }
     for (int itt2 = 0 ; itt2 < GridSz2; itt2++)

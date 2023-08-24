@@ -119,7 +119,7 @@ void Subkernel::request_tile_hops(short TileIdx){
 			run_dev_id, id, tmp->id, tmp->GridId);
 #endif
 		short FetchFromId = -42;
-		if(!tmp->W_total) FetchFromId = tmp->getClosestReadLoc(run_dev_id);
+		if(!tmp->W_total);// FetchFromId = tmp->getClosestReadLoc(run_dev_id);
 		else {
 			FetchFromId = tmp->RW_master;
 			tmp->StoreBlock[idxize(FetchFromId)]->add_reader();
@@ -276,7 +276,7 @@ void Subkernel::request_tile_hops(short TileIdx){
 			run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2);
 #endif
 		short FetchFromId = -42;
-		if(!tmp->W_total) FetchFromId = tmp->getClosestReadLoc(run_dev_id);
+		if(!tmp->W_total);// FetchFromId = tmp->getClosestReadLoc(run_dev_id);
 		else {
 			FetchFromId = tmp->RW_master;
 			tmp->StoreBlock[idxize(FetchFromId)]->add_reader();
@@ -442,7 +442,7 @@ void Subkernel::request_tile(short TileIdx){
 			run_dev_id, id, tmp->id, tmp->GridId);
 #endif
 		short FetchFromId = - 42;
-		if(!tmp->W_total) FetchFromId = tmp->getClosestReadLoc(run_dev_id);
+		if(!tmp->W_total);// FetchFromId = tmp->getClosestReadLoc(run_dev_id);
 		else {
 			FetchFromId = tmp->RW_master;
 			tmp->StoreBlock[idxize(FetchFromId)]->add_reader();
@@ -499,7 +499,7 @@ void Subkernel::request_tile(short TileIdx){
 			run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2);
 #endif
 		short FetchFromId = -42;
-		if(!tmp->W_total) FetchFromId = tmp->getClosestReadLoc(run_dev_id);
+		if(!tmp->W_total);// FetchFromId = tmp->getClosestReadLoc(run_dev_id);
 		else {
 			FetchFromId = tmp->RW_master;
 			tmp->StoreBlock[idxize(FetchFromId)]->add_reader();
@@ -1701,16 +1701,13 @@ Subkernel* SubkernelSelect(short dev_id, Subkernel** Subkernel_list, long Subker
 	return max_fetch_score_sk;
 }
 
-*/
-
-
 long double Subkernel::opt_fetch_cost(short dev_id){
 	long double fetch_cost = 0, inter_fetch_cost = 0;
 	short prefetched = 0;
 	for (int j = 0; j < TileNum; j++){
 		if (TileDimlist[j] == 1){
 			Tile1D* tmp = (Tile1D*) TileList[j];
-			long double temp_fetch_cost = tmp->getMinLinkCost(dev_id);
+			long double temp_fetch_cost = 1; tmp->getMinLinkCost(dev_id);
 			inter_fetch_cost = prefetched = 0;
 			for(int loc_idx = 0; loc_idx < LOC_NUM; loc_idx++){
 				CBlock_p curr_block = tmp->StoreBlock[loc_idx];
@@ -1747,7 +1744,7 @@ long double Subkernel::opt_fetch_cost(short dev_id){
 	}
 	return fetch_cost;
 }
-
+*/
 Subkernel* SubkernelSelect(short dev_id, Subkernel** Subkernel_list, long Subkernel_list_len){
 #ifdef SERIAL_SUBKERNEL_SELECTION
 		return SubkernelSelectSerial(dev_id, Subkernel_list, Subkernel_list_len);

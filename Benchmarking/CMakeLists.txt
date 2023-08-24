@@ -109,24 +109,24 @@ endif()
 
 ## PARALia Runners and Testers
 add_executable (dgemm_tester ${BENCH_DIR_SRC}/PARALia/dgemm_tester.cpp )
-add_executable (sgemm_tester ${BENCH_DIR_SRC}/PARALia/sgemm_tester.cpp )
+#add_executable (sgemm_tester ${BENCH_DIR_SRC}/PARALia/sgemm_tester.cpp )
 add_executable (dgemm_runner ${BENCH_DIR_SRC}/PARALia/dgemm_runner.cpp )
 add_executable (dgemm_runner_hetero ${BENCH_DIR_SRC}/PARALia/dgemm_runner_hetero.cu )
 add_executable (dgemm_predictor ${BENCH_DIR_SRC}/PARALia/dgemm_predictor.cpp )
 
-add_executable (dgemv_runner ${BENCH_DIR_SRC}/PARALia/dgemv_runner.cpp )
+#add_executable (dgemv_runner ${BENCH_DIR_SRC}/PARALia/dgemv_runner.cpp )
 
-add_executable (daxpy_runner ${BENCH_DIR_SRC}/PARALia/daxpy_runner.cpp )
-add_executable (ddot_runner ${BENCH_DIR_SRC}/PARALia/ddot_runner.cpp )
+#add_executable (daxpy_runner ${BENCH_DIR_SRC}/PARALia/daxpy_runner.cpp )
+#add_executable (ddot_runner ${BENCH_DIR_SRC}/PARALia/ddot_runner.cpp )
 
 target_link_libraries(dgemm_tester ${INTERNAL_LINK_LIB} benchparalia)
-target_link_libraries(sgemm_tester ${INTERNAL_LINK_LIB} benchparalia)
+#target_link_libraries(sgemm_tester ${INTERNAL_LINK_LIB} benchparalia)
 target_link_libraries(dgemm_runner ${INTERNAL_LINK_LIB} benchparalia linkmap)
 target_link_libraries(dgemm_runner_hetero ${INTERNAL_LINK_LIB} benchparalia linkmap)
 target_link_libraries(dgemm_predictor ${INTERNAL_LINK_LIB} benchparalia linkmap)
-target_link_libraries(dgemv_runner ${INTERNAL_LINK_LIB} benchparalia linkmap)
-target_link_libraries(daxpy_runner ${INTERNAL_LINK_LIB} benchparalia linkmap)
-target_link_libraries(ddot_runner ${INTERNAL_LINK_LIB} benchparalia linkmap)
+#target_link_libraries(dgemv_runner ${INTERNAL_LINK_LIB} benchparalia linkmap)
+#target_link_libraries(daxpy_runner ${INTERNAL_LINK_LIB} benchparalia linkmap)
+#target_link_libraries(ddot_runner ${INTERNAL_LINK_LIB} benchparalia linkmap)
 
 set (BENCH_INSTALL_INC ${BENCH_INSTALL_INC} PARENT_SCOPE)
 #message( "->\nBenchmarking - Shared Library: " ${CMAKE_LIBRARY_OUTPUT_DIRECTORY} )

@@ -11,96 +11,10 @@
 #include <mutex> // std::mutex
 
 #include "Autotuner.hpp"
-#include "DataCaching.hpp"
+#include "linkmap.hpp"
 #include <atomic>
 
-enum dtype_enum{
-		DOUBLE,
-		FLOAT
-};
-
-class Tile1D
-{
-		// Variables
-	public:
-		dtype_enum dtype;
-		int WriteBackLoc;
-		int id, GridId;
-		int dim;
-		int R_flag, W_flag, W_total, RW_master;
-		int RW_lock;
-		std::atomic<int> RW_lock_holders;
-//#ifdef ENABLE_PARALLEL_BACKEND
-		int RW_Master_backend_ctr;
-//#endif
-
-		CBlock_p WriteBackBlock;
-		CBlock_p StoreBlock[LOC_NUM];
-
-		int inc[LOC_NUM];
-		int RunTileMap[LOC_NUM];
-
-		// Constructor
-		Tile1D(void* tile_addr, int T1tmp,
-			int inc, int inGrid1, dtype_enum dtype_in, CBlock_p init_loc_block_p);
-
-		//Destructor
-		~Tile1D();
-
-    // General Functions
-		int dtypesize() {
-				if (dtype == DOUBLE) return sizeof(double);
-				else if (dtype == FLOAT) return sizeof(float);
-				else error("dtypesize: Unknown type");}
-		int size() { return dtypesize()*dim; }
-		short getWriteBackLoc();
-		short getClosestReadLoc(short dev_id_in);
-		double getMinLinkCost(short dev_id_in);
-		double getMinLinkCostPenaltizeFetch(short dev_id_in);
-		short isLocked();
-
-};
-class Tile2D
-{
-		// Variables
-	public:
-		dtype_enum dtype;
-		int WriteBackLoc;
-		int id, GridId1, GridId2;
-		int dim1, dim2;
-		int R_flag, W_flag, W_total, RW_master;
-		int RW_lock;
-		std::atomic<int> RW_lock_holders;
-//#ifdef ENABLE_PARALLEL_BACKEND
-		int RW_Master_backend_ctr;
-//#endif
-
-		CBlock_p WriteBackBlock;
-		CBlock_p StoreBlock[LOC_NUM];
-
-		int ldim[LOC_NUM];
-		int RunTileMap[LOC_NUM];
-
-		// Constructor
-		Tile2D(void* tile_addr, int T1tmp, int T2tmp,
-			int ldim, int inGrid1, int inGrid2, dtype_enum dtype_in, CBlock_p init_loc_block_p);
-
-		//Destructor
-		~Tile2D();
-
-    // General Functions
-		int dtypesize() {
-				if (dtype == DOUBLE) return sizeof(double);
-				else if (dtype == FLOAT) return sizeof(float);
-				else error("dtypesize: Unknown type");}
-		int size() { return dtypesize()*dim1*dim2; }
-		short getWriteBackLoc();
-		short getClosestReadLoc(short dev_id_in);
-		double getMinLinkCost(short dev_id_in);
-		double getMinLinkCostPenaltizeFetch(short dev_id_in);
-		short isLocked();
-
-};
+#include "DataTile.hpp"
 
 class Decom2D
 {

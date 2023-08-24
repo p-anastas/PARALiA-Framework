@@ -69,13 +69,10 @@ void Decom1D::DrawTileMap(){
                  \n| - - - - - - - - - - -|\
                  \n|        (dim1)        |\
                  \n| - - - - - - - - - - -|\
-                 \n| Read | Write | RW_M  |\n");
-  for(int loctr = 0; loctr < LOC_NUM; loctr++)
-    fprintf(stderr, "| - - - - - - - - - - -|\
-                   \n| loc: %2d | CLI | RTM  |\n",
-                   (loctr == LOC_NUM - 1) ? -1 : loctr );
-
-  fprintf(stderr, "|______________________|\n\n");
+                 \n| - - WR_properties - -|\
+                 \n| - - - - - - - - - - -|\
+                 \n| - - - loc_list  - - -|\
+                 \n|______________________|\n\n");
 
   for (int itt = 0 ; itt < GridSz; itt++)
     fprintf(stderr, " ______________________ ");
@@ -83,38 +80,27 @@ void Decom1D::DrawTileMap(){
   for (int itt = 0 ; itt < GridSz; itt++)
     fprintf(stderr, "|     %4d[%6d]     |",
     Tile_map[itt]->id,
-    Tile_map[itt]->GridId);
+    Tile_map[itt]->GridId1);
   fprintf(stderr, "\n");
   for (int itt = 0 ; itt < GridSz; itt++)
     fprintf(stderr, "| - - - - - - - - - - -|");
   fprintf(stderr, "\n");
   for (int itt = 0 ; itt < GridSz; itt++)
     fprintf(stderr, "|       (%6d)       |",
-    Tile_map[itt]->dim);
+    Tile_map[itt]->dim1);
   fprintf(stderr, "\n");
   for (int itt = 0 ; itt < GridSz; itt++)
     fprintf(stderr, "| - - - - - - - - - - -|");
   fprintf(stderr, "\n");
   for (int itt = 0 ; itt < GridSz; itt++)
-    fprintf(stderr, "| R:%1d | W:%1d | WR_M:%3d |",
-    Tile_map[itt]->R_flag,
-    Tile_map[itt]->W_flag,
-    Tile_map[itt]->RW_master);
+    fprintf(stderr, "%s", Tile_map[itt]->get_WRP_string());
   fprintf(stderr, "\n");
   for(int loctr = 0; loctr < LOC_NUM; loctr++){
     for (int itt = 0 ; itt < GridSz; itt++)
       fprintf(stderr, "| - - - - - - - - - - -|");
     fprintf(stderr, "\n");
-    for (int itt = 0 ; itt < GridSz; itt++){
-      if(Tile_map[itt]->StoreBlock[loctr])
-        fprintf(stderr, "| loc: %2d | %3d | %3d  |",
-                   (loctr == LOC_NUM - 1) ? -1 : loctr,
-                   Tile_map[itt]->StoreBlock[loctr]->id,
-                   Tile_map[itt]->RunTileMap[loctr]);
-      else fprintf(stderr, "| loc: %2d | NaN | %3d  |",
-                   (loctr == LOC_NUM - 1) ? -1 : loctr,
-                   Tile_map[itt]->RunTileMap[loctr]);
-    }
+    for (int itt = 0 ; itt < GridSz; itt++)
+      fprintf(stderr, "%s", printlist<int>(Tile_map[itt]->loc_map, LOC_NUM));
     fprintf(stderr, "\n");
   }
   for (int itt = 0 ; itt < GridSz; itt++)
