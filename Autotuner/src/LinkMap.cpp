@@ -3,7 +3,6 @@
 
 #include "Autotuner.hpp"
 #include "Model_functions.hpp"
-#include "linkmap.hpp"
 
 LinkMap::LinkMap(){
 	for (int i = 0; i < LOC_NUM*LOC_NUM; i++) ESPA_ETA_sorted_dec_ids[i] = i;

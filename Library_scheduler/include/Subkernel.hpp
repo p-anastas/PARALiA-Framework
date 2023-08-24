@@ -10,6 +10,7 @@
 #include <string>
 
 #include "linkmap.hpp"
+#include "DataTile.hpp"
 
 class Subkernel
 {
@@ -17,9 +18,9 @@ class Subkernel
 	public:
 		int id, iloc1, iloc2, iloc3;
 		short run_dev_id;
-		short WR_first, *WR_last;
-		short TileNum, *TileDimlist;
-		void** TileList;
+		short *TileDimlist; // TODO: this might be irrelevant in new version
+		short TileNum;
+		DataTile** TileList;
 		Subkernel* prev, * next;
 
 #ifdef STEST
@@ -44,17 +45,8 @@ class Subkernel
 		void prepare_launch(short dev_id);
 		void init_events();
 		void request_data();
-		void request_tile(short TileIdx);
-		void request_tile_hops(short TileIdx); // Experimental
-		void sync_request_data_RONLY();
-		void sync_request_data();
 		void run_operation();
-		void writeback_data();
-		void writeback_data_hops(); // Experimental
 
-		short no_locked_tiles();
-		short is_RW_lock_master(short dev_id);
-		short RW_lock_initialized();
 		long double opt_fetch_cost(short dev_id);
 		long double opt_fetch_score(short dev_id);
 };

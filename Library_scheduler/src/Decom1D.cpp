@@ -52,6 +52,10 @@ void Decom1D::InitTileMap(int T, Buffer_p* init_loc_cache_p){
   #endif
 }
 
+void Decom1D::SyncTileMap(){
+   for (int itt = 0; itt < GridSz; itt++)
+      Tile_map[itt]->writeback();
+}
 
 void Decom1D::DestroyTileMap(){
   int current_ctr;

@@ -120,7 +120,7 @@ int main(const int argc, const char *argv[]) {
 	 	transfer_timer  * 1000, Gval_per_s(TileDim*TileDim*elemSize, transfer_timer));
 
 	for(short dev_id_idx = 0 ; dev_id_idx < LOC_NUM; dev_id_idx++) if (dev_id_idx != idxize(loc_src) && dev_id_idx != idxize(loc_dest)){
-		link_road_p test_road = (link_road_p) malloc(sizeof(struct link_road));
+		LinkRoute_p test_road = (LinkRoute_p) malloc(sizeof(struct LinkRoute));
 		test_road->hop_num = 3;
 		test_road->hop_uid_list[0] = loc_src;
 		test_road->hop_uid_list[1] = deidxize(dev_id_idx);
@@ -156,7 +156,7 @@ int main(const int argc, const char *argv[]) {
 	if (dev_id_idx != idxize(loc_src) && dev_id_idx != idxize(loc_dest))
 	for(short dev_id_idy = 0 ; dev_id_idy < LOC_NUM; dev_id_idy++)
 	if (dev_id_idy != idxize(loc_src) && dev_id_idy != idxize(loc_dest) && dev_id_idy != dev_id_idx){
-		link_road_p test_road = (link_road_p) malloc(sizeof(struct link_road));
+		LinkRoute_p test_road = (LinkRoute_p) malloc(sizeof(struct LinkRoute));
 		test_road->hop_num = 4;
 		test_road->hop_uid_list[0] = loc_src;
 		test_road->hop_uid_list[1] = deidxize(dev_id_idx);

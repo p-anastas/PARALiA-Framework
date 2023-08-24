@@ -250,7 +250,6 @@ configure_file(${PROJECT_BENCH_DIR}/Heterogeneous_performance_estimation.in ${CM
 #else()
 #endif()
 
-
 #Used for defining Universal_helpers subdir setup mode. Always one for PARALiA
 set (BUILD_BLAS_WRAPPERS_FLAG 1)
 add_definitions(-DBUILD_BLAS_WRAPPERS_FLAG)
@@ -261,6 +260,7 @@ ADD_SUBDIRECTORY (Database_builder)
 add_definitions(-DDEPLOYDB="${DEPLOYMENT_DIR_DB}")
 
 ADD_SUBDIRECTORY (Autotuner)
+
 ADD_SUBDIRECTORY (Library_scheduler)
 
 ADD_SUBDIRECTORY (Benchmarking)

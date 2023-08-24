@@ -16,6 +16,8 @@
 #endif
 #endif
 
+#include "linkmap.hpp"
+
 // TODO: To avoid mallocs, define a set vec size of 4 (No BLAS has that many data arguments anyway)
 typedef struct V_struct{
 	// Routine specific
@@ -65,6 +67,7 @@ typedef struct flagParams{
 	//TODO: Add all flags used in BLAS, only applicable initialized/used for each routine.
 }* flagParams_p;
 
+
 typedef class Modeler{
 	public:
 		Vdata_p V; /// The CoCoPeLia Modeling data struct.
@@ -108,6 +111,9 @@ typedef class Modeler{
 /******************************************************************************/
 
 }* MD_p;
+
+/*****************************************************/
+/// LinkMap stuff
 
 #define MAX_ALLOWED_HOPS 1
 #define MAX_HOP_ROUTES 1
@@ -180,6 +186,7 @@ typedef class LinkMap{
 /******************************************************************************/
 }* LinkMap_p;
 
+
 typedef class ATC{
 	public:
 		long int T; /// The tiling size used for 1D/2D Data split to tiles.
@@ -226,6 +233,6 @@ typedef class ATC{
 
 }* ATC_p;
 
-extern double final_estimated_link_bw[LOC_NUM][LOC_NUM];
 extern LinkMap_p final_estimated_linkmap;
+
 #endif

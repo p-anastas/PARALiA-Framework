@@ -38,6 +38,7 @@ class Decom2D
 
 	// General Functions
 	void InitTileMap(int T1, int T2, Buffer_p* init_loc_cache_p);
+	void SyncTileMap();
 	void DestroyTileMap();
 	Tile2D* getTile(int iloc1, int iloc2);
 	int dtypesize() {
@@ -75,6 +76,7 @@ class Decom1D
 
 	// General Functions
 	void InitTileMap(int T, Buffer_p* init_loc_cache_p);
+	void SyncTileMap();
 	void DestroyTileMap();
 	Tile1D* getTile(int iloc);
 	int dtypesize() {

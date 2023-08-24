@@ -54,7 +54,6 @@ file(MAKE_DIRECTORY ${AUTOTUNE_INSTALL}/testLogs)
 add_definitions(-DTESTDIR="${AUTOTUNE_INSTALL}/testLogs")
 
 add_library(autotuner SHARED
-#${AUTOTUNE_DIR_SRC}/TransferLinks.cpp
 ${AUTOTUNE_DIR_SRC}/LinkMap.cpp
 ${AUTOTUNE_DIR_SRC}/CoModel.cpp
 ${AUTOTUNE_DIR_SRC}/GPUexec_lookup.cpp
