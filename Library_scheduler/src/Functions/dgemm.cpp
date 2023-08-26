@@ -95,6 +95,8 @@ int current_ctr = 0;
 				error("Non implemented\n");
 #else
 				kernels[current_ctr]->TileList[2]->set_WRP(WR);
+				kernels[current_ctr]->TileList[2]->W_pending = KGridSz_dgemm;
+
 #endif
 				kernels[current_ctr]->operation_params = (void*) malloc(sizeof( gemm_backend_in<double>));
 				gemm_backend_in<double>*  ptr_ker_translate = (gemm_backend_in<double>*) kernels[current_ctr]->operation_params;
@@ -135,7 +137,7 @@ void DgemmUpdateDevice(Subkernel* ker, short dev_id){
 	ker->TileList[2]->set_loc_idx(dev_id_idx, 1);
 	ker->TileList[2]->W_master = dev_id;
 	while(__sync_lock_test_and_set(&Sk_select_lock_dgemm, 1));
-	if(!ker->TileList[2]->W_complete) ker->TileList[2]->W_complete = new Event(dev_id);
+	if(ker->TileList[2]->W_pending == KGridSz_dgemm) ker->TileList[2]->W_complete = new Event(dev_id);
 	__sync_lock_release(&Sk_select_lock_dgemm);
 #ifdef DEBUG
 	fprintf(stderr, "<-----|\n");
@@ -250,8 +252,10 @@ void* PARALiADgemmAgentVoid(void* kernel_pthread_wrapped){
 			else curr_sk_idx_dgemm++; // Fire all rounds in device order
 		}
 #endif
-		__sync_lock_release(&Sk_select_lock_dgemm);
-		curr->run_operation(); // Above or bellow?
+	__sync_lock_release(&Sk_select_lock_dgemm);
+	curr->run_operation(); // Above or bellow?
+
+
 	}
 #ifdef TEST
 	double total_cache_timer = Global_Buffer_2D[idxize(dev_id)]->timer;
@@ -502,14 +506,14 @@ ATC_p PARALiADgemm(char TransA,  char TransB, long int M, long int N, long int K
 	curr_sk_idx_dgemm = 0;
 	curr_sk_dgemm_unit_num = autotune_controller_dgemm->active_unit_num;
 	for(int i = 0; i < curr_sk_dgemm_unit_num; i ++) curr_sk_dgemm_unit_list[i] = autotune_controller_dgemm->active_unit_id_list[i];
-	curr_sk_dgemm_unit_list[0] = 0;
+	/*curr_sk_dgemm_unit_list[0] = 0;
 	curr_sk_dgemm_unit_list[1] = 2;
 	curr_sk_dgemm_unit_list[2] = 4;
 	curr_sk_dgemm_unit_list[3] = 6;
 	curr_sk_dgemm_unit_list[4] = 1;
 	curr_sk_dgemm_unit_list[5] = 3;
 	curr_sk_dgemm_unit_list[6] = 5;
-	curr_sk_dgemm_unit_list[7] = 7;
+	curr_sk_dgemm_unit_list[7] = 7;*/
 
 #endif
 
@@ -529,9 +533,14 @@ ATC_p PARALiADgemm(char TransA,  char TransB, long int M, long int N, long int K
 
 		thread_dev_data[d]->SubkernelNumDev = autotune_controller_dgemm->Subkernels_per_unit_num[d];
 		thread_dev_data[d]->SubkernelListDev = (Subkernel**) malloc(thread_dev_data[d]->SubkernelNumDev*sizeof(Subkernel*));
-
+		
+		// TODO: Check 
 		for(int skitt = 0; skitt < autotune_controller_dgemm->Subkernels_per_unit_num[d]; skitt++)
 			thread_dev_data[d]->SubkernelListDev[skitt] = Subkernel_list_dgemm[autotune_controller_dgemm->Subkernels_per_unit_list[d][skitt]];
+		//int skitt = 0;
+		//for(int offset = 0; offset < KGridSz_dgemm; offset++)
+		//	for(int skitt2 = 0; skitt2 < autotune_controller_dgemm->Subkernels_per_unit_num[d]; skitt2+=KGridSz_dgemm)
+		//	thread_dev_data[d]->SubkernelListDev[skitt++] = Subkernel_list_dgemm[autotune_controller_dgemm->Subkernels_per_unit_list[d][skitt2 + offset]];
 
 		s = pthread_create(&thread_id[d], &attr,
                                   &PARALiADgemmAgentVoid, thread_dev_data[d]);

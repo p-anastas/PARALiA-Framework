@@ -95,7 +95,7 @@ int main(const int argc, const char *argv[]) {
 					if (!transfer_queue_list[dev_id_idx][dev_id_idy]){
 						//printf("dev_id = %d, dev_id_idx = %d, dev_id_idy = %d, LOC_NUM = %d\n", dev_id, dev_id_idx, dev_id_idy, LOC_NUM);
 						short queue_id = (dev_id_idy == LOC_NUM - 1) ? deidxize(dev_id_idx): deidxize(dev_id_idy);
-						transfer_queue_list[dev_id_idx][dev_id_idy] = new CommandQueue(queue_id);
+						transfer_queue_list[dev_id_idx][dev_id_idy] = new CommandQueue(queue_id, 0);
 				}
 			}
 			else transfer_queue_list[dev_id_idx][dev_id_idy] = NULL;

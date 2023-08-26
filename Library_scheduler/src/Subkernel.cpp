@@ -38,11 +38,11 @@ Subkernel::~Subkernel(){
 	Subkernel_ctr--;
 	free(TileList);
 	free(operation_params);
-	delete operation_complete;
+	//delete operation_complete;
 }
 
 void Subkernel::init_events(){
-	operation_complete = new Event(run_dev_id);
+	;//operation_complete = new Event(run_dev_id);
 }
 
 void Subkernel::prepare_launch(short dev_id){
@@ -151,16 +151,16 @@ void Subkernel::run_operation()
 		wrap_oper->lockfree = false;
 		// TODO: Will try to remove WR_last calculation and do something else, might not work tho
 		if(tmp->WRP == WR){
-			//tmp->W_flag--;
-			//if(!tmp->W_flag) WR_last[j] = 1;
+			tmp->W_pending--;
 			//else{
-			exec_queue[run_dev_id_idx]->add_host_func((void*)&CBlock_RW_wrap, (void*) wrap_oper);
+			//exec_queue[run_dev_id_idx]->add_host_func((void*)&CBlock_RW_wrap, (void*) wrap_oper);
 			//}
+			if(!tmp->W_pending) tmp->W_complete->record_to_queue(exec_queue[run_dev_id_idx]);
 		}
 		else if(tmp->WRP == RONLY) exec_queue[run_dev_id_idx]->add_host_func((void*)&CBlock_RR_wrap, (void*) wrap_oper);
 
 	}
-	operation_complete->record_to_queue(exec_queue[run_dev_id_idx]);
+	//
 #ifndef ASYNC_ENABLE
 	CoCoSyncCheckErr();
 #endif
@@ -173,7 +173,6 @@ void CoCoPeLiaInitResources(short dev_id){
 	#ifdef DEBUG
 		fprintf(stderr, "|-----> CoCoPeLiaInitResources(dev=%d)\n", dev_id);
 	#endif
-	//while(__sync_lock_test_and_set (&queue_d_allock, 1));
 
 	for(int i = 0; i < LOC_NUM; i++)
 	for(int j = 0; j < LOC_NUM; j++)
@@ -202,7 +201,6 @@ void CoCoPeLiaInitResources(short dev_id){
 	transfer_link_sharing[6][LOC_NUM - 1][1] = LOC_NUM - 1;
 	transfer_link_sharing[7][LOC_NUM - 1][0] = 6;
 	transfer_link_sharing[7][LOC_NUM - 1][1] = LOC_NUM - 1;
-
 /*
 	transfer_link_sharing[LOC_NUM - 1][0][0] = LOC_NUM - 1;
 	transfer_link_sharing[LOC_NUM - 1][0][1] = 1;
@@ -226,6 +224,8 @@ void CoCoPeLiaInitResources(short dev_id){
 */
 #endif
 
+	while(__sync_lock_test_and_set (&queue_d_allock, 1));
+
 	short dev_id_idx = idxize(dev_id);
 	for(short dev_id_idy = 0 ; dev_id_idy < LOC_NUM; dev_id_idy++)
 	if(dev_id_idy!=dev_id_idx){
@@ -236,15 +236,15 @@ void CoCoPeLiaInitResources(short dev_id){
 			short queue_id = (dev_id_idy == LOC_NUM - 1)? deidxize(dev_id_idx) : deidxize(dev_id_idy);
 			if( shared_iloc0 != - 42){ // The smallest index shared link allocates the queue
 				if (dev_id_idx*LOC_NUM + dev_id_idy < shared_iloc0*LOC_NUM + shared_iloc1){
-					recv_queues[dev_id_idx][dev_id_idy] = new CommandQueue(queue_id);
+					recv_queues[dev_id_idx][dev_id_idy] = new CommandQueue(queue_id, 0);
 					recv_queues[shared_iloc0][shared_iloc1] = recv_queues[dev_id_idx][dev_id_idy];
-					wb_queues[dev_id_idx][dev_id_idy] = new CommandQueue(queue_id);
+					wb_queues[dev_id_idx][dev_id_idy] = new CommandQueue(queue_id, 0);
 					wb_queues[shared_iloc0][shared_iloc1] = wb_queues[dev_id_idx][dev_id_idy];
 				}
 			}
 			else{
-				recv_queues[dev_id_idx][dev_id_idy] = new CommandQueue(queue_id);
-				wb_queues[dev_id_idx][dev_id_idy] = new CommandQueue(queue_id);
+				recv_queues[dev_id_idx][dev_id_idy] = new CommandQueue(queue_id, 0);
+				wb_queues[dev_id_idx][dev_id_idy] = new CommandQueue(queue_id, 0);
 			}
 		}
 		if (!recv_queues[dev_id_idy][dev_id_idx]){
@@ -253,22 +253,22 @@ void CoCoPeLiaInitResources(short dev_id){
 			if( shared_iloc0 != - 42){ // The smallest index shared link allocates the queue
 				if (dev_id_idy*LOC_NUM + dev_id_idx < shared_iloc0*LOC_NUM + shared_iloc1){
 					short writeback_queue_id = (dev_id_idx == LOC_NUM - 1)? deidxize(dev_id_idy) : deidxize(dev_id_idx);
-					recv_queues[dev_id_idy][dev_id_idx] = new CommandQueue(writeback_queue_id);
+					recv_queues[dev_id_idy][dev_id_idx] = new CommandQueue(writeback_queue_id, 0);
 					recv_queues[shared_iloc0][shared_iloc1] = recv_queues[dev_id_idy][dev_id_idx];
-					wb_queues[dev_id_idy][dev_id_idx] = new CommandQueue(writeback_queue_id);
+					wb_queues[dev_id_idy][dev_id_idx] = new CommandQueue(writeback_queue_id, 0);
 					wb_queues[shared_iloc0][shared_iloc1] = wb_queues[dev_id_idy][dev_id_idx];
 				}
 			}
 			else{
 				short writeback_queue_id = (dev_id_idx == LOC_NUM - 1)? deidxize(dev_id_idy) : deidxize(dev_id_idx);
-				recv_queues[dev_id_idy][dev_id_idx] = new CommandQueue(writeback_queue_id);
-				wb_queues[dev_id_idy][dev_id_idx] = new CommandQueue(writeback_queue_id);
+				recv_queues[dev_id_idy][dev_id_idx] = new CommandQueue(writeback_queue_id, 0);
+				wb_queues[dev_id_idy][dev_id_idx] = new CommandQueue(writeback_queue_id, 0);
 			}
 		}
 	}
-  if (!exec_queue[dev_id_idx])  exec_queue[dev_id_idx] = new CommandQueue(dev_id);
+	if (!exec_queue[dev_id_idx])  exec_queue[dev_id_idx] = new CommandQueue(dev_id, 1);
 
-	//__sync_lock_release(&queue_d_allock);
+	__sync_lock_release(&queue_d_allock);
 	#ifdef DEBUG
 		fprintf(stderr, "<-----|\n");
 	#endif
@@ -276,7 +276,7 @@ void CoCoPeLiaInitResources(short dev_id){
 
 void CoCoPeLiaFreeResources(short dev_id){
 
-	//while(__sync_lock_test_and_set (&queue_d_allock, 1));
+	while(__sync_lock_test_and_set (&queue_d_allock, 1));
 
 	short dev_id_idx = (dev_id == -1)?  LOC_NUM - 1 : dev_id;
 	for(short dev_id_idy = 0 ; dev_id_idy < LOC_NUM; dev_id_idy++){
@@ -296,7 +296,7 @@ void CoCoPeLiaFreeResources(short dev_id){
 		exec_queue[dev_id_idx] = NULL;
 	}
 
-	//__sync_lock_release(&queue_d_allock);
+	__sync_lock_release(&queue_d_allock);
 }
 
 long long failed_selections[LOC_NUM] = {0};

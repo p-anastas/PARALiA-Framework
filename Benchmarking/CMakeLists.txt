@@ -60,7 +60,7 @@ if ($ENV{PARALIA_XKBLAS_BENCH})
     include_directories(${XKBLAS_INCLUDE_DIRS} )
     message( "Benchmarking - Included XKBLAS: " ${XKBLAS_INCLUDE_DIRS} )
     set (XKBLAS_LD ${XKBLAS_PREFIX}/lib)
-    set (XKBLAS_LINK  "-L${XKBLAS_LD}  -lm -lpthread -lkaapi -lxkblas $ENV{PARALIA_CUDA_LOAD_COMMAND}" )
+    set (XKBLAS_LINK  "-L${XKBLAS_LD}  -lm -lpthread -lkaapi -lxkblas $ENV{PARALIA_CUDA_LOAD_COMMAND} ${XKBLAS_PREFIX}/lib/libxkblas_blaswrapper.so" )
     message( "Benchmarking - Linking XKBLAS: " ${XKBLAS_LINK} )
 endif()
 

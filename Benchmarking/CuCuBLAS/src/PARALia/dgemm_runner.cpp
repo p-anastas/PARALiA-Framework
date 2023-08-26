@@ -123,7 +123,8 @@ int main(const int argc, const char *argv[]) {
 	double min_t = first_over_t, max_t = 0, avg_t = 0;
 	cpu_timer = csecond();
 	short bench_it = 100;
-	if ( M >= 20000 && N >= 20000 && K >= 20000) bench_it = 20;
+	//TODO: bench if ( M >= 20000 && N >= 20000 && K >= 20000) bench_it = 20;
+	bench_it = 10;
 	for(int it = 0; it < bench_it; it++){
 		cpu_timer = csecond();
 		if (predef_control_values!= NULL) return_values = PARALiADgemmControled(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC, predef_control_values);

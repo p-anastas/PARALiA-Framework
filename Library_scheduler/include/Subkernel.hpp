@@ -31,7 +31,7 @@ class Subkernel
 		long long bytes_in[3] = {0}, bytes_out[3] = {0}, flops = 0;
 		short dev_in_from[3], dev_in_to[3], dev_out_from[3], dev_out_to[3];
 #endif
-		Event* operation_complete;
+		//Event* operation_complete;
 		void* operation_params;
 		const char* op_name;
 

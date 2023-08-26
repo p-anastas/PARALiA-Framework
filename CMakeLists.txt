@@ -36,9 +36,9 @@ add_definitions(-DENABLE_SEND_RECV_OVERLAP)
 add_definitions(-DENABLE_CPU_WORKLOAD)
 
 ## Enable using transfer hops for faster transfers between multiple links
-add_definitions(-DENABLE_TRANSFER_HOPS)
+#add_definitions(-DENABLE_TRANSFER_HOPS)
 ## Enable using transfer hops for W tiles as well (no data reuse, but potentially better BW)
-add_definitions(-DENABLE_TRANSFER_W_HOPS)
+#add_definitions(-DENABLE_TRANSFER_W_HOPS)
 
 ## The number of sub-buffers FasTCoCoMemcpy2DAsync will use to increase effective BW
 ## In general effective_trans_time = max_trans_time(route[]) + 1/SBO * sub_trans_time(route_minus_max[])
@@ -47,12 +47,12 @@ add_definitions(-DSTREAMING_BUFFER_OVERLAP=8)
 ## TODO: Route chains could be implemented later (e.g. instead of 1->2->3 to use 1->2 parallel to 1->3)
 
 ## Enable using estimated performance aggregation for initializing the link_hop_route
-add_definitions(-DENABLE_ESPA)
+#add_definitions(-DENABLE_ESPA)
 ## Define the strategy for agreggating the transfer time of a problem if ESPA is used. 0 = max, 1 = sum.
-add_definitions(-DESPA_COMMUNICATION_AGGREGATOR=0)
+#add_definitions(-DESPA_COMMUNICATION_AGGREGATOR=0)
 
 ## Enable sharing of bandwidth between links that utilize the same underlying hardware communication resources
-add_definitions(-DENABLE_LINK_BW_SHARING) # by putting them on different queues
+#add_definitions(-DENABLE_LINK_BW_SHARING) # by putting them on different queues
 
 ## TODO: Enable power measuring for benchmarks, and energy-related prediction modes for the Autotuner
 add_definitions(-DENABLE_POWA)
@@ -114,7 +114,7 @@ add_definitions(-DEXSTEAL_PENALTY=100000) # If this is large : Heuristic -> Only
 add_definitions(-DFETCH_UNAVAILABLE_PENALTY=0.1)
 
 #Run in testing mode : details about models, decisions and time spend in operations.
-add_definitions(-DTEST)
+#add_definitions(-DTEST)
 
 #Run in Subkernel testing mode : details about time spend in subkernel operations.
 #add_definitions(-DSTEST)
@@ -123,7 +123,7 @@ add_definitions(-DTEST)
 #add_definitions(-DDSTEST)
 
 #Run in Link Hop testing mode; transfers using link hops are logged and timed.
-add_definitions(-DTTEST)
+#add_definitions(-DTTEST)
 
 #Run in debug mode, which includes detailed function calls and info for error-checking
 #add_definitions(-DDEBUG)
