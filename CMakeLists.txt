@@ -27,6 +27,13 @@ add_definitions(-DUNIHELPER_LOCKFREE_ENABLE)
 ## The maximum allowed parallel backend operations per queue
 add_definitions(-DMAX_BACKEND_L=8)
 
+## The workspace size that should be assigned to each cublas handle
+## If set to -1, the default ws will be used instead 
+## NOTE-FIXME!!! : Currently WS effects the PCIe BW when a cublas kernel is launched. 
+## NOTE-FIXME!!! This has a serious overhead if SKs are launched during selection
+## NOTE-FIXME!!! Use of SUBKERNELS_FIRE_WHEN_READY is advised for mitigating this
+add_definitions(-DWS_SZ=0)
+
 ## Enable overlapping Send & recv Communication FIXME: Not implemented
 add_definitions(-DENABLE_SEND_RECV_OVERLAP)
 
@@ -43,7 +50,6 @@ add_definitions(-DSUBKERNELS_FIRE_WHEN_READY)
 #add_definitions(-DDISTRIBUTION="SPLIT-CHUNKS-ROBIN")
 #add_definitions(-DDISTRIBUTION="SPLIT-CHUNKS-ROBIN-REVERSE")
 add_definitions(-DDISTRIBUTION="2D-BLOCK-CYCLIC")
-
 
 ## Enable using transfer hops for faster transfers between multiple links
 #add_definitions(-DENABLE_TRANSFER_HOPS)
@@ -96,15 +102,14 @@ add_definitions(-DNORMALIZE_NEAR_SPLIT_LIMIT=0.05)
 add_definitions(-DMINIMUM_UNIT_CONTRIBUTION=0.05)
 
 ## Allow fetching from "Recorded" (i.e. transfer scheduled, not complete) blocks locations if closer to the destination unit.
-## Disabling this flag paired with SERIAL_SUBKERNEL_SELECTION leads to many simultaneous fetches and is not advised due to performance degredation.
 add_definitions(-DALLOW_FETCH_RECORDED)
 
 #Run subkernels in provided order
-#add_definitions(-DSERIAL_SUBKERNEL_SELECTION)
+add_definitions(-DSERIAL_SUBKERNEL_SELECTION)
 
 ## Define subkernel selection heuristic values. 0 = No penalty
 ## 
-add_definitions(-DSUBKERNEL_SELECT_MAX_RONLY_FETCHED)
+add_definitions(-DSUBKERNEL_SELECT_MAX_FETCHED)
 #add_definitions(-DSUBKERNEL_SELECT_MIN_RONLY_ETA)
 
 #Run in testing mode : details about models, decisions and time spend in operations.

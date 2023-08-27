@@ -14,6 +14,12 @@
 
 int Subkernel_ctr = 0, backend_init_flag[LOC_NUM] = {0};
 
+inline int get_next_queue_ctr(int dev_id){
+	exec_queue_ctr[idxize(dev_id)]++;
+	if (exec_queue_ctr[idxize(dev_id)] == MAX_BACKEND_L) exec_queue_ctr[idxize(dev_id)] = 0; 
+	return exec_queue_ctr[idxize(dev_id)];
+}
+
 Subkernel::Subkernel(short TileNum_in, const char* name){
 	id = Subkernel_ctr;
 	run_dev_id = -42;
@@ -75,9 +81,9 @@ void Subkernel::sync_request_data(){
 }
 
 void Subkernel::request_data(){
-//#ifdef DEBUG
+#ifdef DEBUG
 	fprintf(stderr, "|-----> Subkernel(dev=%d,id=%d):request_data()\n", run_dev_id, id);
-//#endif
+#endif
 	short run_dev_id_idx = idxize(run_dev_id);
 	CoCoPeLiaSelectDevice(run_dev_id);
 	for (int j = 0; j < TileNum; j++){
@@ -123,19 +129,16 @@ void Subkernel::run_operation()
 {
 	short run_dev_id_idx = idxize(run_dev_id);
 	CoCoPeLiaSelectDevice(run_dev_id);
-	int RW_parallel_backend_ctr = -42;
+	CQueue_p assigned_exec_queue = NULL;
 	for (int j = 0; j < TileNum; j++){ // Method only works for max 1 W(rite) Tile.
 		DataTile_p tmp = TileList[j];
 		if(tmp->WRP == WR){
-			if(tmp->W_master_backend_ctr!= -42){
-				RW_parallel_backend_ctr = tmp->W_master_backend_ctr;
-				exec_queue[run_dev_id_idx]->set_parallel_backend(RW_parallel_backend_ctr);
-			}
-			else RW_parallel_backend_ctr = exec_queue[run_dev_id_idx]->request_parallel_backend();
+			if(tmp->W_master_backend_ctr == -42)
+				tmp->W_master_backend_ctr = get_next_queue_ctr(run_dev_id);
+			assigned_exec_queue = exec_queue[run_dev_id_idx][tmp->W_master_backend_ctr];
 			//fprintf(stderr,"Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::run_operation: Tile(j=%d) RWPBC = %d\n",
 			//	run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2, j, RW_parallel_backend_ctr);
 		}
-		
 	}
 
 	for (int j = 0; j < TileNum; j++){
@@ -143,13 +146,10 @@ void Subkernel::run_operation()
 		if (tmp->StoreBlock[run_dev_id_idx] == NULL || tmp->StoreBlock[run_dev_id_idx]->State == INVALID)
 			error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::run_operation: Tile(j=%d) Storeblock is NULL\n",
 				run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2, j);
-		if (tmp->WRP == WR || tmp->WRP == RONLY) exec_queue[run_dev_id_idx]->wait_for_event(tmp->StoreBlock[run_dev_id_idx]->Available);
-		if(tmp->WRP == WR)
-			tmp->W_master_backend_ctr = RW_parallel_backend_ctr;
-
+		if (tmp->WRP == WR || tmp->WRP == RONLY) assigned_exec_queue->wait_for_event(tmp->StoreBlock[run_dev_id_idx]->Available);
 	}
 
-	backend_run_operation(operation_params, op_name, exec_queue[run_dev_id_idx]);
+	backend_run_operation(operation_params, op_name,assigned_exec_queue);
 
 	for (int j = 0; j < TileNum; j++){
 		DataTile_p tmp = TileList[j];
@@ -159,9 +159,9 @@ void Subkernel::run_operation()
 		wrap_oper->lockfree = false;
 		if(tmp->WRP == WR){
 			tmp->W_pending--;
-			if(!tmp->W_pending) tmp->W_complete->record_to_queue(exec_queue[run_dev_id_idx]);
+			if(!tmp->W_pending) tmp->W_complete->record_to_queue(assigned_exec_queue);
 		}
-		else if(tmp->WRP == RONLY) exec_queue[run_dev_id_idx]->add_host_func((void*)&CBlock_RR_wrap, (void*) wrap_oper);
+		else if(tmp->WRP == RONLY) assigned_exec_queue->add_host_func((void*)&CBlock_RR_wrap, (void*) wrap_oper);
 
 	}
 	//
@@ -186,22 +186,18 @@ short Subkernel::check_ready(){
 void Subkernel::run_ready_operation(){
 	CoCoPeLiaSelectDevice(run_dev_id);
 	short run_dev_id_idx = idxize(run_dev_id);
-	int RW_parallel_backend_ctr = -42;
+
+	CQueue_p assigned_exec_queue = NULL;
 	for (int j = 0; j < TileNum; j++){ // Method only works for max 1 W(rite) Tile.
 		DataTile_p tmp = TileList[j];
 		if(tmp->WRP == WR){
-			if(tmp->W_master_backend_ctr!= -42){
-				RW_parallel_backend_ctr = tmp->W_master_backend_ctr;
-				exec_queue[run_dev_id_idx]->set_parallel_backend(RW_parallel_backend_ctr);
-			}
-			else tmp->W_master_backend_ctr = RW_parallel_backend_ctr = 
-				exec_queue[run_dev_id_idx]->request_parallel_backend();
-			//fprintf(stderr,"Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::run_operation: Tile(j=%d) RWPBC = %d\n",
-			//	run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2, j, RW_parallel_backend_ctr);
+			if(tmp->W_master_backend_ctr == -42)
+				tmp->W_master_backend_ctr = get_next_queue_ctr(run_dev_id);
+			assigned_exec_queue = exec_queue[run_dev_id_idx][tmp->W_master_backend_ctr];
 		}	
 	}
 
-	backend_run_operation(operation_params, op_name, exec_queue[run_dev_id_idx]);
+	backend_run_operation(operation_params, op_name, assigned_exec_queue);
 
 	for (int j = 0; j < TileNum; j++){
 		DataTile_p tmp = TileList[j];
@@ -212,11 +208,11 @@ void Subkernel::run_ready_operation(){
 		if(tmp->WRP == WR){
 			tmp->W_pending--;
 			if(!tmp->W_pending){
-				tmp->W_complete->record_to_queue(exec_queue[run_dev_id_idx]);
+				tmp->W_complete->record_to_queue(assigned_exec_queue);
 				tmp->writeback();
 			}
 		}
-		else if(tmp->WRP == RONLY) exec_queue[run_dev_id_idx]->add_host_func((void*)&CBlock_RR_wrap, (void*) wrap_oper);
+		else if(tmp->WRP == RONLY) assigned_exec_queue->add_host_func((void*)&CBlock_RR_wrap, (void*) wrap_oper);
 
 	}
 }
@@ -291,13 +287,15 @@ void CoCoPeLiaInitResources(int* dev_list, int dev_num){
 				}
 			}
 		}
-		if (!exec_queue[dev_id_idx]) {
+		if (!exec_queue[dev_id_idx][0]) {
 			int flag_is_worker = 0; 
 			for (int i = 0; i < dev_num; i++) if(dev_list[i] == deidxize(dev_id_idx)){
 				flag_is_worker = 1; 
 				break;
 			}
-			if(flag_is_worker) exec_queue[dev_id_idx] = new CommandQueue(deidxize(dev_id_idx), 1);
+			if(flag_is_worker){
+				for (int i = 0; i < MAX_BACKEND_L; i++) exec_queue[dev_id_idx][i] = new CommandQueue(deidxize(dev_id_idx), 1);
+			}
 		}
 	}
 
@@ -307,18 +305,19 @@ void CoCoPeLiaInitResources(int* dev_list, int dev_num){
 }
 
 void CoCoPeLiaInitWS(int* dev_list, int dev_num){
+	error("CoCoPeLiaInitWS: INCOMPLETE\n");
 	for(short dev_id_idx = 0 ; dev_id_idx < LOC_NUM; dev_id_idx++){
-		if (!exec_queue[dev_id_idx]) {
+		if (!exec_queue[dev_id_idx][0]) {
 			int flag_is_worker = 0; 
 			for (int i = 0; i < dev_num; i++) if(dev_list[i] == deidxize(dev_id_idx)){
 				flag_is_worker = 1; 
 				break;
 			}
 			if(flag_is_worker && deidxize(dev_id_idx)!= -1){
-				for (int par_idx = 0; par_idx < exec_queue[dev_id_idx]->simultaneous_workers; par_idx++ ){
+				for (int par_idx = 0; par_idx < exec_queue[dev_id_idx][0]->simultaneous_workers; par_idx++ ){
 					void* local_ws = CoCoMalloc(2048, deidxize(dev_id_idx)); 
 					massert(CUBLAS_STATUS_SUCCESS == cublasSetWorkspace(*((cublasHandle_t*) 
-						exec_queue[dev_id_idx]->cqueue_backend_data[par_idx]), local_ws, 2048), 
+						exec_queue[dev_id_idx][0]->cqueue_backend_data[par_idx]), local_ws, 2048), 
 						"CommandQueue::CommandQueue(%d): cublasSetWorkspace failed\n", deidxize(dev_id_idx));
 					
 				}
@@ -326,7 +325,6 @@ void CoCoPeLiaInitWS(int* dev_list, int dev_num){
 		}
 	}
 }
-
 
 void CoCoPeLiaFreeResources(){
 	for(short dev_id_idx = 0 ; dev_id_idx < LOC_NUM; dev_id_idx++){
@@ -337,8 +335,10 @@ void CoCoPeLiaFreeResources(){
 				delete wb_queues[dev_id_idx][dev_id_idy];
 				wb_queues[dev_id_idx][dev_id_idy] = NULL;
 		}
-		delete exec_queue[dev_id_idx];
-		exec_queue[dev_id_idx] = NULL;
+		for (int i = 0; i < MAX_BACKEND_L; i++){
+			delete exec_queue[dev_id_idx][i];
+			exec_queue[dev_id_idx][i] = NULL;
+		}
 	}
 }
 
@@ -349,7 +349,7 @@ void CoCoPeLiaCleanResources(){
 				recv_queues[dev_id_idx][dev_id_idy]->WT_set(0);
 				wb_queues[dev_id_idx][dev_id_idy]->WT_set(0);
 		}
-		exec_queue[dev_id_idx]->WT_set(0);
+		for (int i = 0; i < MAX_BACKEND_L; i++) exec_queue[dev_id_idx][i]->WT_set(0);
 	}
 }
 
@@ -359,32 +359,39 @@ void swap_sk(Subkernel** sk1, Subkernel** sk2){
     *sk2 = sk_tmp; 
 }
 
-#ifdef SUBKERNEL_SELECT_MAX_RONLY_FETCHED
+#ifdef SUBKERNEL_SELECT_MAX_FETCHED
 Subkernel* SubkernelSelect(short dev_id, Subkernel** Subkernel_list, long Subkernel_list_len){
 #ifdef SERIAL_SUBKERNEL_SELECTION
 	Subkernel_list[0]->prepare_launch(dev_id);
 	return Subkernel_list[0];
 #endif
 	Subkernel* curr_sk = NULL;
-	long sk_idx, selected_sk_idx = 0;
-	int max_fetches = 0;
+	int sk_idx;
+	int potential_sks[Subkernel_list_len], tie_list_num = 0; 
+	int max_fetches = 1;
 	if(!Subkernel_list_len) error("SubkernelSelect: Gave 0 subkernel len with list = %p\n", Subkernel_list);
 	for (sk_idx = 0; sk_idx < Subkernel_list_len; sk_idx++){
 		curr_sk = Subkernel_list[sk_idx];
 		int tmp_fetches = 0; 
-		for (int j = 0; j < curr_sk->TileNum; j++) if(RONLY == curr_sk->TileList[j]->WRP){
+		for (int j = 0; j < curr_sk->TileNum; j++){
+			if(RONLY == curr_sk->TileList[j]->WRP)
+				if(curr_sk->TileList[j]->loc_map[idxize(dev_id)] == 0 || 
+					curr_sk->TileList[j]->loc_map[idxize(dev_id)] == 42) tmp_fetches++;
+			if(WR == curr_sk->TileList[j]->WRP)
 			if(curr_sk->TileList[j]->loc_map[idxize(dev_id)] == 0 || 
-				curr_sk->TileList[j]->loc_map[idxize(dev_id)] == 42) tmp_fetches++;
-		}
-		for (int j = 0; j < curr_sk->TileNum; j++) if(WR == curr_sk->TileList[j]->WRP){
-			if(curr_sk->TileList[j]->loc_map[idxize(dev_id)] == 0 || 
-				curr_sk->TileList[j]->loc_map[idxize(dev_id)] == 42) tmp_fetches--;
+				curr_sk->TileList[j]->loc_map[idxize(dev_id)] == 42 ||
+				curr_sk->TileList[j]->loc_map[idxize(dev_id)] == 2 ) tmp_fetches++;
 		}
 		if(tmp_fetches > max_fetches){
 			max_fetches = tmp_fetches;
-			selected_sk_idx = sk_idx; 
+			potential_sks[0] = sk_idx;
+			tie_list_num = 1; 
+		}
+		else if(tmp_fetches == max_fetches){
+			potential_sks[tie_list_num++] = sk_idx;
 		}
 	}
+	int selected_sk_idx = (tie_list_num)? potential_sks[int(rand() % tie_list_num)] : tie_list_num; 
 	swap_sk(&(Subkernel_list[0]), &(Subkernel_list[selected_sk_idx])); 
 	Subkernel_list[0]->prepare_launch(dev_id);
 	return Subkernel_list[0];

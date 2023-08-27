@@ -1612,7 +1612,6 @@ int SubkernelPrefetchCheapRONLYTiles(int numTiles, short dev_id, Subkernel** Sub
 	return tiles_prefetched;
 }
 
-
 long double Subkernel::opt_fetch_score(short dev_id){
 	long double fetch_score = 0, inter_fetch_score = 0;
 	short simultaneous_fetch = 0, prefetched;
