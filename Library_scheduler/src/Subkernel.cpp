@@ -41,10 +41,6 @@ Subkernel::~Subkernel(){
 	//delete operation_complete;
 }
 
-void Subkernel::init_events(){
-	;//operation_complete = new Event(run_dev_id);
-}
-
 void Subkernel::prepare_launch(short dev_id){
 #ifdef DEBUG
 	fprintf(stderr, "|-----> Subkernel(dev=%d, id = %d)\n", run_dev_id, id);
@@ -62,11 +58,28 @@ void Subkernel::prepare_launch(short dev_id){
 #endif
 }
 
-void Subkernel::request_data(){
+void Subkernel::sync_request_data(){
+	short lvl = 4;
+	//return;
 #ifdef DEBUG
-	fprintf(stderr, "|-----> Subkernel(dev=%d,id=%d):request_data()\n", run_dev_id, id);
+	lprintf(lvl-1, "|-----> Subkernel(dev=%d,id=%d)::sync_request_data()\n", run_dev_id, id);
 #endif
 	short run_dev_id_idx = idxize(run_dev_id);
+	for (int j = 0; j < TileNum; j++){
+		DataTile_p tmp = TileList[j];
+		if (RONLY == tmp->WRP ) tmp->StoreBlock[run_dev_id_idx]->Available->sync_barrier();
+	}
+#ifdef DEBUG
+	lprintf(lvl-1, "<-----|\n");
+#endif
+}
+
+void Subkernel::request_data(){
+//#ifdef DEBUG
+	fprintf(stderr, "|-----> Subkernel(dev=%d,id=%d):request_data()\n", run_dev_id, id);
+//#endif
+	short run_dev_id_idx = idxize(run_dev_id);
+	CoCoPeLiaSelectDevice(run_dev_id);
 	for (int j = 0; j < TileNum; j++){
 		DataTile_p tmp = TileList[j];
 		if (tmp->StoreBlock[run_dev_id_idx] == NULL ||
@@ -108,9 +121,8 @@ void Subkernel::request_data(){
 
 void Subkernel::run_operation()
 {
-
 	short run_dev_id_idx = idxize(run_dev_id);
-#ifdef ENABLE_PARALLEL_BACKEND
+	CoCoPeLiaSelectDevice(run_dev_id);
 	int RW_parallel_backend_ctr = -42;
 	for (int j = 0; j < TileNum; j++){ // Method only works for max 1 W(rite) Tile.
 		DataTile_p tmp = TileList[j];
@@ -125,7 +137,6 @@ void Subkernel::run_operation()
 		}
 		
 	}
-#endif
 
 	for (int j = 0; j < TileNum; j++){
 		DataTile_p tmp = TileList[j];
@@ -134,11 +145,8 @@ void Subkernel::run_operation()
 				run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2, j);
 		if (tmp->WRP == WR || tmp->WRP == RONLY) exec_queue[run_dev_id_idx]->wait_for_event(tmp->StoreBlock[run_dev_id_idx]->Available);
 		if(tmp->WRP == WR)
-#ifdef ENABLE_PARALLEL_BACKEND
 			tmp->W_master_backend_ctr = RW_parallel_backend_ctr;
-#else
-			tmp->W_master_backend_ctr = -43;
-#endif
+
 	}
 
 	backend_run_operation(operation_params, op_name, exec_queue[run_dev_id_idx]);
@@ -149,12 +157,8 @@ void Subkernel::run_operation()
 		wrap_oper = (CBlock_wrap_p) malloc (sizeof(struct CBlock_wrap));
 		wrap_oper->CBlock = tmp->StoreBlock[run_dev_id_idx];
 		wrap_oper->lockfree = false;
-		// TODO: Will try to remove WR_last calculation and do something else, might not work tho
 		if(tmp->WRP == WR){
 			tmp->W_pending--;
-			//else{
-			//exec_queue[run_dev_id_idx]->add_host_func((void*)&CBlock_RW_wrap, (void*) wrap_oper);
-			//}
 			if(!tmp->W_pending) tmp->W_complete->record_to_queue(exec_queue[run_dev_id_idx]);
 		}
 		else if(tmp->WRP == RONLY) exec_queue[run_dev_id_idx]->add_host_func((void*)&CBlock_RR_wrap, (void*) wrap_oper);
@@ -166,13 +170,58 @@ void Subkernel::run_operation()
 #endif
 }
 
-int queue_d_allock = 0;
+short Subkernel::check_ready(){
+	short run_dev_id_idx = idxize(run_dev_id);
+	for (int j = 0; j < TileNum; j++){
+		DataTile_p tmp = TileList[j];
+		if (tmp->StoreBlock[run_dev_id_idx] == NULL || tmp->StoreBlock[run_dev_id_idx]->State == INVALID) return 0; 
+		else if (tmp->WRP == WR || tmp->WRP == RONLY){
+			event_status what = tmp->StoreBlock[run_dev_id_idx]->Available->query_status();
+			if (!(COMPLETE == what || CHECKED == what)) return 0; 
+		}
+	}
+	return 1;
+}
 
-void CoCoPeLiaInitResources(short dev_id){
-	short lvl = 2;
-	#ifdef DEBUG
-		fprintf(stderr, "|-----> CoCoPeLiaInitResources(dev=%d)\n", dev_id);
-	#endif
+void Subkernel::run_ready_operation(){
+	CoCoPeLiaSelectDevice(run_dev_id);
+	short run_dev_id_idx = idxize(run_dev_id);
+	int RW_parallel_backend_ctr = -42;
+	for (int j = 0; j < TileNum; j++){ // Method only works for max 1 W(rite) Tile.
+		DataTile_p tmp = TileList[j];
+		if(tmp->WRP == WR){
+			if(tmp->W_master_backend_ctr!= -42){
+				RW_parallel_backend_ctr = tmp->W_master_backend_ctr;
+				exec_queue[run_dev_id_idx]->set_parallel_backend(RW_parallel_backend_ctr);
+			}
+			else tmp->W_master_backend_ctr = RW_parallel_backend_ctr = 
+				exec_queue[run_dev_id_idx]->request_parallel_backend();
+			//fprintf(stderr,"Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::run_operation: Tile(j=%d) RWPBC = %d\n",
+			//	run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2, j, RW_parallel_backend_ctr);
+		}	
+	}
+
+	backend_run_operation(operation_params, op_name, exec_queue[run_dev_id_idx]);
+
+	for (int j = 0; j < TileNum; j++){
+		DataTile_p tmp = TileList[j];
+		CBlock_wrap_p wrap_oper = NULL;
+		wrap_oper = (CBlock_wrap_p) malloc (sizeof(struct CBlock_wrap));
+		wrap_oper->CBlock = tmp->StoreBlock[run_dev_id_idx];
+		wrap_oper->lockfree = false;
+		if(tmp->WRP == WR){
+			tmp->W_pending--;
+			if(!tmp->W_pending){
+				tmp->W_complete->record_to_queue(exec_queue[run_dev_id_idx]);
+				tmp->writeback();
+			}
+		}
+		else if(tmp->WRP == RONLY) exec_queue[run_dev_id_idx]->add_host_func((void*)&CBlock_RR_wrap, (void*) wrap_oper);
+
+	}
+}
+
+void CoCoPeLiaInitResources(int* dev_list, int dev_num){
 
 	for(int i = 0; i < LOC_NUM; i++)
 	for(int j = 0; j < LOC_NUM; j++)
@@ -224,103 +273,152 @@ void CoCoPeLiaInitResources(short dev_id){
 */
 #endif
 
-	while(__sync_lock_test_and_set (&queue_d_allock, 1));
-
-	short dev_id_idx = idxize(dev_id);
-	for(short dev_id_idy = 0 ; dev_id_idy < LOC_NUM; dev_id_idy++)
-	if(dev_id_idy!=dev_id_idx){
-		if (!recv_queues[dev_id_idx][dev_id_idy]){
-			//printf("dev_id = %d, dev_id_idx = %d, dev_id_idy = %d, LOC_NUM = %d\n", dev_id, dev_id_idx, dev_id_idy, LOC_NUM);
-			short shared_iloc0 = transfer_link_sharing[dev_id_idx][dev_id_idy][0],
-				shared_iloc1 = transfer_link_sharing[dev_id_idx][dev_id_idy][1];
-			short queue_id = (dev_id_idy == LOC_NUM - 1)? deidxize(dev_id_idx) : deidxize(dev_id_idy);
-			if( shared_iloc0 != - 42){ // The smallest index shared link allocates the queue
-				if (dev_id_idx*LOC_NUM + dev_id_idy < shared_iloc0*LOC_NUM + shared_iloc1){
-					recv_queues[dev_id_idx][dev_id_idy] = new CommandQueue(queue_id, 0);
-					recv_queues[shared_iloc0][shared_iloc1] = recv_queues[dev_id_idx][dev_id_idy];
-					wb_queues[dev_id_idx][dev_id_idy] = new CommandQueue(queue_id, 0);
-					wb_queues[shared_iloc0][shared_iloc1] = wb_queues[dev_id_idx][dev_id_idy];
-				}
-			}
-			else{
+	for(short dev_id_idx = 0 ; dev_id_idx < LOC_NUM; dev_id_idx++){
+		for(short dev_id_idy = 0 ; dev_id_idy < LOC_NUM; dev_id_idy++)
+		if(dev_id_idy!=dev_id_idx){
+			if (!recv_queues[dev_id_idx][dev_id_idy]){
+				//printf("dev_id = %d, dev_id_idx = %d, dev_id_idy = %d, LOC_NUM = %d\n", dev_id, dev_id_idx, dev_id_idy, LOC_NUM);
+				short shared_iloc0 = transfer_link_sharing[dev_id_idx][dev_id_idy][0],
+					shared_iloc1 = transfer_link_sharing[dev_id_idx][dev_id_idy][1];
+				short queue_id = (dev_id_idy == LOC_NUM - 1)? deidxize(dev_id_idx) : deidxize(dev_id_idy);
 				recv_queues[dev_id_idx][dev_id_idy] = new CommandQueue(queue_id, 0);
 				wb_queues[dev_id_idx][dev_id_idy] = new CommandQueue(queue_id, 0);
-			}
-		}
-		if (!recv_queues[dev_id_idy][dev_id_idx]){
-			short shared_iloc0 = transfer_link_sharing[dev_id_idy][dev_id_idx][0],
-				shared_iloc1 = transfer_link_sharing[dev_id_idy][dev_id_idx][1];
-			if( shared_iloc0 != - 42){ // The smallest index shared link allocates the queue
-				if (dev_id_idy*LOC_NUM + dev_id_idx < shared_iloc0*LOC_NUM + shared_iloc1){
-					short writeback_queue_id = (dev_id_idx == LOC_NUM - 1)? deidxize(dev_id_idy) : deidxize(dev_id_idx);
-					recv_queues[dev_id_idy][dev_id_idx] = new CommandQueue(writeback_queue_id, 0);
-					recv_queues[shared_iloc0][shared_iloc1] = recv_queues[dev_id_idy][dev_id_idx];
-					wb_queues[dev_id_idy][dev_id_idx] = new CommandQueue(writeback_queue_id, 0);
-					wb_queues[shared_iloc0][shared_iloc1] = wb_queues[dev_id_idy][dev_id_idx];
+				if( shared_iloc0 != - 42){ // The smallest index shared link allocates the queue
+					if (dev_id_idx*LOC_NUM + dev_id_idy < shared_iloc0*LOC_NUM + shared_iloc1){
+						recv_queues[shared_iloc0][shared_iloc1] = recv_queues[dev_id_idx][dev_id_idy];
+						wb_queues[shared_iloc0][shared_iloc1] = wb_queues[dev_id_idx][dev_id_idy];
+					}
 				}
 			}
-			else{
-				short writeback_queue_id = (dev_id_idx == LOC_NUM - 1)? deidxize(dev_id_idy) : deidxize(dev_id_idx);
-				recv_queues[dev_id_idy][dev_id_idx] = new CommandQueue(writeback_queue_id, 0);
-				wb_queues[dev_id_idy][dev_id_idx] = new CommandQueue(writeback_queue_id, 0);
+		}
+		if (!exec_queue[dev_id_idx]) {
+			int flag_is_worker = 0; 
+			for (int i = 0; i < dev_num; i++) if(dev_list[i] == deidxize(dev_id_idx)){
+				flag_is_worker = 1; 
+				break;
 			}
+			if(flag_is_worker) exec_queue[dev_id_idx] = new CommandQueue(deidxize(dev_id_idx), 1);
 		}
 	}
-	if (!exec_queue[dev_id_idx])  exec_queue[dev_id_idx] = new CommandQueue(dev_id, 1);
 
-	__sync_lock_release(&queue_d_allock);
 	#ifdef DEBUG
 		fprintf(stderr, "<-----|\n");
 	#endif
 }
 
-void CoCoPeLiaFreeResources(short dev_id){
-
-	while(__sync_lock_test_and_set (&queue_d_allock, 1));
-
-	short dev_id_idx = (dev_id == -1)?  LOC_NUM - 1 : dev_id;
-	for(short dev_id_idy = 0 ; dev_id_idy < LOC_NUM; dev_id_idy++){
-		if (recv_queues[dev_id_idx][dev_id_idy]) {
-			CQueue_p temp = recv_queues[dev_id_idx][dev_id_idy];
-			recv_queues[dev_id_idx][dev_id_idy] = NULL;
-			delete temp;
-		}
-		if (recv_queues[dev_id_idy][dev_id_idx]) {
-			CQueue_p temp = recv_queues[dev_id_idy][dev_id_idx];
-			recv_queues[dev_id_idy][dev_id_idx] = NULL;
-			delete temp;
+void CoCoPeLiaInitWS(int* dev_list, int dev_num){
+	for(short dev_id_idx = 0 ; dev_id_idx < LOC_NUM; dev_id_idx++){
+		if (!exec_queue[dev_id_idx]) {
+			int flag_is_worker = 0; 
+			for (int i = 0; i < dev_num; i++) if(dev_list[i] == deidxize(dev_id_idx)){
+				flag_is_worker = 1; 
+				break;
+			}
+			if(flag_is_worker && deidxize(dev_id_idx)!= -1){
+				for (int par_idx = 0; par_idx < exec_queue[dev_id_idx]->simultaneous_workers; par_idx++ ){
+					void* local_ws = CoCoMalloc(2048, deidxize(dev_id_idx)); 
+					massert(CUBLAS_STATUS_SUCCESS == cublasSetWorkspace(*((cublasHandle_t*) 
+						exec_queue[dev_id_idx]->cqueue_backend_data[par_idx]), local_ws, 2048), 
+						"CommandQueue::CommandQueue(%d): cublasSetWorkspace failed\n", deidxize(dev_id_idx));
+					
+				}
+			}
 		}
 	}
-	if (exec_queue[dev_id_idx]){
+}
+
+
+void CoCoPeLiaFreeResources(){
+	for(short dev_id_idx = 0 ; dev_id_idx < LOC_NUM; dev_id_idx++){
+		for(short dev_id_idy = 0 ; dev_id_idy < LOC_NUM; dev_id_idy++)
+		if(dev_id_idx!=dev_id_idy){
+				delete recv_queues[dev_id_idx][dev_id_idy];
+				recv_queues[dev_id_idx][dev_id_idy] = NULL;
+				delete wb_queues[dev_id_idx][dev_id_idy];
+				wb_queues[dev_id_idx][dev_id_idy] = NULL;
+		}
 		delete exec_queue[dev_id_idx];
 		exec_queue[dev_id_idx] = NULL;
 	}
-
-	__sync_lock_release(&queue_d_allock);
 }
 
-long long failed_selections[LOC_NUM] = {0};
+void CoCoPeLiaCleanResources(){
+	for(short dev_id_idx = 0 ; dev_id_idx < LOC_NUM; dev_id_idx++){
+		for(short dev_id_idy = 0 ; dev_id_idy < LOC_NUM; dev_id_idy++)
+		if(dev_id_idx!=dev_id_idy){
+				recv_queues[dev_id_idx][dev_id_idy]->WT_set(0);
+				wb_queues[dev_id_idx][dev_id_idy]->WT_set(0);
+		}
+		exec_queue[dev_id_idx]->WT_set(0);
+	}
+}
 
+void swap_sk(Subkernel** sk1, Subkernel** sk2){
+	Subkernel* sk_tmp = *sk1;
+	*sk1 = *sk2;
+    *sk2 = sk_tmp; 
+}
+
+#ifdef SUBKERNEL_SELECT_MAX_RONLY_FETCHED
 Subkernel* SubkernelSelect(short dev_id, Subkernel** Subkernel_list, long Subkernel_list_len){
-	//while(__sync_lock_test_and_set (&SubkernelSelectLock, 1));
+#ifdef SERIAL_SUBKERNEL_SELECTION
+	Subkernel_list[0]->prepare_launch(dev_id);
+	return Subkernel_list[0];
+#endif
 	Subkernel* curr_sk = NULL;
-	long sk_idx;
-	//if(!Subkernel_list_len) warning("SubkernelSelectSerial: Gave 0 subkernel len with list = %p\n", Subkernel_list);
+	long sk_idx, selected_sk_idx = 0;
+	int max_fetches = 0;
+	if(!Subkernel_list_len) error("SubkernelSelect: Gave 0 subkernel len with list = %p\n", Subkernel_list);
 	for (sk_idx = 0; sk_idx < Subkernel_list_len; sk_idx++){
 		curr_sk = Subkernel_list[sk_idx];
-		//printf("SubkernelSelectSerial(dev_id=%d): curr_sk->run_dev_id = %d, curr_sk->no_locked_tiles() = %d, curr_sk->is_RW_lock_master(dev_id) = %d\n",
-		//	dev_id, curr_sk->run_dev_id, curr_sk->no_locked_tiles(), curr_sk->is_RW_lock_master(dev_id));
-		//if (curr_sk->run_dev_id==-42) 
-		break;
+		int tmp_fetches = 0; 
+		for (int j = 0; j < curr_sk->TileNum; j++) if(RONLY == curr_sk->TileList[j]->WRP){
+			if(curr_sk->TileList[j]->loc_map[idxize(dev_id)] == 0 || 
+				curr_sk->TileList[j]->loc_map[idxize(dev_id)] == 42) tmp_fetches++;
+		}
+		for (int j = 0; j < curr_sk->TileNum; j++) if(WR == curr_sk->TileList[j]->WRP){
+			if(curr_sk->TileList[j]->loc_map[idxize(dev_id)] == 0 || 
+				curr_sk->TileList[j]->loc_map[idxize(dev_id)] == 42) tmp_fetches--;
+		}
+		if(tmp_fetches > max_fetches){
+			max_fetches = tmp_fetches;
+			selected_sk_idx = sk_idx; 
+		}
 	}
-	if(sk_idx==Subkernel_list_len){
-		failed_selections[idxize(dev_id)]++;
-		curr_sk = NULL;
-	}
-	else curr_sk->prepare_launch(dev_id);
-	//__sync_lock_release(&SubkernelSelectLock);
-	return curr_sk;
+	swap_sk(&(Subkernel_list[0]), &(Subkernel_list[selected_sk_idx])); 
+	Subkernel_list[0]->prepare_launch(dev_id);
+	return Subkernel_list[0];
 }
+#endif
+
+#ifdef SUBKERNEL_SELECT_MIN_RONLY_ETA
+Subkernel* SubkernelSelect(short dev_id, Subkernel** Subkernel_list, long Subkernel_list_len){
+#ifdef SERIAL_SUBKERNEL_SELECTION
+	Subkernel_list[0]->prepare_launch(dev_id);
+	return Subkernel_list[0];
+#endif
+	Subkernel* curr_sk = NULL;
+	long sk_idx;
+	double min_ETA = DBL_MAX;
+	Subkernel* min_ETA_sk = NULL;
+	if(!Subkernel_list_len) error("SubkernelSelect: Gave 0 subkernel len with list = %p\n", Subkernel_list);
+	for (sk_idx = 0; sk_idx < Subkernel_list_len; sk_idx++){
+		curr_sk = Subkernel_list[sk_idx];
+		double tmp_ETA = 0; 
+		for (int j = 0; j < curr_sk->TileNum; j++) if(RONLY == curr_sk->TileList[j]->WRP){
+			double block_cost = curr_sk->TileList[j]->block_ETA[idxize(dev_id)];
+			if(-42 == block_cost) block_cost = curr_sk->TileList[j]->size(); 
+			tmp_ETA = fmax(block_cost, tmp_ETA);
+		}
+		if(tmp_ETA < min_ETA){
+			min_ETA = tmp_ETA;
+			min_ETA_sk = curr_sk;
+		}
+	}
+	min_ETA_sk->prepare_launch(dev_id);
+	return min_ETA_sk;
+}
+#endif
 
 void PARALiADevCacheFree(short dev_id){
 	if(Global_Buffer_1D[idxize(dev_id)]) delete Global_Buffer_1D[idxize(dev_id)];
@@ -547,184 +645,3 @@ void STEST_print_SK(kernel_pthread_wrap_p* thread_dev_data_list, double routine_
 	lprintf(0, "\n");
 }
 #endif
-
-/*
-
-Subkernel* SubkernelSelectMinimizeFetch(short dev_id, Subkernel** Subkernel_list, long Subkernel_list_len){
-	//while(__sync_lock_test_and_set (&SubkernelSelectLock, 1));
-	Subkernel* curr_sk = NULL;
-	long sk_idx;
-	double min_fetch_cost = DBL_MAX;
-	Subkernel* min_fetch_cost_sk = NULL;
-	for (sk_idx = 0; sk_idx < Subkernel_list_len; sk_idx++){
-		curr_sk = Subkernel_list[sk_idx];
-		if (curr_sk->run_dev_id==-42 &&
-				(curr_sk->no_locked_tiles() || curr_sk->is_RW_lock_master(dev_id))) {// || curr_sk->is_W_master(dev_id)){
-			double fetch_cost = curr_sk->opt_fetch_cost(dev_id);
-			if(fetch_cost < min_fetch_cost){
-				min_fetch_cost = fetch_cost;
-				min_fetch_cost_sk = curr_sk;
-			}
-		}
-	}
-	if(min_fetch_cost_sk) min_fetch_cost_sk->prepare_launch(dev_id);
-	//__sync_lock_release(&SubkernelSelectLock);
-	return min_fetch_cost_sk;
-}
-
-Subkernel* SubkernelSelectMinimizeFetchParallelBackendBotleneckPenalty(short dev_id, Subkernel** Subkernel_list, long Subkernel_list_len){
-	//while(__sync_lock_test_and_set (&SubkernelSelectLock, 1));
-	Subkernel* curr_sk = NULL;
-	long sk_idx;
-	double min_fetch_cost = DBL_MAX;
-	Subkernel* min_fetch_cost_sk = NULL;
-	for (sk_idx = 0; sk_idx < Subkernel_list_len; sk_idx++){
-		curr_sk = Subkernel_list[sk_idx];
-		if (curr_sk->run_dev_id==-42 &&
-				(curr_sk->no_locked_tiles() || curr_sk->is_RW_lock_master(dev_id))) {// || curr_sk->is_W_master(dev_id)){
-			double fetch_cost = curr_sk->opt_fetch_cost_pen_multifetch(dev_id);
-			if(!curr_sk->no_locked_tiles()) fetch_cost+=PARALLELBBOTLENECK_PENALTY*fetch_cost;
-			else if(!curr_sk->is_RW_lock_master(dev_id)) fetch_cost+=WTILE_TRANSFER_PENALTY*fetch_cost/curr_sk->TileNum;
-			if(fetch_cost < min_fetch_cost){
-				min_fetch_cost = fetch_cost;
-				min_fetch_cost_sk = curr_sk;
-			}
-		}
-	}
-	if(min_fetch_cost_sk) min_fetch_cost_sk->prepare_launch(dev_id);
-	//__sync_lock_release(&SubkernelSelectLock);
-	return min_fetch_cost_sk;
-}
-
-Subkernel* SubkernelSelectMinimizeFetchWritePenaltyMultiFetchPenalty(short dev_id, Subkernel** Subkernel_list, long Subkernel_list_len){
-	//while(__sync_lock_test_and_set (&SubkernelSelectLock, 1));
-	Subkernel* curr_sk = NULL;
-	long sk_idx;
-	double min_fetch_cost = DBL_MAX;
-	Subkernel* min_fetch_cost_sk = NULL;
-	for (sk_idx = 0; sk_idx < Subkernel_list_len; sk_idx++){
-		curr_sk = Subkernel_list[sk_idx];
-		if (curr_sk->run_dev_id==-42 &&
-				(curr_sk->no_locked_tiles() || curr_sk->is_RW_lock_master(dev_id))) {// || curr_sk->is_W_master(dev_id)){
-			double fetch_cost = curr_sk->opt_fetch_cost_pen_multifetch(dev_id);
-			if(!curr_sk->no_locked_tiles()) fetch_cost+=PARALLELBBOTLENECK_PENALTY*fetch_cost;
-			else if(!curr_sk->is_RW_lock_master(dev_id)) fetch_cost+=WTILE_TRANSFER_PENALTY*fetch_cost/curr_sk->TileNum;
-			if(fetch_cost < min_fetch_cost){
-				min_fetch_cost = fetch_cost;
-				min_fetch_cost_sk = curr_sk;
-			}
-		}
-	}
-	if(min_fetch_cost_sk) min_fetch_cost_sk->prepare_launch(dev_id);
-	//__sync_lock_release(&SubkernelSelectLock);
-	return min_fetch_cost_sk;
-}
-
-Subkernel* SubkernelSelectMinimizeFetchWritePenaltyMultiFetchPenaltyMutlidevFair(short dev_id, Subkernel** Subkernel_list, long Subkernel_list_len){
-	//while(__sync_lock_test_and_set (&SubkernelSelectLock, 1));
-	Subkernel* curr_sk = NULL;
-	long sk_idx;
-	double min_fetch_cost = 100000000;
-	Subkernel* min_fetch_cost_sk = NULL;
-	for (sk_idx = 0; sk_idx < Subkernel_list_len; sk_idx++){
-		curr_sk = Subkernel_list[sk_idx];
-		if (curr_sk->run_dev_id==-42 &&
-				(curr_sk->no_locked_tiles() || curr_sk->is_RW_lock_master(dev_id))) {
-			double fetch_cost = curr_sk->opt_fetch_cost_pen_multifetch(dev_id);
-			if(!curr_sk->no_locked_tiles()) fetch_cost+=PARALLELBBOTLENECK_PENALTY*fetch_cost;
-			else if(!curr_sk->is_RW_lock_master(dev_id)) fetch_cost+=WTILE_TRANSFER_PENALTY*fetch_cost/curr_sk->TileNum;
-			if(fetch_cost < min_fetch_cost){
-				min_fetch_cost = fetch_cost;
-				min_fetch_cost_sk = curr_sk;
-			}
-			else if(fetch_cost == min_fetch_cost && curr_sk->no_locked_tiles()){
-				int other_dev_score_winner = 0;
-				for (int dev = 0; dev< LOC_NUM; dev++) if(deidxize(dev)!= dev_id){
-					double fetch_cost_me = curr_sk->opt_fetch_cost(deidxize(dev)),
-					fetch_cost_bro = min_fetch_cost_sk->opt_fetch_cost(deidxize(dev));
-					if(fetch_cost_me <= fetch_cost_bro) other_dev_score_winner ++;
-					else other_dev_score_winner--;
-				}
-				if(other_dev_score_winner < 0){
-					min_fetch_cost = fetch_cost;
-					min_fetch_cost_sk = curr_sk;
-				}
-			}
-		}
-	}
-	if(min_fetch_cost_sk) min_fetch_cost_sk->prepare_launch(dev_id);
-	//__sync_lock_release(&SubkernelSelectLock);
-	return min_fetch_cost_sk;
-}
-
-Subkernel* SubkernelSelectNoWriteShare(short dev_id, Subkernel** Subkernel_list, long Subkernel_list_len){
-	//while(__sync_lock_test_and_set (&SubkernelSelectLock, 1));
-	Subkernel* curr_sk = NULL;
-	long sk_idx;
-	for (sk_idx = 0; sk_idx < Subkernel_list_len; sk_idx++){
-		curr_sk = Subkernel_list[sk_idx];
-		if (curr_sk->run_dev_id==-42 && (!curr_sk->RW_lock_initialized() || curr_sk->is_RW_lock_master(dev_id))) break;
-	}
-	if(sk_idx==Subkernel_list_len) curr_sk = NULL;
-	else curr_sk->prepare_launch(dev_id);
-	//__sync_lock_release(&SubkernelSelectLock);
-	return curr_sk;
-}
-
-Subkernel* SubkernelSelectMinimizeFetchNoWriteShareMultiFetchPenaltyMutlidevFair(short dev_id, Subkernel** Subkernel_list, long Subkernel_list_len){
-	//while(__sync_lock_test_and_set (&SubkernelSelectLock, 1));
-	Subkernel* curr_sk = NULL;
-	long sk_idx;
-	double min_fetch_cost = DBL_MAX;
-	Subkernel* min_fetch_cost_sk = NULL;
-	for (sk_idx = 0; sk_idx < Subkernel_list_len; sk_idx++){
-		curr_sk = Subkernel_list[sk_idx];
-		if (curr_sk->run_dev_id==-42 &&
-				(!curr_sk->RW_lock_initialized() || curr_sk->is_RW_lock_master(dev_id))) {
-			double fetch_cost = curr_sk->opt_fetch_cost_pen_multifetch(dev_id);
-			if(!curr_sk->no_locked_tiles()) fetch_cost+=PARALLELBBOTLENECK_PENALTY*fetch_cost;
-			if(fetch_cost < min_fetch_cost){
-				min_fetch_cost = fetch_cost;
-				min_fetch_cost_sk = curr_sk;
-			}
-			else if(fetch_cost == min_fetch_cost && curr_sk->no_locked_tiles()){
-				int other_dev_score_winner = 0;
-				for (int dev = 0; dev< LOC_NUM; dev++) if(deidxize(dev)!= dev_id){
-					double fetch_cost_me = curr_sk->opt_fetch_cost(deidxize(dev)),
-					fetch_cost_bro = min_fetch_cost_sk->opt_fetch_cost(deidxize(dev));
-					if(fetch_cost_me <= fetch_cost_bro) other_dev_score_winner ++;
-					else other_dev_score_winner--;
-				}
-				if(other_dev_score_winner < 0){
-					min_fetch_cost = fetch_cost;
-					min_fetch_cost_sk = curr_sk;
-				}
-			}
-		}
-	}
-	if(min_fetch_cost_sk) min_fetch_cost_sk->prepare_launch(dev_id);
-	//__sync_lock_release(&SubkernelSelectLock);
-	return min_fetch_cost_sk;
-}
-
-Subkernel* SubkernelSelectMinimizeFetchWritePenalty(short dev_id, Subkernel** Subkernel_list, long Subkernel_list_len){
-	Subkernel* curr_sk = NULL;
-	long sk_idx;
-	double min_fetch_cost = 100000000;
-	Subkernel* min_fetch_cost_sk = NULL;
-	for (sk_idx = 0; sk_idx < Subkernel_list_len; sk_idx++){
-		curr_sk = Subkernel_list[sk_idx];
-		if (curr_sk->no_locked_tiles()){// || curr_sk->is_W_master(dev_id)){
-			double fetch_cost = curr_sk->opt_fetch_cost(dev_id);
-			if(!curr_sk->is_W_master(dev_id)) fetch_cost+=WRITE_COST_PEPENALTY*fetch_cost;
-			if(fetch_cost < min_fetch_cost){
-				min_fetch_cost = fetch_cost;
-				min_fetch_cost_sk = curr_sk;
-			}
-		}
-	}
-	if(!min_fetch_cost_sk) return NULL;
-	min_fetch_cost_sk->prepare_launch();
-	return min_fetch_cost_sk;
-}
-*/

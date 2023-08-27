@@ -38,6 +38,7 @@ class Decom2D
 
 	// General Functions
 	void InitTileMap(int T1, int T2, Buffer_p* init_loc_cache_p);
+	void WBTileMap();
 	void SyncTileMap();
 	void DestroyTileMap();
 	Tile2D* getTile(int iloc1, int iloc2);

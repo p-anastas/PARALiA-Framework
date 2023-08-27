@@ -14,8 +14,6 @@
 
 #include <pthread.h>
 
-pthread_barrier_t  SoftCache_alloc_barrier_dgemm;
-
 gemm_backend_in<double>* initial_dgemm = NULL;
 ATC_p autotune_controller_dgemm = NULL;
 ATC_p predef_controller_dgemm = NULL;
@@ -25,18 +23,6 @@ int MGridSz_dgemm = 0, NGridSz_dgemm = 0, KGridSz_dgemm = 0;
 #ifdef STEST
 double gemm_entry_ts;
 #endif
-
-Subkernel** Subkernel_list_dgemm;
-int Subkernel_num_dgemm;
-int remaining_Subkernels_dgemm;
-
-#define GEMM_FIRE_SK_DEV_ORDER
-#ifdef GEMM_FIRE_SK_DEV_ORDER
-int curr_sk_idx_dgemm = 0;
-int curr_sk_dgemm_unit_list[LOC_NUM], curr_sk_dgemm_unit_num;
-#endif
-
-int Sk_select_lock_dgemm = 0;
 
 Subkernel** CoCoAsignTilesToSubkernelsDgemm(Decom2D* A_asset, Decom2D* B_asset,
 	Decom2D* C_asset, int T, int* kernelNum){
@@ -125,6 +111,7 @@ int current_ctr = 0;
 void DgemmUpdateDevice(Subkernel* ker, short dev_id){
 	gemm_backend_in<double>*  ptr_ker_translate = (gemm_backend_in<double>* ) ker->operation_params;
 	ker->run_dev_id = ptr_ker_translate->dev_id = dev_id;
+	CoCoPeLiaSelectDevice(dev_id);
 #ifdef DEBUG
 	fprintf(stderr, "|-----> DgemmUpdateDevice - Subkernel(dev=%d, id = %d)\n", dev_id, ker->id);
 #endif
@@ -136,15 +123,13 @@ void DgemmUpdateDevice(Subkernel* ker, short dev_id){
 	ker->TileList[1]->set_loc_idx(dev_id_idx, 1);
 	ker->TileList[2]->set_loc_idx(dev_id_idx, 1);
 	ker->TileList[2]->W_master = dev_id;
-	while(__sync_lock_test_and_set(&Sk_select_lock_dgemm, 1));
 	if(ker->TileList[2]->W_pending == KGridSz_dgemm) ker->TileList[2]->W_complete = new Event(dev_id);
-	__sync_lock_release(&Sk_select_lock_dgemm);
 #ifdef DEBUG
 	fprintf(stderr, "<-----|\n");
 #endif
 }
 
-void DgemmPrepareLaunch(Subkernel* ker, short dev_id){
+void DgemmPrepareLaunch(Subkernel* ker){
 	gemm_backend_in<double>*  ptr_ker_translate = (gemm_backend_in<double>* ) ker->operation_params;
 	if(!(ker->TileList[2]->W_master_backend_ctr == -42)) // Means its not the first subkernel using the WR tile
 		ptr_ker_translate->beta = 1.0;
@@ -159,113 +144,39 @@ void DgemmUpdatePointers(Subkernel* ker){
 	ptr_ker_translate->C = &ker->TileList[2]->StoreBlock[dev_id_idx]->Adrs;
 }
 
-void* PARALiADgemmAgentVoid(void* kernel_pthread_wrapped){
-	short lvl = 2;
+#ifdef SUBKERNELS_FIRE_WHEN_READY
+typedef struct subkernel_manager_data{
+	int sk_num; 
+	Subkernel ** sk_list;
+}* SMD_p;
 
-	kernel_pthread_wrap_p gemm_subkernel_data = (kernel_pthread_wrap_p)kernel_pthread_wrapped;
-	short dev_id = gemm_subkernel_data->dev_id;
-#ifdef DEBUG
-	fprintf(stderr, "|-----> PARALiADgemmAgentVoid(gemm_subkernel_data: dev_id = %d)\n",
-		dev_id);
-#endif
-#ifdef TEST
-		double cpu_timer = csecond();
-#endif
-
-	CoCoPeLiaSelectDevice(dev_id);
-	CoCoPeLiaInitResources(dev_id);
-	for(int sk_ctr = 0; sk_ctr < gemm_subkernel_data->SubkernelNumDev; sk_ctr++)
-		DgemmUpdateDevice(gemm_subkernel_data->SubkernelListDev[sk_ctr], dev_id);
-
-
-#ifdef TEST
-	cpu_timer = csecond() - cpu_timer;
-	fprintf(stderr, "Stream/Lib Handle Initialization(%d): t_resource = %lf ms\n", dev_id, cpu_timer*1000);
-	cpu_timer = csecond();
-#endif
-
-	Global_Buffer_2D[idxize(dev_id)]->allocate(true);
-	//CoCoSyncCheckErr();
-
-#ifdef TEST
-	cpu_timer = csecond() - cpu_timer;
-	fprintf(stderr, "Memory management(%d): t_mem = %lf ms\n", dev_id, cpu_timer*1000);
-	cpu_timer = csecond();
-#endif
-	pthread_barrier_wait (&SoftCache_alloc_barrier_dgemm);
-#ifdef TEST
-	cpu_timer = csecond() - cpu_timer;
-	fprintf(stderr, "Wait barrier(%d): t_wb = %lf ms\n", dev_id, cpu_timer*1000);
-	cpu_timer = csecond();
-#endif
-
-	Subkernel * curr = NULL;
-	int remaining_Subkernels_dgemm = gemm_subkernel_data->SubkernelNumDev;
-	while (remaining_Subkernels_dgemm){
-		while(__sync_lock_test_and_set(&Sk_select_lock_dgemm, 1));
-
-#ifdef GEMM_FIRE_SK_DEV_ORDER
-		if(curr_sk_dgemm_unit_list[curr_sk_idx_dgemm] != dev_id){
-		__sync_lock_release(&Sk_select_lock_dgemm);
-	  continue;
-		}
-#endif
-		curr = SubkernelSelect(dev_id, &(gemm_subkernel_data->SubkernelListDev[gemm_subkernel_data->SubkernelNumDev-remaining_Subkernels_dgemm]), remaining_Subkernels_dgemm);
-		if (!curr){
-#ifdef DEBUG
-		fprintf(stderr, "PARALiADgemmAgentVoid(%d): Got curr = NULL, repeating search\n", dev_id);
-#endif
-
-
-#ifdef GEMM_FIRE_SK_DEV_ORDER
-			if (curr_sk_idx_dgemm == curr_sk_dgemm_unit_num -1) curr_sk_idx_dgemm = 0;
-			else curr_sk_idx_dgemm++; // Fire all rounds in device order
-#endif
-
-			__sync_lock_release(&Sk_select_lock_dgemm);
-			continue;
-		}
-		remaining_Subkernels_dgemm--;
-		//for (int keri = 0; keri < gemm_subkernel_data->SubkernelNumDev; keri++)
-		//	if (curr == gemm_subkernel_data->SubkernelListDev[keri]){
-		//		gemm_subkernel_data->SubkernelListDev[keri] = gemm_subkernel_data->SubkernelListDev[remaining_Subkernels_dgemm];
-		//		gemm_subkernel_data->SubkernelListDev[remaining_Subkernels_dgemm] = curr;
-		//		break;
-		//	}
-		curr->init_events();
-		DgemmPrepareLaunch(curr, dev_id);
-		curr->request_data();
-		DgemmUpdatePointers(curr);
-
-#ifdef GEMM_FIRE_SK_DEV_ORDER
-		if(0 == remaining_Subkernels_dgemm){
-			int slide_flag = 0;
-			for (int idx = 0; idx < curr_sk_dgemm_unit_num - 1; idx++){
-				if (curr_sk_dgemm_unit_list[curr_sk_idx_dgemm] == curr_sk_dgemm_unit_list[idx]) slide_flag  = 1;
-				if(slide_flag) curr_sk_dgemm_unit_list[idx] = curr_sk_dgemm_unit_list[idx+1];
+void* subkernel_manager_wrap(void* sk_wrap){
+	SMD_p manager_info = (SMD_p) sk_wrap; 
+	int sk_ctr = 0, remaining_sk = manager_info->sk_num; 
+	short sk_fired[manager_info->sk_num] = {0};
+	while (remaining_sk){
+		if(!sk_fired[sk_ctr]){
+			Subkernel * curr = manager_info->sk_list[sk_ctr];
+			sk_fired[sk_ctr] = curr->check_ready();
+			if(sk_fired[sk_ctr]){
+				DgemmUpdatePointers(curr);
+				DgemmPrepareLaunch(curr);
+				curr->run_ready_operation();
+				remaining_sk--;
+				//fprintf(stderr, "Fired SK %d\n",sk_ctr);
 			}
-			curr_sk_dgemm_unit_num--;
-			if (curr_sk_idx_dgemm == curr_sk_dgemm_unit_num) curr_sk_idx_dgemm = 0;
 		}
+		if (sk_ctr < manager_info->sk_num - 1) sk_ctr++;
 		else{
-			if (curr_sk_idx_dgemm == curr_sk_dgemm_unit_num -1) curr_sk_idx_dgemm = 0;
-			else curr_sk_idx_dgemm++; // Fire all rounds in device order
+			sk_ctr = 0; 
+			usleep(1000); // TODO: This exists solely for nsight profiling reasons
+			//fprintf(stderr, "sk_fired = %s, remaining_sk = %d\n",printlist(sk_fired, manager_info->sk_num), remaining_sk);
 		}
-#endif
-	__sync_lock_release(&Sk_select_lock_dgemm);
-	curr->run_operation(); // Above or bellow?
-
-
+		//fprintf(stderr, "loop %d ",sk_ctr);
 	}
-#ifdef TEST
-	double total_cache_timer = Global_Buffer_2D[idxize(dev_id)]->timer;
-	fprintf(stderr, "Cache requests total timer (%d): t_cache = %lf ms\n" , dev_id, total_cache_timer*1000);
-	cpu_timer = csecond() - cpu_timer;
-	fprintf(stderr, "Subkernels complete(%d): t_comp = %lf ms\n" , dev_id, cpu_timer*1000);
-#endif
-
-	return NULL;
+	return NULL; 
 }
+#endif
 
 /// A dgemm wrapper including auto-tuning of T and cache_size, as well as device management
 ATC_p PARALiADgemm(char TransA,  char TransB, long int M, long int N, long int K, double alpha, double* A, long int ldA,
@@ -403,7 +314,6 @@ ATC_p PARALiADgemm(char TransA,  char TransB, long int M, long int N, long int K
 			}
 			max_cache_sz = fmax((Native_block_num + 3) * Block_sz, max_cache_sz);
 
-
 			CoCoPeLiaSelectDevice(prev_dev);
 			// max_cache_sz = (long long) fmin(max_cache_sz, free_dev_mem - ((long long) max_dev_mem*(1-PROBLEM_GPU_PERCENTAGE/100.0)) + prev_DevCache_sz);
 		}
@@ -467,18 +377,15 @@ ATC_p PARALiADgemm(char TransA,  char TransB, long int M, long int N, long int K
 	cpu_timer = csecond();
 #endif
 
-	Subkernel_list_dgemm = CoCoAsignTilesToSubkernelsDgemm(A_asset, B_asset, C_asset, T,
-		&Subkernel_num_dgemm);
-	kernel_pthread_wrap_p SK_wrap = (kernel_pthread_wrap_p) malloc(sizeof(struct kernel_pthread_wrap));
-	SK_wrap->SubkernelListDev = Subkernel_list_dgemm;
-	SK_wrap->SubkernelNumDev = Subkernel_num_dgemm;
-	SK_wrap->dev_id = -42;
-	remaining_Subkernels_dgemm = Subkernel_num_dgemm;
+	int Subkernel_num = -42; 
+	Subkernel** Subkernel_list = CoCoAsignTilesToSubkernelsDgemm(A_asset, B_asset, C_asset, T,
+		&Subkernel_num);
+	int remaining_Subkernels = Subkernel_num;
 
-	if(!reuse_model_flag) autotune_controller_dgemm->update_sk_num(Subkernel_num_dgemm);
+	if(!reuse_model_flag) autotune_controller_dgemm->update_sk_num(Subkernel_num);
 #ifdef DEBUG
-	fprintf(stderr, "Subkernel_num_dgemm = %d {M,N,K}GridSz = {%d, %d, %d}, autotune_controller_dgemm->active_unit_num = %d\n\n",
-		Subkernel_num_dgemm, MGridSz_dgemm, NGridSz_dgemm, KGridSz_dgemm, autotune_controller_dgemm->active_unit_num);
+	fprintf(stderr, "Subkernel_num = %d {M,N,K}GridSz = {%d, %d, %d}, autotune_controller_dgemm->active_unit_num = %d\n\n",
+		Subkernel_num, MGridSz_dgemm, NGridSz_dgemm, KGridSz_dgemm, autotune_controller_dgemm->active_unit_num);
 #endif
 
 #ifdef TEST
@@ -495,83 +402,135 @@ ATC_p PARALiADgemm(char TransA,  char TransB, long int M, long int N, long int K
 	cpu_timer = csecond();
 #endif
 
-//#endif
-	//autotune_controller_dgemm->active_unit_num = used_devices;
-
-	//s = pthread_attr_init(&attr);
-	//if (s != 0) error("PARALiADgemm: pthread_attr_init failed s=%d\n", s);
-
-#ifdef GEMM_FIRE_SK_DEV_ORDER
-	// Fire all devices in other_dev_score_winner
-	curr_sk_idx_dgemm = 0;
-	curr_sk_dgemm_unit_num = autotune_controller_dgemm->active_unit_num;
-	for(int i = 0; i < curr_sk_dgemm_unit_num; i ++) curr_sk_dgemm_unit_list[i] = autotune_controller_dgemm->active_unit_id_list[i];
-	/*curr_sk_dgemm_unit_list[0] = 0;
-	curr_sk_dgemm_unit_list[1] = 2;
-	curr_sk_dgemm_unit_list[2] = 4;
-	curr_sk_dgemm_unit_list[3] = 6;
-	curr_sk_dgemm_unit_list[4] = 1;
-	curr_sk_dgemm_unit_list[5] = 3;
-	curr_sk_dgemm_unit_list[6] = 5;
-	curr_sk_dgemm_unit_list[7] = 7;*/
-
-#endif
-
-	pthread_t thread_id[autotune_controller_dgemm->active_unit_num];
-	kernel_pthread_wrap_p thread_dev_data[autotune_controller_dgemm->active_unit_num];
-
-	// create a barrier object with a count of autotune_controller_dgemm->active_unit_num + 1
-	pthread_barrier_init (&SoftCache_alloc_barrier_dgemm, NULL, autotune_controller_dgemm->active_unit_num + 1);
+	/*
+		curr_sk_idx_dgemm = 0;
+		int curr_sk_dgemm_unit_list[LOC_NUM], curr_sk_dgemm_unit_num;
+		// Fire all devices in other_dev_score_winner
+		curr_sk_idx_dgemm = 0;
+		curr_sk_dgemm_unit_num = autotune_controller_dgemm->active_unit_num;
+		for(int i = 0; i < curr_sk_dgemm_unit_num; i ++) 
+			curr_sk_dgemm_unit_list[i] = autotune_controller_dgemm->active_unit_id_list[i];
+		curr_sk_dgemm_unit_list[0] = 0;
+		curr_sk_dgemm_unit_list[1] = 2;
+		curr_sk_dgemm_unit_list[2] = 4;
+		curr_sk_dgemm_unit_list[3] = 6;
+		curr_sk_dgemm_unit_list[4] = 1;
+		curr_sk_dgemm_unit_list[5] = 3;
+		curr_sk_dgemm_unit_list[6] = 5;
+		curr_sk_dgemm_unit_list[7] = 7;
+	*/
+	int remaining_Subkernels_dev[autotune_controller_dgemm->active_unit_num];
+	Subkernel* Subkernels_list_dev[LOC_NUM][remaining_Subkernels];
 	for(int d=0; d < LOC_NUM; d++) CoCoEnableLinks(deidxize(d), LOC_NUM);
 	for(int d=0; d < autotune_controller_dgemm->active_unit_num; d++){
 		if(autotune_controller_dgemm->Subkernels_per_unit_num[d] == 0 )
 			error("CoCoPeLiaDgemm: Leftover autotune_controller_dgemm->Subkernels_per_unit_num[%d] == 0", d);
+		int dev_id = autotune_controller_dgemm->active_unit_id_list[d];
+		remaining_Subkernels_dev[d] = remaining_Subkernels_dev[d] = 
+			autotune_controller_dgemm->Subkernels_per_unit_num[d];
 
-		thread_dev_data[d] = (kernel_pthread_wrap_p) malloc(sizeof(struct kernel_pthread_wrap));
-		thread_dev_data[d]->dev_id = autotune_controller_dgemm->active_unit_id_list[d];
-
-
-		thread_dev_data[d]->SubkernelNumDev = autotune_controller_dgemm->Subkernels_per_unit_num[d];
-		thread_dev_data[d]->SubkernelListDev = (Subkernel**) malloc(thread_dev_data[d]->SubkernelNumDev*sizeof(Subkernel*));
-		
-		// TODO: Check 
-		for(int skitt = 0; skitt < autotune_controller_dgemm->Subkernels_per_unit_num[d]; skitt++)
-			thread_dev_data[d]->SubkernelListDev[skitt] = Subkernel_list_dgemm[autotune_controller_dgemm->Subkernels_per_unit_list[d][skitt]];
-		//int skitt = 0;
-		//for(int offset = 0; offset < KGridSz_dgemm; offset++)
-		//	for(int skitt2 = 0; skitt2 < autotune_controller_dgemm->Subkernels_per_unit_num[d]; skitt2+=KGridSz_dgemm)
-		//	thread_dev_data[d]->SubkernelListDev[skitt++] = Subkernel_list_dgemm[autotune_controller_dgemm->Subkernels_per_unit_list[d][skitt2 + offset]];
-
-		s = pthread_create(&thread_id[d], &attr,
-                                  &PARALiADgemmAgentVoid, thread_dev_data[d]);
-
+		for(int sk_ctr = 0; sk_ctr < remaining_Subkernels_dev[d]; sk_ctr++){
+			Subkernels_list_dev[d][sk_ctr] = Subkernel_list
+				[autotune_controller_dgemm->Subkernels_per_unit_list[d][sk_ctr]];
+			DgemmUpdateDevice(Subkernels_list_dev[d][sk_ctr], dev_id);
+		}
 	}
-	pthread_barrier_wait (&SoftCache_alloc_barrier_dgemm);
 
-	//A_asset->DrawTileMap();
-	//B_asset->DrawTileMap();
-	//C_asset->DrawTileMap();
+#ifdef TEST
+	cpu_timer = csecond() - cpu_timer;
+	fprintf(stderr, "Updated subkernels for devices: t_update = %lf ms\n", cpu_timer*1000);
+	cpu_timer = csecond();
+#endif
+	for(int d=0; d < autotune_controller_dgemm->active_unit_num; d++)
+		Global_Buffer_2D[idxize(autotune_controller_dgemm->active_unit_id_list[d])]->allocate(true);
 
-	for(int d=0; d < autotune_controller_dgemm->active_unit_num; d++){
-		s = pthread_join(thread_id[d], &res);
-		if (s != 0) error("PARALiADgemm: pthread_join failed with exit value %d", s);
-		//free(res);      /* Free memory allocated by thread */
+#ifdef TEST
+	cpu_timer = csecond() - cpu_timer;
+	fprintf(stderr, "Memory management: t_mem = %lf ms\n", cpu_timer*1000);
+	cpu_timer = csecond();
+#endif
+
+	CoCoPeLiaInitResources(autotune_controller_dgemm->active_unit_id_list, autotune_controller_dgemm->active_unit_num);
+	//CoCoPeLiaInitWS(autotune_controller_dgemm->active_unit_id_list, autotune_controller_dgemm->active_unit_num);
+
+#ifdef TEST
+	cpu_timer = csecond() - cpu_timer;
+	fprintf(stderr, "Queue/Handle init: t_resource = %lf ms\n", cpu_timer*1000);
+	cpu_timer = csecond();
+	double run_timer = cpu_timer; 
+#endif
+#ifdef SUBKERNELS_FIRE_WHEN_READY
+	
+	pthread_t manager_thread_id;
+	SMD_p manager_data = (SMD_p) malloc(sizeof(struct subkernel_manager_data));
+	manager_data->sk_num = remaining_Subkernels;
+	manager_data->sk_list = (Subkernel**) malloc(remaining_Subkernels*sizeof(Subkernel*));
+	for(int sk_ctr = 0; sk_ctr < manager_data->sk_num; sk_ctr++)
+		manager_data->sk_list[sk_ctr] = Subkernel_list[sk_ctr];
+	s = pthread_create(&manager_thread_id, &attr,
+                                  &subkernel_manager_wrap, (void*) manager_data);
+
+	while (remaining_Subkernels){
+		for(int d_ctr=0; d_ctr < autotune_controller_dgemm->active_unit_num; d_ctr++){
+			//int d = d_ctr*2 % (autotune_controller_dgemm->active_unit_num) + d_ctr*2 / (autotune_controller_dgemm->active_unit_num); 
+			//printf("d_ctr(%d) = d(%d)\n", d_ctr, d); 
+			int d = d_ctr;
+			if (remaining_Subkernels_dev[d]){
+				int dev_id = autotune_controller_dgemm->active_unit_id_list[d];
+				Subkernel * curr = NULL;
+				curr = SubkernelSelect(dev_id, &(Subkernels_list_dev[d][autotune_controller_dgemm->Subkernels_per_unit_num[d]
+					- remaining_Subkernels_dev[d]]), remaining_Subkernels_dev[d]);
+				if (!curr){
+					warning("PARALiADgemm - dev(%d): Got curr = NULL, repeating search\n", dev_id);
+					continue;
+				}
+				remaining_Subkernels_dev[d]--;
+				remaining_Subkernels--;
+				curr->request_data();
+			}
+		}
+	}
+	s = pthread_join(manager_thread_id, &res);
+	if (s != 0) error("PARALiADgemm: manager_thread_id failed with exit value %d", s);
+#else
+	//Subkernel* prev[LOC_NUM] = {NULL};
+	while (remaining_Subkernels){
+		for(int d=0; d < autotune_controller_dgemm->active_unit_num; d++) if (remaining_Subkernels_dev[d]){
+			int dev_id = autotune_controller_dgemm->active_unit_id_list[d];
+			//if(prev[d]) prev[d]->sync_request_data();
+			Subkernel * curr = NULL;
+			curr = SubkernelSelect(dev_id, &(Subkernels_list_dev[d][autotune_controller_dgemm->Subkernels_per_unit_num[d]
+				- remaining_Subkernels_dev[d]]), remaining_Subkernels_dev[d]);
+			if (!curr){
+				warning("PARALiADgemm - dev(%d): Got curr = NULL, repeating search\n", dev_id);
+				continue;
+			}
+			remaining_Subkernels_dev[d]--;
+			remaining_Subkernels--;
+			DgemmPrepareLaunch(curr);
+			curr->request_data();
+			DgemmUpdatePointers(curr);
+			curr->run_operation();
+			//prev[d] = curr; 
+		}
+		//usleep(3000);
 	}
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer;
-	fprintf(stderr, "Fire and gather pthreads for all devices -> t_parallel_fire = %lf ms\n", cpu_timer*1000);
+	fprintf(stderr, "Subkernels launched: t_sk_fire = %lf ms\n", cpu_timer*1000);
+	cpu_timer = csecond();
+#endif
+	C_asset->WBTileMap();
+#ifdef TEST
 	cpu_timer = csecond() - cpu_timer;
+	fprintf(stderr, "Writebacks launched -> t_wb_fire = %lf ms\n", cpu_timer*1000);
+	cpu_timer = csecond();
+#endif
 #endif
 	C_asset->SyncTileMap();
-	int prev_dev = CoCoPeLiaGetDevice();
 
-	for(int i=0; i<LOC_NUM;i++){
-		CoCoPeLiaSelectDevice(deidxize(i));
-		CoCoSyncCheckErr();
-	}
-	CoCoPeLiaSelectDevice(prev_dev);
 #ifdef TEST
-	cpu_timer = csecond() - cpu_timer;
+	cpu_timer = csecond() - run_timer;
 	fprintf(stderr, "Synced result -> t_exec_full = %lf ms\n", cpu_timer*1000);
 	fprintf(stderr, "t_predicted for T=%zu was %.2lf ms : %lf percentile error\n", T, autotune_controller_dgemm->pred_t*1000,
 	(autotune_controller_dgemm->pred_t==0)? 0.0: (autotune_controller_dgemm->pred_t - cpu_timer )/autotune_controller_dgemm->pred_t*100);
@@ -607,7 +566,9 @@ ATC_p PARALiADgemm(char TransA,  char TransB, long int M, long int N, long int K
 #endif
 
 #ifndef BACKEND_RES_REUSE_ENABLE
-	for(int i=0; i<autotune_controller_dgemm->active_unit_num;i++) CoCoPeLiaFreeResources(autotune_controller_dgemm->active_unit_id_list[i]);
+	CoCoPeLiaFreeResources();
+else 
+	CoCoPeLiaCleanResources();
 #endif
 
 #ifdef TEST
@@ -616,8 +577,8 @@ ATC_p PARALiADgemm(char TransA,  char TransB, long int M, long int N, long int K
 	cpu_timer = csecond();
 #endif
 
-	for(int i=0; i<Subkernel_num_dgemm; i++) delete Subkernel_list_dgemm[i];
-	//delete [] Subkernel_list_dgemm;
+	for(int i=0; i<Subkernel_num; i++) delete Subkernel_list[i];
+	//delete [] Subkernel_list;
 
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer;

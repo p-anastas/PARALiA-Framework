@@ -41,27 +41,27 @@ class Subkernel
 		/// Destructors
 		~Subkernel();
 
+		void sync_request_data();
+
 		/// Functions
 		void prepare_launch(short dev_id);
-		void init_events();
 		void request_data();
 		void run_operation();
+		short check_ready(); 
+		void run_ready_operation();
 
 		long double opt_fetch_cost(short dev_id);
 		long double opt_fetch_score(short dev_id);
 };
 
-typedef struct kernel_pthread_wrap{
-	short dev_id;
-	Subkernel** SubkernelListDev;
-	int SubkernelNumDev;
-}* kernel_pthread_wrap_p;
-
 //Subkernel** CoCoAsignTilesToSubkernelsGemm(Decom2D<double>* A_asset, Decom2D<double>* B_asset,
 //Decom2D<double>* C_asset, int T, int* kernelNum);
 
-void 	CoCoPeLiaInitResources(short dev_id);
-void 	CoCoPeLiaFreeResources(short dev_id);
+void CoCoPeLiaInitResources(int* dev_list, int dev_num);
+void CoCoPeLiaInitWS(int* dev_list, int dev_num);
+void CoCoPeLiaFreeResources();
+void CoCoPeLiaCleanResources();
+
 
 int SubkernelPrefetchCheapRONLYTiles(int numTiles, short dev_id, Subkernel** Subkernel_list, long Subkernel_list_len);
 

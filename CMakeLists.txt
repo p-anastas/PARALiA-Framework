@@ -24,8 +24,6 @@ add_definitions(-DBUFFER_REUSE_ENABLE)
 ## Enable lock-free versions of event & Queue management in Universal_helpers
 add_definitions(-DUNIHELPER_LOCKFREE_ENABLE)
 
-## Enable Running multiple backend operations in parallel for each queue
-add_definitions(-DENABLE_PARALLEL_BACKEND)
 ## The maximum allowed parallel backend operations per queue
 add_definitions(-DMAX_BACKEND_L=8)
 
@@ -34,6 +32,18 @@ add_definitions(-DENABLE_SEND_RECV_OVERLAP)
 
 ## Enable using the CPU as an extra device for part of the total workload, if applicable
 add_definitions(-DENABLE_CPU_WORKLOAD)
+
+## Define if Subkernel operations are fired together with data fetches 
+## OR when their data become available
+add_definitions(-DSUBKERNELS_FIRE_WHEN_READY)
+
+## Define which subkernel distribution to use
+#add_definitions(-DDISTRIBUTION="ROUND-ROBIN")
+#add_definitions(-DDISTRIBUTION="SPLIT-NAIVE")
+#add_definitions(-DDISTRIBUTION="SPLIT-CHUNKS-ROBIN")
+#add_definitions(-DDISTRIBUTION="SPLIT-CHUNKS-ROBIN-REVERSE")
+add_definitions(-DDISTRIBUTION="2D-BLOCK-CYCLIC")
+
 
 ## Enable using transfer hops for faster transfers between multiple links
 #add_definitions(-DENABLE_TRANSFER_HOPS)
@@ -85,33 +95,17 @@ add_definitions(-DNORMALIZE_NEAR_SPLIT_LIMIT=0.05)
 ## In case of energy, the maximum allowed percentile energy increase by each new unit.
 add_definitions(-DMINIMUM_UNIT_CONTRIBUTION=0.05)
 
-set(SCHEDULE_TYPE 0) # 0 = static, 1 = runtime selection
-
-if (${SCHEDULE_TYPE} EQUAL 0)
-  ## Define which subkernel distribution to use
-  #add_definitions(-DDISTRIBUTION="ROUND-ROBIN")
-  #add_definitions(-DDISTRIBUTION="SPLIT-NAIVE")
-  #add_definitions(-DDISTRIBUTION="SPLIT-CHUNKS-ROBIN")
-  #add_definitions(-DDISTRIBUTION="SPLIT-CHUNKS-ROBIN-REVERSE")
-  add_definitions(-DDISTRIBUTION="2D-BLOCK-CYCLIC")
-elseif(${SCHEDULE_TYPE} EQUAL 1)
-  add_definitions(-DDISTRIBUTION="ROUND-ROBIN")
-  add_definitions(-DRUNTIME_SCHEDULER_VERSION)
-else()
-endif()
-
 ## Allow fetching from "Recorded" (i.e. transfer scheduled, not complete) blocks locations if closer to the destination unit.
 ## Disabling this flag paired with SERIAL_SUBKERNEL_SELECTION leads to many simultaneous fetches and is not advised due to performance degredation.
 add_definitions(-DALLOW_FETCH_RECORDED)
 
 #Run subkernels in provided order
-add_definitions(-DSERIAL_SUBKERNEL_SELECTION)
+#add_definitions(-DSERIAL_SUBKERNEL_SELECTION)
 
 ## Define subkernel selection heuristic values. 0 = No penalty
-add_definitions(-DMULTIFETCH_PENALTY=3)
-add_definitions(-DEXSTART_PENALTY=1000) # If this is large : Heuristic -> Prefer SKs you have fetched WR tiles for before selecting new
-add_definitions(-DEXSTEAL_PENALTY=100000) # If this is large : Heuristic -> Only 'steal' SKs others hold WR tiles for if you have no other option
-add_definitions(-DFETCH_UNAVAILABLE_PENALTY=0.1)
+## 
+add_definitions(-DSUBKERNEL_SELECT_MAX_RONLY_FETCHED)
+#add_definitions(-DSUBKERNEL_SELECT_MIN_RONLY_ETA)
 
 #Run in testing mode : details about models, decisions and time spend in operations.
 #add_definitions(-DTEST)
