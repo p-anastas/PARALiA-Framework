@@ -24,6 +24,18 @@ add_definitions(-DBUFFER_REUSE_ENABLE)
 ## Enable lock-free versions of event & Queue management in Universal_helpers
 add_definitions(-DUNIHELPER_LOCKFREE_ENABLE)
 
+## Choose the output algorithm for obtaining the actual results of each routine. Options:
+## - ALGO_WR: The output tiles are processed normally. This entails being fetched at the beggining, 
+##            locked while being written on (TODO) and written back after all computations are complete.
+## - ALGO_WR_LAZY: The output tiles are fetched from the source lazily. Computations will use
+##             local buffers. After all computation on each tile is fired, its source values will be
+##             be fetched, reduced locally in the last computation location and written back.
+## - ALGO_WREDUCE: The output tiles are not fetched from the source. Instead, computations will use
+##             local buffers. After they are complete, tiles are reduced to the output (=source) location.
+#add_definitions(-DOUTPUT_ALGO_MODE="ALGO_WR")
+add_definitions(-DOUTPUT_ALGO_MODE="ALGO_WR_LAZY")
+#add_definitions(-DOUTPUT_ALGO_MODE="ALGO_WREDUCE")
+
 ## The maximum allowed parallel backend operations per queue
 add_definitions(-DMAX_BACKEND_L=8)
 

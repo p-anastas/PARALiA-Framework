@@ -17,7 +17,7 @@ class Subkernel
 	private:
 	public:
 		int id, iloc1, iloc2, iloc3;
-		short run_dev_id;
+		short run_dev_id, launched;
 		short *TileDimlist; // TODO: this might be irrelevant in new version
 		short TileNum;
 		DataTile** TileList;

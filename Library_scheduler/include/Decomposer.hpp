@@ -45,7 +45,7 @@ class Decom2D
 	int dtypesize() {
 			if (dtype == DOUBLE) return sizeof(double);
 			else if (dtype == FLOAT) return sizeof(float);
-			else error("dtypesize: Unknown type");}
+			else error("dtypesize: Unknown type"); return 0;}
 	int size() { return dtypesize()*dim1*dim2; }
 	void DrawTileMap();
 
@@ -83,7 +83,7 @@ class Decom1D
 	int dtypesize() {
 			if (dtype == DOUBLE) return sizeof(double);
 			else if (dtype == FLOAT) return sizeof(float);
-			else error("dtypesize: Unknown type");}
+			else error("dtypesize: Unknown type"); return 0;}
 	int size() { return dtypesize()*dim; }
 	void DrawTileMap();
 

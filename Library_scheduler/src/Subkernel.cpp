@@ -22,6 +22,7 @@ inline int get_next_queue_ctr(int dev_id){
 
 Subkernel::Subkernel(short TileNum_in, const char* name){
 	id = Subkernel_ctr;
+	launched = 0; 
 	run_dev_id = -42;
 	op_name = name;
 	Subkernel_ctr++;
@@ -53,7 +54,7 @@ void Subkernel::prepare_launch(short dev_id){
 #endif
 	for (int j = 0; j < TileNum; j++){
 		DataTile_p tmp = TileList[j];
-		if(tmp->WRP == WR) {
+		if(tmp->WRP == WR || tmp->WRP == W_REDUCE || tmp->WRP == WR_LAZY) {
 			// Put this here to avoid block being replaced by jx < j assign schedule out
 			if (tmp->StoreBlock[idxize(dev_id)] &&
 				tmp->StoreBlock[idxize(dev_id)]->State != INVALID) tmp->StoreBlock[idxize(dev_id)]->add_writer();
@@ -92,29 +93,29 @@ void Subkernel::request_data(){
 			tmp->StoreBlock[run_dev_id_idx]->State == INVALID) {
 			if(tmp->StoreBlock[run_dev_id_idx] != NULL) tmp->StoreBlock[run_dev_id_idx]->Owner_p = NULL;
 			state new_block_state;
-			if(tmp->WRP == WR) new_block_state = EXCLUSIVE;
+			if(WR == tmp->WRP || W_REDUCE == tmp->WRP || WR_LAZY == tmp->WRP) new_block_state = EXCLUSIVE;
 			else if(tmp->WRP == RONLY) new_block_state = SHARABLE;
 			else error("Subkernel::request_data: Not implemented for WRP of tile %d = %s\n", j, tmp->get_WRP_string());
 			tmp->StoreBlock[run_dev_id_idx] = Global_Buffer_2D[run_dev_id_idx]->assign_Cblock(new_block_state,false);
 			tmp->StoreBlock[run_dev_id_idx]->set_owner((void**)&tmp->StoreBlock[run_dev_id_idx],false);
-			if(tmp->WRP == WR){ 
-				int WB_loc_idx = idxize(tmp->get_initial_location()); 
-				tmp->StoreBlock[run_dev_id_idx]->init_writeback_info(tmp->StoreBlock[WB_loc_idx],
-				&(tmp->W_master), tmp->dim1, tmp->dim2, tmp->get_chunk_size(run_dev_id_idx), tmp->get_chunk_size(WB_loc_idx),
-				tmp->get_dtype_size(), recv_queues[WB_loc_idx][run_dev_id_idx], false);
-			}
-			else if(tmp->WRP == WREDUCE) error("Writeback not implemented for WREDUCE yet\n");
-			if (tmp->WRP == WR || tmp->WRP == RONLY) tmp->fetch(run_dev_id);
+			//if(tmp->WRP == WR){ 
+			//	int WB_loc_idx = idxize(tmp->get_initial_location()); 
+			//	tmp->StoreBlock[run_dev_id_idx]->init_writeback_info(tmp->StoreBlock[WB_loc_idx],
+			//	&(tmp->W_master), tmp->dim1, tmp->dim2, tmp->get_chunk_size(run_dev_id_idx), tmp->get_chunk_size(WB_loc_idx),
+			//	tmp->get_dtype_size(), recv_queues[WB_loc_idx][run_dev_id_idx], false);
+			//}
+			if (tmp->WRP == WR || tmp->WRP == RONLY) 
+				tmp->fetch(tmp->StoreBlock[idxize(run_dev_id)], run_dev_id);
 		}
-		else if(tmp->StoreBlock[run_dev_id_idx]->State == NATIVE && // TODO: I have no idea what this does and why it exists anymore. Maybe its useless?
-			tmp->WRP == WR && tmp->W_master!= run_dev_id){
-				if(tmp->WRP == WR) tmp->StoreBlock[run_dev_id_idx]->add_reader();
-				if (tmp->WRP == WR || tmp->WRP == RONLY) tmp->fetch(run_dev_id);
-		}
+		//else if(tmp->StoreBlock[run_dev_id_idx]->State == NATIVE && // TODO: I have no idea what this does and why it exists anymore. Maybe its useless?
+		//	tmp->WRP == WR && tmp->W_master!= run_dev_id){
+		//		if(tmp->WRP == WR) tmp->StoreBlock[run_dev_id_idx]->add_reader();
+		//		if (tmp->WRP == WR || tmp->WRP == RONLY) tmp->fetch(run_dev_id);
+		//}
 		else{
 			if (tmp->WRP == RONLY) tmp->StoreBlock[run_dev_id_idx]->add_reader();
-			else if (tmp->WRP == WR) tmp->StoreBlock[run_dev_id_idx]->add_writer();
-
+			else if(tmp->WRP == WR || tmp->WRP == W_REDUCE || tmp->WRP == WR_LAZY)
+				tmp->StoreBlock[run_dev_id_idx]->add_writer();
 		}
 	}
 #ifndef ASYNC_ENABLE
@@ -132,7 +133,7 @@ void Subkernel::run_operation()
 	CQueue_p assigned_exec_queue = NULL;
 	for (int j = 0; j < TileNum; j++){ // Method only works for max 1 W(rite) Tile.
 		DataTile_p tmp = TileList[j];
-		if(tmp->WRP == WR){
+		if(tmp->WRP == WR || tmp->WRP == W_REDUCE || tmp->WRP == WR_LAZY){
 			if(tmp->W_master_backend_ctr == -42)
 				tmp->W_master_backend_ctr = get_next_queue_ctr(run_dev_id);
 			assigned_exec_queue = exec_queue[run_dev_id_idx][tmp->W_master_backend_ctr];
@@ -157,9 +158,9 @@ void Subkernel::run_operation()
 		wrap_oper = (CBlock_wrap_p) malloc (sizeof(struct CBlock_wrap));
 		wrap_oper->CBlock = tmp->StoreBlock[run_dev_id_idx];
 		wrap_oper->lockfree = false;
-		if(tmp->WRP == WR){
+		if(tmp->WRP == WR || tmp->WRP == W_REDUCE || tmp->WRP == WR_LAZY){
 			tmp->W_pending--;
-			if(!tmp->W_pending) tmp->W_complete->record_to_queue(assigned_exec_queue);
+			if(!tmp->W_pending)tmp->operations_complete(assigned_exec_queue);
 		}
 		else if(tmp->WRP == RONLY) assigned_exec_queue->add_host_func((void*)&CBlock_RR_wrap, (void*) wrap_oper);
 
@@ -190,7 +191,7 @@ void Subkernel::run_ready_operation(){
 	CQueue_p assigned_exec_queue = NULL;
 	for (int j = 0; j < TileNum; j++){ // Method only works for max 1 W(rite) Tile.
 		DataTile_p tmp = TileList[j];
-		if(tmp->WRP == WR){
+		if(tmp->WRP == WR || tmp->WRP == W_REDUCE || tmp->WRP == WR_LAZY){
 			if(tmp->W_master_backend_ctr == -42)
 				tmp->W_master_backend_ctr = get_next_queue_ctr(run_dev_id);
 			assigned_exec_queue = exec_queue[run_dev_id_idx][tmp->W_master_backend_ctr];
@@ -205,12 +206,9 @@ void Subkernel::run_ready_operation(){
 		wrap_oper = (CBlock_wrap_p) malloc (sizeof(struct CBlock_wrap));
 		wrap_oper->CBlock = tmp->StoreBlock[run_dev_id_idx];
 		wrap_oper->lockfree = false;
-		if(tmp->WRP == WR){
+		if(tmp->WRP == WR || tmp->WRP == W_REDUCE || tmp->WRP == WR_LAZY){
 			tmp->W_pending--;
-			if(!tmp->W_pending){
-				tmp->W_complete->record_to_queue(assigned_exec_queue);
-				tmp->writeback();
-			}
+			if(!tmp->W_pending)tmp->operations_complete(assigned_exec_queue);
 		}
 		else if(tmp->WRP == RONLY) assigned_exec_queue->add_host_func((void*)&CBlock_RR_wrap, (void*) wrap_oper);
 
@@ -346,10 +344,12 @@ void CoCoPeLiaCleanResources(){
 	for(short dev_id_idx = 0 ; dev_id_idx < LOC_NUM; dev_id_idx++){
 		for(short dev_id_idy = 0 ; dev_id_idy < LOC_NUM; dev_id_idy++)
 		if(dev_id_idx!=dev_id_idy){
-				recv_queues[dev_id_idx][dev_id_idy]->WT_set(0);
-				wb_queues[dev_id_idx][dev_id_idy]->WT_set(0);
+				if(recv_queues[dev_id_idx][dev_id_idy]) recv_queues[dev_id_idx][dev_id_idy]->WT_set(0);
+				if(wb_queues[dev_id_idx][dev_id_idy]) wb_queues[dev_id_idx][dev_id_idy]->WT_set(0);
 		}
-		for (int i = 0; i < MAX_BACKEND_L; i++) exec_queue[dev_id_idx][i]->WT_set(0);
+		for (int i = 0; i < MAX_BACKEND_L; i++)
+			if(exec_queue[dev_id_idx][i])
+				exec_queue[dev_id_idx][i]->WT_set(0);
 	}
 }
 
@@ -368,26 +368,24 @@ Subkernel* SubkernelSelect(short dev_id, Subkernel** Subkernel_list, long Subker
 	Subkernel* curr_sk = NULL;
 	int sk_idx;
 	int potential_sks[Subkernel_list_len], tie_list_num = 0; 
-	int max_fetches = 1;
+	int max_fetches = 1, min_W_pending = 1e9;
 	if(!Subkernel_list_len) error("SubkernelSelect: Gave 0 subkernel len with list = %p\n", Subkernel_list);
 	for (sk_idx = 0; sk_idx < Subkernel_list_len; sk_idx++){
 		curr_sk = Subkernel_list[sk_idx];
-		int tmp_fetches = 0; 
+		int tmp_fetches = 0, tmp_W_pending = 0; 
 		for (int j = 0; j < curr_sk->TileNum; j++){
 			if(RONLY == curr_sk->TileList[j]->WRP)
 				if(curr_sk->TileList[j]->loc_map[idxize(dev_id)] == 0 || 
 					curr_sk->TileList[j]->loc_map[idxize(dev_id)] == 42) tmp_fetches++;
-			if(WR == curr_sk->TileList[j]->WRP)
-			if(curr_sk->TileList[j]->loc_map[idxize(dev_id)] == 0 || 
-				curr_sk->TileList[j]->loc_map[idxize(dev_id)] == 42 ||
-				curr_sk->TileList[j]->loc_map[idxize(dev_id)] == 2 ) tmp_fetches++;
+			else tmp_W_pending = curr_sk->TileList[j]->W_pending; 
 		}
-		if(tmp_fetches > max_fetches){
+		if((tmp_fetches > max_fetches) || ((tmp_fetches == max_fetches && tmp_W_pending < min_W_pending))){
 			max_fetches = tmp_fetches;
+			min_W_pending = tmp_W_pending; 
 			potential_sks[0] = sk_idx;
 			tie_list_num = 1; 
 		}
-		else if(tmp_fetches == max_fetches){
+		else if(tmp_fetches == max_fetches && tmp_W_pending == min_W_pending){
 			potential_sks[tie_list_num++] = sk_idx;
 		}
 	}

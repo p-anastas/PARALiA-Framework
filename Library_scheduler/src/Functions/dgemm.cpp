@@ -76,14 +76,15 @@ int current_ctr = 0;
 				kernels[current_ctr]->TileList[2] = C_asset->getTile(mi,ni);
 				kernels[current_ctr]->TileList[0]->set_WRP(RONLY);
 				kernels[current_ctr]->TileList[1]->set_WRP(RONLY);
-#ifdef REDUCE_OUT
-				kernels[current_ctr]->TileList[2]->set_WRP(WREDUCE);
-				error("Non implemented\n");
-#else
-				kernels[current_ctr]->TileList[2]->set_WRP(WR);
+				if (!strcmp(OUTPUT_ALGO_MODE, "ALGO_WR"))
+					kernels[current_ctr]->TileList[2]->set_WRP(WR);
+				else if (!strcmp(OUTPUT_ALGO_MODE, "ALGO_WR_LAZY"))
+					kernels[current_ctr]->TileList[2]->set_WRP(WR_LAZY);
+				else if (!strcmp(OUTPUT_ALGO_MODE, "ALGO_WREDUCE"))
+					kernels[current_ctr]->TileList[2]->set_WRP(W_REDUCE);
+				else error("CoCoAsignTilesToSubkernelsDgemm: Unknown OUTPUT_ALGO_MODE =  %s\n", OUTPUT_ALGO_MODE);
 				kernels[current_ctr]->TileList[2]->W_pending = KGridSz_dgemm;
-
-#endif
+				kernels[current_ctr]->TileList[2]->reduce_mult = initial_dgemm->beta; 
 				kernels[current_ctr]->operation_params = (void*) malloc(sizeof( gemm_backend_in<double>));
 				gemm_backend_in<double>*  ptr_ker_translate = (gemm_backend_in<double>*) kernels[current_ctr]->operation_params;
 				ptr_ker_translate->TransA = initial_dgemm->TransA;
@@ -131,9 +132,10 @@ void DgemmUpdateDevice(Subkernel* ker, short dev_id){
 
 void DgemmPrepareLaunch(Subkernel* ker){
 	gemm_backend_in<double>*  ptr_ker_translate = (gemm_backend_in<double>* ) ker->operation_params;
-	if(!(ker->TileList[2]->W_master_backend_ctr == -42)) // Means its not the first subkernel using the WR tile
+	if(!(ker->TileList[2]->W_master_backend_ctr == -42)) 
+	// Means its not the first subkernel using the WR tile
 		ptr_ker_translate->beta = 1.0;
-
+	else if(WR_LAZY == ker->TileList[2]->WRP) ptr_ker_translate->beta = 0;
 }
 
 void DgemmUpdatePointers(Subkernel* ker){
@@ -157,7 +159,7 @@ void* subkernel_manager_wrap(void* sk_wrap){
 	while (remaining_sk){
 		if(!sk_fired[sk_ctr]){
 			Subkernel * curr = manager_info->sk_list[sk_ctr];
-			sk_fired[sk_ctr] = curr->check_ready();
+			if(curr->launched) sk_fired[sk_ctr] = curr->check_ready();
 			if(sk_fired[sk_ctr]){
 				DgemmUpdatePointers(curr);
 				DgemmPrepareLaunch(curr);
@@ -169,7 +171,7 @@ void* subkernel_manager_wrap(void* sk_wrap){
 		if (sk_ctr < manager_info->sk_num - 1) sk_ctr++;
 		else{
 			sk_ctr = 0; 
-			usleep(1000); // TODO: This exists solely for nsight profiling reasons
+			usleep(100); // TODO: This exists solely for nsight profiling reasons
 			//fprintf(stderr, "sk_fired = %s, remaining_sk = %d\n",printlist(sk_fired, manager_info->sk_num), remaining_sk);
 		}
 		//fprintf(stderr, "loop %d ",sk_ctr);
@@ -330,6 +332,7 @@ ATC_p PARALiADgemm(char TransA,  char TransB, long int M, long int N, long int K
 			max_cache_sz = free_dev_mem - ((long long) max_dev_mem*(1-PROBLEM_GPU_PERCENTAGE/100.0)) + prev_DevCache_sz;
 		}
 		Block_num = 1 + Block_num_A + Block_num_B + Block_num_C;
+		if (WR_LAZY) Block_num+= Block_num_C; 
 		int max_block_num = max_cache_sz/Block_sz;
 		if(max_block_num < Block_num){
 			//#ifdef DEBUG
@@ -460,7 +463,6 @@ ATC_p PARALiADgemm(char TransA,  char TransB, long int M, long int N, long int K
 	double run_timer = cpu_timer; 
 #endif
 #ifdef SUBKERNELS_FIRE_WHEN_READY
-	
 	pthread_t manager_thread_id;
 	SMD_p manager_data = (SMD_p) malloc(sizeof(struct subkernel_manager_data));
 	manager_data->sk_num = remaining_Subkernels;
@@ -487,6 +489,7 @@ ATC_p PARALiADgemm(char TransA,  char TransB, long int M, long int N, long int K
 				remaining_Subkernels_dev[d]--;
 				remaining_Subkernels--;
 				curr->request_data();
+				curr->launched = 1; 
 			}
 		}
 	}
@@ -511,6 +514,7 @@ ATC_p PARALiADgemm(char TransA,  char TransB, long int M, long int N, long int K
 			curr->request_data();
 			DgemmUpdatePointers(curr);
 			curr->run_operation();
+			curr->launched = 1; 
 			//prev[d] = curr; 
 		}
 		//usleep(3000);
@@ -529,6 +533,7 @@ ATC_p PARALiADgemm(char TransA,  char TransB, long int M, long int N, long int K
 #endif
 	C_asset->SyncTileMap();
 
+	CoCoSyncCheckErr();
 #ifdef TEST
 	cpu_timer = csecond() - run_timer;
 	fprintf(stderr, "Synced result -> t_exec_full = %lf ms\n", cpu_timer*1000);
@@ -565,10 +570,10 @@ ATC_p PARALiADgemm(char TransA,  char TransB, long int M, long int N, long int K
 	for(int i=0; i<LOC_NUM;i++) Global_Buffer_2D[i]->reset(false,true);
 #endif
 
-#ifndef BACKEND_RES_REUSE_ENABLE
-	CoCoPeLiaFreeResources();
-else 
+#ifdef BACKEND_RES_REUSE_ENABLE
 	CoCoPeLiaCleanResources();
+#else 
+	CoCoPeLiaFreeResources();
 #endif
 
 #ifdef TEST
