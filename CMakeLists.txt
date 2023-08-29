@@ -117,11 +117,11 @@ add_definitions(-DMINIMUM_UNIT_CONTRIBUTION=0.05)
 add_definitions(-DALLOW_FETCH_RECORDED)
 
 #Run subkernels in provided order
-add_definitions(-DSERIAL_SUBKERNEL_SELECTION)
+#add_definitions(-DSERIAL_SUBKERNEL_SELECTION)
 
 ## Define subkernel selection heuristic values. 0 = No penalty
 ## 
-add_definitions(-DSUBKERNEL_SELECT_MAX_FETCHED)
+add_definitions(-DSUBKERNEL_SELECT_FETCH_ETA_PLUS_MIN_PENDING)
 #add_definitions(-DSUBKERNEL_SELECT_MIN_RONLY_ETA)
 
 #Run in testing mode : details about models, decisions and time spend in operations.

@@ -156,7 +156,9 @@ void LinkMap::update_link_shared_weights(MD_p* unit_modeler_list,
         for (int k = 0; k < LOC_NUM; k++){
           for(int l = 0; l < LOC_NUM; l++){
             if ((k == l) || (i == k && j == l)) continue;
-            if(!link_hop_num[k][l] && (is_in_list(deidxize(l),datalocs, dataloc_num) && is_in_list(deidxize(k),active_unit_id_list, active_unit_num))){
+            if(!link_hop_num[k][l] && (is_in_list(deidxize(l),datalocs, dataloc_num) 
+              && is_in_list(deidxize(k),active_unit_id_list, active_unit_num)) &&
+              !(links_share_bandwidth[i][j][0] == k && links_share_bandwidth[i][j][1] == l)){
              link_slowdown_multiplier = fmax(link_slowdown_multiplier, unit_modeler_list[i]->link[j]->sl[k][l]);
 #ifdef DPDEBUG
               if (unit_modeler_list[i]->link[j]->sl[k][l] != 1.0) lprintf(lvl, "ATC::update_link_map_shared():\

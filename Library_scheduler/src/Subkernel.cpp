@@ -22,6 +22,7 @@ inline int get_next_queue_ctr(int dev_id){
 
 Subkernel::Subkernel(short TileNum_in, const char* name){
 	id = Subkernel_ctr;
+	fetch_ETA = run_op_est_t = 0;
 	launched = 0; 
 	run_dev_id = -42;
 	op_name = name;
@@ -129,6 +130,7 @@ void Subkernel::request_data(){
 void Subkernel::run_operation()
 {
 	short run_dev_id_idx = idxize(run_dev_id);
+	long double fire_t = csecond();
 	CoCoPeLiaSelectDevice(run_dev_id);
 	CQueue_p assigned_exec_queue = NULL;
 	for (int j = 0; j < TileNum; j++){ // Method only works for max 1 W(rite) Tile.
@@ -141,15 +143,18 @@ void Subkernel::run_operation()
 			//	run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2, j, RW_parallel_backend_ctr);
 		}
 	}
-
 	for (int j = 0; j < TileNum; j++){
 		DataTile_p tmp = TileList[j];
 		if (tmp->StoreBlock[run_dev_id_idx] == NULL || tmp->StoreBlock[run_dev_id_idx]->State == INVALID)
 			error("Subkernel(dev=%d,id=%d)-Tile(%d.[%d,%d])::run_operation: Tile(j=%d) Storeblock is NULL\n",
 				run_dev_id, id, tmp->id, tmp->GridId1, tmp->GridId2, j);
-		if (tmp->WRP == WR || tmp->WRP == RONLY) assigned_exec_queue->wait_for_event(tmp->StoreBlock[run_dev_id_idx]->Available);
+		if (tmp->WRP == WR || tmp->WRP == RONLY){
+			assigned_exec_queue->wait_for_event(tmp->StoreBlock[run_dev_id_idx]->Available);
+			fetch_ETA = fmax(fetch_ETA, tmp->ETA_get(run_dev_id));
+		}
 	}
-
+	long double start_op_ETA = fmax(fire_t, fetch_ETA);
+	assigned_exec_queue->ETA_add_task(start_op_ETA, run_op_est_t); 
 	backend_run_operation(operation_params, op_name,assigned_exec_queue);
 
 	for (int j = 0; j < TileNum; j++){
@@ -160,6 +165,7 @@ void Subkernel::run_operation()
 		wrap_oper->lockfree = false;
 		if(tmp->WRP == WR || tmp->WRP == W_REDUCE || tmp->WRP == WR_LAZY){
 			tmp->W_pending--;
+			tmp->ETA_set(assigned_exec_queue->ETA_get(), run_dev_id);
 			if(!tmp->W_pending)tmp->operations_complete(assigned_exec_queue);
 		}
 		else if(tmp->WRP == RONLY) assigned_exec_queue->add_host_func((void*)&CBlock_RR_wrap, (void*) wrap_oper);
@@ -173,8 +179,10 @@ void Subkernel::run_operation()
 
 short Subkernel::check_ready(){
 	short run_dev_id_idx = idxize(run_dev_id);
+	int update_ETA_flag = fetch_ETA; // Only update ETA the first time the check runs for each sk. 
 	for (int j = 0; j < TileNum; j++){
 		DataTile_p tmp = TileList[j];
+		if(update_ETA_flag) fetch_ETA = fmax(fetch_ETA, tmp->ETA_get(run_dev_id));
 		if (tmp->StoreBlock[run_dev_id_idx] == NULL || tmp->StoreBlock[run_dev_id_idx]->State == INVALID) return 0; 
 		else if (tmp->WRP == WR || tmp->WRP == RONLY){
 			event_status what = tmp->StoreBlock[run_dev_id_idx]->Available->query_status();
@@ -187,7 +195,7 @@ short Subkernel::check_ready(){
 void Subkernel::run_ready_operation(){
 	CoCoPeLiaSelectDevice(run_dev_id);
 	short run_dev_id_idx = idxize(run_dev_id);
-
+	long double fire_t = csecond();
 	CQueue_p assigned_exec_queue = NULL;
 	for (int j = 0; j < TileNum; j++){ // Method only works for max 1 W(rite) Tile.
 		DataTile_p tmp = TileList[j];
@@ -197,7 +205,8 @@ void Subkernel::run_ready_operation(){
 			assigned_exec_queue = exec_queue[run_dev_id_idx][tmp->W_master_backend_ctr];
 		}	
 	}
-
+	long double start_op_ETA = fmax(fire_t, fetch_ETA);
+	assigned_exec_queue->ETA_add_task(start_op_ETA, run_op_est_t); 
 	backend_run_operation(operation_params, op_name, assigned_exec_queue);
 
 	for (int j = 0; j < TileNum; j++){
@@ -208,6 +217,7 @@ void Subkernel::run_ready_operation(){
 		wrap_oper->lockfree = false;
 		if(tmp->WRP == WR || tmp->WRP == W_REDUCE || tmp->WRP == WR_LAZY){
 			tmp->W_pending--;
+			tmp->ETA_set(assigned_exec_queue->ETA_get(), run_dev_id);
 			if(!tmp->W_pending)tmp->operations_complete(assigned_exec_queue);
 		}
 		else if(tmp->WRP == RONLY) assigned_exec_queue->add_host_func((void*)&CBlock_RR_wrap, (void*) wrap_oper);
@@ -219,51 +229,51 @@ void CoCoPeLiaInitResources(int* dev_list, int dev_num){
 
 	for(int i = 0; i < LOC_NUM; i++)
 	for(int j = 0; j < LOC_NUM; j++)
-	for(int k = 0; k < 2; k++) transfer_link_sharing[i][j][k] = -42;
+	for(int k = 0; k < 2; k++) links_share_bandwidth[i][j][k] = -42;
 
 #ifndef ENABLE_LINK_BW_SHARING
 	///TODO: ENABLE_LINK_BW_SHARING flag is disabled, but sharing-disabler mechanism is handmade
 
 	// FIXME: Handmade distribution, for testing purposes
-	transfer_link_sharing[0][LOC_NUM - 1][0] = 1;
-	transfer_link_sharing[0][LOC_NUM - 1][1] = LOC_NUM - 1;
-	transfer_link_sharing[1][LOC_NUM - 1][0] = 0;
-	transfer_link_sharing[1][LOC_NUM - 1][1] = LOC_NUM - 1;
+	links_share_bandwidth[0][LOC_NUM - 1][0] = 1;
+	links_share_bandwidth[0][LOC_NUM - 1][1] = LOC_NUM - 1;
+	links_share_bandwidth[1][LOC_NUM - 1][0] = 0;
+	links_share_bandwidth[1][LOC_NUM - 1][1] = LOC_NUM - 1;
 
-	transfer_link_sharing[2][LOC_NUM - 1][0] = 3;
-	transfer_link_sharing[2][LOC_NUM - 1][1] = LOC_NUM - 1;
-	transfer_link_sharing[3][LOC_NUM - 1][0] = 2;
-	transfer_link_sharing[3][LOC_NUM - 1][1] = LOC_NUM - 1;
+	links_share_bandwidth[2][LOC_NUM - 1][0] = 3;
+	links_share_bandwidth[2][LOC_NUM - 1][1] = LOC_NUM - 1;
+	links_share_bandwidth[3][LOC_NUM - 1][0] = 2;
+	links_share_bandwidth[3][LOC_NUM - 1][1] = LOC_NUM - 1;
 
-	transfer_link_sharing[4][LOC_NUM - 1][0] = 5;
-	transfer_link_sharing[4][LOC_NUM - 1][1] = LOC_NUM - 1;
-	transfer_link_sharing[5][LOC_NUM - 1][0] = 4;
-	transfer_link_sharing[5][LOC_NUM - 1][1] = LOC_NUM - 1;
+	links_share_bandwidth[4][LOC_NUM - 1][0] = 5;
+	links_share_bandwidth[4][LOC_NUM - 1][1] = LOC_NUM - 1;
+	links_share_bandwidth[5][LOC_NUM - 1][0] = 4;
+	links_share_bandwidth[5][LOC_NUM - 1][1] = LOC_NUM - 1;
 
-	transfer_link_sharing[6][LOC_NUM - 1][0] = 7;
-	transfer_link_sharing[6][LOC_NUM - 1][1] = LOC_NUM - 1;
-	transfer_link_sharing[7][LOC_NUM - 1][0] = 6;
-	transfer_link_sharing[7][LOC_NUM - 1][1] = LOC_NUM - 1;
+	links_share_bandwidth[6][LOC_NUM - 1][0] = 7;
+	links_share_bandwidth[6][LOC_NUM - 1][1] = LOC_NUM - 1;
+	links_share_bandwidth[7][LOC_NUM - 1][0] = 6;
+	links_share_bandwidth[7][LOC_NUM - 1][1] = LOC_NUM - 1;
 /*
-	transfer_link_sharing[LOC_NUM - 1][0][0] = LOC_NUM - 1;
-	transfer_link_sharing[LOC_NUM - 1][0][1] = 1;
-	transfer_link_sharing[LOC_NUM - 1][1][0] = LOC_NUM - 1;
-	transfer_link_sharing[LOC_NUM - 1][1][1] = 0;
+	links_share_bandwidth[LOC_NUM - 1][0][0] = LOC_NUM - 1;
+	links_share_bandwidth[LOC_NUM - 1][0][1] = 1;
+	links_share_bandwidth[LOC_NUM - 1][1][0] = LOC_NUM - 1;
+	links_share_bandwidth[LOC_NUM - 1][1][1] = 0;
 
-	transfer_link_sharing[LOC_NUM - 1][2][0] = LOC_NUM - 1;
-	transfer_link_sharing[LOC_NUM - 1][2][1] = 3;
-	transfer_link_sharing[LOC_NUM - 1][3][0] = LOC_NUM - 1;
-	transfer_link_sharing[LOC_NUM - 1][3][1] = 2;
+	links_share_bandwidth[LOC_NUM - 1][2][0] = LOC_NUM - 1;
+	links_share_bandwidth[LOC_NUM - 1][2][1] = 3;
+	links_share_bandwidth[LOC_NUM - 1][3][0] = LOC_NUM - 1;
+	links_share_bandwidth[LOC_NUM - 1][3][1] = 2;
 
-	transfer_link_sharing[LOC_NUM - 1][4][0] = LOC_NUM - 1;
-	transfer_link_sharing[LOC_NUM - 1][4][1] = 5;
-	transfer_link_sharing[LOC_NUM - 1][5][0] = LOC_NUM - 1;
-	transfer_link_sharing[LOC_NUM - 1][5][1] = 4;
+	links_share_bandwidth[LOC_NUM - 1][4][0] = LOC_NUM - 1;
+	links_share_bandwidth[LOC_NUM - 1][4][1] = 5;
+	links_share_bandwidth[LOC_NUM - 1][5][0] = LOC_NUM - 1;
+	links_share_bandwidth[LOC_NUM - 1][5][1] = 4;
 
-	transfer_link_sharing[LOC_NUM - 1][6][0] = LOC_NUM - 1;
-	transfer_link_sharing[LOC_NUM - 1][6][1] = 7;
-	transfer_link_sharing[LOC_NUM - 1][7][0] = LOC_NUM - 1;
-	transfer_link_sharing[LOC_NUM - 1][7][1] = 6;
+	links_share_bandwidth[LOC_NUM - 1][6][0] = LOC_NUM - 1;
+	links_share_bandwidth[LOC_NUM - 1][6][1] = 7;
+	links_share_bandwidth[LOC_NUM - 1][7][0] = LOC_NUM - 1;
+	links_share_bandwidth[LOC_NUM - 1][7][1] = 6;
 */
 #endif
 
@@ -272,8 +282,8 @@ void CoCoPeLiaInitResources(int* dev_list, int dev_num){
 		if(dev_id_idy!=dev_id_idx){
 			if (!recv_queues[dev_id_idx][dev_id_idy]){
 				//printf("dev_id = %d, dev_id_idx = %d, dev_id_idy = %d, LOC_NUM = %d\n", dev_id, dev_id_idx, dev_id_idy, LOC_NUM);
-				short shared_iloc0 = transfer_link_sharing[dev_id_idx][dev_id_idy][0],
-					shared_iloc1 = transfer_link_sharing[dev_id_idx][dev_id_idy][1];
+				short shared_iloc0 = links_share_bandwidth[dev_id_idx][dev_id_idy][0],
+					shared_iloc1 = links_share_bandwidth[dev_id_idx][dev_id_idy][1];
 				short queue_id = (dev_id_idy == LOC_NUM - 1)? deidxize(dev_id_idx) : deidxize(dev_id_idy);
 				recv_queues[dev_id_idx][dev_id_idy] = new CommandQueue(queue_id, 0);
 				wb_queues[dev_id_idx][dev_id_idy] = new CommandQueue(queue_id, 0);
@@ -344,12 +354,12 @@ void CoCoPeLiaCleanResources(){
 	for(short dev_id_idx = 0 ; dev_id_idx < LOC_NUM; dev_id_idx++){
 		for(short dev_id_idy = 0 ; dev_id_idy < LOC_NUM; dev_id_idy++)
 		if(dev_id_idx!=dev_id_idy){
-				if(recv_queues[dev_id_idx][dev_id_idy]) recv_queues[dev_id_idx][dev_id_idy]->WT_set(0);
-				if(wb_queues[dev_id_idx][dev_id_idy]) wb_queues[dev_id_idx][dev_id_idy]->WT_set(0);
+				if(recv_queues[dev_id_idx][dev_id_idy]) recv_queues[dev_id_idx][dev_id_idy]->ETA_set(0);
+				if(wb_queues[dev_id_idx][dev_id_idy]) wb_queues[dev_id_idx][dev_id_idy]->ETA_set(0);
 		}
 		for (int i = 0; i < MAX_BACKEND_L; i++)
 			if(exec_queue[dev_id_idx][i])
-				exec_queue[dev_id_idx][i]->WT_set(0);
+				exec_queue[dev_id_idx][i]->ETA_set(0);
 	}
 }
 
@@ -358,38 +368,75 @@ void swap_sk(Subkernel** sk1, Subkernel** sk2){
 	*sk1 = *sk2;
     *sk2 = sk_tmp; 
 }
+/*****************************************************/
+/// PARALia 2.0 - timed queues and blocks
+long double Subkernel::run_op_estimate(MD_p modeler){
+	run_op_est_t = modeler->getGPUexecFull(); 
+#ifdef PDEBUG
+	fprintf(stderr, "|-----> Subkernel(dev=%d,id=%d):run_op_estimate() -> run_op_est_t = %lf\n", 
+		run_dev_id, id, run_op_est_t);
+#endif
+	return run_op_est_t; 
+}
 
-#ifdef SUBKERNEL_SELECT_MAX_FETCHED
+#ifdef SUBKERNEL_SELECT_FETCH_ETA_PLUS_MIN_PENDING
 Subkernel* SubkernelSelect(short dev_id, Subkernel** Subkernel_list, long Subkernel_list_len){
 #ifdef SERIAL_SUBKERNEL_SELECTION
 	Subkernel_list[0]->prepare_launch(dev_id);
 	return Subkernel_list[0];
 #endif
 	Subkernel* curr_sk = NULL;
-	int sk_idx;
-	int potential_sks[Subkernel_list_len], tie_list_num = 0; 
-	int max_fetches = 1, min_W_pending = 1e9;
+	int sk_idx, potential_sks[Subkernel_list_len], tie_list_num = 0, doubletie_list_num = 0; 
+	long double min_ETA = DBL_MAX;
 	if(!Subkernel_list_len) error("SubkernelSelect: Gave 0 subkernel len with list = %p\n", Subkernel_list);
 	for (sk_idx = 0; sk_idx < Subkernel_list_len; sk_idx++){
 		curr_sk = Subkernel_list[sk_idx];
-		int tmp_fetches = 0, tmp_W_pending = 0; 
+		long double tmp_ETA = 0; 
 		for (int j = 0; j < curr_sk->TileNum; j++){
-			if(RONLY == curr_sk->TileList[j]->WRP)
-				if(curr_sk->TileList[j]->loc_map[idxize(dev_id)] == 0 || 
-					curr_sk->TileList[j]->loc_map[idxize(dev_id)] == 42) tmp_fetches++;
-			else tmp_W_pending = curr_sk->TileList[j]->W_pending; 
+			long double block_ETA = 0; 
+			if ( RONLY == curr_sk->TileList[j]->WRP || WR == curr_sk->TileList[j]->WRP){
+				block_ETA = curr_sk->TileList[j]->ETA_get(dev_id);
+				if(-42 == block_ETA) block_ETA = curr_sk->TileList[j]->ETA_fetch_estimate(dev_id);
+			}
+			tmp_ETA = fmax(block_ETA, tmp_ETA);
 		}
-		if((tmp_fetches > max_fetches) || ((tmp_fetches == max_fetches && tmp_W_pending < min_W_pending))){
-			max_fetches = tmp_fetches;
-			min_W_pending = tmp_W_pending; 
+		if(tmp_ETA < min_ETA){
+		//if(abs(tmp_ETA - min_ETA)/abs(tmp_ETA-csecond()) > NORMALIZE_NEAR_SPLIT_LIMIT && tmp_ETA < min_ETA){
+			min_ETA = tmp_ETA;
 			potential_sks[0] = sk_idx;
 			tie_list_num = 1; 
 		}
-		else if(tmp_fetches == max_fetches && tmp_W_pending == min_W_pending){
+		else if(tmp_ETA == min_ETA){
+		//else if(abs(tmp_ETA - min_ETA)/abs(tmp_ETA-csecond()) <= NORMALIZE_NEAR_SPLIT_LIMIT){
 			potential_sks[tie_list_num++] = sk_idx;
 		}
 	}
-	int selected_sk_idx = (tie_list_num)? potential_sks[int(rand() % tie_list_num)] : tie_list_num; 
+	int least_pending_sks = 0, potential_tied_sks[tie_list_num];
+	if (tie_list_num){
+		potential_tied_sks[0] = potential_sks[0];
+		doubletie_list_num = 1; 
+	}
+	for (int ctr = 0; ctr < tie_list_num; ctr++){
+		curr_sk = Subkernel_list[potential_sks[ctr]];
+		int tmp_pending_sks = 0; 
+		for (int j = 0; j < curr_sk->TileNum; j++){
+			if ( WR_LAZY == curr_sk->TileList[j]->WRP || WR == curr_sk->TileList[j]->WRP
+				|| W_REDUCE == curr_sk->TileList[j]->WRP || WONLY == curr_sk->TileList[j]->WRP){
+				tmp_pending_sks = curr_sk->TileList[j]->W_pending; 
+			}
+		}
+		if(tmp_pending_sks < least_pending_sks){
+			least_pending_sks = tmp_pending_sks;
+			potential_tied_sks[0] = potential_sks[ctr];
+			doubletie_list_num = 1; 
+		}
+		else if(tmp_pending_sks == least_pending_sks){
+		//else if(abs(tmp_ETA - min_ETA)/abs(tmp_ETA-csecond()) <= NORMALIZE_NEAR_SPLIT_LIMIT){
+			potential_tied_sks[doubletie_list_num++] = potential_sks[ctr];
+		}
+	}
+	int selected_sk_idx = (doubletie_list_num)? 
+		potential_tied_sks[int(rand() % doubletie_list_num)] : doubletie_list_num; 
 	swap_sk(&(Subkernel_list[0]), &(Subkernel_list[selected_sk_idx])); 
 	Subkernel_list[0]->prepare_launch(dev_id);
 	return Subkernel_list[0];
@@ -403,27 +450,35 @@ Subkernel* SubkernelSelect(short dev_id, Subkernel** Subkernel_list, long Subker
 	return Subkernel_list[0];
 #endif
 	Subkernel* curr_sk = NULL;
-	long sk_idx;
-	double min_ETA = DBL_MAX;
-	Subkernel* min_ETA_sk = NULL;
+	int sk_idx;
+	int potential_sks[Subkernel_list_len], tie_list_num = 0; 
+	int max_fetches = -1;
 	if(!Subkernel_list_len) error("SubkernelSelect: Gave 0 subkernel len with list = %p\n", Subkernel_list);
 	for (sk_idx = 0; sk_idx < Subkernel_list_len; sk_idx++){
 		curr_sk = Subkernel_list[sk_idx];
-		double tmp_ETA = 0; 
-		for (int j = 0; j < curr_sk->TileNum; j++) if(RONLY == curr_sk->TileList[j]->WRP){
-			double block_cost = curr_sk->TileList[j]->block_ETA[idxize(dev_id)];
-			if(-42 == block_cost) block_cost = curr_sk->TileList[j]->size(); 
-			tmp_ETA = fmax(block_cost, tmp_ETA);
+		int tmp_fetches = 0; 
+		for (int j = 0; j < curr_sk->TileNum; j++){
+			if(RONLY == curr_sk->TileList[j]->WRP)
+				if(curr_sk->TileList[j]->loc_map[idxize(dev_id)] == 0 || 
+					curr_sk->TileList[j]->loc_map[idxize(dev_id)] == 42) tmp_fetches++;
 		}
-		if(tmp_ETA < min_ETA){
-			min_ETA = tmp_ETA;
-			min_ETA_sk = curr_sk;
+		if(tmp_fetches > max_fetches){
+			max_fetches = tmp_fetches;
+			potential_sks[0] = sk_idx;
+			tie_list_num = 1; 
+		}
+		else if(tmp_fetches == max_fetches){
+			potential_sks[tie_list_num++] = sk_idx;
 		}
 	}
-	min_ETA_sk->prepare_launch(dev_id);
-	return min_ETA_sk;
+	int selected_sk_idx = (tie_list_num)? potential_sks[int(rand() % tie_list_num)] : tie_list_num; 
+	swap_sk(&(Subkernel_list[0]), &(Subkernel_list[selected_sk_idx])); 
+	Subkernel_list[0]->prepare_launch(dev_id);
+	return Subkernel_list[0];
 }
 #endif
+
+/*****************************************************/
 
 void PARALiADevCacheFree(short dev_id){
 	if(Global_Buffer_1D[idxize(dev_id)]) delete Global_Buffer_1D[idxize(dev_id)];

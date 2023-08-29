@@ -50,8 +50,10 @@ class Subkernel
 		short check_ready(); 
 		void run_ready_operation();
 
-		long double opt_fetch_cost(short dev_id);
-		long double opt_fetch_score(short dev_id);
+		/*****************************************************/
+		/// PARALia 2.0 - timed queues and blocks
+		long double fetch_ETA, run_op_est_t;
+		long double run_op_estimate(MD_p modeler); 
 };
 
 //Subkernel** CoCoAsignTilesToSubkernelsGemm(Decom2D<double>* A_asset, Decom2D<double>* B_asset,

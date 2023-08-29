@@ -132,7 +132,7 @@ long int Modeler::getSKNum(int T){
 }
 
 
-// Currently return the Watts for the last(larger) measurement
+// Currently return the perf for the last(larger) measurement
 double Modeler::getGPUexecFull(){
 	switch(problem){
 		case BLAS1:

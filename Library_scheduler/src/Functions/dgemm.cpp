@@ -109,14 +109,14 @@ int current_ctr = 0;
 	return kernels;
 }
 
-void DgemmUpdateDevice(Subkernel* ker, short dev_id){
+void DgemmUpdateDevice(Subkernel* ker, int dev_id){
 	gemm_backend_in<double>*  ptr_ker_translate = (gemm_backend_in<double>* ) ker->operation_params;
 	ker->run_dev_id = ptr_ker_translate->dev_id = dev_id;
 	CoCoPeLiaSelectDevice(dev_id);
 #ifdef DEBUG
 	fprintf(stderr, "|-----> DgemmUpdateDevice - Subkernel(dev=%d, id = %d)\n", dev_id, ker->id);
 #endif
-	short dev_id_idx = idxize(dev_id);
+	int dev_id_idx = idxize(dev_id);
 	ptr_ker_translate->ldA = ker->TileList[0]->get_chunk_size(dev_id_idx);
 	ptr_ker_translate->ldB = ker->TileList[1]->get_chunk_size(dev_id_idx);
 	ptr_ker_translate->ldC = ker->TileList[2]->get_chunk_size(dev_id_idx);
@@ -125,6 +125,8 @@ void DgemmUpdateDevice(Subkernel* ker, short dev_id){
 	ker->TileList[2]->set_loc_idx(dev_id_idx, 1);
 	ker->TileList[2]->W_master = dev_id;
 	if(ker->TileList[2]->W_pending == KGridSz_dgemm) ker->TileList[2]->W_complete = new Event(dev_id);
+	if(autotune_controller_dgemm) if(autotune_controller_dgemm->unit_modeler_list[dev_id_idx])
+		ker->run_op_estimate(autotune_controller_dgemm->unit_modeler_list[dev_id_idx]); 
 #ifdef DEBUG
 	fprintf(stderr, "<-----|\n");
 #endif
