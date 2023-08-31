@@ -572,7 +572,7 @@ ATC_p PARALiADgemm(char TransA,  char TransB, long int M, long int N, long int K
 	for(int i=0; i<LOC_NUM;i++) Global_Buffer_2D[i]->reset(false,true);
 #endif
 
-#ifdef BACKEND_RES_REUSE_ENABLE
+#ifdef QUEUE_REUSE_ENABLE
 	CoCoPeLiaCleanResources();
 #else 
 	CoCoPeLiaFreeResources();

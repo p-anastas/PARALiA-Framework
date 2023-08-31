@@ -302,7 +302,13 @@ void CoCoPeLiaInitResources(int* dev_list, int dev_num){
 					shared_iloc1 = links_share_bandwidth[dev_id_idx][dev_id_idy][1];
 				short queue_id = (dev_id_idy == LOC_NUM - 1)? deidxize(dev_id_idx) : deidxize(dev_id_idy);
 				recv_queues[dev_id_idx][dev_id_idy] = new CommandQueue(queue_id, 0);
+#ifdef ENABLE_SEND_RECV_OVERLAP
 				wb_queues[dev_id_idx][dev_id_idy] = new CommandQueue(queue_id, 0);
+#else 
+				wb_queues[dev_id_idx][dev_id_idy] = recv_queues[dev_id_idx][dev_id_idy];
+				wb_queues[dev_id_idy][dev_id_idx] = recv_queues[dev_id_idx][dev_id_idy];
+
+#endif
 				if( shared_iloc0 != - 42){ // The smallest index shared link allocates the queue
 					if (dev_id_idx*LOC_NUM + dev_id_idy < shared_iloc0*LOC_NUM + shared_iloc1){
 						recv_queues[shared_iloc0][shared_iloc1] = recv_queues[dev_id_idx][dev_id_idy];
@@ -357,13 +363,13 @@ void CoCoPeLiaFreeResources(){
 	for(short dev_id_idx = 0 ; dev_id_idx < LOC_NUM; dev_id_idx++){
 		for(short dev_id_idy = 0 ; dev_id_idy < LOC_NUM; dev_id_idy++)
 		if(dev_id_idx!=dev_id_idy){
-				delete recv_queues[dev_id_idx][dev_id_idy];
+				if(recv_queues[dev_id_idx][dev_id_idy]) delete recv_queues[dev_id_idx][dev_id_idy];
 				recv_queues[dev_id_idx][dev_id_idy] = NULL;
-				delete wb_queues[dev_id_idx][dev_id_idy];
+				if(wb_queues[dev_id_idx][dev_id_idy]) delete wb_queues[dev_id_idx][dev_id_idy];
 				wb_queues[dev_id_idx][dev_id_idy] = NULL;
 		}
 		for (int i = 0; i < MAX_BACKEND_L; i++){
-			delete exec_queue[dev_id_idx][i];
+			if(exec_queue[dev_id_idx] && exec_queue[dev_id_idx][i]) delete exec_queue[dev_id_idx][i];
 			exec_queue[dev_id_idx][i] = NULL;
 		}
 	}
@@ -377,7 +383,7 @@ void CoCoPeLiaCleanResources(){
 				if(wb_queues[dev_id_idx][dev_id_idy]) wb_queues[dev_id_idx][dev_id_idy]->ETA_set(0);
 		}
 		for (int i = 0; i < MAX_BACKEND_L; i++)
-			if(exec_queue[dev_id_idx][i])
+			if(exec_queue[dev_id_idx]  && exec_queue[dev_id_idx][i])
 				exec_queue[dev_id_idx][i]->ETA_set(0);
 	}
 }
