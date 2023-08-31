@@ -6,9 +6,9 @@
 
 #include "backend_wrappers.hpp"
 #include "Autotuner.hpp"
+#include "Decomposer.hpp"
 #include "PARALiA.hpp"
 #include "linkmap.hpp"
-#include "Decomposer.hpp"
 #include "Subkernel.hpp"
 #include "DataCaching.hpp"
 
@@ -24,39 +24,39 @@ int MGridSz_dgemm = 0, NGridSz_dgemm = 0, KGridSz_dgemm = 0;
 double gemm_entry_ts;
 #endif
 
-Subkernel** CoCoAsignTilesToSubkernelsDgemm(Decom2D* A_asset, Decom2D* B_asset,
-	Decom2D* C_asset, int T, int* kernelNum){
+Subkernel** CoCoAsignTilesToSubkernelsDgemm(Decomposer_p A_decom, Decomposer_p B_decom,
+	Decomposer_p C_decom, int T, int* kernelNum){
 
 	short lvl = 2;
 	/// Check Assets satisfy GEMM dim criteria for N, N transpose
-	if (A_asset->transpose == 'N' && B_asset->transpose == 'N'){
-		massert(A_asset->GridSz1 == C_asset->GridSz1 &&
-						A_asset->Tile_map[0]->dim1 == C_asset->Tile_map[0]->dim1 &&
-						A_asset->Tile_map[A_asset->GridSz1*A_asset->GridSz2-1]->dim1
-						== C_asset->Tile_map[C_asset->GridSz1*C_asset->GridSz2-1]->dim1,
+	if (A_decom->transpose == 'N' && B_decom->transpose == 'N'){
+		massert(A_decom->GridSz1 == C_decom->GridSz1 &&
+						A_decom->Tile_map[0]->dim1 == C_decom->Tile_map[0]->dim1 &&
+						A_decom->Tile_map[A_decom->GridSz1*A_decom->GridSz2-1]->dim1
+						== C_decom->Tile_map[C_decom->GridSz1*C_decom->GridSz2-1]->dim1,
 						"M dim does not mach between assets for GEMM\n");
-		massert(B_asset->GridSz2 == C_asset->GridSz2 &&
-						B_asset->Tile_map[0]->dim2 == C_asset->Tile_map[0]->dim2 &&
-						B_asset->Tile_map[B_asset->GridSz1*B_asset->GridSz2-1]->dim2
-						== C_asset->Tile_map[C_asset->GridSz1*C_asset->GridSz2-1]->dim2,
+		massert(B_decom->GridSz2 == C_decom->GridSz2 &&
+						B_decom->Tile_map[0]->dim2 == C_decom->Tile_map[0]->dim2 &&
+						B_decom->Tile_map[B_decom->GridSz1*B_decom->GridSz2-1]->dim2
+						== C_decom->Tile_map[C_decom->GridSz1*C_decom->GridSz2-1]->dim2,
 						"N dim does not mach between assets for GEMM\n");
-		massert(A_asset->GridSz2 == B_asset->GridSz1 &&
-						A_asset->Tile_map[0]->dim2 == B_asset->Tile_map[0]->dim1 &&
-						A_asset->Tile_map[A_asset->GridSz1*A_asset->GridSz2-1]->dim2
-						== B_asset->Tile_map[B_asset->GridSz1*B_asset->GridSz2-1]->dim1,
+		massert(A_decom->GridSz2 == B_decom->GridSz1 &&
+						A_decom->Tile_map[0]->dim2 == B_decom->Tile_map[0]->dim1 &&
+						A_decom->Tile_map[A_decom->GridSz1*A_decom->GridSz2-1]->dim2
+						== B_decom->Tile_map[B_decom->GridSz1*B_decom->GridSz2-1]->dim1,
 						"K dim does not mach between assets for GEMM\n");
 	}
-	MGridSz_dgemm = A_asset->GridSz1;
-	NGridSz_dgemm = B_asset->GridSz2;
-	KGridSz_dgemm = A_asset->GridSz2;
+	MGridSz_dgemm = A_decom->GridSz1;
+	NGridSz_dgemm = B_decom->GridSz2;
+	KGridSz_dgemm = A_decom->GridSz2;
 	*kernelNum = MGridSz_dgemm*NGridSz_dgemm*KGridSz_dgemm;
 #ifdef DEBUG
-	fprintf(stderr, "|-----> CoCoAsignTilesToSubkernelsDgemm(A_asset,B_asset,C_asset,%d,%d)\n", T, *kernelNum);
+	fprintf(stderr, "|-----> CoCoAsignTilesToSubkernelsDgemm(A_decom,B_decom,C_decom,%d,%d)\n", T, *kernelNum);
 	fprintf(stderr,"MgridSz = %d, NgridSz = %d, KgridSz = %d\n", MGridSz_dgemm, NGridSz_dgemm, KGridSz_dgemm);
 	fprintf(stderr,"Mlast = %d, Nlast = %d, Klast = %d\n",
-	A_asset->Tile_map[A_asset->GridSz1*A_asset->GridSz2-1]->dim1,
-	B_asset->Tile_map[B_asset->GridSz1*B_asset->GridSz2-1]->dim2,
-	A_asset->Tile_map[A_asset->GridSz1*A_asset->GridSz2-1]->dim2);
+	A_decom->Tile_map[A_decom->GridSz1*A_decom->GridSz2-1]->dim1,
+	B_decom->Tile_map[B_decom->GridSz1*B_decom->GridSz2-1]->dim2,
+	A_decom->Tile_map[A_decom->GridSz1*A_decom->GridSz2-1]->dim2);
 #endif
 
 Subkernel** kernels = (Subkernel**) malloc(*kernelNum*sizeof(Subkernel*));
@@ -71,9 +71,9 @@ int current_ctr = 0;
 				kernels[current_ctr]->iloc3 = ki;
 				kernels[current_ctr]->TileDimlist[0] = kernels[current_ctr]->TileDimlist[1]
 				= kernels[current_ctr]->TileDimlist[2] = 2;
-				kernels[current_ctr]->TileList[0] = A_asset->getTile(mi,ki);
-				kernels[current_ctr]->TileList[1] = B_asset->getTile(ki,ni);
-				kernels[current_ctr]->TileList[2] = C_asset->getTile(mi,ni);
+				kernels[current_ctr]->TileList[0] = A_decom->getTile(mi,ki);
+				kernels[current_ctr]->TileList[1] = B_decom->getTile(ki,ni);
+				kernels[current_ctr]->TileList[2] = C_decom->getTile(mi,ni);
 				kernels[current_ctr]->TileList[0]->set_WRP(RONLY);
 				kernels[current_ctr]->TileList[1]->set_WRP(RONLY);
 				if (!strcmp(OUTPUT_ALGO_MODE, "ALGO_WR"))
@@ -242,21 +242,21 @@ ATC_p PARALiADgemm(char TransA,  char TransB, long int M, long int N, long int K
 	initial_dgemm->ldC = ldC;
 	initial_dgemm->dev_id = -1;
 
-	Decom2D* A_asset, *B_asset, *C_asset;
+	Decomposer_p A_decom, B_decom, C_decom;
 	/// Prepare Assets in parallel( e.g. initialize asset classes, pin memory with pthreads)
-	/// return: A_asset, B_asset, C_asset initialized and pinned
-	A_asset = new Decom2D( (void*) A, M, K, ldA, TransA, DOUBLE);
-	B_asset = new Decom2D( (void*) B, K, N, ldB, TransB, DOUBLE);
-	C_asset = new Decom2D( (void*) C, M, N, ldC, 'N', DOUBLE);
+	/// return: A_decom, B_decom, C_decom initialized and pinned
+	A_decom = new Decom2D( (void*) A, M, K, ldA, TransA, DOUBLE);
+	B_decom = new Decom2D( (void*) B, K, N, ldB, TransB, DOUBLE);
+	C_decom = new Decom2D( (void*) C, M, N, ldC, 'N', DOUBLE);
 
 	pthread_attr_t attr;
 	int s = pthread_attr_init(&attr);
 	if (s != 0) error("PARALiADgemm: pthread_attr_init failed s=%d\n", s);
 
 	pthread_t asset_thread_id[3];
-	A_asset->prepareAsync(&asset_thread_id[0], attr);
-	B_asset->prepareAsync(&asset_thread_id[1], attr);
-	C_asset->prepareAsync(&asset_thread_id[2], attr);
+	A_decom->prepareAsync(&asset_thread_id[0], attr);
+	B_decom->prepareAsync(&asset_thread_id[1], attr);
+	C_decom->prepareAsync(&asset_thread_id[2], attr);
 
 	if (!reuse_model_flag){
 		delete autotune_controller_dgemm;
@@ -285,15 +285,15 @@ ATC_p PARALiADgemm(char TransA,  char TransB, long int M, long int N, long int K
 
 	long int T = autotune_controller_dgemm->T;
 
-	int Block_num_A = (A_asset->dim1/T + ((A_asset->dim1%T)? 1 : 0))* (A_asset->dim2/T + ((A_asset->dim2%T)? 1 : 0)),
-			Block_num_B = (B_asset->dim1/T + ((B_asset->dim1%T)? 1 : 0))* (B_asset->dim2/T + ((B_asset->dim2%T)? 1 : 0)),
-			Block_num_C = (C_asset->dim1/T + ((C_asset->dim1%T)? 1 : 0))* (C_asset->dim2/T + ((C_asset->dim2%T)? 1 : 0));
+	int Block_num_A = (A_decom->dim1/T + ((A_decom->dim1%T)? 1 : 0))* (A_decom->dim2/T + ((A_decom->dim2%T)? 1 : 0)),
+			Block_num_B = (B_decom->dim1/T + ((B_decom->dim1%T)? 1 : 0))* (B_decom->dim2/T + ((B_decom->dim2%T)? 1 : 0)),
+			Block_num_C = (C_decom->dim1/T + ((C_decom->dim1%T)? 1 : 0))* (C_decom->dim2/T + ((C_decom->dim2%T)? 1 : 0));
 	long long Block_sz = 	T*T*sizeof(double);
 	for(int cache_loc = 0; cache_loc < LOC_NUM; cache_loc++){
 		int Block_num = 0, Native_block_num = 0;
-		if (A_asset->loc == deidxize(cache_loc)) Native_block_num+=Block_num_A;
-		if (B_asset->loc == deidxize(cache_loc)) Native_block_num+=Block_num_B;
-		if (C_asset->loc == deidxize(cache_loc)) Native_block_num+=Block_num_C;
+		if (A_decom->loc == deidxize(cache_loc)) Native_block_num+=Block_num_A;
+		if (B_decom->loc == deidxize(cache_loc)) Native_block_num+=Block_num_B;
+		if (C_decom->loc == deidxize(cache_loc)) Native_block_num+=Block_num_C;
 
 		long long max_cache_sz = 0;
 		if(autotune_controller_dgemm->cache_limit > 0) {
@@ -345,7 +345,7 @@ ATC_p PARALiADgemm(char TransA,  char TransB, long int M, long int N, long int K
 			}
 			Block_num = max_block_num;
 			// With Parallel backends unfortunately == SK_blocks + Max_Exclusive_Blocks - 1
-			int worst_case_ex_blocks = 3; //2 + (C_asset->dim1/T + ((C_asset->dim1%T)? 1 : 0))* (C_asset->dim2/T + ((C_asset->dim2%T)? 1 : 0));
+			int worst_case_ex_blocks = 3; //2 + (C_decom->dim1/T + ((C_decom->dim1%T)? 1 : 0))* (C_decom->dim2/T + ((C_decom->dim2%T)? 1 : 0));
 			if(max_block_num < worst_case_ex_blocks)
 				error("PARALiADgemm: Not able to run with < %d blocks per cache due to EX scheduling\n", worst_case_ex_blocks);
 		}
@@ -372,9 +372,9 @@ ATC_p PARALiADgemm(char TransA,  char TransB, long int M, long int N, long int K
 	}
 
 	/// TODO: Split each asset to Tiles
-	A_asset->InitTileMap(T, T, Global_Buffer_2D);
-	B_asset->InitTileMap(T, T, Global_Buffer_2D);
-	C_asset->InitTileMap(T, T, Global_Buffer_2D);
+	A_decom->InitTileMap(T, T, Global_Buffer_2D);
+	B_decom->InitTileMap(T, T, Global_Buffer_2D);
+	C_decom->InitTileMap(T, T, Global_Buffer_2D);
 
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer;
@@ -383,7 +383,7 @@ ATC_p PARALiADgemm(char TransA,  char TransB, long int M, long int N, long int K
 #endif
 
 	int Subkernel_num = -42; 
-	Subkernel** Subkernel_list = CoCoAsignTilesToSubkernelsDgemm(A_asset, B_asset, C_asset, T,
+	Subkernel** Subkernel_list = CoCoAsignTilesToSubkernelsDgemm(A_decom, B_decom, C_decom, T,
 		&Subkernel_num);
 	int remaining_Subkernels = Subkernel_num;
 
@@ -526,14 +526,14 @@ ATC_p PARALiADgemm(char TransA,  char TransB, long int M, long int N, long int K
 	fprintf(stderr, "Subkernels launched: t_sk_fire = %lf ms\n", cpu_timer*1000);
 	cpu_timer = csecond();
 #endif
-	C_asset->WBTileMap();
+	C_decom->WBTileMap();
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer;
 	fprintf(stderr, "Writebacks launched -> t_wb_fire = %lf ms\n", cpu_timer*1000);
 	cpu_timer = csecond();
 #endif
 #endif
-	C_asset->SyncTileMap();
+	C_decom->SyncTileMap();
 
 	CoCoSyncCheckErr();
 #ifdef TEST
@@ -554,9 +554,9 @@ ATC_p PARALiADgemm(char TransA,  char TransB, long int M, long int N, long int K
 #endif
 
 #ifdef DDEBUG
-  A_asset->DrawTileMap();
-  B_asset->DrawTileMap();
-  C_asset->DrawTileMap();
+  A_decom->DrawTileMap();
+  B_decom->DrawTileMap();
+  C_decom->DrawTileMap();
 #endif
 
 #ifdef CDEBUG
@@ -593,9 +593,9 @@ ATC_p PARALiADgemm(char TransA,  char TransB, long int M, long int N, long int K
 	cpu_timer = csecond();
 #endif
 
-	A_asset->DestroyTileMap();
-	B_asset->DestroyTileMap();
-	C_asset->DestroyTileMap();
+	A_decom->DestroyTileMap();
+	B_decom->DestroyTileMap();
+	C_decom->DestroyTileMap();
 
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer;
@@ -605,12 +605,12 @@ ATC_p PARALiADgemm(char TransA,  char TransB, long int M, long int N, long int K
 
 	 CoCoPeLiaSelectDevice(prev_dev_id);
 
-    A_asset->resetProperties();
-    B_asset->resetProperties();
-    C_asset->resetProperties();
-	delete A_asset;
-	delete B_asset;
-	delete C_asset;
+    A_decom->resetProperties();
+    B_decom->resetProperties();
+    C_decom->resetProperties();
+	delete A_decom;
+	delete B_decom;
+	delete C_decom;
 
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer;

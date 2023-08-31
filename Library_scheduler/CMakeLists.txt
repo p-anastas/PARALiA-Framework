@@ -41,15 +41,12 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${LIBSC_INSTALL_LIB})
 configure_file(${LIBSC_DIR_INC}/Subkernel.hpp ${LIBSC_INSTALL_INC}/Subkernel.hpp COPYONLY)
 
 add_library(paralia SHARED
-${LIBSC_DIR_SRC}/Decom1D.cpp
-${LIBSC_DIR_SRC}/Decom2D.cpp
 ${LIBSC_DIR_SRC}/Subkernel.cpp
 ${LIBSC_DIR_SRC}/Functions/dgemm.cpp
 #${LIBSC_DIR_SRC}/Functions/sgemm.cpp
 #${LIBSC_DIR_SRC}/Functions/dgemv.cpp
 #${LIBSC_DIR_SRC}/Functions/daxpy.cpp
 #${LIBSC_DIR_SRC}/Functions/ddot.cpp
-${BACKEND_LIBSC_DIR}/Decom_backend.cpp
 )
 target_link_libraries(paralia ${INTERNAL_LINK_LIB} autotuner linkmap caching)
 configure_file(${LIBSC_DIR_INC}/PARALiA.hpp ${LIBSC_INSTALL_INC}/PARALiA.hpp COPYONLY)

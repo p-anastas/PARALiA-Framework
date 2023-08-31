@@ -6,7 +6,7 @@
 
 #include "Subkernel.hpp"
 #include "linkmap.hpp"
-#include "Decomposer.hpp"
+#include "Autotuner.hpp"
 #include "DataCaching.hpp"
 #include "backend_wrappers.hpp"
 
