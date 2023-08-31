@@ -105,6 +105,7 @@ void Subkernel::request_data(){
 			//	&(tmp->W_master), tmp->dim1, tmp->dim2, tmp->get_chunk_size(run_dev_id_idx), tmp->get_chunk_size(WB_loc_idx),
 			//	tmp->get_dtype_size(), recv_queues[WB_loc_idx][run_dev_id_idx], false);
 			//}
+			tmp->fired_times++;
 			if (tmp->WRP == WR || tmp->WRP == RONLY) 
 				tmp->fetch(tmp->StoreBlock[idxize(run_dev_id)], run_dev_id);
 		}
@@ -114,6 +115,7 @@ void Subkernel::request_data(){
 		//		if (tmp->WRP == WR || tmp->WRP == RONLY) tmp->fetch(run_dev_id);
 		//}
 		else{
+			tmp->fired_times++; 
 			if (tmp->WRP == RONLY) tmp->StoreBlock[run_dev_id_idx]->add_reader();
 			else if(tmp->WRP == WR || tmp->WRP == W_REDUCE || tmp->WRP == WR_LAZY)
 				tmp->StoreBlock[run_dev_id_idx]->add_writer();
@@ -129,6 +131,9 @@ void Subkernel::request_data(){
 
 void Subkernel::run_operation()
 {
+#ifdef DEBUG
+	fprintf(stderr, "|-----> Subkernel(dev=%d,id=%d):run_operation()\n", run_dev_id, id);
+#endif
 	short run_dev_id_idx = idxize(run_dev_id);
 	long double fire_t = csecond();
 	CoCoPeLiaSelectDevice(run_dev_id);
@@ -171,9 +176,11 @@ void Subkernel::run_operation()
 		else if(tmp->WRP == RONLY) assigned_exec_queue->add_host_func((void*)&CBlock_RR_wrap, (void*) wrap_oper);
 
 	}
-	//
 #ifndef ASYNC_ENABLE
 	CoCoSyncCheckErr();
+#endif
+#ifdef DEBUG
+	fprintf(stderr, "<-----|\n");
 #endif
 }
 
@@ -193,6 +200,9 @@ short Subkernel::check_ready(){
 }
 
 void Subkernel::run_ready_operation(){
+#ifdef DEBUG
+	fprintf(stderr, "|-----> Subkernel(dev=%d,id=%d):run_ready_operation()\n", run_dev_id, id);
+#endif
 	CoCoPeLiaSelectDevice(run_dev_id);
 	short run_dev_id_idx = idxize(run_dev_id);
 	long double fire_t = csecond();
@@ -203,10 +213,13 @@ void Subkernel::run_ready_operation(){
 			if(tmp->W_master_backend_ctr == -42)
 				tmp->W_master_backend_ctr = get_next_queue_ctr(run_dev_id);
 			assigned_exec_queue = exec_queue[run_dev_id_idx][tmp->W_master_backend_ctr];
+#ifdef DEBUG
+	fprintf(stderr, "Using exec_queue[%d][%d] \n", run_dev_id_idx, tmp->W_master_backend_ctr);
+#endif
 		}	
 	}
-	long double start_op_ETA = fmax(fire_t, fetch_ETA);
-	assigned_exec_queue->ETA_add_task(start_op_ETA, run_op_est_t); 
+	//long double start_op_ETA = fmax(fire_t, fetch_ETA);
+	//assigned_exec_queue->ETA_add_task(start_op_ETA, run_op_est_t); 
 	backend_run_operation(operation_params, op_name, assigned_exec_queue);
 
 	for (int j = 0; j < TileNum; j++){
@@ -217,12 +230,15 @@ void Subkernel::run_ready_operation(){
 		wrap_oper->lockfree = false;
 		if(tmp->WRP == WR || tmp->WRP == W_REDUCE || tmp->WRP == WR_LAZY){
 			tmp->W_pending--;
-			tmp->ETA_set(assigned_exec_queue->ETA_get(), run_dev_id);
+			//tmp->ETA_set(assigned_exec_queue->ETA_get(), run_dev_id);
 			if(!tmp->W_pending)tmp->operations_complete(assigned_exec_queue);
 		}
 		else if(tmp->WRP == RONLY) assigned_exec_queue->add_host_func((void*)&CBlock_RR_wrap, (void*) wrap_oper);
 
 	}
+#ifdef DEBUG
+	fprintf(stderr, "<-----|\n");
+#endif
 }
 
 void CoCoPeLiaInitResources(int* dev_list, int dev_num){
@@ -302,7 +318,10 @@ void CoCoPeLiaInitResources(int* dev_list, int dev_num){
 				break;
 			}
 			if(flag_is_worker){
-				for (int i = 0; i < MAX_BACKEND_L; i++) exec_queue[dev_id_idx][i] = new CommandQueue(deidxize(dev_id_idx), 1);
+				for (int i = 0; i < MAX_BACKEND_L; i++){
+					exec_queue[dev_id_idx][i] = new CommandQueue(deidxize(dev_id_idx), 1);
+					exec_queue_ctr[dev_id_idx] = -1; 
+				}
 			}
 		}
 	}
@@ -411,29 +430,29 @@ Subkernel* SubkernelSelect(short dev_id, Subkernel** Subkernel_list, long Subker
 			potential_sks[tie_list_num++] = sk_idx;
 		}
 	}
-	int least_pending_sks = 0, potential_tied_sks[tie_list_num];
+	int most_fired_sks = 0, potential_tied_sks[tie_list_num];
 	if (tie_list_num){
 		potential_tied_sks[0] = potential_sks[0];
 		doubletie_list_num = 1; 
 	}
 	for (int ctr = 0; ctr < tie_list_num; ctr++){
 		curr_sk = Subkernel_list[potential_sks[ctr]];
-		int tmp_pending_sks = 0; 
+		int tmp_fired_sks = 0; 
 		for (int j = 0; j < curr_sk->TileNum; j++){
 			if ( WR_LAZY == curr_sk->TileList[j]->WRP || WR == curr_sk->TileList[j]->WRP
 				|| W_REDUCE == curr_sk->TileList[j]->WRP || WONLY == curr_sk->TileList[j]->WRP){
-				tmp_pending_sks = curr_sk->TileList[j]->W_pending; 
+				tmp_fired_sks = curr_sk->TileList[j]->fired_times; 
 			}
 		}
-		if(tmp_pending_sks < least_pending_sks){
-			least_pending_sks = tmp_pending_sks;
+		if(tmp_fired_sks > most_fired_sks){
+			most_fired_sks = tmp_fired_sks;
 			potential_tied_sks[0] = potential_sks[ctr];
 			doubletie_list_num = 1; 
 		}
-		else if(tmp_pending_sks == least_pending_sks){
+		//else if(tmp_fired_sks == most_fired_sks){
 		//else if(abs(tmp_ETA - min_ETA)/abs(tmp_ETA-csecond()) <= NORMALIZE_NEAR_SPLIT_LIMIT){
-			potential_tied_sks[doubletie_list_num++] = potential_sks[ctr];
-		}
+		//	potential_tied_sks[doubletie_list_num++] = potential_sks[ctr];
+		//}
 	}
 	int selected_sk_idx = (doubletie_list_num)? 
 		potential_tied_sks[int(rand() % doubletie_list_num)] : doubletie_list_num; 

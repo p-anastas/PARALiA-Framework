@@ -61,6 +61,8 @@
         "cfenv": "cpp",
         "cinttypes": "cpp",
         "typeinfo": "cpp",
-        "list": "cpp"
+        "list": "cpp",
+        "optional": "cpp",
+        "fstream": "cpp"
     }
 }

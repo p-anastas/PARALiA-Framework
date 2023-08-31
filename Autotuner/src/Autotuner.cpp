@@ -16,7 +16,7 @@ LinkMap_p final_estimated_linkmap;
 ATC::ATC(){
 	short lvl = 2;
 #ifdef DEBUG
-		lprintf(lvl, "|-----> ATC::ATC\n");
+		fprintf(stderr,  "|-----> ATC::ATC\n");
 #endif
 	active_unit_id_list = (int*) malloc(LOC_NUM*sizeof(int));
 	active_unit_score = (double*) malloc(LOC_NUM*sizeof(double));
@@ -34,14 +34,14 @@ ATC::ATC(){
 	unit_modeler_list = (MD_p*) malloc(LOC_NUM*sizeof(MD_p));
 	linkmap = new LinkMap();
 #ifdef DEBUG
-	lprintf(lvl, "<-----|\n");
+	fprintf(stderr,  "<-----|\n");
 #endif
 }
 
 ATC::~ATC(){
 	short lvl = 2;
 #ifdef DEBUG
-		lprintf(lvl, "|-----> ATC::~ATC\n");
+		fprintf(stderr,  "|-----> ATC::~ATC\n");
 #endif
 	free(active_unit_id_list);
 	free(active_unit_score);
@@ -49,7 +49,7 @@ ATC::~ATC(){
 	for (int d = 0; d < LOC_NUM; d++) free(Subkernels_per_unit_list[d]);
 	free(Subkernels_per_unit_list);
 #ifdef DEBUG
-	lprintf(lvl, "<-----|\n");
+	fprintf(stderr,  "<-----|\n");
 #endif
 }
 
@@ -59,7 +59,7 @@ void ATC::init_modelers(const char* routine_name, void* initial_problem_wrap){
 void ATC::reset(){
 	short lvl = 4;
 #ifdef DEBUG
-		lprintf(lvl, "|-----> ATC::reset\n");
+		fprintf(stderr,  "|-----> ATC::reset\n");
 #endif
 	for (int d = 0; d < LOC_NUM; d++){
 		free(Subkernels_per_unit_list[d]);
@@ -70,26 +70,26 @@ void ATC::reset(){
 	pred_t = -1.0;
 	cache_limit = 0;
 #ifdef DEBUG
-	lprintf(lvl, "<-----|\n");
+	fprintf(stderr,  "<-----|\n");
 #endif
 }
 
 int ATC::diff_intialized_params_ATC(ATC_p other_ATC){
 	short lvl = 3;
 	#ifdef DEBUG
-		lprintf(lvl, "|-----> ATC::diff_intialized_params_ATC(other_ATC = %p)\n", other_ATC);
+		fprintf(stderr,  "|-----> ATC::diff_intialized_params_ATC(other_ATC = %p)\n", other_ATC);
 	#endif
 	int result = 0;
 	if(other_ATC->T != -1 && other_ATC->T != T){
 		result++;
 #ifdef PDEBUG
-		lprintf(lvl, "ATC::diff_intialized_params_ATC(): other_ATC->T = %ld, T = %ld\n", other_ATC->T, T);
+		fprintf(stderr,  "ATC::diff_intialized_params_ATC(): other_ATC->T = %ld, T = %ld\n", other_ATC->T, T);
 #endif
 		}
 	if(other_ATC->active_unit_num != -1 && other_ATC->active_unit_num != active_unit_num){
 		result++;
 #ifdef PDEBUG
-		lprintf(lvl, "ATC::diff_intialized_params_ATC(): other_ATC->active_unit_num = %d, active_unit_num = %d\n",
+		fprintf(stderr,  "ATC::diff_intialized_params_ATC(): other_ATC->active_unit_num = %d, active_unit_num = %d\n",
 			other_ATC->active_unit_num, active_unit_num);
 #endif
 	}
@@ -97,7 +97,7 @@ int ATC::diff_intialized_params_ATC(ATC_p other_ATC){
 		for (int ctr = 0; ctr < active_unit_num; ctr++) if(other_ATC->active_unit_id_list[ctr] != active_unit_id_list[ctr]){
 			result++;
 #ifdef PDEBUG
-		lprintf(lvl, "ATC::diff_intialized_params_ATC(): other_ATC->active_unit_id_list[%d] = %d, active_unit_id_list[%d] = %d\n",
+		fprintf(stderr,  "ATC::diff_intialized_params_ATC(): other_ATC->active_unit_id_list[%d] = %d, active_unit_id_list[%d] = %d\n",
 			ctr, other_ATC->active_unit_id_list[ctr], ctr, active_unit_id_list[ctr]);
 #endif
 			break;
@@ -106,12 +106,12 @@ int ATC::diff_intialized_params_ATC(ATC_p other_ATC){
 	if(other_ATC->cache_limit != 0 && other_ATC->cache_limit != cache_limit){
 		result++;
 #ifdef PDEBUG
-		lprintf(lvl, "ATC::diff_intialized_params_ATC(): other_ATC->cache_limit = %lld, cache_limit = %lld\n",
+		fprintf(stderr,  "ATC::diff_intialized_params_ATC(): other_ATC->cache_limit = %lld, cache_limit = %lld\n",
 			other_ATC->cache_limit, cache_limit);
 #endif
 	}
 #ifdef DEBUG
-	lprintf(lvl, "<-----|\n");
+	fprintf(stderr,  "<-----|\n");
 #endif
 	return result;
 }
@@ -119,7 +119,7 @@ int ATC::diff_intialized_params_ATC(ATC_p other_ATC){
 void ATC::mimic_ATC(ATC_p other_ATC){
 	short lvl = 3;
 	#ifdef DEBUG
-		lprintf(lvl, "|-----> ATC::mimic_ATC(other_ATC = %p)\n", other_ATC);
+		fprintf(stderr,  "|-----> ATC::mimic_ATC(other_ATC = %p)\n", other_ATC);
 	#endif
 	T = other_ATC->T;
 	active_unit_num = other_ATC->active_unit_num;
@@ -156,14 +156,14 @@ void ATC::mimic_ATC(ATC_p other_ATC){
 
 	unit_modeler_list = other_ATC->unit_modeler_list;
 #ifdef DEBUG
-	lprintf(lvl, "<-----|\n");
+	fprintf(stderr,  "<-----|\n");
 #endif
 }
 
 void ATC::update_sk_num(long long int subkernel_num_in){
 	short lvl = 3;
 	#ifdef DEBUG
-		lprintf(lvl, "|-----> ATC::update_sk_num\n");
+		fprintf(stderr,  "|-----> ATC::update_sk_num\n");
 	#endif
 	int prev_sk_num = subkernel_num;
 	subkernel_num = subkernel_num_in;
@@ -177,7 +177,7 @@ void ATC::update_sk_num(long long int subkernel_num_in){
 		for (int sk = 0; sk < subkernel_num; sk++) Subkernels_per_unit_list[d][sk] = -1;
 	}
 #ifdef DEBUG
-	lprintf(lvl, "<-----|\n");
+	fprintf(stderr,  "<-----|\n");
 #endif
 }
 
@@ -216,7 +216,7 @@ void ATC::normalize_split(){
 	short lvl = 4;
 	double cpu_timer = csecond();
 #ifdef DEBUG
-	lprintf(lvl, "|-----> ATC::normalize_split\n");
+	fprintf(stderr,  "|-----> ATC::normalize_split\n");
 #endif
 	for (int i = 0; i < active_unit_num; i++)
 	if(active_unit_score[i] < MINIMUM_UNIT_CONTRIBUTION){
@@ -248,7 +248,7 @@ void ATC::normalize_split(){
 		active_unit_num--;
 	}
 #ifdef DEBUG
-	lprintf(lvl, "<-----|\n");
+	fprintf(stderr,  "<-----|\n");
 #endif
 }
 
@@ -256,7 +256,7 @@ double ATC::autotune_problem(const char* routine_name, void* initial_problem_wra
 	short lvl = 3;
 	double cpu_timer = csecond();
 #ifdef DEBUG
-	lprintf(lvl, "|-----> ATC::autotune_problem(%s, %p)\n", routine_name,
+	fprintf(stderr,  "|-----> ATC::autotune_problem(%s, %p)\n", routine_name,
 		initial_problem_wrap);
 	print();
 #endif
@@ -268,7 +268,7 @@ double ATC::autotune_problem(const char* routine_name, void* initial_problem_wra
 	if (active_unit_num > 0){
 		if (active_unit_id_list){
 //#ifdef PDEBUG
-		lprintf(lvl, "Running on %d devices with dev_ids=[ ", active_unit_num);
+		fprintf(stderr,  "Running on %d devices with dev_ids=[ ", active_unit_num);
 		for (int i =0; i < active_unit_num; i++) fprintf(stderr, "%d ", active_unit_id_list[i]);
 		fprintf(stderr, "]\n");
 //#endif
@@ -276,7 +276,7 @@ double ATC::autotune_problem(const char* routine_name, void* initial_problem_wra
 		else{
 			autotune_eval_devices = 1;
 //#ifdef PDEBUG
-		lprintf(lvl, "Running on %d devices with tunable dev_ids\n", active_unit_num);
+		fprintf(stderr,  "Running on %d devices with tunable dev_ids\n", active_unit_num);
 //#endif
 		}
 	}
@@ -327,27 +327,34 @@ double ATC::autotune_problem(const char* routine_name, void* initial_problem_wra
 				final_estimated_link_bw[i][j] = temp_controller->linkmap->link_bw_shared[i][j];
 #endif
 			if(initial_T <= 0) tile_selection_t += temp_controller->optimize_tile();
-			split_selection_t += temp_controller->optimize_split();
+			/// Remove case that could not file a proper tile. 
+			if(temp_controller->T < 0){
+				temp_controller->pred_t = pred_t*100;
+				temp_controller->pred_J = pred_J*100;
+				temp_controller->power_delay = power_delay/100; 
+				temp_controller->energy_delay = energy_delay/100; 
+			}
+			else split_selection_t += temp_controller->optimize_split();
 #ifndef ENABLE_POWA
 			if (temp_controller->pred_t +
 				temp_controller->pred_t*((temp_controller->active_unit_num-active_unit_num)*MINIMUM_UNIT_CONTRIBUTION) < pred_t) mimic_ATC(temp_controller);
 #ifdef SDEBUG
-			lprintf(0, "==============================================\n");
-			lprintf(0, "Autotune devices (iter %d): Tuning for active_unit_id_list = [ ", case_id);
-			for (int i =0; i < temp_controller->active_unit_num; i++) lprintf(0, "%d ", temp_controller->active_unit_id_list[i]);
-			lprintf(0, "] -> pred_t = %lf, best_pred_t = %lf\n", temp_controller->pred_t,  pred_t);
-			lprintf(0, "==============================================\n");
+			fprintf(stderr, "==============================================\n");
+			fprintf(stderr, "Autotune devices (iter %d): Tuning for active_unit_id_list = [ ", case_id);
+			for (int i =0; i < temp_controller->active_unit_num; i++) fprintf(stderr, "%d ", temp_controller->active_unit_id_list[i]);
+			fprintf(stderr, "] -> pred_t = %lf, best_pred_t = %lf\n", temp_controller->pred_t,  pred_t);
+			fprintf(stderr, "==============================================\n");
 #endif
 #else
 			if (!strcmp(PREDICT_OPTIMIZE_TARGET,"PERF")){
 				if (temp_controller->pred_t +
 					temp_controller->pred_t*((temp_controller->active_unit_num-active_unit_num)*MINIMUM_UNIT_CONTRIBUTION) < pred_t) mimic_ATC(temp_controller);
 #ifdef SDEBUG
-				lprintf(0, "==============================================\n");
-				lprintf(0, "Autotune devices (iter %d): Tuning for active_unit_id_list = [ ", case_id);
-				for (int i =0; i < temp_controller->active_unit_num; i++) lprintf(0, "%d ", temp_controller->active_unit_id_list[i]);
-				lprintf(0, "] -> pred_t = %lf, best_pred_t = %lf\n", temp_controller->pred_t,  pred_t);
-				lprintf(0, "==============================================\n");
+				fprintf(stderr, "==============================================\n");
+				fprintf(stderr, "Autotune devices (iter %d): Tuning for active_unit_id_list = [ ", case_id);
+				for (int i =0; i < temp_controller->active_unit_num; i++) fprintf(stderr, "%d ", temp_controller->active_unit_id_list[i]);
+				fprintf(stderr, "] -> pred_t = %lf, best_pred_t = %lf\n", temp_controller->pred_t,  pred_t);
+				fprintf(stderr, "==============================================\n");
 #endif
 			}
 			else if(!strcmp(PREDICT_OPTIMIZE_TARGET,"ENERGY")){
@@ -355,11 +362,11 @@ double ATC::autotune_problem(const char* routine_name, void* initial_problem_wra
 					- temp_controller->pred_J*((temp_controller->active_unit_num-active_unit_num)*MINIMUM_UNIT_CONTRIBUTION)
 					< pred_J) mimic_ATC(temp_controller);
 #ifdef SDEBUG
-				lprintf(0, "==============================================\n");
-				lprintf(0, "Autotune devices (iter %d): Tuning for active_unit_id_list = [ ", case_id);
-				for (int i =0; i < temp_controller->active_unit_num; i++) lprintf(0, "%d ", temp_controller->active_unit_id_list[i]);
-				lprintf(0, "] -> pred_J = %lf, best_pred_J = %lf\n", temp_controller->pred_J,  pred_J);
-				lprintf(0, "==============================================\n");
+				fprintf(stderr, "==============================================\n");
+				fprintf(stderr, "Autotune devices (iter %d): Tuning for active_unit_id_list = [ ", case_id);
+				for (int i =0; i < temp_controller->active_unit_num; i++) fprintf(stderr, "%d ", temp_controller->active_unit_id_list[i]);
+				fprintf(stderr, "] -> pred_J = %lf, best_pred_J = %lf\n", temp_controller->pred_J,  pred_J);
+				fprintf(stderr, "==============================================\n");
 #endif
 			}
 			else if(!strcmp(PREDICT_OPTIMIZE_TARGET,"POWER-DELAY")){
@@ -367,11 +374,11 @@ double ATC::autotune_problem(const char* routine_name, void* initial_problem_wra
 					- temp_controller->power_delay*((temp_controller->active_unit_num-active_unit_num)*MINIMUM_UNIT_CONTRIBUTION)
 					> power_delay) mimic_ATC(temp_controller);
 #ifdef SDEBUG
-				lprintf(0, "==============================================\n");
-				lprintf(0, "Autotune devices (iter %d): Tuning for active_unit_id_list = [ ", case_id);
-				for (int i =0; i < temp_controller->active_unit_num; i++) lprintf(0, "%d ", temp_controller->active_unit_id_list[i]);
-				lprintf(0, "] -> power_delay = %lf, best_power_delay = %lf\n", temp_controller->power_delay,  power_delay);
-				lprintf(0, "==============================================\n");
+				fprintf(stderr, "==============================================\n");
+				fprintf(stderr, "Autotune devices (iter %d): Tuning for active_unit_id_list = [ ", case_id);
+				for (int i =0; i < temp_controller->active_unit_num; i++) fprintf(stderr, "%d ", temp_controller->active_unit_id_list[i]);
+				fprintf(stderr, "] -> power_delay = %lf, best_power_delay = %lf\n", temp_controller->power_delay,  power_delay);
+				fprintf(stderr, "==============================================\n");
 #endif
 			}
 			else if(!strcmp(PREDICT_OPTIMIZE_TARGET,"ENERGY-DELAY")){
@@ -379,11 +386,11 @@ double ATC::autotune_problem(const char* routine_name, void* initial_problem_wra
 					- temp_controller->energy_delay*((temp_controller->active_unit_num-active_unit_num)*MINIMUM_UNIT_CONTRIBUTION)
 					> energy_delay) mimic_ATC(temp_controller);
 #ifdef SDEBUG
-				lprintf(0, "==============================================\n");
-				lprintf(0, "Autotune devices (iter %d): Tuning for active_unit_id_list = [ ", case_id);
-				for (int i =0; i < temp_controller->active_unit_num; i++) lprintf(0, "%d ", temp_controller->active_unit_id_list[i]);
-				lprintf(0, "] -> energy_delay = %lf, best_energy_delay = %lf\n", temp_controller->energy_delay,  energy_delay);
-				lprintf(0, "==============================================\n");
+				fprintf(stderr, "==============================================\n");
+				fprintf(stderr, "Autotune devices (iter %d): Tuning for active_unit_id_list = [ ", case_id);
+				for (int i =0; i < temp_controller->active_unit_num; i++) fprintf(stderr, "%d ", temp_controller->active_unit_id_list[i]);
+				fprintf(stderr, "] -> energy_delay = %lf, best_energy_delay = %lf\n", temp_controller->energy_delay,  energy_delay);
+				fprintf(stderr, "==============================================\n");
 #endif
 			} // Example for choosing U1(tpred = X, En = J1) vs U2(tpred = Y, En = J2) units with PERPER_LIMIT: if ( X/Y >= PERPER_LIMIT*J2/J1) U2 else U1
 			else if(!strcmp(PREDICT_OPTIMIZE_TARGET,"PERF-PER-J")){
@@ -406,16 +413,17 @@ double ATC::autotune_problem(const char* routine_name, void* initial_problem_wra
 					if (PER_score < PERPER_LIMIT) mimic_ATC(temp_controller);
 				}
 #ifdef SDEBUG
-				lprintf(0, "==============================================\n");
-				lprintf(0, "Autotune devices (iter %d): Tuning for active_unit_id_list = [ ", case_id);
-				for (int i =0; i < temp_controller->active_unit_num; i++) lprintf(0, "%d ", temp_controller->active_unit_id_list[i]);
-				lprintf(0, "] -> t = %lf per J = %lf : PER_Score = %lf, best_t = %lf per J = %lf\n", temp_controller->pred_t, temp_controller->pred_J,  PER_score, pred_t, pred_J);
-				lprintf(0, "==============================================\n");
+				fprintf(stderr, "==============================================\n");
+				fprintf(stderr, "Autotune devices (iter %d): Tuning for active_unit_id_list = [ ", case_id);
+				for (int i =0; i < temp_controller->active_unit_num; i++) fprintf(stderr, "%d ", temp_controller->active_unit_id_list[i]);
+				fprintf(stderr, "] -> t = %lf per J = %lf : PER_Score = %lf, best_t = %lf per J = %lf\n", temp_controller->pred_t, temp_controller->pred_J,  PER_score, pred_t, pred_J);
+				fprintf(stderr, "==============================================\n");
 #endif
 			}
 			else error("PREDICT_OPTIMIZE_TARGET = %s not implemented\n", PREDICT_OPTIMIZE_TARGET);
 #endif
 		}
+		if (T < 0) error("ATC::autotune_problem() - returned negative T -> failed to decompose dims\n");
 	}
 	else{
 		int initial_T = T;
@@ -472,15 +480,15 @@ double ATC::autotune_problem(const char* routine_name, void* initial_problem_wra
 
 	cpu_timer = csecond() - cpu_timer;
 
-	lprintf(0, "====================================\n");
-	lprintf(0, "ATC::autotune_problem: Autotuning complete-> t_autotune = %lf ms\n", cpu_timer*1000);
-	lprintf(0, "autotune_controller: T=%ld,  active_unit_num=%d, Problem split = %s -> %s : pred_t = %lf ms, pred_J = %lf kJ\n",
+	fprintf(stderr, "====================================\n");
+	fprintf(stderr, "ATC::autotune_problem: Autotuning complete-> t_autotune = %lf ms\n", cpu_timer*1000);
+	fprintf(stderr, "autotune_controller: T=%ld,  active_unit_num=%d, Problem split = %s -> %s : pred_t = %lf ms, pred_J = %lf kJ\n",
 		T, active_unit_num, printlist<int>(active_unit_id_list, active_unit_num),
 		printlist<double>(active_unit_score, active_unit_num), pred_t*1000, pred_J/1000);
-	lprintf(0, "====================================\n");
+	fprintf(stderr, "====================================\n");
 
 #ifdef DEBUG
-	lprintf(lvl, "<-----|\n");
+	fprintf(stderr,  "<-----|\n");
 #endif
 	return cpu_timer;
 }
@@ -489,7 +497,7 @@ double ATC::optimize_tile(){
 	short lvl = 3;
 	double timer = csecond();
 #ifdef DEBUG
-lprintf(lvl, "|-----> ATC::optimize_tile( autotune_controller{ T=%ld, active_unit_num=%d, Problem split = %s -> %s : t_pred = %lf ms}, unit_modeler_list =%p)\n",
+fprintf(stderr,  "|-----> ATC::optimize_tile( autotune_controller{ T=%ld, active_unit_num=%d, Problem split = %s -> %s : t_pred = %lf ms}, unit_modeler_list =%p)\n",
 	T, active_unit_num, printlist<int>(active_unit_id_list, active_unit_num),
 	printlist<double>(active_unit_score, active_unit_num), pred_t*1000, unit_modeler_list);
 #endif
@@ -502,76 +510,102 @@ lprintf(lvl, "|-----> ATC::optimize_tile( autotune_controller{ T=%ld, active_uni
 	short first_model_idx = idxize(active_unit_id_list[0]);
 	MD_p model = unit_modeler_list[first_model_idx];
 
-	long int min_T = 0, max_allowed_T = 0, ctr = 0;
-	max_allowed_T = model->getMaxT();
-	min_T = model->getMinT();
-#ifdef PDEBUG
-	lprintf(lvl, "min_T = %ld, max_allowed_T = %ld\n",
-		min_T, max_allowed_T);
-#endif
-	if (min_T >= max_allowed_T){
-		T = max_allowed_T;
-#ifdef PDEBUG
-		lprintf(lvl, "min_T = %ld > max_allowed_T = %ld: returning T = %ld\n",
-			min_T, max_allowed_T, max_allowed_T);
-#endif
-		timer = csecond() - timer;
-#ifdef DEBUG
-		lprintf(lvl, "<-----|\n");
-#endif
-		return timer;
-	}
-
 /// TODO: Maybe define the lowest suggested Tile sizes?
 
-/// Not very sciency, but also not a priority currently
-#define MAX_DESIRED_SK_DEV 128
-#define MIN_DESIRED_SK_DEV 32
-	long int max_sk = MAX_DESIRED_SK_DEV*active_unit_num,
-					 min_sk = MIN_DESIRED_SK_DEV*active_unit_num;
+#define MIN_DESIRED_SK_DEV 64
+	long int min_sk = MIN_DESIRED_SK_DEV*active_unit_num, max_sk = 10000;
 #ifdef PDEBUG
-	lprintf(lvl, "Desired max_sk = %ld, min_sk = %ld\n",
-		max_sk, min_sk);
-#endif
-	long int sk_num_of_max_T = model->getSKNum(max_allowed_T), sk_num_of_min_T = model->getSKNum(min_T);
-#ifdef PDEBUG
-	lprintf(lvl, "sk_num_of_max_T = %ld, sk_num_of_min_T = %ld\n",
-		sk_num_of_max_T, sk_num_of_min_T);
-#endif
-	if (sk_num_of_max_T > min_sk) min_sk = sk_num_of_max_T;
-	if (sk_num_of_min_T < max_sk) max_sk = sk_num_of_min_T;
-	if (min_sk >= max_sk) min_sk = max_sk;
-#ifdef PDEBUG
-	lprintf(lvl, "min_sk = %ld, max_sk = %ld\n",
-		min_sk, max_sk);
+	fprintf(stderr,  "min_sk = %ld\n", min_sk);
 #endif
 
-	//if (min_sk == max_sk && ()) min_sk = max_sk;
-/// Assume having no remainders in SK-spliting is the most important.
+/// Conditions: 
+/// 1-HARD: NO-Wshare: Spliting creates subkernels that can be distributed equally to devices without WR-sharing
+/// 2-HARD: SK-num: subkernels per device must be >= MIN_DESIRED_SK_DEV
+/// 3-LIGHT: NO-remainder: split should not create remainder Tiles if possible
 /// TODO: For future could also take into account specific "good" tiles per device.
 
-	int D1_dummy = model->D1, D2_Dummy = (model->D2 == -1)? D1_dummy: model->D2, D3_Dummy = (model->D3 == -1)? D1_dummy: model->D3;
-	int candidate_T = gcd(D1_dummy, D2_Dummy, D3_Dummy);
-	if(candidate_T == 1) candidate_T = std::min(D1_dummy, std::min(D2_Dummy, D3_Dummy));
-	while(model->getSKNum(candidate_T) < min_sk) candidate_T/=2;
-	while(model->getSKNum(candidate_T) > max_sk) candidate_T++;
-	if (model->getSKNum(candidate_T) < min_sk){
+	int D1_dummy = model->D1, D2_dummy = (model->D2 == -1)? D1_dummy: model->D2, D3_dummy = (model->D3 == -1)? D1_dummy: model->D3;
+	int candidate_T = gcd(D1_dummy, D2_dummy, D3_dummy);
+	if(candidate_T == 1) candidate_T = std::min(D1_dummy, std::min(D2_dummy, D3_dummy));
+	int ctr = 1;
+	while(ctr < candidate_T && ((D1_dummy/(candidate_T/ctr) + ((D1_dummy%(candidate_T/ctr))? 1:0))
+	 *(D2_dummy/(candidate_T/ctr) + ((D2_dummy%(candidate_T/ctr))? 1:0)) % active_unit_num
+	|| (((D1_dummy%(candidate_T/ctr))? 1:0) + 
+		((D2_dummy%(candidate_T/ctr))? 1:0) + 
+		((D3_dummy%(candidate_T/ctr))? 1:0))))
+		ctr++;
+	candidate_T/=ctr; 
 #ifdef PDEBUG
-		lprintf(lvl, "Default GCD method for obtaining T failed, resorting in secondary method - performance might degrade\n");
+	fprintf(stderr,  "Updated candidate_T = %d with ctr = %d for NO-Wshare + NO-remainder conditions\n", 
+		candidate_T, ctr);
 #endif
-			while(model->getSKNum(candidate_T) < min_sk) candidate_T/=2;
+	ctr = 1; 
+	while(ctr < candidate_T && (model->getSKNum(candidate_T/ctr) < min_sk ||
+	((D1_dummy/(candidate_T/ctr) + ((D1_dummy%(candidate_T/ctr))? 1:0))
+	*(D2_dummy/(candidate_T/ctr) + ((D2_dummy%(candidate_T/ctr))? 1:0))) % active_unit_num
+	|| (((D1_dummy%(candidate_T/ctr))? 1:0) + 
+		((D2_dummy%(candidate_T/ctr))? 1:0) + 
+		((D3_dummy%(candidate_T/ctr))? 1:0))))
+		ctr++;
+	candidate_T/=ctr; 
+#ifdef PDEBUG
+	fprintf(stderr,  "Updated candidate_T = %d with ctr = %d for NO-Wshare + NO-remainder + SK-num conditions\n", 
+		candidate_T, ctr);
+#endif
+	if (model->getSKNum(candidate_T) > max_sk){
+#ifdef PDEBUG
+		warning("Finding a no-remainder split failed - performance might degrade\n");
+#endif
+		candidate_T = gcd(D1_dummy, D2_dummy, D3_dummy);
+		if(candidate_T == 1) candidate_T = std::min(D1_dummy, std::min(D2_dummy, D3_dummy));
+		ctr = 1;
+		while(ctr < candidate_T && (((D1_dummy/(candidate_T/ctr) + ((D1_dummy%(candidate_T/ctr))? 1:0))
+		*(D2_dummy/(candidate_T/ctr) + ((D2_dummy%(candidate_T/ctr))? 1:0)))%active_unit_num))
+			ctr++;
+		candidate_T/=ctr; 
+#ifdef PDEBUG
+		fprintf(stderr,  "Updated candidate_T = %d with ctr = %d for NO-Wshare condition\n", candidate_T, ctr);
+#endif
+		ctr = 1; 
+		while(ctr < candidate_T && (model->getSKNum(candidate_T/ctr) < min_sk ||
+		((D1_dummy/(candidate_T/ctr) + ((D1_dummy%(candidate_T/ctr))? 1:0))
+		*(D2_dummy/(candidate_T/ctr) + ((D2_dummy%(candidate_T/ctr))? 1:0)))%active_unit_num))
+			ctr++;
+		if(candidate_T/ctr > 1){
+			candidate_T/=ctr; 
+#ifdef PDEBUG
+			fprintf(stderr,  "Updated candidate_T = %d with ctr = %d for NO-Wshare + SK-num conditions\n", candidate_T, ctr);
+#endif
+		}
+		else{
+			ctr = 1; 
+			while(ctr < candidate_T &&
+			((D1_dummy/(candidate_T/ctr) + ((D1_dummy%(candidate_T/ctr))? 1:0))
+			*(D2_dummy/(candidate_T/ctr) + ((D2_dummy%(candidate_T/ctr))? 1:0)))%active_unit_num)
+				ctr++;
+			candidate_T/=ctr;
+#ifdef PDEBUG
+			fprintf(stderr,  "Updated candidate_T = %d with ctr = %d for NO-Wshare condition\n", candidate_T, ctr);
+#endif 			
+		}
 	}
 	T = candidate_T;
+	if (model->getSKNum(candidate_T) > max_sk){
 #ifdef PDEBUG
-	lprintf(lvl, "====================================\n");
-	lprintf(lvl, "Predict T=%ld : No t_pred provided\n", T);
+		warning("Default method for obtaining T failed for active_unit_num = %d\n", active_unit_num);
+#endif
+		T = -1; 
+	}
+#ifdef PDEBUG
+	fprintf(stderr,  "====================================\n");
+	fprintf(stderr,  "Predict T=%ld : No t_pred provided\n", T);
 #endif
 	timer = csecond() - timer;
 #ifdef TEST
-	lprintf(lvl, "Tile selection time:%lf ms\n", timer*1000);
+	fprintf(stderr,  "Tile selection time:%lf ms\n", timer*1000);
 #endif
 #ifdef DEBUG
-	lprintf(lvl, "<-----|\n");
+	fprintf(stderr,  "<-----|\n");
 #endif
 	return timer;
 }
@@ -580,7 +614,7 @@ double ATC::optimize_split(){
 	short lvl = 3;
 	double timer = csecond();
 #ifdef DEBUG
-	lprintf(lvl, "|-----> ATC::optimize_split( autotune_controller{ T=%ld, active_unit_num=%d, Problem split = %s -> %s : t_pred = %lf ms}, unit_modeler_list =%p)\n",
+	fprintf(stderr,  "|-----> ATC::optimize_split( autotune_controller{ T=%ld, active_unit_num=%d, Problem split = %s -> %s : t_pred = %lf ms}, unit_modeler_list =%p)\n",
 		T, active_unit_num, printlist<int>(active_unit_id_list, active_unit_num),
 		printlist<double>(active_unit_score, active_unit_num), pred_t*1000, unit_modeler_list);
 #endif
@@ -594,7 +628,7 @@ double ATC::optimize_split(){
 	long int max_allowed_T = 0, ctr = 0;
 	max_allowed_T = model->getMaxT();
 #ifdef PDEBUG
-		lprintf(lvl, "max_allowed_T = %ld\n", max_allowed_T);
+		fprintf(stderr,  "max_allowed_T = %ld\n", max_allowed_T);
 #endif
 	if (T > max_allowed_T)
 		error("ATC::optimize_split: Give T = %ld > max_allowed_T = %ld\n", T, max_allowed_T);
@@ -631,14 +665,14 @@ double ATC::optimize_split(){
 		if (split_homogeneously) active_unit_score[idx] = 1.0/active_unit_num;
 		else active_unit_score[idx] /= temp_score;
 #ifdef PDEBUG
-		lprintf(lvl, "Calculating Relative score for unit_id = %d (idx = %d ): active_unit_score = %e\n",
+		fprintf(stderr,  "Calculating Relative score for unit_id = %d (idx = %d ): active_unit_score = %e\n",
 				active_unit_id_list[idx], idx, active_unit_score[idx]);
 #endif
 	}
 	normalize_split();
 	for(int idx = 0; idx < active_unit_num; idx++){;
 #ifdef PDEBUG
-		lprintf(lvl, "Normalized Relative score for unit_id = %d (idx = %d ): active_unit_score = %e\n",
+		fprintf(stderr,  "Normalized Relative score for unit_id = %d (idx = %d ): active_unit_score = %e\n",
 				active_unit_id_list[idx], idx, active_unit_score[idx]);
 #endif
 	}
@@ -689,7 +723,7 @@ double ATC::optimize_split(){
 		else error("model->predict(%p(dev_id = %d, (idx = %d )), T = %ld): negative prediction temp_t = %lf\n",
 			model, cur_dev_id, cur_dev_idx, T, temp_t);
 #ifdef PDEBUG
-		lprintf(lvl, "model->predict(%p) for dev_id = %d (idx = %d ) with T = %ld: temp_overlap_t = %lf, temp_t = %lf\n",
+		fprintf(stderr,  "model->predict(%p) for dev_id = %d (idx = %d ) with T = %ld: temp_overlap_t = %lf, temp_t = %lf\n",
 			model, cur_dev_id, cur_dev_idx, T, temp_overlap_t, temp_t);
 #endif
 #else
@@ -703,7 +737,7 @@ double ATC::optimize_split(){
 			model, cur_dev_id, cur_dev_idx, T, temp_t);
 		total_J += temp_J;
 #ifdef PDEBUG
-		lprintf(lvl, "model->predict(%p) for dev_id = %d (idx = %d ) with T = %ld: temp_overlap_t = %lf, temp_t = %lf\
+		fprintf(stderr,  "model->predict(%p) for dev_id = %d (idx = %d ) with T = %ld: temp_overlap_t = %lf, temp_t = %lf\
 		total_J = %lf, temp_J = %lf\n",
 			model, cur_dev_id, cur_dev_idx, T, temp_overlap_t, temp_t, total_J, temp_J);
 #endif
@@ -730,7 +764,7 @@ double ATC::optimize_split(){
 		if (split_homogeneously) active_unit_score[idx] = 1.0/active_unit_num;
 		else active_unit_score[idx] = 1/((active_unit_score[idx]) ? active_unit_score_new[idx]/active_unit_score[idx] : 0)/temp_score;
 #ifdef PDEBUG
-		lprintf(lvl, "Recalibrating Relative score for unit_id = %d (idx = %d ): active_unit_score = %e\n",
+		fprintf(stderr,  "Recalibrating Relative score for unit_id = %d (idx = %d ): active_unit_score = %e\n",
 				active_unit_id_list[idx], idx, active_unit_score[idx]);
 #endif
 	}
@@ -738,24 +772,24 @@ double ATC::optimize_split(){
 	normalize_split();
 	for(int idx = 0; idx < active_unit_num; idx++){;
 #ifdef PDEBUG
-		lprintf(lvl, "Normalized Relative score for unit_id = %d (idx = %d ): active_unit_score = %e\n",
+		fprintf(stderr,  "Normalized Relative score for unit_id = %d (idx = %d ): active_unit_score = %e\n",
 				active_unit_id_list[idx], idx, active_unit_score[idx]);
 #endif
 	}
 
 #ifdef PDEBUG
-	lprintf(lvl, "====================================\n");
-	lprintf(lvl, "Best %d percentages : [ ", active_unit_num);
-	for (int i =0; i < active_unit_num; i++) lprintf(0, "%.5lf ", active_unit_score[i]);
-	lprintf(0, "]\n");
-	lprintf(lvl, "====================================\n");
+	fprintf(stderr,  "====================================\n");
+	fprintf(stderr,  "Best %d percentages : [ ", active_unit_num);
+	for (int i =0; i < active_unit_num; i++) fprintf(stderr, "%.5lf ", active_unit_score[i]);
+	fprintf(stderr, "]\n");
+	fprintf(stderr,  "====================================\n");
 #endif
 	timer = csecond() - timer;
 #ifdef TEST
-	lprintf(lvl, "Optimization time:%lf ms\n", timer*1000);
+	fprintf(stderr,  "Optimization time:%lf ms\n", timer*1000);
 #endif
 #ifdef DEBUG
-	lprintf(lvl, "<-----|\n");
+	fprintf(stderr,  "<-----|\n");
 #endif
 	return timer;
 }
@@ -795,9 +829,9 @@ double ATC::optimize_tile_modelBased(ATC_p autotune_controller, short used_devs,
 	int* dev_idx_ignore, MD_p* unit_modeler_list){
 	short lvl = 3;
 #ifdef DEBUG
-	lprintf(lvl, "||-----> ATC::optimize_tile_modelBased(used_devs=%d, used_dev_ids= [ ", used_devs);
-	for (int i =0; i < used_devs; i++) lprintf(0, "%d ", used_dev_ids[i]);
-	lprintf(0, "]\n");
+	fprintf(stderr,  "||-----> ATC::optimize_tile_modelBased(used_devs=%d, used_dev_ids= [ ", used_devs);
+	for (int i =0; i < used_devs; i++) fprintf(stderr, "%d ", used_dev_ids[i]);
+	fprintf(stderr, "]\n");
 #endif
 #ifdef TEST
 	double timer = csecond();
@@ -812,7 +846,7 @@ double ATC::optimize_tile_modelBased(ATC_p autotune_controller, short used_devs,
 	max_allowed_T = CoCopeLiaMaxT(model);
 	min_T = CoCopeLiaMinT(model);
 #ifdef PDEBUG
-		lprintf(lvl, "min_T = %ld, max_allowed_T = %ld\n",
+		fprintf(stderr,  "min_T = %ld, max_allowed_T = %ld\n",
 			min_T, max_allowed_T);
 #endif
 	if (min_T > max_allowed_T){
@@ -820,7 +854,7 @@ double ATC::optimize_tile_modelBased(ATC_p autotune_controller, short used_devs,
 		// FIXME: Undefined expected performance for tiles < than the smaller microbenchmark
 		outparams->pred_t = 0;
 #ifdef PDEBUG
-		lprintf(lvl, "min_T = %ld > max_allowed_T = %ld: returning T = %ld",
+		fprintf(stderr,  "min_T = %ld > max_allowed_T = %ld: returning T = %ld",
 			min_T, max_allowed_T, max_allowed_T);
 #endif
 		return outparams;
@@ -870,7 +904,7 @@ double ATC::optimize_tile_modelBased(ATC_p autotune_controller, short used_devs,
 			else error("CoCoPeLiaModelPredict(%p(dev_id = %d, (idx = %d )), trial_T = %ld): negative prediction temp_t = %lf\n",
 				model, cur_dev_id, cur_dev_idx, trial_T, temp_t);
 #ifdef PDEBUG
-			lprintf(lvl, "CoCoPeLiaModelPredict(%p) for dev_id = %d (idx = %d ) with trial_T = %ld: temp_overlap_t = %lf, temp_t = %lf\n",
+			fprintf(stderr,  "CoCoPeLiaModelPredict(%p) for dev_id = %d (idx = %d ) with trial_T = %ld: temp_overlap_t = %lf, temp_t = %lf\n",
 				model, cur_dev_id, cur_dev_idx, trial_T, temp_overlap_t, temp_t);
 #endif
 		}
@@ -883,17 +917,17 @@ double ATC::optimize_tile_modelBased(ATC_p autotune_controller, short used_devs,
 	outparams->T = min_T;
 	outparams->pred_t = min_overlap_t;
 #ifdef PDEBUG
-	lprintf(lvl, "====================================\n");
-	lprintf(lvl, "Predict T=%ld : t_pred = %lf\n", outparams->T, outparams->pred_t);
+	fprintf(stderr,  "====================================\n");
+	fprintf(stderr,  "Predict T=%ld : t_pred = %lf\n", outparams->T, outparams->pred_t);
 #endif
 #ifdef TEST
 	timer = csecond() - timer;
-	lprintf(lvl, "Tile selection time:%lf ms\n", timer*1000);
-	lprintf(lvl, "<-----|\n");
+	fprintf(stderr,  "Tile selection time:%lf ms\n", timer*1000);
+	fprintf(stderr,  "<-----|\n");
 #endif
 #ifdef DEBUG
-	lprintf(lvl, "outparams->T = %ld\n : outparams->pred_t = %lf ms\n", outparams->T, outparams->pred_t);
-	lprintf(lvl, "<-----|\n");
+	fprintf(stderr,  "outparams->T = %ld\n : outparams->pred_t = %lf ms\n", outparams->T, outparams->pred_t);
+	fprintf(stderr,  "<-----|\n");
 #endif
 	return outparams;
 }

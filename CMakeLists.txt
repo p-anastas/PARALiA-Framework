@@ -119,8 +119,7 @@ add_definitions(-DALLOW_FETCH_RECORDED)
 #Run subkernels in provided order
 #add_definitions(-DSERIAL_SUBKERNEL_SELECTION)
 
-## Define subkernel selection heuristic values. 0 = No penalty
-## 
+## Define subkernel selection heuristic values.
 add_definitions(-DSUBKERNEL_SELECT_FETCH_ETA_PLUS_MIN_PENDING)
 #add_definitions(-DSUBKERNEL_SELECT_MIN_RONLY_ETA)
 
