@@ -280,18 +280,12 @@ void DgemmUpdatePointers(Subkernel* ker){
 }
 
 #ifdef SUBKERNELS_FIRE_WHEN_READY
-typedef struct subkernel_manager_data{
-	int sk_num; 
-	Subkernel ** sk_list;
-}* SMD_p;
-
-void* subkernel_manager_wrap(void* sk_wrap){
-	SMD_p manager_info = (SMD_p) sk_wrap; 
-	int sk_ctr = 0, remaining_sk = manager_info->sk_num; 
-	short sk_fired[manager_info->sk_num] = {0};
+void* subkernel_manager_wrap(void* dummy){
+	int sk_ctr = 0, remaining_sk = PMD_cache[PMD_cache_entries-1]->sk_num; 
+	short sk_fired[PMD_cache[PMD_cache_entries-1]->sk_num] = {0};
 	while (remaining_sk){
 		if(!sk_fired[sk_ctr]){
-			Subkernel * curr = manager_info->sk_list[sk_ctr];
+			Subkernel * curr = PMD_cache[PMD_cache_entries-1]->subkernel_list[sk_ctr];
 			if(curr->launched) sk_fired[sk_ctr] = curr->check_ready();
 			if(sk_fired[sk_ctr]){
 				DgemmUpdatePointers(curr);
@@ -301,11 +295,11 @@ void* subkernel_manager_wrap(void* sk_wrap){
 				//fprintf(stderr, "Fired SK %d\n",sk_ctr);
 			}
 		}
-		if (sk_ctr < manager_info->sk_num - 1) sk_ctr++;
+		if (sk_ctr < PMD_cache[PMD_cache_entries-1]->sk_num - 1) sk_ctr++;
 		else{
 			sk_ctr = 0; 
 			usleep(100); // TODO: This exists solely for nsight profiling reasons
-			//fprintf(stderr, "sk_fired = %s, remaining_sk = %d\n",printlist(sk_fired, manager_info->sk_num), remaining_sk);
+			//fprintf(stderr, "sk_fired = %s, remaining_sk = %d\n",printlist(sk_fired, PMD_cache[PMD_cache_entries-1]->sk_num), remaining_sk);
 		}
 		//fprintf(stderr, "loop %d ",sk_ctr);
 	}
@@ -523,19 +517,13 @@ ATC_p PARALiADgemm(char TransA,  char TransB, long int M, long int N, long int K
 #endif
 #ifdef SUBKERNELS_FIRE_WHEN_READY
 	pthread_t manager_thread_id;
-	SMD_p manager_data = (SMD_p) malloc(sizeof(struct subkernel_manager_data));
-	manager_data->sk_num = remaining_Subkernels;
-	manager_data->sk_list = (Subkernel**) malloc(remaining_Subkernels*sizeof(Subkernel*));
-	for(int sk_ctr = 0; sk_ctr < manager_data->sk_num; sk_ctr++)
-		manager_data->sk_list[sk_ctr] = local_PMD->subkernel_list[sk_ctr];
-
 	s = pthread_create(&manager_thread_id, &attr,
-                                  &subkernel_manager_wrap, (void*) manager_data);
+                                  &subkernel_manager_wrap, NULL);
 	while (remaining_Subkernels){
 		for(int d_ctr=0; d_ctr < local_PMD->autotuner->active_unit_num; d_ctr++){
-			//int d = d_ctr*2 % (local_PMD->autotuner->active_unit_num) + d_ctr*2 / (local_PMD->autotuner->active_unit_num); 
+			int d = d_ctr*2 % (local_PMD->autotuner->active_unit_num) + d_ctr*2 / (local_PMD->autotuner->active_unit_num); 
 			//printf("d_ctr(%d) = d(%d)\n", d_ctr, d); 
-			int d = d_ctr;
+			//int d = d_ctr;
 			if (remaining_Subkernels_dev[d]){
 				int dev_id = local_PMD->autotuner->active_unit_id_list[d];
 				Subkernel * curr = NULL;

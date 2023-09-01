@@ -2195,3 +2195,52 @@ Subkernel* SubkernelSelectMinimizeFetchWritePenalty(short dev_id, Subkernel** Su
 	return min_fetch_cost_sk;
 }
 */
+
+/// A dump for a pthread attempt for gemm
+int threadlock = 0;
+void* subkernel_worker_wrap(void* dev_idx_wrap){
+	int d = *((int*) dev_idx_wrap);
+	//fprintf(stderr, "Firing subkernel_worker_wrap for d = %d\n", d);
+	int remaining_sk_dev = PMD_cache[PMD_cache_entries-1]->sk_dev_num[d]; 
+	while(remaining_sk_dev){
+		//while(__sync_lock_test_and_set(&threadlock, 1));
+		int dev_id = deidxize(d);
+		Subkernel * curr = NULL;
+		if (reuse_problem_flag){
+			for (int sk_ctr = 0; sk_ctr < PMD_cache[PMD_cache_entries-1]->sk_dev_num[d]; sk_ctr++)
+				if(PMD_cache[PMD_cache_entries-1]->subkernel_dev_list[d][sk_ctr]->launch_order ==  
+				(PMD_cache[PMD_cache_entries-1]->sk_dev_num[d] - remaining_sk_dev) + 1)
+					curr = PMD_cache[PMD_cache_entries-1]->subkernel_dev_list[d][sk_ctr];
+		}
+		else curr = SubkernelSelect(dev_id, PMD_cache[PMD_cache_entries-1]->subkernel_dev_list[d], 
+			PMD_cache[PMD_cache_entries-1]->sk_dev_num[d]);
+		if (!curr){
+			error("PARALiADgemm - dev(%d): Got curr = NULL, repeating search\n", dev_id);
+			continue;
+		}
+		remaining_sk_dev--;
+		curr->request_data();
+		curr->launch_order =  PMD_cache[PMD_cache_entries-1]->sk_dev_num[d] - remaining_sk_dev; 
+		curr->launched = 1; 
+		//__sync_lock_release(&threadlock);
+
+	}
+	return NULL;
+}
+
+pthread_t manager_thread_id;
+s = pthread_create(&manager_thread_id, &attr,
+								&subkernel_manager_wrap, NULL);
+pthread_t worker_thread_id[local_PMD->autotuner->active_unit_num];
+int dev_idx[local_PMD->autotuner->active_unit_num] = {-1}; 
+for(int d=0; d < local_PMD->autotuner->active_unit_num; d++){
+	dev_idx[d] = d; 
+	s = pthread_create(&worker_thread_id[d], &attr,
+		&subkernel_worker_wrap, (void*) &dev_idx[d]);
+}
+for(int d=0; d < local_PMD->autotuner->active_unit_num; d++){
+	s = pthread_join(worker_thread_id[d], &res);
+	if (s != 0) error("PARALiADgemm: pthread_join failed with exit value %d", s);
+}		
+s = pthread_join(manager_thread_id, &res);
+if (s != 0) error("PARALiADgemm: manager_thread_id failed with exit value %d", s);

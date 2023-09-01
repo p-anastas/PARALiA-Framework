@@ -103,7 +103,7 @@ void Subkernel::request_data(){
 			else if(tmp->WRP == RONLY) new_block_state = SHARABLE;
 			else error("Subkernel::request_data: Not implemented for WRP of tile %d = %s\n", j, tmp->get_WRP_string());
 			tmp->StoreBlock[run_dev_id_idx] = current_SAB[run_dev_id_idx]->assign_Cblock(new_block_state,false);
-			tmp->StoreBlock[run_dev_id_idx]->set_owner((void**)&tmp->StoreBlock[run_dev_id_idx],false);
+			//tmp->StoreBlock[run_dev_id_idx]->set_owner((void**)&tmp->StoreBlock[run_dev_id_idx],false);
 			//if(tmp->WRP == WR){ 
 			//	int WB_loc_idx = idxize(tmp->get_initial_location()); 
 			//	tmp->StoreBlock[run_dev_id_idx]->init_writeback_info(tmp->StoreBlock[WB_loc_idx],
@@ -121,9 +121,9 @@ void Subkernel::request_data(){
 		//}
 		else{
 			tmp->fired_times++; 
-			if (tmp->WRP == RONLY) tmp->StoreBlock[run_dev_id_idx]->add_reader();
-			else if(tmp->WRP == WR || tmp->WRP == W_REDUCE || tmp->WRP == WR_LAZY)
-				tmp->StoreBlock[run_dev_id_idx]->add_writer();
+			//if (tmp->WRP == RONLY) tmp->StoreBlock[run_dev_id_idx]->add_reader();
+			//else if(tmp->WRP == WR || tmp->WRP == W_REDUCE || tmp->WRP == WR_LAZY)
+			//	tmp->StoreBlock[run_dev_id_idx]->add_writer();
 		}
 	}
 #ifndef ASYNC_ENABLE
@@ -169,16 +169,16 @@ void Subkernel::run_operation()
 
 	for (int j = 0; j < TileNum; j++){
 		DataTile_p tmp = TileList[j];
-		CBlock_wrap_p wrap_oper = NULL;
-		wrap_oper = (CBlock_wrap_p) malloc (sizeof(struct CBlock_wrap));
-		wrap_oper->CBlock = tmp->StoreBlock[run_dev_id_idx];
-		wrap_oper->lockfree = false;
 		if(tmp->WRP == WR || tmp->WRP == W_REDUCE || tmp->WRP == WR_LAZY){
 			tmp->W_pending--;
 			tmp->ETA_set(assigned_exec_queue->ETA_get(), run_dev_id);
 			if(!tmp->W_pending) tmp->operations_complete(assigned_exec_queue, &(predef_route[j]), &(predef_route[TileNum +j]));
 		}
-		else if(tmp->WRP == RONLY) assigned_exec_queue->add_host_func((void*)&CBlock_RR_wrap, (void*) wrap_oper);
+		/*CBlock_wrap_p wrap_oper = NULL;
+		wrap_oper = (CBlock_wrap_p) malloc (sizeof(struct CBlock_wrap));
+		wrap_oper->CBlock = tmp->StoreBlock[run_dev_id_idx];
+		wrap_oper->lockfree = false;
+		else if(tmp->WRP == RONLY) assigned_exec_queue->add_host_func((void*)&CBlock_RR_wrap, (void*) wrap_oper);*/
 
 	}
 #ifndef ASYNC_ENABLE
@@ -229,16 +229,16 @@ void Subkernel::run_ready_operation(){
 
 	for (int j = 0; j < TileNum; j++){
 		DataTile_p tmp = TileList[j];
-		CBlock_wrap_p wrap_oper = NULL;
-		wrap_oper = (CBlock_wrap_p) malloc (sizeof(struct CBlock_wrap));
-		wrap_oper->CBlock = tmp->StoreBlock[run_dev_id_idx];
-		wrap_oper->lockfree = false;
 		if(tmp->WRP == WR || tmp->WRP == W_REDUCE || tmp->WRP == WR_LAZY){
 			tmp->W_pending--;
 			//tmp->ETA_set(assigned_exec_queue->ETA_get(), run_dev_id);
 			if(!tmp->W_pending) tmp->operations_complete(assigned_exec_queue, &(predef_route[j]), &(predef_route[TileNum +j]));
 		}
-		else if(tmp->WRP == RONLY) assigned_exec_queue->add_host_func((void*)&CBlock_RR_wrap, (void*) wrap_oper);
+		/*CBlock_wrap_p wrap_oper = NULL;
+		wrap_oper = (CBlock_wrap_p) malloc (sizeof(struct CBlock_wrap));
+		wrap_oper->CBlock = tmp->StoreBlock[run_dev_id_idx];
+		wrap_oper->lockfree = false;
+		else if(tmp->WRP == RONLY) assigned_exec_queue->add_host_func((void*)&CBlock_RR_wrap, (void*) wrap_oper);*/
 
 	}
 #ifdef DEBUG
@@ -419,6 +419,7 @@ Subkernel* SubkernelSelect(short dev_id, Subkernel** Subkernel_list, long Subker
 			Subkernel_list[sk_idx]->prepare_launch(dev_id);
 			return Subkernel_list[sk_idx];
 		}
+	error("SubkernelSelect(SERIAL)\n No sk matched search condition\n");
 #endif
 	Subkernel* curr_sk = NULL;
 	int sk_idx, potential_sks[Subkernel_list_len], tie_list_num = 0, doubletie_list_num = 0; 
