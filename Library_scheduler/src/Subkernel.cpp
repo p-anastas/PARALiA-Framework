@@ -4,6 +4,7 @@
 /// \brief The "Subkernel" related function implementations.
 ///
 
+#include "PARALiA.hpp"
 #include "Subkernel.hpp"
 #include "linkmap.hpp"
 #include "Autotuner.hpp"
@@ -12,7 +13,7 @@
 
 #include <cfloat>
 
-int Subkernel_ctr = 0, backend_init_flag[LOC_NUM] = {0};
+int Subkernel_ctr = 0;
 
 inline int get_next_queue_ctr(int dev_id){
 	exec_queue_ctr[idxize(dev_id)]++;
@@ -23,14 +24,14 @@ inline int get_next_queue_ctr(int dev_id){
 Subkernel::Subkernel(short TileNum_in, const char* name){
 	id = Subkernel_ctr;
 	fetch_ETA = run_op_est_t = 0;
-	launched = 0; 
+	launched = launch_order = 0; 
 	run_dev_id = -42;
 	op_name = name;
 	Subkernel_ctr++;
 	TileNum = TileNum_in;
-	TileDimlist = (short*) malloc(TileNum*sizeof(short));
 	TileList = (DataTile_p*) malloc(TileNum*sizeof(DataTile_p));
-	prev = next = NULL;
+	predef_route = (LinkRoute_p*) malloc(2*TileNum*sizeof(LinkRoute_p));
+	for (int i = 0; i < 2*TileNum; i++) predef_route[i] = NULL; 
 #ifdef STEST
 	for (int i = 0; i < 3; i++){
 		dev_in_from[i] = dev_in_to[i] = dev_out_from[i] = dev_out_to[i] = -2;
@@ -47,6 +48,10 @@ Subkernel::~Subkernel(){
 	free(TileList);
 	free(operation_params);
 	//delete operation_complete;
+}
+
+void Subkernel::reset(){
+	launched = 0 ;
 }
 
 void Subkernel::prepare_launch(short dev_id){
@@ -93,11 +98,11 @@ void Subkernel::request_data(){
 		if (tmp->StoreBlock[run_dev_id_idx] == NULL ||
 			tmp->StoreBlock[run_dev_id_idx]->State == INVALID) {
 			if(tmp->StoreBlock[run_dev_id_idx] != NULL) tmp->StoreBlock[run_dev_id_idx]->Owner_p = NULL;
-			state new_block_state;
+			state new_block_state = SHARABLE;
 			if(WR == tmp->WRP || W_REDUCE == tmp->WRP || WR_LAZY == tmp->WRP) new_block_state = EXCLUSIVE;
 			else if(tmp->WRP == RONLY) new_block_state = SHARABLE;
 			else error("Subkernel::request_data: Not implemented for WRP of tile %d = %s\n", j, tmp->get_WRP_string());
-			tmp->StoreBlock[run_dev_id_idx] = Global_Buffer_2D[run_dev_id_idx]->assign_Cblock(new_block_state,false);
+			tmp->StoreBlock[run_dev_id_idx] = current_SAB[run_dev_id_idx]->assign_Cblock(new_block_state,false);
 			tmp->StoreBlock[run_dev_id_idx]->set_owner((void**)&tmp->StoreBlock[run_dev_id_idx],false);
 			//if(tmp->WRP == WR){ 
 			//	int WB_loc_idx = idxize(tmp->get_initial_location()); 
@@ -107,7 +112,7 @@ void Subkernel::request_data(){
 			//}
 			tmp->fired_times++;
 			if (tmp->WRP == WR || tmp->WRP == RONLY) 
-				tmp->fetch(tmp->StoreBlock[idxize(run_dev_id)], run_dev_id);
+				predef_route[j] = tmp->fetch(tmp->StoreBlock[idxize(run_dev_id)], run_dev_id, predef_route[j]);
 		}
 		//else if(tmp->StoreBlock[run_dev_id_idx]->State == NATIVE && // TODO: I have no idea what this does and why it exists anymore. Maybe its useless?
 		//	tmp->WRP == WR && tmp->W_master!= run_dev_id){
@@ -171,7 +176,7 @@ void Subkernel::run_operation()
 		if(tmp->WRP == WR || tmp->WRP == W_REDUCE || tmp->WRP == WR_LAZY){
 			tmp->W_pending--;
 			tmp->ETA_set(assigned_exec_queue->ETA_get(), run_dev_id);
-			if(!tmp->W_pending)tmp->operations_complete(assigned_exec_queue);
+			if(!tmp->W_pending) tmp->operations_complete(assigned_exec_queue, &(predef_route[j]), &(predef_route[TileNum +j]));
 		}
 		else if(tmp->WRP == RONLY) assigned_exec_queue->add_host_func((void*)&CBlock_RR_wrap, (void*) wrap_oper);
 
@@ -231,7 +236,7 @@ void Subkernel::run_ready_operation(){
 		if(tmp->WRP == WR || tmp->WRP == W_REDUCE || tmp->WRP == WR_LAZY){
 			tmp->W_pending--;
 			//tmp->ETA_set(assigned_exec_queue->ETA_get(), run_dev_id);
-			if(!tmp->W_pending)tmp->operations_complete(assigned_exec_queue);
+			if(!tmp->W_pending) tmp->operations_complete(assigned_exec_queue, &(predef_route[j]), &(predef_route[TileNum +j]));
 		}
 		else if(tmp->WRP == RONLY) assigned_exec_queue->add_host_func((void*)&CBlock_RR_wrap, (void*) wrap_oper);
 
@@ -383,8 +388,10 @@ void CoCoPeLiaCleanResources(){
 				if(wb_queues[dev_id_idx][dev_id_idy]) wb_queues[dev_id_idx][dev_id_idy]->ETA_set(0);
 		}
 		for (int i = 0; i < MAX_BACKEND_L; i++)
-			if(exec_queue[dev_id_idx]  && exec_queue[dev_id_idx][i])
+			if(exec_queue[dev_id_idx]  && exec_queue[dev_id_idx][i]){
 				exec_queue[dev_id_idx][i]->ETA_set(0);
+				exec_queue_ctr[dev_id_idx] = -1;
+			}
 	}
 }
 
@@ -395,26 +402,29 @@ void swap_sk(Subkernel** sk1, Subkernel** sk2){
 }
 /*****************************************************/
 /// PARALia 2.0 - timed queues and blocks
-long double Subkernel::run_op_estimate(MD_p modeler){
+/*long double Subkernel::run_op_estimate(MD_p modeler){
 	run_op_est_t = modeler->getGPUexecFull(); 
 #ifdef PDEBUG
 	fprintf(stderr, "|-----> Subkernel(dev=%d,id=%d):run_op_estimate() -> run_op_est_t = %lf\n", 
 		run_dev_id, id, run_op_est_t);
 #endif
 	return run_op_est_t; 
-}
+}*/
 
 #ifdef SUBKERNEL_SELECT_FETCH_ETA_PLUS_MIN_PENDING
 Subkernel* SubkernelSelect(short dev_id, Subkernel** Subkernel_list, long Subkernel_list_len){
 #ifdef SERIAL_SUBKERNEL_SELECTION
-	Subkernel_list[0]->prepare_launch(dev_id);
-	return Subkernel_list[0];
+	for (int sk_idx = 0; sk_idx < Subkernel_list_len; sk_idx++)
+		if(!Subkernel_list[sk_idx]->launched){
+			Subkernel_list[sk_idx]->prepare_launch(dev_id);
+			return Subkernel_list[sk_idx];
+		}
 #endif
 	Subkernel* curr_sk = NULL;
 	int sk_idx, potential_sks[Subkernel_list_len], tie_list_num = 0, doubletie_list_num = 0; 
 	long double min_ETA = DBL_MAX;
 	if(!Subkernel_list_len) error("SubkernelSelect: Gave 0 subkernel len with list = %p\n", Subkernel_list);
-	for (sk_idx = 0; sk_idx < Subkernel_list_len; sk_idx++){
+	for (sk_idx = 0; sk_idx < Subkernel_list_len; sk_idx++)if(!Subkernel_list[sk_idx]->launched){
 		curr_sk = Subkernel_list[sk_idx];
 		long double tmp_ETA = 0; 
 		for (int j = 0; j < curr_sk->TileNum; j++){
@@ -436,11 +446,12 @@ Subkernel* SubkernelSelect(short dev_id, Subkernel** Subkernel_list, long Subker
 			potential_sks[tie_list_num++] = sk_idx;
 		}
 	}
-	int most_fired_sks = 0, potential_tied_sks[tie_list_num];
+	int most_fired_sks = -1, potential_tied_sks[tie_list_num];
 	if (tie_list_num){
 		potential_tied_sks[0] = potential_sks[0];
 		doubletie_list_num = 1; 
 	}
+	else error("SubkernelSelect\n No sk matched search condition\n");
 	for (int ctr = 0; ctr < tie_list_num; ctr++){
 		curr_sk = Subkernel_list[potential_sks[ctr]];
 		int tmp_fired_sks = 0; 
@@ -462,9 +473,8 @@ Subkernel* SubkernelSelect(short dev_id, Subkernel** Subkernel_list, long Subker
 	}
 	int selected_sk_idx = (doubletie_list_num)? 
 		potential_tied_sks[int(rand() % doubletie_list_num)] : doubletie_list_num; 
-	swap_sk(&(Subkernel_list[0]), &(Subkernel_list[selected_sk_idx])); 
-	Subkernel_list[0]->prepare_launch(dev_id);
-	return Subkernel_list[0];
+	Subkernel_list[selected_sk_idx]->prepare_launch(dev_id);
+	return Subkernel_list[selected_sk_idx];
 }
 #endif
 
@@ -506,10 +516,12 @@ Subkernel* SubkernelSelect(short dev_id, Subkernel** Subkernel_list, long Subker
 /*****************************************************/
 
 void PARALiADevCacheFree(short dev_id){
-	if(Global_Buffer_1D[idxize(dev_id)]) delete Global_Buffer_1D[idxize(dev_id)];
-	Global_Buffer_1D[idxize(dev_id)] = NULL;
-	if(Global_Buffer_2D[idxize(dev_id)]) delete Global_Buffer_2D[idxize(dev_id)];
-	Global_Buffer_2D[idxize(dev_id)] = NULL;
+	for(int i = 0; i < PMD_cache_entries; i++) 
+		if (PMD_cache[i]->SAB[idxize(dev_id)] == current_SAB[idxize(dev_id)]){
+			PMD_cache[i]->SAB[idxize(dev_id)] = NULL;
+	}
+	if(current_SAB[idxize(dev_id)]) delete current_SAB[idxize(dev_id)];
+	current_SAB[idxize(dev_id)] = NULL;
 }
 
 #ifdef STEST

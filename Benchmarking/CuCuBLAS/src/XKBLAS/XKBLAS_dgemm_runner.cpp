@@ -159,7 +159,7 @@ int main(const int argc, const char *argv[]) {
 	if (predef_control_values!= NULL && predef_control_values->cache_limit > 0)
 		error("XKBLASDgemmRunner: XKBLAS not modified to accept cache_limit\n");
 	else cache_limit = -1;
-	int dev_num, *dev_ids;
+	int dev_num, *dev_ids = NULL;
 	if (predef_control_values!= NULL && predef_control_values->active_unit_num > 0)
 		error("XKBLASDgemmRunner: XKBLAS not modified to accept devices from within script\n");
 	else{

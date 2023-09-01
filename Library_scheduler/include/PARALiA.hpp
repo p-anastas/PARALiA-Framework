@@ -8,6 +8,7 @@
 
 #include "Autotuner.hpp"
 
+typedef class Buffer* Buffer_p;
 typedef class Decomposer* Decomposer_p; 
 class Subkernel;
 
@@ -17,9 +18,16 @@ public:
 	const char* problem_name;
 	void* problem_wrap; 
 	int decom_num;
-	Decomposer_p* decom;
-	Subkernel** Subkernel_list; 
+	Decomposer_p decom[10];
+	int sk_num; 
+	Subkernel** subkernel_list; 
+	int sk_dev_num[LOC_NUM]; 
+	Subkernel** subkernel_dev_list[LOC_NUM]; 
+	Buffer_p SAB[LOC_NUM]; 
 }* PMD_p; 
+
+extern PMD_p PMD_cache[PROBLEM_MD_CACHE]; 
+extern int PMD_cache_entries; 
 
 /// The PARALiA Dgemm implementation.
 ATC_p PARALiADgemm(char TransA,  char TransB, long int M, long int N, long int K,

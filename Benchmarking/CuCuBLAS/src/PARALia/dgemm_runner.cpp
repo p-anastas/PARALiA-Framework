@@ -76,7 +76,13 @@ int main(const int argc, const char *argv[]) {
 
 	CoCoMemcpy(C_buf, C,  M * N *sizeof(double), -2, C_loc);
 
-	// Call for Validate
+	// Call for Validate start
+	if (predef_control_values!= NULL) return_values = PARALiADgemmControled(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC, predef_control_values);
+	else return_values = PARALiADgemm(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC);
+	CoCoSyncCheckErr();
+	CoCoMemcpy(C, C_buf,  M * N *sizeof(double), C_loc, -2);
+
+	// Call for Validate reuse
 	if (predef_control_values!= NULL) return_values = PARALiADgemmControled(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC, predef_control_values);
 	else return_values = PARALiADgemm(TransA, TransB, M, N, K, alpha, A, ldA, B, ldB, beta, C , ldC);
 	CoCoSyncCheckErr();

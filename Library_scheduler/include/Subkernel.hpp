@@ -17,11 +17,10 @@ class Subkernel
 	private:
 	public:
 		int id, iloc1, iloc2, iloc3;
-		short run_dev_id, launched;
-		short *TileDimlist; // TODO: this might be irrelevant in new version
-		short TileNum;
+		int run_dev_id, launch_order, launched;
+		int TileNum;
 		DataTile** TileList;
-		Subkernel* prev, * next;
+		LinkRoute_p* predef_route;
 
 #ifdef STEST
 		double req_in_ts = 0, req_out_ts = 0;
@@ -49,6 +48,8 @@ class Subkernel
 		void run_operation();
 		short check_ready(); 
 		void run_ready_operation();
+
+		void reset();
 
 		/*****************************************************/
 		/// PARALia 2.0 - timed queues and blocks

@@ -14,86 +14,183 @@
 
 #include <pthread.h>
 
-gemm_backend_in<double>* initial_dgemm = NULL;
-ATC_p autotune_controller_dgemm = NULL;
 ATC_p predef_controller_dgemm = NULL;
-
-int MGridSz_dgemm = 0, NGridSz_dgemm = 0, KGridSz_dgemm = 0;
 
 #ifdef STEST
 double gemm_entry_ts;
 #endif
 
-Subkernel** CoCoAsignTilesToSubkernelsDgemm(Decomposer_p A_decom, Decomposer_p B_decom,
-	Decomposer_p C_decom, int T, int* kernelNum){
+void ManageCachesDgemm(PMD_p local_PMD){
+	int T = local_PMD->autotuner->T; 
+	int Block_num_A = (local_PMD->decom[0]->dim1/T + ((local_PMD->decom[0]->dim1%T)? 1 : 0))
+			* (local_PMD->decom[0]->dim2/T + ((local_PMD->decom[0]->dim2%T)? 1 : 0)),
+		Block_num_B = (local_PMD->decom[1]->dim1/T + ((local_PMD->decom[1]->dim1%T)? 1 : 0))
+			* (local_PMD->decom[1]->dim2/T + ((local_PMD->decom[1]->dim2%T)? 1 : 0)),
+		Block_num_C = (local_PMD->decom[2]->dim1/T + ((local_PMD->decom[2]->dim1%T)? 1 : 0))
+			* (local_PMD->decom[2]->dim2/T + ((local_PMD->decom[2]->dim2%T)? 1 : 0));
+	long long Block_sz = 	T*T*sizeof(double);
+	for(int cache_loc = 0; cache_loc < LOC_NUM; cache_loc++){
+		int Block_num = 0, Native_block_num = 0;
+		if (local_PMD->decom[0]->loc == deidxize(cache_loc)) Native_block_num+=Block_num_A;
+		if (local_PMD->decom[1]->loc == deidxize(cache_loc)) Native_block_num+=Block_num_B;
+		if (local_PMD->decom[2]->loc == deidxize(cache_loc)) Native_block_num+=Block_num_C;
 
-	short lvl = 2;
-	/// Check Assets satisfy GEMM dim criteria for N, N transpose
-	if (A_decom->transpose == 'N' && B_decom->transpose == 'N'){
-		massert(A_decom->GridSz1 == C_decom->GridSz1 &&
-						A_decom->Tile_map[0]->dim1 == C_decom->Tile_map[0]->dim1 &&
-						A_decom->Tile_map[A_decom->GridSz1*A_decom->GridSz2-1]->dim1
-						== C_decom->Tile_map[C_decom->GridSz1*C_decom->GridSz2-1]->dim1,
-						"M dim does not mach between assets for GEMM\n");
-		massert(B_decom->GridSz2 == C_decom->GridSz2 &&
-						B_decom->Tile_map[0]->dim2 == C_decom->Tile_map[0]->dim2 &&
-						B_decom->Tile_map[B_decom->GridSz1*B_decom->GridSz2-1]->dim2
-						== C_decom->Tile_map[C_decom->GridSz1*C_decom->GridSz2-1]->dim2,
-						"N dim does not mach between assets for GEMM\n");
-		massert(A_decom->GridSz2 == B_decom->GridSz1 &&
-						A_decom->Tile_map[0]->dim2 == B_decom->Tile_map[0]->dim1 &&
-						A_decom->Tile_map[A_decom->GridSz1*A_decom->GridSz2-1]->dim2
-						== B_decom->Tile_map[B_decom->GridSz1*B_decom->GridSz2-1]->dim1,
-						"K dim does not mach between assets for GEMM\n");
-	}
-	MGridSz_dgemm = A_decom->GridSz1;
-	NGridSz_dgemm = B_decom->GridSz2;
-	KGridSz_dgemm = A_decom->GridSz2;
-	*kernelNum = MGridSz_dgemm*NGridSz_dgemm*KGridSz_dgemm;
+		long long max_cache_sz = 0;
+		if(local_PMD->autotuner->cache_limit > 0) {
+			max_cache_sz = local_PMD->autotuner->cache_limit;
+			if (max_cache_sz < 3 * Block_sz) 
+				error("PARALiADgemm: Problem cannot run with less memory than %d\n", 3 * Block_sz);
+
+			long long free_dev_mem, max_dev_mem = 0, prev_DevCache_sz = 0;
+			if (current_SAB[cache_loc] != NULL) prev_DevCache_sz = (long long)
+				current_SAB[cache_loc]->BlockSize* current_SAB[cache_loc]->BlockNum;
+			int prev_dev = CoCoPeLiaGetDevice();
+			CoCoPeLiaSelectDevice(deidxize(cache_loc));
+
+			if(deidxize(cache_loc)!=-1) {
+			// if(Native_block_num==0){
+				CoCoPeLiaDevGetMemInfo(&free_dev_mem, &max_dev_mem);
+				max_cache_sz = (long long) fmin(max_cache_sz, free_dev_mem 
+					- ((long long) max_dev_mem*(1-PROBLEM_GPU_PERCENTAGE/100.0)) + prev_DevCache_sz);
+			}
+			else {
+				// free_dev_mem = max_dev_mem = 2 * Native_block_num * Block_sz;
+				free_dev_mem = max_dev_mem = (Native_block_num + 3) * Block_sz;
+				max_cache_sz = free_dev_mem;
+			}
+			max_cache_sz = fmax((Native_block_num + 3) * Block_sz, max_cache_sz);
+
+			CoCoPeLiaSelectDevice(prev_dev);
+			// max_cache_sz = (long long) fmin(max_cache_sz, free_dev_mem 
+			// - ((long long) max_dev_mem*(1-PROBLEM_GPU_PERCENTAGE/100.0)) + prev_DevCache_sz);
+		}
+		else{
+			long long free_dev_mem, max_dev_mem = 0, prev_DevCache_sz = 0;
+			if (current_SAB[cache_loc] != NULL) prev_DevCache_sz = (long long)
+				current_SAB[cache_loc]->BlockSize* current_SAB[cache_loc]->BlockNum;
+			int prev_dev = CoCoPeLiaGetDevice();
+			CoCoPeLiaSelectDevice(deidxize(cache_loc));
+
+			if(deidxize(cache_loc)!=-1) CoCoPeLiaDevGetMemInfo(&free_dev_mem, &max_dev_mem);
+			// TODO: hard coded value, should put something that reads it from system?
+			else free_dev_mem = max_dev_mem = 100000000000; 
+			CoCoPeLiaSelectDevice(prev_dev);
+			max_cache_sz = free_dev_mem - ((long long) max_dev_mem*(1-PROBLEM_GPU_PERCENTAGE/100.0)) + prev_DevCache_sz;
+		}
+		Block_num = 1 + Block_num_A + Block_num_B + Block_num_C;
+		if (WR_LAZY) Block_num+= Block_num_C; 
+		int max_block_num = max_cache_sz/Block_sz;
+		if(max_block_num < Block_num){
+			lprintf(0, "PARALiADgemm: Problem will use %d blocks for dev_id = %d\
+				instead of %d needed for the full problem\n", max_block_num, deidxize(cache_loc), Block_num);
+			lprintf(0, "====================================\n");
+			Block_num = max_block_num;
+			// 2 + (local_PMD->decom[2]->dim1/T + ((local_PMD->decom[2]->dim1%T)? 1 : 0))
+			// * (local_PMD->decom[2]->dim2/T + ((local_PMD->decom[2]->dim2%T)? 1 : 0));
+			int worst_case_ex_blocks = 3; 
+			if(max_block_num < worst_case_ex_blocks)
+				error("PARALiADgemm: Not able to run with < %d blocks per cache due to EX scheduling\n", 
+					worst_case_ex_blocks);
+		}
+#ifdef BUFFER_REUSE_ENABLE
+		if(current_SAB[cache_loc] == NULL) current_SAB[cache_loc] = 
+			new Buffer(deidxize(cache_loc), Block_num, Block_sz);
+		else if (current_SAB[cache_loc]->BlockSize != Block_sz 
+			|| current_SAB[cache_loc]->BlockNum < Block_num){
 #ifdef DEBUG
-	fprintf(stderr, "|-----> CoCoAsignTilesToSubkernelsDgemm(A_decom,B_decom,C_decom,%d,%d)\n", T, *kernelNum);
-	fprintf(stderr,"MgridSz = %d, NgridSz = %d, KgridSz = %d\n", MGridSz_dgemm, NGridSz_dgemm, KGridSz_dgemm);
+			fprintf(stderr, "PARALiADgemm: Previous Cache smaller than requested:\
+			current_SAB[%d]->BlockSize=%lld vs Block_sz = %lld,\
+			current_SAB[%d]->BlockNum=%d vs Block_num = %d\n",
+			cache_loc, current_SAB[cache_loc]->BlockSize, Block_sz,
+			cache_loc, current_SAB[cache_loc]->BlockNum, Block_num);
+#endif
+			delete current_SAB[cache_loc];
+			current_SAB[cache_loc] = new Buffer(deidxize(cache_loc), Block_num, Block_sz);
+		}
+		else{
+			;
+		}
+#else
+			if(current_SAB[cache_loc]!= NULL) 
+				error("PARALiADgemm: current_SAB[%d] was not NULL with reuse disabled\n", cache_loc);
+			current_SAB[cache_loc] = new Buffer(deidxize(cache_loc), Block_num, Block_sz);
+#endif
+	}
+	for (int i = 0; i < LOC_NUM; i++) local_PMD->SAB[i] = current_SAB[i];
+	return;
+}
+
+void CreateSubkernelsDgemm(PMD_p local_PMD){
+
+	/// Check if decomposers satisfy GEMM dim criteria for N, N transpose
+	if (local_PMD->decom[0]->transpose == 'N' && local_PMD->decom[1]->transpose == 'N'){
+		massert(local_PMD->decom[0]->GridSz1 == local_PMD->decom[2]->GridSz1 &&
+						local_PMD->decom[0]->Tile_map[0]->dim1 == local_PMD->decom[2]->Tile_map[0]->dim1 &&
+						local_PMD->decom[0]->Tile_map[local_PMD->decom[0]->GridSz1*local_PMD->decom[0]->GridSz2-1]->dim1
+						== local_PMD->decom[2]->Tile_map[local_PMD->decom[2]->GridSz1*local_PMD->decom[2]->GridSz2-1]->dim1,
+						"M dim does not mach between decomposers for GEMM\n");
+		massert(local_PMD->decom[1]->GridSz2 == local_PMD->decom[2]->GridSz2 &&
+						local_PMD->decom[1]->Tile_map[0]->dim2 == local_PMD->decom[2]->Tile_map[0]->dim2 &&
+						local_PMD->decom[1]->Tile_map[local_PMD->decom[1]->GridSz1*local_PMD->decom[1]->GridSz2-1]->dim2
+						== local_PMD->decom[2]->Tile_map[local_PMD->decom[2]->GridSz1*local_PMD->decom[2]->GridSz2-1]->dim2,
+						"N dim does not mach between decomposers for GEMM\n");
+		massert(local_PMD->decom[0]->GridSz2 == local_PMD->decom[1]->GridSz1 &&
+						local_PMD->decom[0]->Tile_map[0]->dim2 == local_PMD->decom[1]->Tile_map[0]->dim1 &&
+						local_PMD->decom[0]->Tile_map[local_PMD->decom[0]->GridSz1*local_PMD->decom[0]->GridSz2-1]->dim2
+						== local_PMD->decom[1]->Tile_map[local_PMD->decom[1]->GridSz1*local_PMD->decom[1]->GridSz2-1]->dim1,
+						"K dim does not mach between decomposers for GEMM\n");
+	}
+	local_PMD->sk_num = local_PMD->decom[0]->GridSz1*local_PMD->decom[1]->GridSz2*local_PMD->decom[0]->GridSz2;
+#ifdef DEBUG
+	fprintf(stderr, "|-----> CreateSubkernelsDgemm(%p,%d,%d)\n",
+		local_PMD, local_PMD->autotuner->T, local_PMD->sk_num);
+	fprintf(stderr,"MgridSz = %d, NgridSz = %d, KgridSz = %d\n",
+		local_PMD->decom[0]->GridSz1, local_PMD->decom[1]->GridSz2, local_PMD->decom[0]->GridSz2);
 	fprintf(stderr,"Mlast = %d, Nlast = %d, Klast = %d\n",
-	A_decom->Tile_map[A_decom->GridSz1*A_decom->GridSz2-1]->dim1,
-	B_decom->Tile_map[B_decom->GridSz1*B_decom->GridSz2-1]->dim2,
-	A_decom->Tile_map[A_decom->GridSz1*A_decom->GridSz2-1]->dim2);
+	local_PMD->decom[0]->Tile_map[local_PMD->decom[0]->GridSz1*local_PMD->decom[0]->GridSz2-1]->dim1,
+	local_PMD->decom[1]->Tile_map[local_PMD->decom[1]->GridSz1*local_PMD->decom[1]->GridSz2-1]->dim2,
+	local_PMD->decom[0]->Tile_map[local_PMD->decom[0]->GridSz1*local_PMD->decom[0]->GridSz2-1]->dim2);
 #endif
 
-Subkernel** kernels = (Subkernel**) malloc(*kernelNum*sizeof(Subkernel*));
-int current_ctr = 0;
-	for (int mi = 0; mi < MGridSz_dgemm; mi++){
-		for (int ni = 0; ni < NGridSz_dgemm; ni++){
-			for (int ki = 0; ki < KGridSz_dgemm; ki++){
-	      		current_ctr = mi*NGridSz_dgemm*KGridSz_dgemm + ni*KGridSz_dgemm + ki;
-				kernels[current_ctr] = new Subkernel(3,"Dgemm");
-				kernels[current_ctr]->iloc1 = mi;
-				kernels[current_ctr]->iloc2 = ni;
-				kernels[current_ctr]->iloc3 = ki;
-				kernels[current_ctr]->TileDimlist[0] = kernels[current_ctr]->TileDimlist[1]
-				= kernels[current_ctr]->TileDimlist[2] = 2;
-				kernels[current_ctr]->TileList[0] = A_decom->getTile(mi,ki);
-				kernels[current_ctr]->TileList[1] = B_decom->getTile(ki,ni);
-				kernels[current_ctr]->TileList[2] = C_decom->getTile(mi,ni);
-				kernels[current_ctr]->TileList[0]->set_WRP(RONLY);
-				kernels[current_ctr]->TileList[1]->set_WRP(RONLY);
+	local_PMD->subkernel_list = (Subkernel**) malloc(local_PMD->sk_num*sizeof(Subkernel*));
+	gemm_backend_in<double>* initial_dgemm = (gemm_backend_in<double>*) local_PMD->problem_wrap;
+	int current_ctr = 0;
+	for (int mi = 0; mi < local_PMD->decom[0]->GridSz1; mi++){
+		for (int ni = 0; ni < local_PMD->decom[1]->GridSz2; ni++){
+			for (int ki = 0; ki < local_PMD->decom[0]->GridSz2; ki++){
+	      		current_ctr = mi*local_PMD->decom[1]->GridSz2*local_PMD->decom[0]->GridSz2 + 
+					ni*local_PMD->decom[0]->GridSz2 + ki;
+				local_PMD->subkernel_list[current_ctr] = new Subkernel(3,"Dgemm");
+				local_PMD->subkernel_list[current_ctr]->iloc1 = mi;
+				local_PMD->subkernel_list[current_ctr]->iloc2 = ni;
+				local_PMD->subkernel_list[current_ctr]->iloc3 = ki;
+				local_PMD->subkernel_list[current_ctr]->TileList[0] = local_PMD->decom[0]->getTile(mi,ki);
+				local_PMD->subkernel_list[current_ctr]->TileList[1] = local_PMD->decom[1]->getTile(ki,ni);
+				local_PMD->subkernel_list[current_ctr]->TileList[2] = local_PMD->decom[2]->getTile(mi,ni);
+				local_PMD->subkernel_list[current_ctr]->TileList[0]->set_WRP(RONLY);
+				local_PMD->subkernel_list[current_ctr]->TileList[1]->set_WRP(RONLY);
 				if (!strcmp(OUTPUT_ALGO_MODE, "ALGO_WR"))
-					kernels[current_ctr]->TileList[2]->set_WRP(WR);
+					local_PMD->subkernel_list[current_ctr]->TileList[2]->set_WRP(WR);
 				else if (!strcmp(OUTPUT_ALGO_MODE, "ALGO_WR_LAZY"))
-					kernels[current_ctr]->TileList[2]->set_WRP(WR_LAZY);
+					local_PMD->subkernel_list[current_ctr]->TileList[2]->set_WRP(WR_LAZY);
 				else if (!strcmp(OUTPUT_ALGO_MODE, "ALGO_WREDUCE"))
-					kernels[current_ctr]->TileList[2]->set_WRP(W_REDUCE);
-				else error("CoCoAsignTilesToSubkernelsDgemm: Unknown OUTPUT_ALGO_MODE =  %s\n", OUTPUT_ALGO_MODE);
-				kernels[current_ctr]->TileList[2]->W_pending = KGridSz_dgemm;
-				kernels[current_ctr]->TileList[2]->reduce_mult = initial_dgemm->beta; 
-				kernels[current_ctr]->operation_params = (void*) malloc(sizeof( gemm_backend_in<double>));
-				gemm_backend_in<double>*  ptr_ker_translate = (gemm_backend_in<double>*) kernels[current_ctr]->operation_params;
+					local_PMD->subkernel_list[current_ctr]->TileList[2]->set_WRP(W_REDUCE);
+				else error("CreateSubkernelsDgemm: Unknown OUTPUT_ALGO_MODE =  %s\n", OUTPUT_ALGO_MODE);
+				local_PMD->subkernel_list[current_ctr]->TileList[2]->W_pending = local_PMD->decom[0]->GridSz2;
+				local_PMD->subkernel_list[current_ctr]->TileList[2]->reduce_mult = initial_dgemm->beta; 
+				local_PMD->subkernel_list[current_ctr]->operation_params = 
+					(void*) malloc(sizeof( gemm_backend_in<double>));
+				gemm_backend_in<double>*  ptr_ker_translate = 
+					(gemm_backend_in<double>*) local_PMD->subkernel_list[current_ctr]->operation_params;
 				ptr_ker_translate->TransA = initial_dgemm->TransA;
 				ptr_ker_translate->TransB = initial_dgemm->TransB;
-				ptr_ker_translate->M = kernels[current_ctr]->TileList[2]->dim1;
-				ptr_ker_translate->N = kernels[current_ctr]->TileList[2]->dim2;
-				if (ptr_ker_translate->TransA == 'N') ptr_ker_translate->K = kernels[current_ctr]->TileList[0]->dim2;
-				else if (ptr_ker_translate->TransA == 'T') ptr_ker_translate->K = kernels[current_ctr]->TileList[0]->dim1;
-				else error("CoCoAsignTilesToSubkernelsDgemm: Unknown transpose type\n");
+				ptr_ker_translate->M = local_PMD->subkernel_list[current_ctr]->TileList[2]->dim1;
+				ptr_ker_translate->N = local_PMD->subkernel_list[current_ctr]->TileList[2]->dim2;
+				if (ptr_ker_translate->TransA == 'N') ptr_ker_translate->K = 
+					local_PMD->subkernel_list[current_ctr]->TileList[0]->dim2;
+				else if (ptr_ker_translate->TransA == 'T') ptr_ker_translate->K = 
+					local_PMD->subkernel_list[current_ctr]->TileList[0]->dim1;
+				else error("CreateSubkernelsDgemm: Unknown transpose type\n");
 				ptr_ker_translate->A = NULL;
 				ptr_ker_translate->B = NULL;
 				ptr_ker_translate->C = NULL;
@@ -106,15 +203,49 @@ int current_ctr = 0;
 #ifdef DEBUG
 	fprintf(stderr, "<-----|\n");
 #endif
-	return kernels;
 }
 
-void DgemmUpdateDevice(Subkernel* ker, int dev_id){
+void UpdateSubkernelsDgemm(PMD_p local_PMD){
+	gemm_backend_in<double>* initial_dgemm = (gemm_backend_in<double>*) local_PMD->problem_wrap;
+	int current_ctr = 0;
+	for (int mi = 0; mi < local_PMD->decom[0]->GridSz1; mi++){
+		for (int ni = 0; ni < local_PMD->decom[1]->GridSz2; ni++){
+			for (int ki = 0; ki < local_PMD->decom[0]->GridSz2; ki++){
+	      		current_ctr = mi*local_PMD->decom[1]->GridSz2*local_PMD->decom[0]->GridSz2 
+							+ ni*local_PMD->decom[0]->GridSz2 + ki;
+				local_PMD->subkernel_list[current_ctr]->TileList[2]->W_pending = local_PMD->decom[0]->GridSz2;
+				local_PMD->subkernel_list[current_ctr]->TileList[2]->reduce_mult = initial_dgemm->beta;
+				//local_PMD->subkernel_list[current_ctr]->TileList[2]->W_complete->reset();
+				gemm_backend_in<double>*  ptr_ker_translate = (gemm_backend_in<double>*) 
+					local_PMD->subkernel_list[current_ctr]->operation_params;
+				//ptr_ker_translate->TransA = initial_dgemm->TransA;
+				//ptr_ker_translate->TransB = initial_dgemm->TransB;
+				//if (ptr_ker_translate->TransA == 'N') ptr_ker_translate->K = 
+				//	local_PMD->subkernel_list[current_ctr]->TileList[0]->dim2;
+				//else if (ptr_ker_translate->TransA == 'T') ptr_ker_translate->K = 
+				//	local_PMD->subkernel_list[current_ctr]->TileList[0]->dim1;
+				//else error("CreateSubkernelsDgemm: Unknown transpose type\n");
+				ptr_ker_translate->A = NULL;
+				ptr_ker_translate->B = NULL;
+				ptr_ker_translate->C = NULL;
+				ptr_ker_translate->alpha = initial_dgemm->alpha;
+				ptr_ker_translate->beta = initial_dgemm->beta;
+
+				int dev_id_idx = idxize(local_PMD->subkernel_list[current_ctr]->run_dev_id);
+				local_PMD->subkernel_list[current_ctr]->TileList[0]->set_loc_idx(dev_id_idx, 1);
+				local_PMD->subkernel_list[current_ctr]->TileList[1]->set_loc_idx(dev_id_idx, 1);
+				local_PMD->subkernel_list[current_ctr]->TileList[2]->set_loc_idx(dev_id_idx, 1);
+			}
+		}
+	}
+}
+
+void DgemmBindDevice(PMD_p local_PMD, Subkernel* ker, int dev_id){
 	gemm_backend_in<double>*  ptr_ker_translate = (gemm_backend_in<double>* ) ker->operation_params;
 	ker->run_dev_id = ptr_ker_translate->dev_id = dev_id;
 	CoCoPeLiaSelectDevice(dev_id);
 #ifdef DEBUG
-	fprintf(stderr, "|-----> DgemmUpdateDevice - Subkernel(dev=%d, id = %d)\n", dev_id, ker->id);
+	fprintf(stderr, "|-----> DgemmBindDevice - Subkernel(dev=%d, id = %d)\n", dev_id, ker->id);
 #endif
 	int dev_id_idx = idxize(dev_id);
 	ptr_ker_translate->ldA = ker->TileList[0]->get_chunk_size(dev_id_idx);
@@ -124,9 +255,9 @@ void DgemmUpdateDevice(Subkernel* ker, int dev_id){
 	ker->TileList[1]->set_loc_idx(dev_id_idx, 1);
 	ker->TileList[2]->set_loc_idx(dev_id_idx, 1);
 	ker->TileList[2]->W_master = dev_id;
-	if(ker->TileList[2]->W_pending == KGridSz_dgemm) ker->TileList[2]->W_complete = new Event(dev_id);
-	if(autotune_controller_dgemm) if(autotune_controller_dgemm->unit_modeler_list[dev_id_idx])
-		ker->run_op_estimate(autotune_controller_dgemm->unit_modeler_list[dev_id_idx]); 
+	if(ker->TileList[2]->W_pending == local_PMD->decom[0]->GridSz2) ker->TileList[2]->W_complete = new Event(dev_id);
+	//if(local_PMD->autotuner) if(local_PMD->autotuner->unit_modeler_list[dev_id_idx])
+	//	ker->run_op_estimate(local_PMD->autotuner->unit_modeler_list[dev_id_idx]); 
 #ifdef DEBUG
 	fprintf(stderr, "<-----|\n");
 #endif
@@ -203,38 +334,58 @@ ATC_p PARALiADgemm(char TransA,  char TransB, long int M, long int N, long int K
 
 	int prev_dev_id = CoCoPeLiaGetDevice();
 
-	int reuse_model_flag = 1;
-	if(!initial_dgemm){
-		initial_dgemm = (gemm_backend_in<double>* ) malloc(sizeof( gemm_backend_in<double>));
-		reuse_model_flag = 0;
+	int reuse_problem_flag = 0;
+	PMD_p local_PMD = NULL; 
+	gemm_backend_in<double>* initial_dgemm;
+
+	for(int cache_entries = 0; cache_entries < PMD_cache_entries; cache_entries++)
+	if(PMD_cache[cache_entries] && !strcmp(PMD_cache[cache_entries]->problem_name, "Dgemm")){
+			initial_dgemm = (gemm_backend_in<double>*) PMD_cache[cache_entries]->problem_wrap;
+			reuse_problem_flag = 1; 
+			if(initial_dgemm->TransA != TransA)
+			reuse_problem_flag = 0;
+			if(initial_dgemm->TransB != TransB)
+				reuse_problem_flag = 0;
+			if(initial_dgemm->M != M)
+				reuse_problem_flag = 0;
+			if(initial_dgemm->N != N)
+				reuse_problem_flag = 0;
+			if(initial_dgemm->K != K)
+				reuse_problem_flag = 0;
+			if(initial_dgemm->A!= NULL && CoCoGetPtrLoc(*initial_dgemm->A) != CoCoGetPtrLoc(A))
+				reuse_problem_flag = 0;
+
+			if(initial_dgemm->B!= NULL && CoCoGetPtrLoc(*initial_dgemm->B) != CoCoGetPtrLoc(B))
+				reuse_problem_flag = 0;
+
+			if(initial_dgemm->C!= NULL && CoCoGetPtrLoc(*initial_dgemm->C) != CoCoGetPtrLoc(C))
+				reuse_problem_flag = 0;
+			if(reuse_problem_flag){
+				local_PMD = PMD_cache[cache_entries]; 
+				break; 
+			}
 	}
-	if(reuse_model_flag && initial_dgemm->TransA != TransA)
-		reuse_model_flag = 0;
+	if (!local_PMD){
+#ifdef DEBUG
+			fprintf(stderr, "No previous problem metadata cache entry found, starting...\n");
+#endif
+			if (PMD_cache_entries == PROBLEM_MD_CACHE){
+				warning("PARALiADgemm - problem cache full, removing first entry\n");
+				delete PMD_cache[0];
+				local_PMD = PMD_cache[0] = new ProblemMetadata();
+			}
+			else local_PMD = PMD_cache[PMD_cache_entries++] = new ProblemMetadata();
+			local_PMD->problem_wrap = malloc(sizeof(gemm_backend_in<double>));
+	}
+	initial_dgemm = (gemm_backend_in<double>*) local_PMD->problem_wrap;
 	initial_dgemm->TransA = TransA;
-	if(reuse_model_flag && initial_dgemm->TransB != TransB)
-		reuse_model_flag = 0;
 	initial_dgemm->TransB = TransB;
-	if(reuse_model_flag && initial_dgemm->M != M)
-		reuse_model_flag = 0;
 	initial_dgemm->M = M;
-	if(reuse_model_flag && initial_dgemm->N != N)
-		reuse_model_flag = 0;
 	initial_dgemm->N = N;
-	if(reuse_model_flag && initial_dgemm->K != K)
-		reuse_model_flag = 0;
 	initial_dgemm->K = K;
-	if(reuse_model_flag && initial_dgemm->A!= NULL && *initial_dgemm->A != A)
-		reuse_model_flag = 0;
 	initial_dgemm->A = (void**) &A;
-
-	if(reuse_model_flag && initial_dgemm->B!= NULL && *initial_dgemm->B != B)
-		reuse_model_flag = 0;
 	initial_dgemm->B = (void**) &B;
-
-	if(reuse_model_flag && initial_dgemm->C!= NULL && *initial_dgemm->C != C)
-		reuse_model_flag = 0;
 	initial_dgemm->C = (void**) &C;
-
 	initial_dgemm->alpha = alpha;
 	initial_dgemm->beta = beta;
 	initial_dgemm->ldA = ldA;
@@ -242,203 +393,109 @@ ATC_p PARALiADgemm(char TransA,  char TransB, long int M, long int N, long int K
 	initial_dgemm->ldC = ldC;
 	initial_dgemm->dev_id = -1;
 
-	Decomposer_p A_decom, B_decom, C_decom;
-	/// Prepare Assets in parallel( e.g. initialize asset classes, pin memory with pthreads)
-	/// return: A_decom, B_decom, C_decom initialized and pinned
-	A_decom = new Decom2D( (void*) A, M, K, ldA, TransA, DOUBLE);
-	B_decom = new Decom2D( (void*) B, K, N, ldB, TransB, DOUBLE);
-	C_decom = new Decom2D( (void*) C, M, N, ldC, 'N', DOUBLE);
-
 	pthread_attr_t attr;
 	int s = pthread_attr_init(&attr);
 	if (s != 0) error("PARALiADgemm: pthread_attr_init failed s=%d\n", s);
-
-	pthread_t asset_thread_id[3];
-	A_decom->prepareAsync(&asset_thread_id[0], attr);
-	B_decom->prepareAsync(&asset_thread_id[1], attr);
-	C_decom->prepareAsync(&asset_thread_id[2], attr);
-
-	if (!reuse_model_flag){
-		delete autotune_controller_dgemm;
-		autotune_controller_dgemm = NULL;
-	}
-	if (autotune_controller_dgemm == NULL) autotune_controller_dgemm = new ATC();
-	if (predef_controller_dgemm && autotune_controller_dgemm->diff_intialized_params_ATC(predef_controller_dgemm)){
-		 autotune_controller_dgemm->mimic_ATC(predef_controller_dgemm);
-		 reuse_model_flag = 0;
-	}
-	double autotune_timer = 0;
-	if(!reuse_model_flag) autotune_timer = autotune_controller_dgemm->autotune_problem("Dgemm", initial_dgemm);
-
 	void* res;
-	for(int i=0; i<3;i++){
-		s = pthread_join(asset_thread_id[i], &res);
-		if (s != 0) error("PARALiADgemm: pthread_join failed with exit value %d", s);
-		//free(res);      /* Free memory allocated by thread */
-	}
+	double autotune_timer = 0;
+	long int T; 
+	int remaining_Subkernels = 0;
+	int remaining_Subkernels_dev[LOC_NUM] = {0};
 
+	if(!reuse_problem_flag){
+		local_PMD->problem_name = "Dgemm";
+		local_PMD->decom_num = 3;
+		local_PMD->decom[0] = new Decom2D( (void*) A, M, K, ldA, TransA, DOUBLE);
+		local_PMD->decom[1] = new Decom2D( (void*) B, K, N, ldB, TransB, DOUBLE);
+		local_PMD->decom[2] = new Decom2D( (void*) C, M, N, ldC, 'N', DOUBLE);
+
+		pthread_t asset_thread_id[3];
+		local_PMD->decom[0]->prepareAsync(&asset_thread_id[0], attr);
+		local_PMD->decom[1]->prepareAsync(&asset_thread_id[1], attr);
+		local_PMD->decom[2]->prepareAsync(&asset_thread_id[2], attr);
+
+		local_PMD->autotuner = new ATC();
+		if (predef_controller_dgemm && local_PMD->autotuner->diff_intialized_params_ATC(predef_controller_dgemm))
+			local_PMD->autotuner->mimic_ATC(predef_controller_dgemm);
+		autotune_timer = local_PMD->autotuner->autotune_problem("Dgemm", initial_dgemm);
+
+		for(int d=0; d < LOC_NUM; d++) CoCoEnableLinks(deidxize(d), LOC_NUM);
+
+		for(int i=0; i<3;i++){
+			s = pthread_join(asset_thread_id[i], &res);
+			if (s != 0) error("PARALiADgemm: pthread_join failed with exit value %d", s);
+			//free(res);      /* Free memory allocated by thread */
+		}
 #ifdef TEST
-	cpu_timer = csecond() - cpu_timer;
-	fprintf(stderr, "Preparing assets (parallel with pthreads) -> t_prep = %lf ms\n", cpu_timer*1000);
-	cpu_timer = csecond();
+		cpu_timer = csecond() - cpu_timer;
+		fprintf(stderr, "Preparing decomposers (parallel with pthreads) -> t_prep = %lf ms\n", cpu_timer*1000);
+		cpu_timer = csecond();
 #endif
-
-	long int T = autotune_controller_dgemm->T;
-
-	int Block_num_A = (A_decom->dim1/T + ((A_decom->dim1%T)? 1 : 0))* (A_decom->dim2/T + ((A_decom->dim2%T)? 1 : 0)),
-			Block_num_B = (B_decom->dim1/T + ((B_decom->dim1%T)? 1 : 0))* (B_decom->dim2/T + ((B_decom->dim2%T)? 1 : 0)),
-			Block_num_C = (C_decom->dim1/T + ((C_decom->dim1%T)? 1 : 0))* (C_decom->dim2/T + ((C_decom->dim2%T)? 1 : 0));
-	long long Block_sz = 	T*T*sizeof(double);
-	for(int cache_loc = 0; cache_loc < LOC_NUM; cache_loc++){
-		int Block_num = 0, Native_block_num = 0;
-		if (A_decom->loc == deidxize(cache_loc)) Native_block_num+=Block_num_A;
-		if (B_decom->loc == deidxize(cache_loc)) Native_block_num+=Block_num_B;
-		if (C_decom->loc == deidxize(cache_loc)) Native_block_num+=Block_num_C;
-
-		long long max_cache_sz = 0;
-		if(autotune_controller_dgemm->cache_limit > 0) {
-			max_cache_sz = autotune_controller_dgemm->cache_limit;
-			if (max_cache_sz < 3 * Block_sz) error("PARALiADgemm: Problem cannot run with less memory than %d\n", 3 * Block_sz);
-
-			long long free_dev_mem, max_dev_mem = 0, prev_DevCache_sz = 0;
-			if (Global_Buffer_2D[cache_loc] != NULL) prev_DevCache_sz = (long long)
-				Global_Buffer_2D[cache_loc]->BlockSize* Global_Buffer_2D[cache_loc]->BlockNum;
-			int prev_dev = CoCoPeLiaGetDevice();
-			CoCoPeLiaSelectDevice(deidxize(cache_loc));
-
-			if(deidxize(cache_loc)!=-1) {
-			// if(Native_block_num==0){
-				CoCoPeLiaDevGetMemInfo(&free_dev_mem, &max_dev_mem);
-				max_cache_sz = (long long) fmin(max_cache_sz, free_dev_mem - ((long long) max_dev_mem*(1-PROBLEM_GPU_PERCENTAGE/100.0)) + prev_DevCache_sz);
-			}
-			else {
-				// free_dev_mem = max_dev_mem = 2 * Native_block_num * Block_sz;
-				free_dev_mem = max_dev_mem = (Native_block_num + 3) * Block_sz;
-				max_cache_sz = free_dev_mem;
-			}
-			max_cache_sz = fmax((Native_block_num + 3) * Block_sz, max_cache_sz);
-
-			CoCoPeLiaSelectDevice(prev_dev);
-			// max_cache_sz = (long long) fmin(max_cache_sz, free_dev_mem - ((long long) max_dev_mem*(1-PROBLEM_GPU_PERCENTAGE/100.0)) + prev_DevCache_sz);
-		}
-		else{
-			long long free_dev_mem, max_dev_mem = 0, prev_DevCache_sz = 0;
-			if (Global_Buffer_2D[cache_loc] != NULL) prev_DevCache_sz = (long long)
-				Global_Buffer_2D[cache_loc]->BlockSize* Global_Buffer_2D[cache_loc]->BlockNum;
-			int prev_dev = CoCoPeLiaGetDevice();
-			CoCoPeLiaSelectDevice(deidxize(cache_loc));
-
-			if(deidxize(cache_loc)!=-1) CoCoPeLiaDevGetMemInfo(&free_dev_mem, &max_dev_mem);
-			else free_dev_mem = max_dev_mem = 100000000000; // TODO: hard coded value, should put something that reads it from system?
-			CoCoPeLiaSelectDevice(prev_dev);
-			max_cache_sz = free_dev_mem - ((long long) max_dev_mem*(1-PROBLEM_GPU_PERCENTAGE/100.0)) + prev_DevCache_sz;
-		}
-		Block_num = 1 + Block_num_A + Block_num_B + Block_num_C;
-		if (WR_LAZY) Block_num+= Block_num_C; 
-		int max_block_num = max_cache_sz/Block_sz;
-		if(max_block_num < Block_num){
-			//#ifdef DEBUG
-			if(!reuse_model_flag){
-				lprintf(0, "PARALiADgemm: Problem will use %d blocks for dev_id = %d\
-					instead of %d needed for the full problem\n", max_block_num, deidxize(cache_loc), Block_num);
-				lprintf(0, "====================================\n");
-			}
-			Block_num = max_block_num;
-			// With Parallel backends unfortunately == SK_blocks + Max_Exclusive_Blocks - 1
-			int worst_case_ex_blocks = 3; //2 + (C_decom->dim1/T + ((C_decom->dim1%T)? 1 : 0))* (C_decom->dim2/T + ((C_decom->dim2%T)? 1 : 0));
-			if(max_block_num < worst_case_ex_blocks)
-				error("PARALiADgemm: Not able to run with < %d blocks per cache due to EX scheduling\n", worst_case_ex_blocks);
-		}
-#ifdef BUFFER_REUSE_ENABLE
-		if(Global_Buffer_2D[cache_loc] == NULL) Global_Buffer_2D[cache_loc] = new Buffer(deidxize(cache_loc), Block_num, Block_sz);
-		else if (Global_Buffer_2D[cache_loc]->BlockSize != Block_sz || Global_Buffer_2D[cache_loc]->BlockNum < Block_num){
+		for (int i = 0; i < LOC_NUM; i++) current_SAB[i] = NULL;
+		ManageCachesDgemm(local_PMD);
+		T = local_PMD->autotuner->T;
+		local_PMD->decom[0]->InitTileMap(T, T, local_PMD->SAB);
+		local_PMD->decom[1]->InitTileMap(T, T, local_PMD->SAB);
+		local_PMD->decom[2]->InitTileMap(T, T, local_PMD->SAB);
+#ifdef TEST
+		cpu_timer = csecond() - cpu_timer;
+		fprintf(stderr, "Decomposing data to tiles -> t_tile = %lf ms\n", cpu_timer*1000);
+		cpu_timer = csecond();
+#endif
+		CreateSubkernelsDgemm(local_PMD);
+		local_PMD->autotuner->update_sk_num(local_PMD->sk_num);
 #ifdef DEBUG
-		fprintf(stderr, "PARALiADgemm: Previous Cache smaller than requested:\
-		Global_Buffer_2D[%d]->BlockSize=%lld vs Block_sz = %lld,\
-		Global_Buffer_2D[%d]->BlockNum=%d vs Block_num = %d\n",
-		cache_loc, Global_Buffer_2D[cache_loc]->BlockSize, Block_sz,
-		cache_loc, Global_Buffer_2D[cache_loc]->BlockNum, Block_num);
+		fprintf(stderr, "local_PMD->sk_num = %d {M,N,K}GridSz = {%d, %d, %d}, local_PMD->autotuner->active_unit_num = %d\n\n",
+			local_PMD->sk_num, local_PMD->decom[0]->GridSz1, local_PMD->decom[1]->GridSz2, local_PMD->decom[0]->GridSz2, local_PMD->autotuner->active_unit_num);
 #endif
-			delete Global_Buffer_2D[cache_loc];
-			Global_Buffer_2D[cache_loc] = new Buffer(deidxize(cache_loc), Block_num, Block_sz);
-		}
-		else{
-			;
-		}
-#else
-			if(Global_Buffer_2D[cache_loc]!= NULL) error("PARALiADgemm: Global_Buffer_2D[%d] was not NULL with reuse disabled\n", cache_loc);
-			Global_Buffer_2D[cache_loc] = new Buffer(deidxize(cache_loc), Block_num, Block_sz);
+#ifdef TEST
+		cpu_timer = csecond() - cpu_timer;
+		fprintf(stderr, "Subkernel init -> t_subkernel_init = %lf ms\n", cpu_timer*1000);
+		cpu_timer = csecond();
 #endif
+		local_PMD->autotuner->distribute_subkernels(local_PMD->decom[0]->GridSz1, local_PMD->decom[1]->GridSz2, local_PMD->decom[0]->GridSz2);
+
+#ifdef TEST
+		cpu_timer = csecond() - cpu_timer;
+		fprintf(stderr, "Subkernel Distribute -> t_subkernel_dist = %lf ms\n", cpu_timer*1000);
+		cpu_timer = csecond();
+#endif
+		remaining_Subkernels = local_PMD->sk_num;
+		for(int d=0; d < local_PMD->autotuner->active_unit_num; d++){
+			if(local_PMD->autotuner->Subkernels_per_unit_num[d] == 0 )
+				error("CoCoPeLiaDgemm: Leftover local_PMD->autotuner->Subkernels_per_unit_num[%d] == 0", d);
+			int dev_id = local_PMD->autotuner->active_unit_id_list[d];
+			remaining_Subkernels_dev[d] =  local_PMD->sk_dev_num[d] = 
+			local_PMD->autotuner->Subkernels_per_unit_num[d];
+			local_PMD->subkernel_dev_list[d] = (Subkernel**) 
+				malloc(local_PMD->autotuner->Subkernels_per_unit_num[d]*sizeof(Subkernel*));
+			for(int sk_ctr = 0; sk_ctr < remaining_Subkernels_dev[d]; sk_ctr++){
+				local_PMD->subkernel_dev_list[d][sk_ctr] = local_PMD->subkernel_list
+					[local_PMD->autotuner->Subkernels_per_unit_list[d][sk_ctr]];
+				DgemmBindDevice(local_PMD, local_PMD->subkernel_dev_list[d][sk_ctr], dev_id);
+			}
+		}
 	}
-
-	/// TODO: Split each asset to Tiles
-	A_decom->InitTileMap(T, T, Global_Buffer_2D);
-	B_decom->InitTileMap(T, T, Global_Buffer_2D);
-	C_decom->InitTileMap(T, T, Global_Buffer_2D);
-
-#ifdef TEST
-	cpu_timer = csecond() - cpu_timer;
-	fprintf(stderr, "Spliting assets to tiles -> t_tile_init = %lf ms\n", cpu_timer*1000);
-	cpu_timer = csecond();
-#endif
-
-	int Subkernel_num = -42; 
-	Subkernel** Subkernel_list = CoCoAsignTilesToSubkernelsDgemm(A_decom, B_decom, C_decom, T,
-		&Subkernel_num);
-	int remaining_Subkernels = Subkernel_num;
-
-	if(!reuse_model_flag) autotune_controller_dgemm->update_sk_num(Subkernel_num);
-#ifdef DEBUG
-	fprintf(stderr, "Subkernel_num = %d {M,N,K}GridSz = {%d, %d, %d}, autotune_controller_dgemm->active_unit_num = %d\n\n",
-		Subkernel_num, MGridSz_dgemm, NGridSz_dgemm, KGridSz_dgemm, autotune_controller_dgemm->active_unit_num);
-#endif
-
-#ifdef TEST
-	cpu_timer = csecond() - cpu_timer;
-	fprintf(stderr, "Subkernel init -> t_subkernel_init = %lf ms\n", cpu_timer*1000);
-	cpu_timer = csecond();
-#endif
-
-	if(!reuse_model_flag) autotune_controller_dgemm->distribute_subkernels(MGridSz_dgemm, NGridSz_dgemm, KGridSz_dgemm);
-
-#ifdef TEST
-	cpu_timer = csecond() - cpu_timer;
-	fprintf(stderr, "Subkernel Distribute -> t_subkernel_dist = %lf ms\n", cpu_timer*1000);
-	cpu_timer = csecond();
-#endif
-
-	/*
-		curr_sk_idx_dgemm = 0;
-		int curr_sk_dgemm_unit_list[LOC_NUM], curr_sk_dgemm_unit_num;
-		// Fire all devices in other_dev_score_winner
-		curr_sk_idx_dgemm = 0;
-		curr_sk_dgemm_unit_num = autotune_controller_dgemm->active_unit_num;
-		for(int i = 0; i < curr_sk_dgemm_unit_num; i ++) 
-			curr_sk_dgemm_unit_list[i] = autotune_controller_dgemm->active_unit_id_list[i];
-		curr_sk_dgemm_unit_list[0] = 0;
-		curr_sk_dgemm_unit_list[1] = 2;
-		curr_sk_dgemm_unit_list[2] = 4;
-		curr_sk_dgemm_unit_list[3] = 6;
-		curr_sk_dgemm_unit_list[4] = 1;
-		curr_sk_dgemm_unit_list[5] = 3;
-		curr_sk_dgemm_unit_list[6] = 5;
-		curr_sk_dgemm_unit_list[7] = 7;
-	*/
-	int remaining_Subkernels_dev[autotune_controller_dgemm->active_unit_num];
-	Subkernel* Subkernels_list_dev[LOC_NUM][remaining_Subkernels];
-	for(int d=0; d < LOC_NUM; d++) CoCoEnableLinks(deidxize(d), LOC_NUM);
-	for(int d=0; d < autotune_controller_dgemm->active_unit_num; d++){
-		if(autotune_controller_dgemm->Subkernels_per_unit_num[d] == 0 )
-			error("CoCoPeLiaDgemm: Leftover autotune_controller_dgemm->Subkernels_per_unit_num[%d] == 0", d);
-		int dev_id = autotune_controller_dgemm->active_unit_id_list[d];
-		remaining_Subkernels_dev[d] = remaining_Subkernels_dev[d] = 
-			autotune_controller_dgemm->Subkernels_per_unit_num[d];
-
-		for(int sk_ctr = 0; sk_ctr < remaining_Subkernels_dev[d]; sk_ctr++){
-			Subkernels_list_dev[d][sk_ctr] = Subkernel_list
-				[autotune_controller_dgemm->Subkernels_per_unit_list[d][sk_ctr]];
-			DgemmUpdateDevice(Subkernels_list_dev[d][sk_ctr], dev_id);
+	else{
+		int buffer_freed = 0; 
+		for (int i = 0; i < LOC_NUM; i++){
+			current_SAB[i] = local_PMD->SAB[i];
+			if(!current_SAB[i]) buffer_freed = 1; 
 		}
+		if(buffer_freed) ManageCachesDgemm(local_PMD);
+		T = local_PMD->autotuner->T;
+		local_PMD->decom[0]->Reset((void*) A, ldA, local_PMD->SAB);
+		local_PMD->decom[1]->Reset((void*) B, ldB, local_PMD->SAB);
+		local_PMD->decom[2]->Reset((void*) C, ldC, local_PMD->SAB);
+#ifdef TEST
+		cpu_timer = csecond() - cpu_timer;
+		fprintf(stderr, "Re-assigning cache blocks to tiles -> t_tile = %lf ms\n", cpu_timer*1000);
+		cpu_timer = csecond();
+#endif
+		UpdateSubkernelsDgemm(local_PMD);
+		remaining_Subkernels = local_PMD->sk_num;
+		for(int d=0; d < local_PMD->autotuner->active_unit_num; d++)
+			remaining_Subkernels_dev[d] =  local_PMD->sk_dev_num[d];
 	}
 
 #ifdef TEST
@@ -446,8 +503,8 @@ ATC_p PARALiADgemm(char TransA,  char TransB, long int M, long int N, long int K
 	fprintf(stderr, "Updated subkernels for devices: t_update = %lf ms\n", cpu_timer*1000);
 	cpu_timer = csecond();
 #endif
-	for(int d=0; d < autotune_controller_dgemm->active_unit_num; d++)
-		Global_Buffer_2D[idxize(autotune_controller_dgemm->active_unit_id_list[d])]->allocate(true);
+	for(int d=0; d < local_PMD->autotuner->active_unit_num; d++)
+		current_SAB[idxize(local_PMD->autotuner->active_unit_id_list[d])]->allocate(true);
 
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer;
@@ -455,8 +512,8 @@ ATC_p PARALiADgemm(char TransA,  char TransB, long int M, long int N, long int K
 	cpu_timer = csecond();
 #endif
 
-	CoCoPeLiaInitResources(autotune_controller_dgemm->active_unit_id_list, autotune_controller_dgemm->active_unit_num);
-	//CoCoPeLiaInitWS(autotune_controller_dgemm->active_unit_id_list, autotune_controller_dgemm->active_unit_num);
+	CoCoPeLiaInitResources(local_PMD->autotuner->active_unit_id_list, local_PMD->autotuner->active_unit_num);
+	//CoCoPeLiaInitWS(local_PMD->autotuner->active_unit_id_list, local_PMD->autotuner->active_unit_num);
 
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer;
@@ -470,20 +527,26 @@ ATC_p PARALiADgemm(char TransA,  char TransB, long int M, long int N, long int K
 	manager_data->sk_num = remaining_Subkernels;
 	manager_data->sk_list = (Subkernel**) malloc(remaining_Subkernels*sizeof(Subkernel*));
 	for(int sk_ctr = 0; sk_ctr < manager_data->sk_num; sk_ctr++)
-		manager_data->sk_list[sk_ctr] = Subkernel_list[sk_ctr];
+		manager_data->sk_list[sk_ctr] = local_PMD->subkernel_list[sk_ctr];
+
 	s = pthread_create(&manager_thread_id, &attr,
                                   &subkernel_manager_wrap, (void*) manager_data);
-
 	while (remaining_Subkernels){
-		for(int d_ctr=0; d_ctr < autotune_controller_dgemm->active_unit_num; d_ctr++){
-			//int d = d_ctr*2 % (autotune_controller_dgemm->active_unit_num) + d_ctr*2 / (autotune_controller_dgemm->active_unit_num); 
+		for(int d_ctr=0; d_ctr < local_PMD->autotuner->active_unit_num; d_ctr++){
+			//int d = d_ctr*2 % (local_PMD->autotuner->active_unit_num) + d_ctr*2 / (local_PMD->autotuner->active_unit_num); 
 			//printf("d_ctr(%d) = d(%d)\n", d_ctr, d); 
 			int d = d_ctr;
 			if (remaining_Subkernels_dev[d]){
-				int dev_id = autotune_controller_dgemm->active_unit_id_list[d];
+				int dev_id = local_PMD->autotuner->active_unit_id_list[d];
 				Subkernel * curr = NULL;
-				curr = SubkernelSelect(dev_id, &(Subkernels_list_dev[d][autotune_controller_dgemm->Subkernels_per_unit_num[d]
-					- remaining_Subkernels_dev[d]]), remaining_Subkernels_dev[d]);
+				if (reuse_problem_flag){
+					for (int sk_ctr = 0; sk_ctr < local_PMD->sk_dev_num[d]; sk_ctr++)
+						if(local_PMD->subkernel_dev_list[d][sk_ctr]->launch_order ==  
+						(local_PMD->sk_dev_num[d] - remaining_Subkernels_dev[d]) + 1)
+							curr = local_PMD->subkernel_dev_list[d][sk_ctr];
+				}
+				else curr = SubkernelSelect(dev_id, local_PMD->subkernel_dev_list[d], 
+					local_PMD->sk_dev_num[d]);
 				if (!curr){
 					warning("PARALiADgemm - dev(%d): Got curr = NULL, repeating search\n", dev_id);
 					continue;
@@ -491,7 +554,9 @@ ATC_p PARALiADgemm(char TransA,  char TransB, long int M, long int N, long int K
 				remaining_Subkernels_dev[d]--;
 				remaining_Subkernels--;
 				curr->request_data();
+				curr->launch_order =  local_PMD->sk_dev_num[d] - remaining_Subkernels_dev[d]; 
 				curr->launched = 1; 
+
 			}
 		}
 	}
@@ -500,12 +565,18 @@ ATC_p PARALiADgemm(char TransA,  char TransB, long int M, long int N, long int K
 #else
 	//Subkernel* prev[LOC_NUM] = {NULL};
 	while (remaining_Subkernels){
-		for(int d=0; d < autotune_controller_dgemm->active_unit_num; d++) if (remaining_Subkernels_dev[d]){
-			int dev_id = autotune_controller_dgemm->active_unit_id_list[d];
+		for(int d=0; d < local_PMD->autotuner->active_unit_num; d++) if (remaining_Subkernels_dev[d]){
+			int dev_id = local_PMD->autotuner->active_unit_id_list[d];
 			//if(prev[d]) prev[d]->sync_request_data();
 			Subkernel * curr = NULL;
-			curr = SubkernelSelect(dev_id, &(Subkernels_list_dev[d][autotune_controller_dgemm->Subkernels_per_unit_num[d]
-				- remaining_Subkernels_dev[d]]), remaining_Subkernels_dev[d]);
+			if (reuse_problem_flag){
+				for (int sk_ctr = 0; sk_ctr < local_PMD->sk_dev_num[d]; sk_ctr++)
+					if(local_PMD->subkernel_dev_list[d][sk_ctr]->launch_order ==  
+					( local_PMD->sk_dev_num[d] - remaining_Subkernels_dev[d]) + 1)
+						curr = local_PMD->subkernel_dev_list[d][sk_ctr];
+			}
+			else curr = SubkernelSelect(dev_id, local_PMD->subkernel_dev_list[d], 
+				local_PMD->sk_dev_num[d]);
 			if (!curr){
 				warning("PARALiADgemm - dev(%d): Got curr = NULL, repeating search\n", dev_id);
 				continue;
@@ -516,6 +587,7 @@ ATC_p PARALiADgemm(char TransA,  char TransB, long int M, long int N, long int K
 			curr->request_data();
 			DgemmUpdatePointers(curr);
 			curr->run_operation();
+			curr->launch_order =  local_PMD->sk_dev_num[d] - remaining_Subkernels_dev[d]; 
 			curr->launched = 1; 
 			//prev[d] = curr; 
 		}
@@ -526,26 +598,28 @@ ATC_p PARALiADgemm(char TransA,  char TransB, long int M, long int N, long int K
 	fprintf(stderr, "Subkernels launched: t_sk_fire = %lf ms\n", cpu_timer*1000);
 	cpu_timer = csecond();
 #endif
-	C_decom->WBTileMap();
+	local_PMD->decom[2]->WBTileMap();
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer;
 	fprintf(stderr, "Writebacks launched -> t_wb_fire = %lf ms\n", cpu_timer*1000);
 	cpu_timer = csecond();
 #endif
 #endif
-	C_decom->SyncTileMap();
+	local_PMD->decom[2]->SyncTileMap();
 
 	CoCoSyncCheckErr();
 #ifdef TEST
 	cpu_timer = csecond() - run_timer;
 	fprintf(stderr, "Synced result -> t_exec_full = %lf ms\n", cpu_timer*1000);
-	fprintf(stderr, "t_predicted for T=%zu was %.2lf ms : %lf percentile error\n", T, autotune_controller_dgemm->pred_t*1000,
-	(autotune_controller_dgemm->pred_t==0)? 0.0: (autotune_controller_dgemm->pred_t - cpu_timer )/autotune_controller_dgemm->pred_t*100);
+	fprintf(stderr, "t_predicted for T=%zu was %.2lf ms : %lf percentile error\n", T, local_PMD->autotuner->pred_t*1000,
+	(local_PMD->autotuner->pred_t==0)? 0.0: (local_PMD->autotuner->pred_t - cpu_timer )/local_PMD->autotuner->pred_t*100);
 	cpu_timer = csecond();
 #endif
-
+#ifdef PDEBUG
+	fprintf(stderr, "PARALiADgemm(): completed for PMD_cache_entries = %d\n", PMD_cache_entries);
+#endif
 #ifdef STEST
-	STEST_print_SK(thread_dev_data, gemm_entry_ts, autotune_controller_dgemm->active_unit_num);
+	STEST_print_SK(thread_dev_data, gemm_entry_ts, local_PMD->autotuner->active_unit_num);
 #endif
 
 #ifdef TTEST
@@ -554,22 +628,22 @@ ATC_p PARALiADgemm(char TransA,  char TransB, long int M, long int N, long int K
 #endif
 
 #ifdef DDEBUG
-  A_decom->DrawTileMap();
-  B_decom->DrawTileMap();
-  C_decom->DrawTileMap();
+  local_PMD->decom[0]->DrawTileMap();
+  local_PMD->decom[1]->DrawTileMap();
+  local_PMD->decom[2]->DrawTileMap();
 #endif
 
 #ifdef CDEBUG
-	for(int i=0; i<LOC_NUM;i++) Global_Buffer_2D[i]->draw_buffer(true,true,true);
+	for(int i=0; i<LOC_NUM;i++) local_PMD->SAB[i]->draw_buffer(true,true,true);
 #endif
 
-#ifndef BUFFER_REUSE_ENABLE
-	for(int i = 0 ; i < LOC_NUM; i++){
-		delete Global_Buffer_2D[i];
-		Global_Buffer_2D[i] = NULL;
-	}
+#ifdef BUFFER_REUSE_ENABLE
+	for(int i=0; i<LOC_NUM;i++) local_PMD->SAB[i]->reset(false,true);
 #else
-	for(int i=0; i<LOC_NUM;i++) Global_Buffer_2D[i]->reset(false,true);
+	for(int i = 0 ; i < LOC_NUM; i++){
+		delete local_PMD->SAB[i];
+		local_PMD->SAB[i] = current_SAB[i] = NULL;
+	}
 #endif
 
 #ifdef QUEUE_REUSE_ENABLE
@@ -584,18 +658,18 @@ ATC_p PARALiADgemm(char TransA,  char TransB, long int M, long int N, long int K
 	cpu_timer = csecond();
 #endif
 
-	for(int i=0; i<Subkernel_num; i++) delete Subkernel_list[i];
-	//delete [] Subkernel_list;
-
+#ifdef METADATA_REUSE_PROBLEMS
+	for(int i=0; i<local_PMD->sk_num; i++) local_PMD->subkernel_list[i]->reset();
+#else
+	for(int i=0; i<local_PMD->sk_num; i++) delete local_PMD->subkernel_list[i];
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer;
 	fprintf(stderr, "Freed Subkernels -> t_invalidate = %lf ms\n", cpu_timer*1000);
 	cpu_timer = csecond();
 #endif
-
-	A_decom->DestroyTileMap();
-	B_decom->DestroyTileMap();
-	C_decom->DestroyTileMap();
+	local_PMD->decom[0]->DestroyTileMap();
+	local_PMD->decom[1]->DestroyTileMap();
+	local_PMD->decom[2]->DestroyTileMap();
 
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer;
@@ -605,16 +679,17 @@ ATC_p PARALiADgemm(char TransA,  char TransB, long int M, long int N, long int K
 
 	 CoCoPeLiaSelectDevice(prev_dev_id);
 
-    A_decom->resetProperties();
-    B_decom->resetProperties();
-    C_decom->resetProperties();
-	delete A_decom;
-	delete B_decom;
-	delete C_decom;
+    local_PMD->decom[0]->resetProperties();
+    local_PMD->decom[1]->resetProperties();
+    local_PMD->decom[2]->resetProperties();
+	delete local_PMD->decom[0];
+	delete local_PMD->decom[1];
+	delete local_PMD->decom[2];
 
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer;
-	fprintf(stderr, "Unregistering assets -> t_unpin = %lf ms\n", cpu_timer*1000);
+	fprintf(stderr, "Unregistering decomposers -> t_unpin = %lf ms\n", cpu_timer*1000);
+#endif
 #endif
 
 #ifdef DEBUG
@@ -624,11 +699,10 @@ ATC_p PARALiADgemm(char TransA,  char TransB, long int M, long int N, long int K
 	fprintf(stderr, "<-----|\n");
 #endif
 
-	reuse_model_flag = 1;
 	predef_controller_dgemm = NULL;
 	// Better not return our global to the user, he can accidentally do stuff to it.
 	ATC_p result = new ATC();
-	result->mimic_ATC(autotune_controller_dgemm);
+	result->mimic_ATC(local_PMD->autotuner);
 	return result;
 }
 
