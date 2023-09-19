@@ -36,3 +36,5 @@ PARALiA BLAS functions accept usual BLAS paramaters in a similar way to OpenBLAS
 
 ## Related Publications:
  - CoCoPeLia: Communication-Computation Overlap Prediction for Efficient Linear Algebra on GPUs (https://ieeexplore.ieee.org/document/9408195)
+ - PARALiA : A Performance Aware Runtime for Auto-tuning Linear Algebra on heterogeneous systems (https://dl.acm.org/doi/10.1145/3624569)
+
