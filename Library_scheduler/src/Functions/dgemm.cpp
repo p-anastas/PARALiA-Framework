@@ -521,9 +521,9 @@ ATC_p PARALiADgemm(char TransA,  char TransB, long int M, long int N, long int K
                                   &subkernel_manager_wrap, NULL);
 	while (remaining_Subkernels){
 		for(int d_ctr=0; d_ctr < local_PMD->autotuner->active_unit_num; d_ctr++){
-			int d = d_ctr*2 % (local_PMD->autotuner->active_unit_num) + d_ctr*2 / (local_PMD->autotuner->active_unit_num); 
+			//int d = d_ctr*2 % (local_PMD->autotuner->active_unit_num) + d_ctr*2 / (local_PMD->autotuner->active_unit_num); 
 			//printf("d_ctr(%d) = d(%d)\n", d_ctr, d); 
-			//int d = d_ctr;
+			int d = d_ctr;
 			if (remaining_Subkernels_dev[d]){
 				int dev_id = local_PMD->autotuner->active_unit_id_list[d];
 				Subkernel * curr = NULL;
