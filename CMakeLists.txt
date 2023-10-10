@@ -53,7 +53,7 @@ add_definitions(-DSUBKERNELS_FIRE_WHEN_READY)
 ##             be fetched, reduced locally in the last computation location and written back.
 ## - ALGO_WREDUCE: The output tiles are not fetched from the source. Instead, computations will use
 ##             local buffers. After they are complete, tiles are reduced to the output (=source) location.
-#add_definitions(-DOUTPUT_ALGO_MODE="ALGO_WR")
+#dd_definitions(-DOUTPUT_ALGO_MODE="ALGO_WR")
 add_definitions(-DOUTPUT_ALGO_MODE="ALGO_WR_LAZY")
 #add_definitions(-DOUTPUT_ALGO_MODE="ALGO_WREDUCE")
 
@@ -116,7 +116,7 @@ add_definitions(-DDISTRIBUTION="2D-BLOCK-CYCLIC")
 ###########################################################################################
 
 #Run subkernels in provided order
-#add_definitions(-DSERIAL_SUBKERNEL_SELECTION)
+add_definitions(-DSERIAL_SUBKERNEL_SELECTION)
 
 ## Define subkernel selection heuristic values.
 add_definitions(-DSUBKERNEL_SELECT_FETCH_ETA_PLUS_MIN_PENDING)
@@ -196,7 +196,7 @@ add_definitions(-DUNIHELPER_LOCKFREE_ENABLE)
 #add_definitions(-DDDEBUG)
 
 #Run Simple Prediction debug mode (well-presented simple autotuner stuff)
-#add_definitions(-DSDEBUG)
+add_definitions(-DSDEBUG)
 
 #Run Prediction debug mode (autotuner stuff)
 #add_definitions(-DPDEBUG)

@@ -232,9 +232,12 @@ void UpdateSubkernelsDgemm(PMD_p local_PMD){
 				ptr_ker_translate->beta = initial_dgemm->beta;
 
 				int dev_id_idx = idxize(local_PMD->subkernel_list[current_ctr]->run_dev_id);
-				local_PMD->subkernel_list[current_ctr]->TileList[0]->set_loc_idx(dev_id_idx, 1);
-				local_PMD->subkernel_list[current_ctr]->TileList[1]->set_loc_idx(dev_id_idx, 1);
-				local_PMD->subkernel_list[current_ctr]->TileList[2]->set_loc_idx(dev_id_idx, 1);
+				local_PMD->subkernel_list[current_ctr]->TileList[0]->try_set_loc_idx(dev_id_idx, 1);
+				local_PMD->subkernel_list[current_ctr]->TileList[1]->try_set_loc_idx(dev_id_idx, 1);
+				local_PMD->subkernel_list[current_ctr]->TileList[2]->try_set_loc_idx(dev_id_idx, 1);
+				if (local_PMD->subkernel_list[current_ctr]->TileList[2]->WRP != WR && 
+					!local_PMD->subkernel_list[current_ctr]->TileList[2]->loc_map[dev_id_idx]) 
+					local_PMD->subkernel_list[current_ctr]->TileList[2]->set_WRP(WR);
 			}
 		}
 	}
@@ -251,9 +254,11 @@ void DgemmBindDevice(PMD_p local_PMD, Subkernel* ker, int dev_id){
 	ptr_ker_translate->ldA = ker->TileList[0]->get_chunk_size(dev_id_idx);
 	ptr_ker_translate->ldB = ker->TileList[1]->get_chunk_size(dev_id_idx);
 	ptr_ker_translate->ldC = ker->TileList[2]->get_chunk_size(dev_id_idx);
-	ker->TileList[0]->set_loc_idx(dev_id_idx, 1);
-	ker->TileList[1]->set_loc_idx(dev_id_idx, 1);
-	ker->TileList[2]->set_loc_idx(dev_id_idx, 1);
+	ker->TileList[0]->try_set_loc_idx(dev_id_idx, 1);
+	ker->TileList[1]->try_set_loc_idx(dev_id_idx, 1);
+	ker->TileList[2]->try_set_loc_idx(dev_id_idx, 1);
+	if (ker->TileList[2]->WRP != WR && !ker->TileList[2]->loc_map[dev_id_idx]) 
+		ker->TileList[2]->set_WRP(WR);
 	ker->TileList[2]->W_master = dev_id;
 	if(ker->TileList[2]->W_pending == local_PMD->decom[0]->GridSz2) ker->TileList[2]->W_complete = new Event(dev_id);
 	//if(local_PMD->autotuner) if(local_PMD->autotuner->unit_modeler_list[dev_id_idx])
