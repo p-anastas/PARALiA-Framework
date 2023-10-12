@@ -140,7 +140,7 @@ void CreateSubkernelsDgemm(PMD_p local_PMD){
 						== local_PMD->decom[1]->Tile_map[local_PMD->decom[1]->GridSz1*local_PMD->decom[1]->GridSz2-1]->dim1,
 						"K dim does not mach between decomposers for GEMM\n");
 	}
-	local_PMD->sk_num = local_PMD->decom[0]->GridSz1*local_PMD->decom[1]->GridSz2*local_PMD->decom[0]->GridSz2;
+	local_PMD->sk_num = local_PMD->autotuner->subkernel_num;
 #ifdef DEBUG
 	fprintf(stderr, "|-----> CreateSubkernelsDgemm(%p,%d,%d)\n",
 		local_PMD, local_PMD->autotuner->T, local_PMD->sk_num);
@@ -442,23 +442,6 @@ ATC_p PARALiADgemm(char TransA,  char TransB, long int M, long int N, long int K
 		cpu_timer = csecond();
 #endif
 		CreateSubkernelsDgemm(local_PMD);
-		local_PMD->autotuner->update_sk_num(local_PMD->sk_num);
-#ifdef DEBUG
-		fprintf(stderr, "local_PMD->sk_num = %d {M,N,K}GridSz = {%d, %d, %d}, local_PMD->autotuner->active_unit_num = %d\n\n",
-			local_PMD->sk_num, local_PMD->decom[0]->GridSz1, local_PMD->decom[1]->GridSz2, local_PMD->decom[0]->GridSz2, local_PMD->autotuner->active_unit_num);
-#endif
-#ifdef TEST
-		cpu_timer = csecond() - cpu_timer;
-		fprintf(stderr, "Subkernel init -> t_subkernel_init = %lf ms\n", cpu_timer*1000);
-		cpu_timer = csecond();
-#endif
-		local_PMD->autotuner->distribute_subkernels(local_PMD->decom[0]->GridSz1, local_PMD->decom[1]->GridSz2, local_PMD->decom[0]->GridSz2);
-
-#ifdef TEST
-		cpu_timer = csecond() - cpu_timer;
-		fprintf(stderr, "Subkernel Distribute -> t_subkernel_dist = %lf ms\n", cpu_timer*1000);
-		cpu_timer = csecond();
-#endif
 		remaining_Subkernels = local_PMD->sk_num;
 		for(int d=0; d < local_PMD->autotuner->active_unit_num; d++){
 			if(local_PMD->autotuner->Subkernels_per_unit_num[d] == 0 )

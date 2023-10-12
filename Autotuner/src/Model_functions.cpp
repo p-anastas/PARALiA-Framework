@@ -174,37 +174,17 @@ double PredictBidirectionalHetero(MD_p model, long int T, int active_unit_num = 
 	return 0;
 }
 
-double PARALiaPerfPenaltyModifier(MD_p model, long int T, int active_unit_num){
-	short lvl = 5;
-	if (T == -1) return 1.0;
-	double padding_time_multiplier = 1.0, inbalance_time_multiplier = 1.0;
-#ifdef TILE_IMBALANCE_PENALTY
-	if (model->D1 != -1 && model->D1%T) padding_time_multiplier+=TILE_IMBALANCE_PENALTY;
-	if (model->D2 != -1 && model->D2%T) padding_time_multiplier+=TILE_IMBALANCE_PENALTY;
-	if (model->D3 != -1 && model->D3%T) padding_time_multiplier+=TILE_IMBALANCE_PENALTY;
-#endif
-#ifdef REDUCE_PENALTY /// FIXME: questionable in any heterogeneous system, should consider purging it
-	if ((model->D1/T + ((model->D1%T)? 1 : 0)) *
-			(model->D2/T + ((model->D2%T)? 1 : 0)) *
-			(model->D3/T + ((model->D3%T)? 1 : 0)) % active_unit_num) inbalance_time_multiplier+=REDUCE_PENALTY;
-
-#endif
-	double not_enough_WR_pieces_multiplier = 1.0;
-	int temp_pieces = (model->D1/T + ((model->D1%T)? 1 : 0)) * (model->D2/T + ((model->D2%T)? 1 : 0));
-	if (temp_pieces < active_unit_num) not_enough_WR_pieces_multiplier *= 1000;
-#ifdef PDEBUG
-	lprintf(0, "PARALiaPerfPenaltyModifier: Penaltize unit/tile combination leading to padding -> padding_time_multiplier = %lf\
-		\nPenaltize unit/tile combination leading SK num not equally distributed to units -> inbalance_time_multiplier = %lf\
-		\nPenaltize unit/tile combination with more units than Subkernels -> not_enough_WR_pieces_multiplier = %lf\n",
-		padding_time_multiplier, inbalance_time_multiplier, not_enough_WR_pieces_multiplier);
-#endif
-	return padding_time_multiplier*inbalance_time_multiplier*not_enough_WR_pieces_multiplier*not_enough_WR_pieces_multiplier;
+double share_mult(int dest, int src, int* active_unit_id_list, int active_unit_num){
+	double mult = 1.0;
+	if(links_share_bandwidth[idxize(dest)][idxize(src)][0] != -42 && 
+		final_link_active[links_share_bandwidth[idxize(dest)][idxize(src)][0]]
+					[links_share_bandwidth[idxize(dest)][idxize(src)][1]]) mult = 2.0;
+	return mult;
 }
 
-double PARALiaPredictLinkHeteroBLAS3(MD_p model, long int T, int active_unit_num, int* active_unit_id_list,
+double* PARALiaPredictLinkHeteroBLAS3_v2(MD_p model, long int T, int active_unit_num, int* active_unit_id_list,
 	double* active_unit_score){
-		short lvl = 4;
-		double penalty = PARALiaPerfPenaltyModifier(model, T, active_unit_num);
+		double* result = (double*) calloc(4,sizeof(double));
 		int used_unit_idx = -1;
 		for(int unit_idx = 0; unit_idx < active_unit_num; unit_idx++) if(model->unit_id == active_unit_id_list[unit_idx]) used_unit_idx = unit_idx;
 		if (used_unit_idx == - 1) error("PARALiaPredictLinkHeteroBLAS3: Model %p with unit_id = %d not present in given active_unit_id_list = %s\n",
@@ -218,11 +198,9 @@ double PARALiaPredictLinkHeteroBLAS3(MD_p model, long int T, int active_unit_num
 		t_exec_full = (model->D1*1.0/Tbig * model->D2*1.0/Tbig * model->D3*1.0/Tbig)*
 			GPUexec3Model_predict((GPUexec3Model_p)model->GPUexec_model_ptr, Tbig, model->flags->TransA, model->flags->TransB);
 		t_exec_full*= active_unit_score[used_unit_idx];
+		if ( t_exec_full < 0)
+			error("PARALiaPredictLinkHeteroBLAS3: GPUexec3Model_predict submodel returned negative value, abort prediction");
 
-				if ( t_exec_full < 0){
-			warning("PARALiaPredictLinkHeteroBLAS3: GPUexec3Model_predict submodel returned negative value, abort prediction");
-			return -1.0;
-		}
 		long long recv_sz = 0, recv_sz_RONLY = 0, send_sz = 0;
 		int recv_num_RONLY = 0;
 		for (int i = 0; i < model->V->numT; i++){
@@ -230,13 +208,15 @@ double PARALiaPredictLinkHeteroBLAS3(MD_p model, long int T, int active_unit_num
 				model->V->dtype_sz*active_unit_score[used_unit_idx];
 			long long tmp_send_sz =  (long long) model->V->out[i]*(*model->V->Dim1[i])*(*model->V->Dim2[i])*
 				model->V->dtype_sz*active_unit_score[used_unit_idx];
-			double t_recv_tmp = t_com_predict_shared(model->link[idxize(model->V->loc[i])], tmp_recv_sz);
-			double t_send_tmp = t_com_predict_shared(model->link[idxize(model->V->out_loc[i])], tmp_send_sz);
-			if(t_recv_tmp < 0 || t_send_tmp < 0 ){
-					warning("PARALiaPredictLinkHeteroBLAS3: t_com_predict submodel idx = %d\
-						returned negative value, abort prediction", idxize(model->V->loc[i]));
-					return -1.0;
-			}
+			double t_recv_tmp = share_mult(model->unit_id, model->V->loc[i], active_unit_id_list, active_unit_num)*
+				t_com_predict_shared(model->link[idxize(model->V->loc[i])], tmp_recv_sz);
+			double t_send_tmp = share_mult(model->V->out_loc[i], model->unit_id, active_unit_id_list, active_unit_num)*
+				t_com_predict_shared(model->link[idxize(model->V->out_loc[i])], tmp_send_sz);
+			if(t_recv_tmp < 0 || t_send_tmp < 0 )	
+				error("PARALiaPredictLinkHeteroBLAS3: t_recv_tmp(%d<-%d) = %lf, t_send_tmp(%d<-%d) = %lf,\
+					abort prediction", model->unit_id, model->V->loc[i], t_recv_tmp, 
+					model->V->out_loc[i], model->unit_id, t_send_tmp );
+
 			recv_sz += tmp_recv_sz;
 			send_sz += tmp_send_sz;
 			if(!model->V->out[i] && model->V->loc[i] != model->unit_id) { recv_sz_RONLY+= recv_sz; recv_num_RONLY++; }
@@ -260,23 +240,30 @@ double PARALiaPredictLinkHeteroBLAS3(MD_p model, long int T, int active_unit_num
 		double extra_transfer_ratio = (recv_num_RONLY)? (1.0*((D1_parts-1) + (D2_parts -1)))/recv_num_RONLY: 0;
 
 #ifdef DPDEBUG
-		lprintf(lvl, "PARALiaPredictLinkHeteroBLAS3(unit_num = %d) : D1_parts = %d, D2_parts = %d, extra_transfer_ratio = %lf\n",
+		fprintf(stderr, "PARALiaPredictLinkHeteroBLAS3(unit_num = %d) : D1_parts = %d, D2_parts = %d, extra_transfer_ratio = %lf\n",
 		active_unit_num, D1_parts, D2_parts, extra_transfer_ratio);
 #endif
 		long long recv_sz_extra = extra_transfer_ratio * recv_sz_RONLY;
-		//double t_recv_extra_optimistic = model->predictBestFriends_t(extra_transfer_ratio, recv_sz_extra, active_unit_num, active_unit_id_list);
-	 	double t_recv_extra_pesimistic = model->predictAvgBw_t(recv_sz_extra, active_unit_num, active_unit_id_list);
+		//double t_recv_extra_optimistic_old = model->predictBestFriends_t(extra_transfer_ratio, recv_sz_extra, active_unit_num, active_unit_id_list);
+	 	//double t_recv_extra_pesimistic = model->predictAvgBw_t(recv_sz_extra, active_unit_num, active_unit_id_list);
+		double t_recv_extra_optimistic = model->predictSumBw_t(recv_sz_extra, active_unit_num, active_unit_id_list);
 
-		double t_recv_extra = t_recv_extra_pesimistic; // (t_recv_extra_optimistic + t_recv_extra_pesimistic)/2;
+		double t_recv_extra = t_recv_extra_optimistic; // (t_recv_extra_optimistic + t_recv_extra_pesimistic)/2;
 
-		t_total = penalty * fmax(t_exec_full, fmax(t_recv_full + t_recv_extra, t_send_full));
+		t_total = fmax(t_exec_full, fmax(t_recv_full, fmax(t_recv_extra, t_send_full)));
+				
+		result[0] = t_exec_full; 
+		result[1] = t_recv_full; 
+		result[2] = t_recv_extra; 
+		result[3] = t_send_full; 
+
 #ifdef PDEBUG
 		fprintf(stderr, "PARALia  PredictLinkHetero (Unit = %d, Unit_ratio = %.2lf%%):\n"
 		"\tt_recv_full: %lf ms ( %lf Gb/s)\n"
 		"\tt_recv_extra: %lf ms ( %lf Gb/s) -> (%.2lf%% bytes of full)\n"
 		"\tt_exec_full: %lf ms (%lf GFlops/s)\n"
 		"\tt_send_full: %lf ms ( %lf Gb/s)\n"
-		"\tt_total: %lf ms (%lf GFlops/s)\n\n",
+		"\tt_max: %lf ms (%lf GFlops/s)\n\n",
 		model->unit_id, 100*active_unit_score[used_unit_idx], t_recv_full*1000, Gval_per_s(recv_sz,t_recv_full),
 		t_recv_extra*1000, Gval_per_s(recv_sz_extra,t_recv_extra), 100*extra_transfer_ratio,
 		t_exec_full*1000, Gval_per_s(model->getFlops()*active_unit_score[used_unit_idx], t_exec_full),
@@ -284,22 +271,22 @@ double PARALiaPredictLinkHeteroBLAS3(MD_p model, long int T, int active_unit_num
 		t_total*1000, Gval_per_s(model->getFlops()*active_unit_score[used_unit_idx], t_total));
 #endif
 
-		return t_total;
+		return result;
 	}
 
-double PARALiaPredictLinkHetero(MD_p model, long int T, int active_unit_num, int* active_unit_id_list,
+double* PARALiaPredictLinkHetero_v2(MD_p model, long int T, int active_unit_num, int* active_unit_id_list,
 	double* active_unit_score)
 {
 	switch(model->problem){
 		case BLAS1:
-			error("PredictBidirectionalHetero: BLAS 3 Not implemented\n");
+			error("PARALiaPredictLinkHetero_v2: BLAS 3 Not implemented\n");
 		case BLAS2:
-			error("PredictBidirectionalHetero: BLAS 2 Not implemented\n");
+			error("PARALiaPredictLinkHetero_v2: BLAS 2 Not implemented\n");
 		case BLAS3:
-			return PARALiaPredictLinkHeteroBLAS3(model, T, active_unit_num, active_unit_id_list,
+			return PARALiaPredictLinkHeteroBLAS3_v2(model, T, active_unit_num, active_unit_id_list,
 				active_unit_score);
 		default:
-			error("PredictBidirectionalHetero: Invalid Problem %s", printProblem(model->problem));
+			error("PARALiaPredictLinkHetero_v2: Invalid Problem %s", printProblem(model->problem));
 	}
 	return 0;
 }

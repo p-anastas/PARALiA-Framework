@@ -16,6 +16,7 @@ void LinkMap::copy(class LinkMap* other_linkmap)
       link_bw[i][j] = other_linkmap->link_bw[i][j];
       link_bw_shared[i][j] = other_linkmap->link_bw_shared[i][j];
       link_bw_shared_hops[i][j] = other_linkmap->link_bw_shared_hops[i][j];
+      link_active[i][j] = other_linkmap->link_active[i][j];
       link_uses[i][j] = other_linkmap->link_uses[i][j];
       link_hop_num[i][j] = other_linkmap->link_hop_num[i][j];
       link_hop_route_num[i][j] = other_linkmap->link_hop_route_num[i][j];
@@ -37,6 +38,7 @@ void LinkMap::reset()
     for (int j = 0; j < LOC_NUM; j++){
       link_bw_shared[i][j] = 0;
       link_bw_shared_hops[i][j] = 0;
+      link_active[i][j] = 0; 
       link_uses[i][j] = 0;
       link_hop_num[i][j] = 0;
       link_hop_route_num[i][j] = 0;
@@ -49,7 +51,6 @@ void LinkMap::reset()
     }
 	for (int i = 0; i < LOC_NUM*LOC_NUM; i++) ESPA_ETA_sorted_dec_ids[i] = i;
 }
-
 
 void LinkMap::reset_links(int unit_id){
   	for (int i = 0; i < LOC_NUM; i++)
@@ -67,7 +68,6 @@ void LinkMap::reset_links(int unit_id){
 						}
 
 }
-
 
 void normalize_2D_LOC_NUM(double link_bw [][LOC_NUM], int dim1, double split_limit){
   int already_normalized[dim1][LOC_NUM] = {{0}};
@@ -137,28 +137,83 @@ void LinkMap::update_link_shared_weights(MD_p* unit_modeler_list,
 #endif
   int* datalocs = (int*) malloc(LOC_NUM*sizeof(int)), dataloc_num = 0;
   unit_modeler_list[0]->getDatalocs(&datalocs, &dataloc_num);
-  //double send_ratio = unit_modeler_list[0]->getSendRatio(), recv_ratio = unit_modeler_list[0]->getRecvRatio();
   if (!dataloc_num)
     error("Called ATC::update_link_map_shared() without properly initalized model in unit_modeler_list[0]\n");
 #ifdef PDEBUG
   lprintf(0, "\n|-----> LinkMap::update_link_shared_weights(unit_list = %s, datalocs = %s)\n\n",
     printlist<int>(active_unit_id_list, active_unit_num), printlist<int>(datalocs, dataloc_num));
-
 #endif
-  //int pred_T_dim = 0;
-  //if(T < 1) pred_T_dim = 2048;
-  //else pred_T_dim = T;
+#ifdef PDEBUG
+  print_link_bw();
+#endif
+	if(!links_share_bandwidth_init){
+		for(int i = 0; i < LOC_NUM; i++)
+		for(int j = 0; j < LOC_NUM; j++)
+		for(int k = 0; k < 2; k++) links_share_bandwidth[i][j][k] = -42;
+		links_share_bandwidth_init = 1; 
+	}
+
+#ifndef ENABLE_LINK_BW_SHARING
+	///TODO: ENABLE_LINK_BW_SHARING flag is disabled, but sharing-disabler mechanism is handmade
+
+	// FIXME: Handmade distribution, for testing purposes
+	links_share_bandwidth[0][LOC_NUM - 1][0] = 1;
+	links_share_bandwidth[0][LOC_NUM - 1][1] = LOC_NUM - 1;
+	links_share_bandwidth[1][LOC_NUM - 1][0] = 0;
+	links_share_bandwidth[1][LOC_NUM - 1][1] = LOC_NUM - 1;
+
+	links_share_bandwidth[2][LOC_NUM - 1][0] = 3;
+	links_share_bandwidth[2][LOC_NUM - 1][1] = LOC_NUM - 1;
+	links_share_bandwidth[3][LOC_NUM - 1][0] = 2;
+	links_share_bandwidth[3][LOC_NUM - 1][1] = LOC_NUM - 1;
+
+	links_share_bandwidth[4][LOC_NUM - 1][0] = 5;
+	links_share_bandwidth[4][LOC_NUM - 1][1] = LOC_NUM - 1;
+	links_share_bandwidth[5][LOC_NUM - 1][0] = 4;
+	links_share_bandwidth[5][LOC_NUM - 1][1] = LOC_NUM - 1;
+
+	links_share_bandwidth[6][LOC_NUM - 1][0] = 7;
+	links_share_bandwidth[6][LOC_NUM - 1][1] = LOC_NUM - 1;
+	links_share_bandwidth[7][LOC_NUM - 1][0] = 6;
+	links_share_bandwidth[7][LOC_NUM - 1][1] = LOC_NUM - 1;
+/*
+	links_share_bandwidth[LOC_NUM - 1][0][0] = LOC_NUM - 1;
+	links_share_bandwidth[LOC_NUM - 1][0][1] = 1;
+	links_share_bandwidth[LOC_NUM - 1][1][0] = LOC_NUM - 1;
+	links_share_bandwidth[LOC_NUM - 1][1][1] = 0;
+
+	links_share_bandwidth[LOC_NUM - 1][2][0] = LOC_NUM - 1;
+	links_share_bandwidth[LOC_NUM - 1][2][1] = 3;
+	links_share_bandwidth[LOC_NUM - 1][3][0] = LOC_NUM - 1;
+	links_share_bandwidth[LOC_NUM - 1][3][1] = 2;
+
+	links_share_bandwidth[LOC_NUM - 1][4][0] = LOC_NUM - 1;
+	links_share_bandwidth[LOC_NUM - 1][4][1] = 5;
+	links_share_bandwidth[LOC_NUM - 1][5][0] = LOC_NUM - 1;
+	links_share_bandwidth[LOC_NUM - 1][5][1] = 4;
+
+	links_share_bandwidth[LOC_NUM - 1][6][0] = LOC_NUM - 1;
+	links_share_bandwidth[LOC_NUM - 1][6][1] = 7;
+	links_share_bandwidth[LOC_NUM - 1][7][0] = LOC_NUM - 1;
+	links_share_bandwidth[LOC_NUM - 1][7][1] = 6;
+*/
+#endif
   for (int i = 0; i < LOC_NUM; i++){
     for(int j = 0; j < LOC_NUM; j++){
-      if(i == j) link_bw_shared[i][j] = 0;
+      if(i == j || 
+      !( (is_in_list(deidxize(i),active_unit_id_list, active_unit_num) && is_in_list(deidxize(j),active_unit_id_list, active_unit_num))
+      || (is_in_list(deidxize(i),datalocs, dataloc_num) && is_in_list(deidxize(j),active_unit_id_list, active_unit_num))
+      || (is_in_list(deidxize(j),datalocs, dataloc_num) && is_in_list(deidxize(i),active_unit_id_list, active_unit_num))))
+        link_bw_shared[i][j] = -1;
       else{
+        link_active[i][j] = 1;
         double link_slowdown_multiplier = 1.0;
         for (int k = 0; k < LOC_NUM; k++){
           for(int l = 0; l < LOC_NUM; l++){
             if ((k == l) || (i == k && j == l)) continue;
-            if(!link_hop_num[k][l] && (is_in_list(deidxize(l),datalocs, dataloc_num) 
-              && is_in_list(deidxize(k),active_unit_id_list, active_unit_num)) &&
-              !(links_share_bandwidth[i][j][0] == k && links_share_bandwidth[i][j][1] == l)){
+            if((is_in_list(deidxize(l),datalocs, dataloc_num) 
+              && is_in_list(deidxize(k),active_unit_id_list, active_unit_num)) 
+              && !(links_share_bandwidth[i][j][0] == k && links_share_bandwidth[i][j][1] == l)){
              link_slowdown_multiplier = fmax(link_slowdown_multiplier, unit_modeler_list[i]->link[j]->sl[k][l]);
 #ifdef DPDEBUG
               if (unit_modeler_list[i]->link[j]->sl[k][l] != 1.0) lprintf(lvl, "ATC::update_link_map_shared():\
@@ -166,29 +221,16 @@ void LinkMap::update_link_shared_weights(MD_p* unit_modeler_list,
                 deidxize(l), deidxize(k), deidxize(j), deidxize(i), unit_modeler_list[i]->link[j]->sl[k][l]);
 #endif
             }
-            else if(link_hop_num[k][l]){
-              int hoplocs[link_hop_num[k][l] + 2];
-              hoplocs[0] = k;
-              hoplocs[link_hop_num[k][l]+1] = l;
-              for (int idx = 0; idx < link_hop_num[k][l]; idx++) hoplocs[idx+1] = link_hop_route[k][l][0][idx];
-              for (int idx = 0; idx < link_hop_num[k][l] + 1; idx++){
-                if(is_in_list(deidxize(hoplocs[idx+1]),datalocs, dataloc_num) && is_in_list(deidxize(hoplocs[idx]),active_unit_id_list, active_unit_num))
-                link_slowdown_multiplier = fmax(link_slowdown_multiplier,unit_modeler_list[i]->link[j]->sl[hoplocs[idx]][hoplocs[idx+1]]);
+            /* Do not include output transfer to link slowdown calculation...
+            else if((is_in_list(deidxize(k),datalocs, dataloc_num)
+                && is_in_list(deidxize(l),active_unit_id_list, active_unit_num))
+                && !(links_share_bandwidth[i][j][0] == k && links_share_bandwidth[i][j][1] == l)){
+                link_slowdown_multiplier = fmax(link_slowdown_multiplier,unit_modeler_list[i]->link[j]->sl[k][l]);
 #ifdef DPDEBUG
-                 if (unit_modeler_list[i]->link[j]->sl[hoplocs[idx]][hoplocs[idx+1]] != 1.0) lprintf(lvl, "ATC::update_link_map_shared():\
+                if (unit_modeler_list[i]->link[j]->sl[k][l] != 1.0) lprintf(lvl, "ATC::update_link_map_shared():\
                    \nFound link (%d -> %d) imposing potential recv-based slowdown to (%d -> %d) with sl = %Lf\n",
-                   deidxize(hoplocs[idx+1]), deidxize(hoplocs[idx]), deidxize(j), deidxize(i), unit_modeler_list[i]->link[j]->sl[hoplocs[idx]][hoplocs[idx+1]]);
+                   deidxize(l), deidxize(k), deidxize(j), deidxize(i), unit_modeler_list[i]->link[j]->sl[k][l]);
 #endif
-
-              }
-            }
-/*            if(is_in_list(deidxize(k),datalocs, dataloc_num) && is_in_list(deidxize(l),active_unit_id_list, active_unit_num)){
-              link_slowdown_multiplier = fmax(link_slowdown_multiplier, unit_modeler_list[i]->link[j]->sl[k][l]);
-//#ifdef DPDEBUG
-              if (unit_modeler_list[i]->link[j]->sl[k][l] != 1.0) lprintf(lvl, "ATC::update_link_map_shared():\
-                \nFound link (%d -> %d) imposing potential send-based slowdown to (%d -> %d) with sl = %Lf\n",
-                deidxize(l), deidxize(k), deidxize(j), deidxize(i), unit_modeler_list[i]->link[j]->sl[k][l]);
-//#endif
             }*/
           }
         }
@@ -197,12 +239,18 @@ void LinkMap::update_link_shared_weights(MD_p* unit_modeler_list,
         \nAdjusting link_bw_shared[%d][%d] with link_slowdown_multiplier = %lf\n", i, j, link_slowdown_multiplier);
 #endif
         if (link_slowdown_multiplier>2) link_slowdown_multiplier = 2;
-        link_bw_shared[i][j] = link_bw[i][j] * (1/link_slowdown_multiplier);
+        if (links_share_bandwidth[i][j][0] != -42 
+        && (i*LOC_NUM + j > links_share_bandwidth[i][j][0]*LOC_NUM + links_share_bandwidth[i][j][1]) 
+        && (link_bw_shared[links_share_bandwidth[i][j][0]][links_share_bandwidth[i][j][1]]!=-1)) link_bw_shared[i][j] = -1;
+        else link_bw_shared[i][j] = link_bw[i][j] * (1/link_slowdown_multiplier);
       }
     }
     /// Normalize costs.
     for(int j = 0; j < LOC_NUM; j++){
-      if(i == j) continue;
+      if(i == j || 
+      !( (is_in_list(deidxize(i),active_unit_id_list, active_unit_num) && is_in_list(deidxize(j),active_unit_id_list, active_unit_num))
+      || (is_in_list(deidxize(i),datalocs, dataloc_num) && is_in_list(deidxize(j),active_unit_id_list, active_unit_num))
+      || (is_in_list(deidxize(j),datalocs, dataloc_num) && is_in_list(deidxize(i),active_unit_id_list, active_unit_num)) )) continue;
       int flag_normalize[LOC_NUM] = {0}, normalize_num = 1;
       double normalize_sum = link_bw_shared[i][j];
       flag_normalize[j] = 1;
@@ -224,7 +272,6 @@ void LinkMap::update_link_shared_weights(MD_p* unit_modeler_list,
 #endif
 }
 
-#ifdef ENABLE_TRANSFER_HOPS
 void LinkMap::init_hop_routes(MD_p* unit_modeler_list, int* active_unit_id_list, int active_unit_num){
   double safe_hop_penalty = HOP_PENALTY;
   for (int unit_idx = 0 ; unit_idx < LOC_NUM; unit_idx++)
@@ -298,8 +345,7 @@ void LinkMap::print_link_bw_shared_hops(){
   }
 }
 
-#ifdef ENABLE_ESPA
-
+/*
 double LinkMap::update_ESPA_ETA_idx(MD_p* unit_modeler_list, int idxi, int idxj){
 	ESPA_ETA[idxi][idxj] = t_com_predict_shared(unit_modeler_list[idxi]->link[idxj], ESPA_bytes[idxi][idxj]);
 	return ESPA_ETA[idxi][idxj]; // Already stored in LinkMap, return for ease of use as getter.
@@ -377,8 +423,7 @@ void LinkMap::ESPA_init(MD_p* unit_modeler_list, int* active_unit_id_list, doubl
       }
     if (!model) error("LinkMap::ESPA_init: Model not found for active_unit_id_list[%d] = %d\n",
       unit_idx, active_unit_id_list[unit_idx]);
-
-    long long recv_sz_RONLY = 0;
+    long long recv_sz_RONLY[5] = 0;
     int recv_num_RONLY = 0;
     for (int i = 0; i < model->V->numT; i++){
       long long recv_bytes = (long long) model->V->in[i]*(*model->V->Dim1[i])*(*model->V->Dim2[i])*
@@ -389,38 +434,45 @@ void LinkMap::ESPA_init(MD_p* unit_modeler_list, int* active_unit_id_list, doubl
       	ESPA_bytes[idxize(model->unit_id)][idxize(model->V->loc[i])]+= recv_bytes;
       	ESPA_bytes[idxize(model->V->loc[i])][idxize(model->unit_id)]+= send_bytes;
 	      if(!model->V->out[i]) {
-	        recv_sz_RONLY+= recv_bytes;
+	        recv_sz_RONLY[recv_num_RONLY] = recv_bytes;
 	        recv_num_RONLY++;
 	      }
 			}
     }
 
-    /// TODO: Extra transfers created from internal dims due to multi-unit spliting.
-    /// Algorithm may vary for other BLAS3, but not at that bridge yet.
-    /// The assumtion for extra transfers is made based on the 2D cyclic distribution,
-    /// but the estimation is also useful for other distributions as a best case scenario (worse distributions -> more extra transfers).
-    int D1_parts = sqrt(active_unit_num);
-    int D2_parts = D1_parts;
-    if (D1_parts ==0) { D2_parts = active_unit_num; D1_parts = 1; }
-    else { /* find the most square decomposition of autotune_controller->active_unit_num in D1_parts x D2_parts */
-      int g;
-      for (g = D1_parts+1; g>0; --g) if (active_unit_num % g == 0) break;
-      if (g==0) { D1_parts = active_unit_num; D2_parts = 1; }
-      else { D1_parts = g; D2_parts = active_unit_num/g; }
+    if(!strcmp(func, "Dgemm") || !strcmp(func, "Sgemm") ){
+      /// TODO: Extra transfers created from internal dims due to multi-unit spliting.
+      /// Algorithm may vary for other BLAS3, but not at that bridge yet.
+      /// The assumtion for extra transfers is made based on the 2D cyclic distribution,
+      /// but the estimation is also useful for other distributions as a best case scenario (worse distributions -> more extra transfers).
+      int D1_parts = sqrt(active_unit_num);
+      int D2_parts = D1_parts;
+      if (D1_parts ==0) { D2_parts = active_unit_num; D1_parts = 1; }
+      else { // find the most square decomposition of autotune_controller->active_unit_num in D1_parts x D2_parts 
+        int g;
+        for (g = D1_parts+1; g>0; --g) if (active_unit_num % g == 0) break;
+        if (g==0) { D1_parts = active_unit_num; D2_parts = 1; }
+        else { D1_parts = g; D2_parts = active_unit_num/g; }
+      }
+  #ifdef DPDEBUG
+      lprintf(lvl, "LinkMap::ESPA_init(unit_num = %d) : D1_parts = %d, D2_parts = %d\n",
+      active_unit_num, D1_parts, D2_parts);
+  #endif
+      /// Assume extra transfers are split equally between all other units on the decomposition dims
+      int row_dec = unit_idx/D1_parts, col_dec = unit_idx%D1_parts; 
+      for (int other_loc_idx = 0; other_loc_idx < active_unit_num; other_loc_idx++)
+        if(active_unit_id_list[other_loc_idx]!=model->unit_id){
+          int other_row_dec = other_loc_idx/D1_parts, other_col_dec = other_loc_idx%D1_parts;
+          if(other_row_dec == row_dec) 
+            ESPA_bytes[idxize(model->unit_id)][idxize(active_unit_id_list[other_loc_idx])]+= recv_sz_RONLY[0];
+          if(other_col_dec == col_dec) 
+            ESPA_bytes[idxize(model->unit_id)][idxize(active_unit_id_list[other_loc_idx])]+= recv_sz_RONLY[1];
+        }
     }
-    double extra_transfer_ratio = (recv_num_RONLY)? (1.0*((D1_parts-1) + (D2_parts -1)))/recv_num_RONLY: 0;
-
-#ifdef DPDEBUG
-    lprintf(lvl, "LinkMap::ESPA_init(unit_num = %d) : D1_parts = %d, D2_parts = %d, extra_transfer_ratio = %lf\n",
-    active_unit_num, D1_parts, D2_parts, extra_transfer_ratio);
-#endif
-    long long recv_sz_extra = extra_transfer_ratio * recv_sz_RONLY;
-    /// Assume extra transfers are split equally between all other units
-    for (int other_loc_idx = 0; other_loc_idx < active_unit_num; other_loc_idx++) if(active_unit_id_list[other_loc_idx]!=model->unit_id)
-      ESPA_bytes[idxize(model->unit_id)][idxize(active_unit_id_list[other_loc_idx])]+= recv_sz_extra/(active_unit_num-1);
   }
 
-  for (int idxi = 0; idxi < LOC_NUM; idxi++) for (int idxj = 0; idxj < LOC_NUM; idxj++) update_ESPA_ETA_idx(unit_modeler_list, idxi, idxj);
+  for (int idxi = 0; idxi < LOC_NUM; idxi++) for (int idxj = 0; idxj < LOC_NUM; idxj++) 
+    update_ESPA_ETA_idx(unit_modeler_list, idxi, idxj);
   update_ESPA_ETA_max();
   update_ESPA_ETA_mean_and_var();
   update_ESPA_ETA_sorted_dec_ids();
@@ -433,7 +485,7 @@ void LinkMap::ESPA_init(MD_p* unit_modeler_list, int* active_unit_id_list, doubl
 #endif
 }
 
-void LinkMap::ESPA_init_hop_routes(MD_p* unit_modeler_list, int* active_unit_id_list, double* active_unit_score,
+void LinkMap::ESPA_estimate_hop_routes(MD_p* unit_modeler_list, int* active_unit_id_list, double* active_unit_score,
   int active_unit_num, int init_type){
 	int* datalocs = (int*) malloc(LOC_NUM*sizeof(int)), dataloc_num = 0;
 	unit_modeler_list[0]->getDatalocs(&datalocs, &dataloc_num);
@@ -632,13 +684,7 @@ void LinkMap::print_ESPA(){
 	lprintf(0, "ESPA_ETA_sorted_dec_ids[%d] = %d : ESPA_ETA[%d][%d] = %lf\n", unit_ctr, ESPA_ETA_sorted_dec_ids[unit_ctr], unit_idx, unit_idy, ESPA_ETA[unit_idx][unit_idy]);
   }
 }
-
-#endif
-
-
-#endif
-
-
+*/
 void LinkMap::print_link_bw(){
   lprintf(0,"\n Link BW Map:\n   |");
   for (int d2 = 0; d2 < LOC_NUM; d2++)

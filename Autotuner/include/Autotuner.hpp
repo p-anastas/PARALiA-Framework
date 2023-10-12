@@ -104,9 +104,16 @@ typedef class Modeler{
 		double predictBestFriends_t(double request_ratio, long long request_size, int active_unit_num, int* active_unit_id_list);
 		/// Predicts the transfer time for request_size bytes if given by the average of all (other) available BWs
 		double predictAvgBw_t(long long request_size, int active_unit_num, int* active_unit_id_list);
+		/// Predicts the transfer time for request_size bytes based on the sum of all (other) available BWs
+		double predictSumBw_t(long long request_size, int active_unit_num, int* active_unit_id_list);
 
 		double predict(ModelType mode, long int T = -1, int active_unit_num = -1, int* active_unit_id_list = NULL,
 			double* active_unit_score = NULL);	///  Mode-Generalized prediction wrapper
+
+		///  Mode-Generalized prediction wrapper that returns the full list
+		/// (comp_t, fetch_t, fetch_extra_t, return_t) with sub-predictions instead of max
+		double* predict_v2(ModelType mode, long int T = -1, int active_unit_num = -1, int* active_unit_id_list = NULL,
+			double* active_unit_score = NULL);	
 /******************************************************************************/
 
 }* MD_p;
@@ -121,10 +128,14 @@ typedef class ATC{
 		double pred_t; /// The predicted seconds the whole operation will require using the above parameters.
 		double pred_J; /// The predicted Joules the whole operation will require using the above parameters.
 		double power_delay, energy_delay; /// The predicted power and energy delay products using the above parameters.
+
+		double pred_t_pesimistic; /// The predicted seconds the whole operation will require if all overlap fails.
+		double pred_J_pesimistic; /// The predicted Joules the whole operation will require if all overlap fails.
+		double power_delay_pesimistic, energy_delay_pesimistic; /// The predicted power and energy delay products if all overlap fails.
+	
 		long int subkernel_num; /// The number of subkernels.
 		int* Subkernels_per_unit_num; /// The number of subkernels derived from a unit's score that that unit unit will fire.
 		int** Subkernels_per_unit_list; /// The sk_id ids of said sub-kernels, IF they are predefined and not dynamic.
-
 		long long cache_limit; /// The 'cache' size allocation limit for all devices in bytes, IF any.
 		MD_p* unit_modeler_list; /// The list of modelers for ALL available units (e.g. LOC_NUM)
 		LinkMap_p linkmap; /// The LinkMap representation of the system memory interconnection.

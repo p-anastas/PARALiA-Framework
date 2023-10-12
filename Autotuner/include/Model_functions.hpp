@@ -27,7 +27,7 @@ double PredictReuseHetero(MD_p model, long int T, int used_devs,
   int* used_dev_ids, double* used_dev_relative_scores);
 double PredictBidirectionalHetero(MD_p model, long int T,
   int used_devs, int* used_dev_ids, double* used_dev_relative_scores);
-double PARALiaPredictLinkHetero(MD_p model, long int T, int used_devs, int* used_dev_ids,
+double* PARALiaPredictLinkHetero_v2(MD_p model, long int T, int used_devs, int* used_dev_ids,
 	double* used_dev_relative_scores);
 /******************************************************************************/
 

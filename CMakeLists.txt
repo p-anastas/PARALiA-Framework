@@ -58,7 +58,7 @@ add_definitions(-DOUTPUT_ALGO_MODE="ALGO_WR_LAZY")
 #add_definitions(-DOUTPUT_ALGO_MODE="ALGO_WREDUCE")
 
 ###########################################################################################
-#-----------------------------------Modeling options--------------------------------------#
+#-----------------------------------Modeling options - UNDER CONSRUCTION------------------#
 ###########################################################################################
 
 ## Enable using transfer hops for faster transfers between multiple links
@@ -70,6 +70,10 @@ add_definitions(-DOUTPUT_ALGO_MODE="ALGO_WR_LAZY")
 #add_definitions(-DENABLE_ESPA)
 ## Define the strategy for agreggating the transfer time of a problem if ESPA is used. 0 = max, 1 = sum.
 #add_definitions(-DESPA_COMMUNICATION_AGGREGATOR=0)
+
+## The number of itterations that will performed to tune the per-device ratio workload split.
+## Inconsequential for homogeneous cases, higher = better for heterogeneous ones.
+add_definitions(-DRATIO_TUNE_ITTER=10)
 
 ###########################################################################################
 #------------------------------------Routing options--------------------------------------#
@@ -116,7 +120,7 @@ add_definitions(-DDISTRIBUTION="2D-BLOCK-CYCLIC")
 ###########################################################################################
 
 #Run subkernels in provided order
-add_definitions(-DSERIAL_SUBKERNEL_SELECTION)
+#add_definitions(-DSERIAL_SUBKERNEL_SELECTION)
 
 ## Define subkernel selection heuristic values.
 add_definitions(-DSUBKERNEL_SELECT_FETCH_ETA_PLUS_MIN_PENDING)
@@ -138,7 +142,7 @@ add_definitions(-DENABLE_POWA)
 add_definitions(-DCPU_W_PREDEF=$ENV{PARALIA_W_CPU_PREDEF})
 
 ## Choose the Unit combination that maximizes total performance (minimum time).
-add_definitions(-DPREDICT_OPTIMIZE_TARGET="PERF")
+#add_definitions(-DPREDICT_OPTIMIZE_TARGET="PERF")
 ## Choose the Unit combination that minimizes consumed energy (J).
 ## Rarely chooses multi-unit execution, since its almost always less energy-efficient than single-unit.
 #add_definitions(-DPREDICT_OPTIMIZE_TARGET="ENERGY")
@@ -147,7 +151,7 @@ add_definitions(-DPREDICT_OPTIMIZE_TARGET="PERF")
 #add_definitions(-DPREDICT_OPTIMIZE_TARGET="POWER-DELAY")
 
 ## Choose the Unit combination that maximizes the energy-delay product - closer to "PERF" but also slightly considering energy.
-#add_definitions(-DPREDICT_OPTIMIZE_TARGET="ENERGY-DELAY")
+add_definitions(-DPREDICT_OPTIMIZE_TARGET="ENERGY-DELAY")
 
 #--------------------------------------Experimental----------------------------------------#
 
@@ -199,7 +203,7 @@ add_definitions(-DUNIHELPER_LOCKFREE_ENABLE)
 add_definitions(-DSDEBUG)
 
 #Run Prediction debug mode (autotuner stuff)
-#add_definitions(-DPDEBUG)
+add_definitions(-DPDEBUG)
 
 #Run Prediction deep debug mode (all autotuner stuff)
 #add_definitions(-DDPDEBUG)

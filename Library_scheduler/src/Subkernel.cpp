@@ -247,57 +247,6 @@ void Subkernel::run_ready_operation(){
 }
 
 void CoCoPeLiaInitResources(int* dev_list, int dev_num){
-
-	for(int i = 0; i < LOC_NUM; i++)
-	for(int j = 0; j < LOC_NUM; j++)
-	for(int k = 0; k < 2; k++) links_share_bandwidth[i][j][k] = -42;
-
-#ifndef ENABLE_LINK_BW_SHARING
-	///TODO: ENABLE_LINK_BW_SHARING flag is disabled, but sharing-disabler mechanism is handmade
-
-	// FIXME: Handmade distribution, for testing purposes
-	links_share_bandwidth[0][LOC_NUM - 1][0] = 1;
-	links_share_bandwidth[0][LOC_NUM - 1][1] = LOC_NUM - 1;
-	links_share_bandwidth[1][LOC_NUM - 1][0] = 0;
-	links_share_bandwidth[1][LOC_NUM - 1][1] = LOC_NUM - 1;
-
-	links_share_bandwidth[2][LOC_NUM - 1][0] = 3;
-	links_share_bandwidth[2][LOC_NUM - 1][1] = LOC_NUM - 1;
-	links_share_bandwidth[3][LOC_NUM - 1][0] = 2;
-	links_share_bandwidth[3][LOC_NUM - 1][1] = LOC_NUM - 1;
-
-	links_share_bandwidth[4][LOC_NUM - 1][0] = 5;
-	links_share_bandwidth[4][LOC_NUM - 1][1] = LOC_NUM - 1;
-	links_share_bandwidth[5][LOC_NUM - 1][0] = 4;
-	links_share_bandwidth[5][LOC_NUM - 1][1] = LOC_NUM - 1;
-
-	links_share_bandwidth[6][LOC_NUM - 1][0] = 7;
-	links_share_bandwidth[6][LOC_NUM - 1][1] = LOC_NUM - 1;
-	links_share_bandwidth[7][LOC_NUM - 1][0] = 6;
-	links_share_bandwidth[7][LOC_NUM - 1][1] = LOC_NUM - 1;
-/*
-	links_share_bandwidth[LOC_NUM - 1][0][0] = LOC_NUM - 1;
-	links_share_bandwidth[LOC_NUM - 1][0][1] = 1;
-	links_share_bandwidth[LOC_NUM - 1][1][0] = LOC_NUM - 1;
-	links_share_bandwidth[LOC_NUM - 1][1][1] = 0;
-
-	links_share_bandwidth[LOC_NUM - 1][2][0] = LOC_NUM - 1;
-	links_share_bandwidth[LOC_NUM - 1][2][1] = 3;
-	links_share_bandwidth[LOC_NUM - 1][3][0] = LOC_NUM - 1;
-	links_share_bandwidth[LOC_NUM - 1][3][1] = 2;
-
-	links_share_bandwidth[LOC_NUM - 1][4][0] = LOC_NUM - 1;
-	links_share_bandwidth[LOC_NUM - 1][4][1] = 5;
-	links_share_bandwidth[LOC_NUM - 1][5][0] = LOC_NUM - 1;
-	links_share_bandwidth[LOC_NUM - 1][5][1] = 4;
-
-	links_share_bandwidth[LOC_NUM - 1][6][0] = LOC_NUM - 1;
-	links_share_bandwidth[LOC_NUM - 1][6][1] = 7;
-	links_share_bandwidth[LOC_NUM - 1][7][0] = LOC_NUM - 1;
-	links_share_bandwidth[LOC_NUM - 1][7][1] = 6;
-*/
-#endif
-
 	for(short dev_id_idx = 0 ; dev_id_idx < LOC_NUM; dev_id_idx++){
 		for(short dev_id_idy = 0 ; dev_id_idy < LOC_NUM; dev_id_idy++)
 		if(dev_id_idy!=dev_id_idx){

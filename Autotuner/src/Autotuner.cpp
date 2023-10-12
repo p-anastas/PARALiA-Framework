@@ -9,9 +9,6 @@
 
 #include <float.h> /// For DBL_MAX
 
-double final_estimated_link_bw[LOC_NUM][LOC_NUM] = {{0}};
-LinkMap_p final_estimated_linkmap;
-
 /********************** Initialization/Modification ***************************/
 ATC::ATC(){
 	short lvl = 2;
@@ -304,30 +301,13 @@ double ATC::autotune_problem(const char* routine_name, void* initial_problem_wra
 			temp_controller->linkmap->reset();
 			temp_controller->linkmap->update_link_shared_weights(temp_controller->unit_modeler_list,
 					temp_controller->active_unit_id_list, temp_controller->active_unit_num);
-			for(int i = 0; i< LOC_NUM; i++)	for(int j = 0; j< LOC_NUM; j++)
+			for(int i = 0; i< LOC_NUM; i++)	for(int j = 0; j< LOC_NUM; j++){
 				final_estimated_link_bw[i][j] = temp_controller->linkmap->link_bw_shared[i][j];
-#ifdef ENABLE_TRANSFER_HOPS
-#ifndef ENABLE_ESPA
-			temp_controller->linkmap->init_hop_routes(temp_controller->unit_modeler_list,
-				temp_controller->active_unit_id_list, temp_controller->active_unit_num);
-#else
-			temp_controller->linkmap->ESPA_init(temp_controller->unit_modeler_list,
-				temp_controller->active_unit_id_list, NULL, temp_controller->active_unit_num, 0);
-			temp_controller->linkmap->ESPA_init_hop_routes(temp_controller->unit_modeler_list,
-				temp_controller->active_unit_id_list, NULL, temp_controller->active_unit_num, 0);
-#endif
+				final_link_active[i][j] = temp_controller->linkmap->link_active[i][j];
+			}
 
-			temp_controller->linkmap->update_link_shared_weights(temp_controller->unit_modeler_list,
-				temp_controller->active_unit_id_list, temp_controller->active_unit_num);
-
-		  	for(int i = 0; i< LOC_NUM; i++)	for(int j = 0; j< LOC_NUM; j++)
-				final_estimated_link_bw[i][j] = temp_controller->linkmap->link_bw_shared_hops[i][j];
-#else
-		  	for(int i = 0; i< LOC_NUM; i++)	for(int j = 0; j< LOC_NUM; j++)
-				final_estimated_link_bw[i][j] = temp_controller->linkmap->link_bw_shared[i][j];
-#endif
 			if(initial_T <= 0) tile_selection_t += temp_controller->optimize_tile();
-			/// Remove case that could not file a proper tile. 
+			/// Remove case that could not find a proper tile. 
 			if(temp_controller->T < 0){
 				temp_controller->pred_t = pred_t*100;
 				temp_controller->pred_J = pred_J*100;
@@ -347,8 +327,14 @@ double ATC::autotune_problem(const char* routine_name, void* initial_problem_wra
 #endif
 #else
 			if (!strcmp(PREDICT_OPTIMIZE_TARGET,"PERF")){
-				if (temp_controller->pred_t +
-					temp_controller->pred_t*((temp_controller->active_unit_num-active_unit_num)*MINIMUM_UNIT_CONTRIBUTION) < pred_t) mimic_ATC(temp_controller);
+				if ((temp_controller->pred_t + temp_controller->pred_t*
+					((temp_controller->active_unit_num-active_unit_num)*MINIMUM_UNIT_CONTRIBUTION) < pred_t)
+					|| ((temp_controller->pred_t + temp_controller->pred_t*
+					((temp_controller->active_unit_num-active_unit_num)*MINIMUM_UNIT_CONTRIBUTION) == pred_t) && (
+					temp_controller->pred_t_pesimistic + temp_controller->pred_t_pesimistic*
+						((temp_controller->active_unit_num-active_unit_num)*MINIMUM_UNIT_CONTRIBUTION) < pred_t_pesimistic
+					)))
+						mimic_ATC(temp_controller);
 #ifdef SDEBUG
 				fprintf(stderr, "==============================================\n");
 				fprintf(stderr, "Autotune devices (iter %d): Tuning for active_unit_id_list = [ ", case_id);
@@ -358,9 +344,14 @@ double ATC::autotune_problem(const char* routine_name, void* initial_problem_wra
 #endif
 			}
 			else if(!strcmp(PREDICT_OPTIMIZE_TARGET,"ENERGY")){
-				if (temp_controller->pred_J // Minus here to allow reverse effect for MINIMUM_UNIT_CONTRIBUTION (otherwise less devices always better)
-					- temp_controller->pred_J*((temp_controller->active_unit_num-active_unit_num)*MINIMUM_UNIT_CONTRIBUTION)
-					< pred_J) mimic_ATC(temp_controller);
+				if ((temp_controller->pred_J - temp_controller->pred_J*
+					((temp_controller->active_unit_num-active_unit_num)*MINIMUM_UNIT_CONTRIBUTION) < pred_J)
+					|| ((temp_controller->pred_J - temp_controller->pred_J*
+					((temp_controller->active_unit_num-active_unit_num)*MINIMUM_UNIT_CONTRIBUTION) == pred_J) && (
+					temp_controller->pred_J_pesimistic - temp_controller->pred_J_pesimistic*
+						((temp_controller->active_unit_num-active_unit_num)*MINIMUM_UNIT_CONTRIBUTION) < pred_J_pesimistic
+					)))
+						mimic_ATC(temp_controller);
 #ifdef SDEBUG
 				fprintf(stderr, "==============================================\n");
 				fprintf(stderr, "Autotune devices (iter %d): Tuning for active_unit_id_list = [ ", case_id);
@@ -370,9 +361,14 @@ double ATC::autotune_problem(const char* routine_name, void* initial_problem_wra
 #endif
 			}
 			else if(!strcmp(PREDICT_OPTIMIZE_TARGET,"POWER-DELAY")){
-				if (temp_controller->power_delay
-					- temp_controller->power_delay*((temp_controller->active_unit_num-active_unit_num)*MINIMUM_UNIT_CONTRIBUTION)
-					> power_delay) mimic_ATC(temp_controller);
+				if ((temp_controller->power_delay - temp_controller->power_delay*
+					((temp_controller->active_unit_num-active_unit_num)*MINIMUM_UNIT_CONTRIBUTION) > power_delay)
+					|| ((temp_controller->power_delay - temp_controller->power_delay*
+					((temp_controller->active_unit_num-active_unit_num)*MINIMUM_UNIT_CONTRIBUTION) == power_delay) && (
+					temp_controller->power_delay_pesimistic - temp_controller->power_delay_pesimistic*
+						((temp_controller->active_unit_num-active_unit_num)*MINIMUM_UNIT_CONTRIBUTION) > power_delay_pesimistic
+					)))
+						mimic_ATC(temp_controller);
 #ifdef SDEBUG
 				fprintf(stderr, "==============================================\n");
 				fprintf(stderr, "Autotune devices (iter %d): Tuning for active_unit_id_list = [ ", case_id);
@@ -382,14 +378,19 @@ double ATC::autotune_problem(const char* routine_name, void* initial_problem_wra
 #endif
 			}
 			else if(!strcmp(PREDICT_OPTIMIZE_TARGET,"ENERGY-DELAY")){
-				if (temp_controller->energy_delay
-					- temp_controller->energy_delay*((temp_controller->active_unit_num-active_unit_num)*MINIMUM_UNIT_CONTRIBUTION)
-					> energy_delay) mimic_ATC(temp_controller);
+				if ((temp_controller->energy_delay - temp_controller->energy_delay*
+					((temp_controller->active_unit_num-active_unit_num)*MINIMUM_UNIT_CONTRIBUTION) > energy_delay)
+					|| ((temp_controller->energy_delay - temp_controller->energy_delay*
+					((temp_controller->active_unit_num-active_unit_num)*MINIMUM_UNIT_CONTRIBUTION) == energy_delay) && (
+					temp_controller->energy_delay_pesimistic - temp_controller->energy_delay_pesimistic*
+						((temp_controller->active_unit_num-active_unit_num)*MINIMUM_UNIT_CONTRIBUTION) > energy_delay_pesimistic
+					)))
+						mimic_ATC(temp_controller);
 #ifdef SDEBUG
 				fprintf(stderr, "==============================================\n");
 				fprintf(stderr, "Autotune devices (iter %d): Tuning for active_unit_id_list = [ ", case_id);
 				for (int i =0; i < temp_controller->active_unit_num; i++) fprintf(stderr, "%d ", temp_controller->active_unit_id_list[i]);
-				fprintf(stderr, "] -> energy_delay = %lf, best_energy_delay = %lf\n", temp_controller->energy_delay,  energy_delay);
+				fprintf(stderr, "] -> energy_delay = %e, best_energy_delay = %e\n", temp_controller->energy_delay,  energy_delay);
 				fprintf(stderr, "==============================================\n");
 #endif
 			} // Example for choosing U1(tpred = X, En = J1) vs U2(tpred = Y, En = J2) units with PERPER_LIMIT: if ( X/Y >= PERPER_LIMIT*J2/J1) U2 else U1
@@ -430,63 +431,37 @@ double ATC::autotune_problem(const char* routine_name, void* initial_problem_wra
 		double tile_selection_t = 0, split_selection_t = 0;
 		linkmap->update_link_shared_weights(unit_modeler_list,
 				active_unit_id_list, active_unit_num);
-		for(int i = 0; i< LOC_NUM; i++)	for(int j = 0; j< LOC_NUM; j++)
+		for(int i = 0; i< LOC_NUM; i++)	for(int j = 0; j< LOC_NUM; j++){
 			final_estimated_link_bw[i][j] = linkmap->link_bw_shared[i][j];
-#ifdef ENABLE_TRANSFER_HOPS
-#ifndef ENABLE_ESPA
-		linkmap->init_hop_routes(unit_modeler_list,
-			active_unit_id_list, active_unit_num);
-#else
-		linkmap->ESPA_init(unit_modeler_list,
-			active_unit_id_list,
-			NULL, active_unit_num, 0);
-		linkmap->ESPA_init_hop_routes(unit_modeler_list,
-			active_unit_id_list,
-			NULL, active_unit_num, 0);
-#endif
-#ifdef PDEBUG
-  	linkmap->print_link_bw_shared_hops();
-#endif
-  	for(int i = 0; i< LOC_NUM; i++)	for(int j = 0; j< LOC_NUM; j++)
-    	final_estimated_link_bw[i][j] = linkmap->link_bw_shared_hops[i][j];
-#else
-  	for(int i = 0; i< LOC_NUM; i++)	for(int j = 0; j< LOC_NUM; j++)
-    	final_estimated_link_bw[i][j] = linkmap->link_bw_shared[i][j];
-#endif
+			final_link_active[i][j] = linkmap->link_active[i][j];
+		}
 		if(initial_T <= 0) tile_selection_t += optimize_tile();
 		// TODO: Must decide if workload ratio should be tuned when there is a predefined number of devices... Currently == off for paper
 		split_homogeneously = 1;
 		split_selection_t += optimize_split();
 	}
-
-#ifdef ENABLE_TRANSFER_HOPS
-  for(int i = 0; i< LOC_NUM; i++)	for(int j = 0; j< LOC_NUM; j++)
-    final_estimated_link_bw[i][j] = linkmap->link_bw_shared_hops[i][j];
-#else
-  for(int i = 0; i< LOC_NUM; i++)	for(int j = 0; j< LOC_NUM; j++)
-    final_estimated_link_bw[i][j] = linkmap->link_bw_shared[i][j];
-#endif
+	for(int i = 0; i< LOC_NUM; i++)	for(int j = 0; j< LOC_NUM; j++){
+		final_estimated_link_bw[i][j] = linkmap->link_bw_shared[i][j];
+		final_link_active[i][j] = linkmap->link_active[i][j];
+	}
 	final_estimated_linkmap = linkmap;
 
 #ifdef PDEBUG
-#ifdef ENABLE_TRANSFER_HOPS
-  	final_estimated_linkmap->print_link_bw_shared_hops();
 #ifdef ENABLE_ESPA
 	final_estimated_linkmap->print_ESPA();
 #endif
 #endif
-#endif
-
+	MD_p model = unit_modeler_list[idxize(active_unit_id_list[0])];
+	update_sk_num(model->getSKNum(T));
+	distribute_subkernels(model->D1/T + (model->D1%T ? 1 : 0), model->D2/T  + (model->D2%T ? 1 : 0), model->D3/T  + (model->D3%T ? 1 : 0));
 
 	cpu_timer = csecond() - cpu_timer;
-
 	fprintf(stderr, "====================================\n");
 	fprintf(stderr, "ATC::autotune_problem: Autotuning complete-> t_autotune = %lf ms\n", cpu_timer*1000);
 	fprintf(stderr, "autotune_controller: T=%ld,  active_unit_num=%d, Problem split = %s -> %s : pred_t = %lf ms, pred_J = %lf kJ\n",
 		T, active_unit_num, printlist<int>(active_unit_id_list, active_unit_num),
-		printlist<double>(active_unit_score, active_unit_num), pred_t*1000, pred_J/1000);
+		printlist<int>(Subkernels_per_unit_num, active_unit_num), pred_t*1000, pred_J/1000);
 	fprintf(stderr, "====================================\n");
-
 #ifdef DEBUG
 	fprintf(stderr,  "<-----|\n");
 #endif
@@ -610,6 +585,7 @@ fprintf(stderr,  "|-----> ATC::optimize_tile( autotune_controller{ T=%ld, active
 	return timer;
 }
 
+//TODO: optimize split is considerably naive, further consideration needed for PARALiA 2.0 in heterogeneous systems.
 double ATC::optimize_split(){
 	short lvl = 3;
 	double timer = csecond();
@@ -633,150 +609,110 @@ double ATC::optimize_split(){
 	if (T > max_allowed_T)
 		error("ATC::optimize_split: Give T = %ld > max_allowed_T = %ld\n", T, max_allowed_T);
 
+	long int sk_num = model->getSKNum(T);
+
 	double min_overlap_t = 10000000, temp_score = 0;
 
-	for(int idx = 0; idx < active_unit_num; idx++){
-		int cur_dev_idx = idxize(active_unit_id_list[idx]);
-#ifdef ENABLE_ESPA
-		double tmp_score = linkmap->ESPA_predict(unit_modeler_list[cur_dev_idx], -1, active_unit_id_list, NULL, active_unit_num, 0);
-#else
-		double tmp_score = unit_modeler_list[cur_dev_idx]->predict(FULL_OVERLAP);
-#endif
-#ifndef ENABLE_POWA
-		active_unit_score[idx] = tmp_score;
-#else
-		if (!strcmp(PREDICT_OPTIMIZE_TARGET,"PERF")) active_unit_score[idx] = tmp_score;
-		else if (!strcmp(PREDICT_OPTIMIZE_TARGET,"ENERGY")) active_unit_score[idx] =
-			tmp_score*unit_modeler_list[cur_dev_idx]->getGPUexecWatts();
-		else if (!strcmp(PREDICT_OPTIMIZE_TARGET,"POWER-DELAY")) active_unit_score[idx] =
-			tmp_score;
-		else if (!strcmp(PREDICT_OPTIMIZE_TARGET,"ENERGY-DELAY")) active_unit_score[idx] =
-			tmp_score;
-		else if (!strcmp(PREDICT_OPTIMIZE_TARGET,"PERF-PER-J")) active_unit_score[idx] =
-			tmp_score;
-		else error("PREDICT_OPTIMIZE_TARGET = %s not implemented\n", PREDICT_OPTIMIZE_TARGET);
-#endif
+	for(int idx = 0; idx < active_unit_num; idx++)
+		active_unit_score[idx] = 1.0/active_unit_num;
 
-		if (active_unit_score[idx] != 0) active_unit_score[idx] = 1/active_unit_score[idx];
-		else warning("ATC::optimize_split: active_unit_score[%d] == 0\n", idx);
-		temp_score+= active_unit_score[idx];
-	}
-	for(int idx = 0; idx < active_unit_num; idx++){
-		if (split_homogeneously) active_unit_score[idx] = 1.0/active_unit_num;
-		else active_unit_score[idx] /= temp_score;
-#ifdef PDEBUG
-		fprintf(stderr,  "Calculating Relative score for unit_id = %d (idx = %d ): active_unit_score = %e\n",
-				active_unit_id_list[idx], idx, active_unit_score[idx]);
-#endif
-	}
-	normalize_split();
-	for(int idx = 0; idx < active_unit_num; idx++){;
-#ifdef PDEBUG
-		fprintf(stderr,  "Normalized Relative score for unit_id = %d (idx = %d ): active_unit_score = %e\n",
-				active_unit_id_list[idx], idx, active_unit_score[idx]);
-#endif
-	}
+	for(int split_itter = 0; split_itter < RATIO_TUNE_ITTER; split_itter++){
+		double temp_overlap_t = 0, total_J = 0, temp_overlap_t_pesimistic = 0, total_J_pesimistic = 0;
+		double active_unit_score_new[LOC_NUM];
+		temp_score = 0;
+		for(int idx = 0; idx < active_unit_num; idx++){
+			int cur_dev_id = active_unit_id_list[idx], cur_dev_idx = idxize(cur_dev_id);
+			model = unit_modeler_list[cur_dev_idx];
+			ModelType used_model = NO_OVERLAP;
+			switch(model->problem){
+				case BLAS1:
+					used_model = HETERO_BIDIRECTIONAL;
+					break;
+				case BLAS2:
+					used_model = HETERO_BIDIRECTIONAL;
+					break;
+				case BLAS3:
+					used_model = PARALIA_HETERO_LINK_BASED;
+					break;
+				default:
+					error("ATC::optimize_tileAndSplit:model->problem switch default reached\n");
+			}
+			double* scores = model->predict_v2(used_model, T, active_unit_num, active_unit_id_list, active_unit_score);
+			double tmp_score = fmax(scores[0], fmax(scores[1], fmax(scores[2], scores[3]))), 
+				tmp_score_pesimistic = scores[0] + scores[1] + scores[2] + scores[3];
+	#ifndef ENABLE_POWA
+			double temp_t = tmp_score;
+			active_unit_score_new[idx] = temp_t;
+			if (active_unit_score_new[idx] != 0) //active_unit_score_new[idx] = active_unit_score[idx]/active_unit_score_new[idx]; this was wrong?
+				active_unit_score_new[idx] = 1/active_unit_score_new[idx];
+			else warning("ATC::optimize_split: active_unit_score_new[%d] == 0\n", idx);
+			temp_score+= active_unit_score_new[idx];
+			if(temp_t > 0) temp_overlap_t = fmax(temp_overlap_t, temp_t);
+			else error("model->predict(%p(dev_id = %d, (idx = %d )), T = %ld): negative prediction temp_t = %lf\n",
+				model, cur_dev_id, cur_dev_idx, T, temp_t);
+	#ifdef PDEBUG
+			fprintf(stderr,  "model->predict(%p) for dev_id = %d (idx = %d ) with T = %ld: temp_overlap_t = %lf, temp_t = %lf\n",
+				model, cur_dev_id, cur_dev_idx, T, temp_overlap_t, temp_t);
+	#endif
+	#else
+			double temp_t = tmp_score, temp_t_pesimistic = tmp_score_pesimistic;
+			double temp_J = temp_t*unit_modeler_list[cur_dev_idx]->getGPUexecWatts(),
+				temp_J_pesimistic = temp_t_pesimistic*unit_modeler_list[cur_dev_idx]->getGPUexecWatts();
+			long int temp_flops = active_unit_score[idx]*model->getFlops();
+			double temp_PDP = (temp_flops/temp_t)/unit_modeler_list[cur_dev_idx]->getGPUexecWatts(),
+				temp_PDP_pesimistic = (temp_flops/temp_t_pesimistic)/unit_modeler_list[cur_dev_idx]->getGPUexecWatts();
+			double temp_EDP = (temp_flops/temp_t)*(temp_flops/temp_t)/unit_modeler_list[cur_dev_idx]->getGPUexecWatts(),
+				temp_EDP_pesimistic = (temp_flops/temp_t_pesimistic)*(temp_flops/temp_t_pesimistic)/unit_modeler_list[cur_dev_idx]->getGPUexecWatts();
+			if(temp_t > 0) temp_overlap_t = fmax(temp_overlap_t, temp_t);
+			else error("model->predict(%p(dev_id = %d, (idx = %d )), T = %ld): negative prediction temp_t = %lf\n",
+				model, cur_dev_id, cur_dev_idx, T, temp_t);
+			if(temp_t_pesimistic > 0) temp_overlap_t_pesimistic = fmax(temp_overlap_t_pesimistic, temp_t_pesimistic);
+			else error("model->predict(%p(dev_id = %d, (idx = %d )), T = %ld): negative prediction temp_t_pesimistic = %lf\n",
+				model, cur_dev_id, cur_dev_idx, T, temp_t_pesimistic);
+			
+			total_J += temp_J;
+			total_J_pesimistic += temp_J_pesimistic;
+	#ifdef PDEBUG
+			fprintf(stderr,  "model->predict(%p) for dev_id = %d (idx = %d ) with T = %ld: temp_overlap_t = %lf, temp_t = %lf\
+			total_J = %lf, temp_J = %lf\n",
+				model, cur_dev_id, cur_dev_idx, T, temp_overlap_t, temp_t, total_J, temp_J);
+	#endif
+			if (!strcmp(PREDICT_OPTIMIZE_TARGET,"PERF")) active_unit_score_new[idx] = temp_t;
+			else if (!strcmp(PREDICT_OPTIMIZE_TARGET,"ENERGY")) active_unit_score_new[idx] = temp_J;
+			else if (!strcmp(PREDICT_OPTIMIZE_TARGET,"POWER-DELAY")) active_unit_score_new[idx] = 1/temp_PDP;
+			else if (!strcmp(PREDICT_OPTIMIZE_TARGET,"ENERGY-DELAY")) active_unit_score_new[idx] = 1/temp_EDP;
+			else if (!strcmp(PREDICT_OPTIMIZE_TARGET,"PERF-PER-J")) active_unit_score_new[idx] = temp_t;
+			else error("PREDICT_OPTIMIZE_TARGET = %s not implemented\n", PREDICT_OPTIMIZE_TARGET);
 
-#ifdef ENABLE_ESPA
-  				linkmap->ESPA_init(unit_modeler_list,
-						active_unit_id_list,
-						active_unit_score, active_unit_num, 1);
-  				linkmap->ESPA_init_hop_routes(unit_modeler_list,
-						active_unit_id_list,
-						active_unit_score, active_unit_num, 1);
-#endif
-
-	double temp_overlap_t = 0, total_J = 0;
-	double active_unit_score_new[LOC_NUM];
-	temp_score = 0;
-	for(int idx = 0; idx < active_unit_num; idx++){
-		int cur_dev_id = active_unit_id_list[idx], cur_dev_idx = idxize(cur_dev_id);
-		model = unit_modeler_list[cur_dev_idx];
-		ModelType used_model = NO_OVERLAP;
-		switch(model->problem){
-			case BLAS1:
-				used_model = HETERO_BIDIRECTIONAL;
-				break;
-			case BLAS2:
-				used_model = HETERO_BIDIRECTIONAL;
-				break;
-			case BLAS3:
-				used_model = PARALIA_HETERO_LINK_BASED;
-				break;
-			default:
-				error("ATC::optimize_tileAndSplit:\
-				model->problem switch default reached\n");
+			temp_score+= 1/((active_unit_score[idx]) ? active_unit_score_new[idx]/active_unit_score[idx] : 0);
+	#endif
 		}
-#ifdef ENABLE_ESPA
-		double tmp_score = linkmap->ESPA_predict(model, T, active_unit_id_list, active_unit_score, active_unit_num, 1);
-#else
-		double tmp_score = model->predict(used_model, T, active_unit_num, active_unit_id_list, active_unit_score);
-#endif
-#ifndef ENABLE_POWA
-		double temp_t = tmp_score;
-		active_unit_score_new[idx] = temp_t;
-		if (active_unit_score_new[idx] != 0) //ctive_unit_score_new[idx] = active_unit_score[idx]/active_unit_score_new[idx]; this was wrong?
-			active_unit_score_new[idx] = 1/active_unit_score_new[idx];
-		else warning("ATC::optimize_split: active_unit_score_new[%d] == 0\n", idx);
-		temp_score+= active_unit_score_new[idx];
-		if(temp_t > 0) temp_overlap_t = fmax(temp_overlap_t, temp_t);
-		else error("model->predict(%p(dev_id = %d, (idx = %d )), T = %ld): negative prediction temp_t = %lf\n",
-			model, cur_dev_id, cur_dev_idx, T, temp_t);
-#ifdef PDEBUG
-		fprintf(stderr,  "model->predict(%p) for dev_id = %d (idx = %d ) with T = %ld: temp_overlap_t = %lf, temp_t = %lf\n",
-			model, cur_dev_id, cur_dev_idx, T, temp_overlap_t, temp_t);
-#endif
-#else
-		double temp_t = tmp_score;
-		double temp_J = temp_t*unit_modeler_list[cur_dev_idx]->getGPUexecWatts();
-		long int temp_flops = active_unit_score[idx]*model->getFlops();
-		double temp_PDP = (temp_flops/temp_t)/unit_modeler_list[cur_dev_idx]->getGPUexecWatts();
-		double temp_EDP = (temp_flops/temp_t)*(temp_flops/temp_t)/unit_modeler_list[cur_dev_idx]->getGPUexecWatts();
-		if(temp_t > 0) temp_overlap_t = fmax(temp_overlap_t, temp_t);
-		else error("model->predict(%p(dev_id = %d, (idx = %d )), T = %ld): negative prediction temp_t = %lf\n",
-			model, cur_dev_id, cur_dev_idx, T, temp_t);
-		total_J += temp_J;
-#ifdef PDEBUG
-		fprintf(stderr,  "model->predict(%p) for dev_id = %d (idx = %d ) with T = %ld: temp_overlap_t = %lf, temp_t = %lf\
-		total_J = %lf, temp_J = %lf\n",
-			model, cur_dev_id, cur_dev_idx, T, temp_overlap_t, temp_t, total_J, temp_J);
-#endif
-		if (!strcmp(PREDICT_OPTIMIZE_TARGET,"PERF")) active_unit_score_new[idx] = temp_t;
-		else if (!strcmp(PREDICT_OPTIMIZE_TARGET,"ENERGY")) active_unit_score_new[idx] = temp_J;
-		else if (!strcmp(PREDICT_OPTIMIZE_TARGET,"POWER-DELAY")) active_unit_score_new[idx] = 1/temp_PDP;
-		else if (!strcmp(PREDICT_OPTIMIZE_TARGET,"ENERGY-DELAY")) active_unit_score_new[idx] = 1/temp_EDP;
-		else if (!strcmp(PREDICT_OPTIMIZE_TARGET,"PERF-PER-J")) active_unit_score_new[idx] = temp_t;
-		else error("PREDICT_OPTIMIZE_TARGET = %s not implemented\n", PREDICT_OPTIMIZE_TARGET);
+	#ifndef ENABLE_POWA
+		pred_t = temp_overlap_t;
+	#else
+		pred_t = temp_overlap_t;
+		pred_J = total_J;
+		long int total_flops = model->getFlops();
+		power_delay = (total_flops/temp_overlap_t)/(total_J/temp_overlap_t);
+		energy_delay = (total_flops/temp_overlap_t)*(total_flops/temp_overlap_t)/(total_J/temp_overlap_t);
+	#endif
+		for(int idx = 0; idx < active_unit_num; idx++){
+			if (split_homogeneously) active_unit_score[idx] = 1.0/active_unit_num;
+			else active_unit_score[idx] = 1/((active_unit_score[idx]) ? active_unit_score_new[idx]/active_unit_score[idx] : 0)/temp_score;
+	#ifdef PDEBUG
+			fprintf(stderr,  "Recalibrating Relative score for unit_id = %d (idx = %d ): active_unit_score = %e\n",
+					active_unit_id_list[idx], idx, active_unit_score[idx]);
+	#endif
+		}
 
-		temp_score+= 1/((active_unit_score[idx]) ? active_unit_score_new[idx]/active_unit_score[idx] : 0);
-#endif
+		normalize_split();
+		for(int idx = 0; idx < active_unit_num; idx++){;
+	#ifdef PDEBUG
+			fprintf(stderr,  "Normalized Relative score for unit_id = %d (idx = %d ): active_unit_score = %e\n",
+					active_unit_id_list[idx], idx, active_unit_score[idx]);
+	#endif
+		}
 	}
-#ifndef ENABLE_POWA
-	pred_t = temp_overlap_t;
-#else
-	pred_t = temp_overlap_t;
-	pred_J = total_J;
-	long int total_flops = model->getFlops();
-	power_delay = (total_flops/temp_overlap_t)/(total_J/temp_overlap_t);
-	energy_delay = (total_flops/temp_overlap_t)*(total_flops/temp_overlap_t)/(total_J/temp_overlap_t);
-#endif
-	for(int idx = 0; idx < active_unit_num; idx++){
-		if (split_homogeneously) active_unit_score[idx] = 1.0/active_unit_num;
-		else active_unit_score[idx] = 1/((active_unit_score[idx]) ? active_unit_score_new[idx]/active_unit_score[idx] : 0)/temp_score;
-#ifdef PDEBUG
-		fprintf(stderr,  "Recalibrating Relative score for unit_id = %d (idx = %d ): active_unit_score = %e\n",
-				active_unit_id_list[idx], idx, active_unit_score[idx]);
-#endif
-	}
-
-	normalize_split();
-	for(int idx = 0; idx < active_unit_num; idx++){;
-#ifdef PDEBUG
-		fprintf(stderr,  "Normalized Relative score for unit_id = %d (idx = %d ): active_unit_score = %e\n",
-				active_unit_id_list[idx], idx, active_unit_score[idx]);
-#endif
-	}
-
 #ifdef PDEBUG
 	fprintf(stderr,  "====================================\n");
 	fprintf(stderr,  "Best %d percentages : [ ", active_unit_num);
