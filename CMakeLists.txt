@@ -132,6 +132,7 @@ add_definitions(-DSUBKERNEL_SELECT_FETCH_ETA_PLUS_MIN_PENDING)
 
 ## Define at which percentage to normalize float values for similar data (e.g. costs, splits etc) to avoid empirical errors leaking into decisions
 add_definitions(-DNORMALIZE_NEAR_SPLIT_LIMIT=0.05)
+#TODO: FIXME !!!! TRIM execution logs automatically, currently by hand for testing
 
 ## Define the minimum allowed percentile contribution in total time from each potential unit
 ## In case of energy, the maximum allowed percentile energy increase by each new unit.
@@ -142,7 +143,7 @@ add_definitions(-DENABLE_POWA)
 add_definitions(-DCPU_W_PREDEF=$ENV{PARALIA_W_CPU_PREDEF})
 
 ## Choose the Unit combination that maximizes total performance (minimum time).
-#add_definitions(-DPREDICT_OPTIMIZE_TARGET="PERF")
+add_definitions(-DPREDICT_OPTIMIZE_TARGET="PERF")
 ## Choose the Unit combination that minimizes consumed energy (J).
 ## Rarely chooses multi-unit execution, since its almost always less energy-efficient than single-unit.
 #add_definitions(-DPREDICT_OPTIMIZE_TARGET="ENERGY")
@@ -151,7 +152,7 @@ add_definitions(-DCPU_W_PREDEF=$ENV{PARALIA_W_CPU_PREDEF})
 #add_definitions(-DPREDICT_OPTIMIZE_TARGET="POWER-DELAY")
 
 ## Choose the Unit combination that maximizes the energy-delay product - closer to "PERF" but also slightly considering energy.
-add_definitions(-DPREDICT_OPTIMIZE_TARGET="ENERGY-DELAY")
+#add_definitions(-DPREDICT_OPTIMIZE_TARGET="ENERGY-DELAY")
 
 #--------------------------------------Experimental----------------------------------------#
 
@@ -203,7 +204,7 @@ add_definitions(-DUNIHELPER_LOCKFREE_ENABLE)
 add_definitions(-DSDEBUG)
 
 #Run Prediction debug mode (autotuner stuff)
-add_definitions(-DPDEBUG)
+#add_definitions(-DPDEBUG)
 
 #Run Prediction deep debug mode (all autotuner stuff)
 #add_definitions(-DDPDEBUG)
