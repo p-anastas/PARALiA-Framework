@@ -249,6 +249,21 @@ void ATC::normalize_split(){
 #endif
 }
 
+double ATC::predict_reuse_map(){
+		switch(unit_modeler_list[0]->problem){
+		case BLAS1:
+			return 0;
+		case BLAS2:
+			return 0;
+		case BLAS3:
+			return PredictHeteroBestReuseMapBLAS3_v2(unit_modeler_list, T, 
+				active_unit_num, active_unit_id_list, active_unit_score);
+		default:
+			error("PredictHeteroFullOverlap_v2: Invalid Problem %s", printProblem(unit_modeler_list[0]->problem));
+	}
+	return 0;
+}
+
 double ATC::autotune_problem(const char* routine_name, void* initial_problem_wrap){
 	short lvl = 3;
 	double cpu_timer = csecond();
@@ -625,14 +640,16 @@ double ATC::optimize_split(){
 					used_model = HETERO_BIDIRECTIONAL;
 					break;
 				case BLAS3:
-					used_model = PARALIA_HETERO_LINK_BASED;
+					used_model = HETERO_FULL_OVERLAP_v2;
 					break;
 				default:
 					error("ATC::optimize_tileAndSplit:model->problem switch default reached\n");
 			}
 			double* scores = model->predict_v2(used_model, T, active_unit_num, active_unit_id_list, active_unit_score);
-			double tmp_score = fmax(scores[0], fmax(scores[1], fmax(scores[2], scores[3]))), 
-				tmp_score_pesimistic = scores[0] + scores[1] + scores[2] + scores[3];
+			double extra_reuse_dim_t = predict_reuse_map();
+			//double 
+			double tmp_score = fmax(scores[0], fmax(scores[1], fmax(scores[2], extra_reuse_dim_t))), 
+				tmp_score_pesimistic = scores[0] + scores[1] + scores[2] + extra_reuse_dim_t;
 	#ifndef ENABLE_POWA
 			double temp_t = tmp_score;
 			active_unit_score_new[idx] = temp_t;

@@ -30,4 +30,6 @@ double CoCopeLiaPipelineEmulateBLAS3(MD_p model, long int T);
 double PredictReuseHeteroBLAS3(MD_p model, long int T, int used_devs, int* used_dev_ids,
 	double* used_dev_relative_scores);
 
+double* PredictHeteroFullOverlapBLAS3_v2(MD_p model, long int T, int active_unit_num, int* active_unit_id_list,
+	double* active_unit_score);
 #endif

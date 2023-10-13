@@ -6,6 +6,9 @@
 
 #include <stdlib.h>
 #include <math.h>
+#include <algorithm>
+#include <iostream>
+#include <list>
 
 #include "CoModel.hpp"
 #include "GPUexec_lookup.hpp"
@@ -16,7 +19,6 @@
 
 double PredictFullOverlapBLAS3(MD_p model)
 {
-	short lvl = 4;
 	double t_recv_full = 0, t_send_full = 0, t_exec_full = 0, t_total = 0;
 	long int maxT = GPUexec3MaxT((GPUexec3Model_p)model->GPUexec_model_ptr);
 	long int Tbig = GPUexec3NearestT((GPUexec3Model_p)model->GPUexec_model_ptr,
@@ -59,6 +61,200 @@ double PredictFullOverlapBLAS3(MD_p model)
 #endif
 
 	return t_total;
+}
+
+
+double share_mult(int dest, int src, int* active_unit_id_list, int active_unit_num){
+	double mult = 1.0;
+	if(links_share_bandwidth[idxize(dest)][idxize(src)][0] != -42 && 
+		final_link_active[links_share_bandwidth[idxize(dest)][idxize(src)][0]]
+					[links_share_bandwidth[idxize(dest)][idxize(src)][1]]) mult = 2.0;
+	return mult;
+}
+
+double* PredictHeteroFullOverlapBLAS3_v2(MD_p model, long int T, int active_unit_num, int* active_unit_id_list,
+	double* active_unit_score){
+	double* result = (double*) calloc(4,sizeof(double));
+	int used_unit_idx = -1;
+	for(int unit_idx = 0; unit_idx < active_unit_num; unit_idx++) if(model->unit_id == active_unit_id_list[unit_idx]) used_unit_idx = unit_idx;
+	if (used_unit_idx == - 1) error("PredictHeteroFullOverlapBLAS3_v2: Model %p with unit_id = %d not present in given active_unit_id_list = %s\n",
+		model, model->unit_id, printlist<int>(active_unit_id_list, active_unit_num));
+
+	double t_recv_full = 0, t_send_full = 0, t_exec_full = 0, t_total = 0;
+	long int maxT = GPUexec3MaxT((GPUexec3Model_p)model->GPUexec_model_ptr);
+	long int Tbig = GPUexec3NearestT((GPUexec3Model_p)model->GPUexec_model_ptr,
+		fmin(maxT, fmin(fmin(model->D1,model->D2), model->D3)));
+	//fprintf(stderr, "Tbig = %ld\n", Tbig);
+	t_exec_full = (model->D1*1.0/Tbig * model->D2*1.0/Tbig * model->D3*1.0/Tbig)*
+		GPUexec3Model_predict((GPUexec3Model_p)model->GPUexec_model_ptr, Tbig, model->flags->TransA, model->flags->TransB);
+	t_exec_full*= active_unit_score[used_unit_idx];
+	if ( t_exec_full < 0)
+		error("PredictHeteroFullOverlapBLAS3_v2: GPUexec3Model_predict submodel returned negative value, abort prediction");
+
+	long long recv_sz = 0, recv_sz_RONLY = 0, send_sz = 0;
+	int recv_num_RONLY = 0;
+	for (int i = 0; i < model->V->numT; i++){
+		long long tmp_recv_sz = (long long) model->V->in[i]*(*model->V->Dim1[i])*(*model->V->Dim2[i])*
+			model->V->dtype_sz*active_unit_score[used_unit_idx];
+		long long tmp_send_sz =  (long long) model->V->out[i]*(*model->V->Dim1[i])*(*model->V->Dim2[i])*
+			model->V->dtype_sz*active_unit_score[used_unit_idx];
+		double t_recv_tmp = share_mult(model->unit_id, model->V->loc[i], active_unit_id_list, active_unit_num)*
+			t_com_predict_shared(model->link[idxize(model->V->loc[i])], tmp_recv_sz);
+		double t_send_tmp = share_mult(model->V->out_loc[i], model->unit_id, active_unit_id_list, active_unit_num)*
+			t_com_predict_shared(model->link[idxize(model->V->out_loc[i])], tmp_send_sz);
+		if(t_recv_tmp < 0 || t_send_tmp < 0 )	
+			error("PredictHeteroFullOverlapBLAS3_v2: t_recv_tmp(%d<-%d) = %lf, t_send_tmp(%d<-%d) = %lf,\
+				abort prediction", model->unit_id, model->V->loc[i], t_recv_tmp, 
+				model->V->out_loc[i], model->unit_id, t_send_tmp );
+
+		recv_sz += tmp_recv_sz;
+		send_sz += tmp_send_sz;
+		if(!model->V->out[i] && model->V->loc[i] != model->unit_id) { recv_sz_RONLY+= recv_sz; recv_num_RONLY++; }
+		t_recv_full+= t_recv_tmp;
+		t_send_full+= t_send_tmp;
+	}
+
+	/// TODO: Extra transfers created from internal dims due to multi-unit spliting.
+	/// Algorithm may vary for other BLAS3, but not at that bridge yet.
+	/// The assumtion for extra transfers is made based on the 2D cyclic distribution,
+	/// but the estimation is also useful for other distributions as a best case scenario (worse distributions -> more extra transfers).
+	int D1_parts = sqrt(active_unit_num);
+	int D2_parts = D1_parts;
+	if (D1_parts ==0) { D2_parts = active_unit_num; D1_parts = 1; }
+	else { /* find the most square decomposition of autotune_controller->active_unit_num in D1_parts x D2_parts */
+		int g;
+		for (g = D1_parts+1; g>0; --g) if (active_unit_num % g == 0) break;
+		if (g==0) { D1_parts = active_unit_num; D2_parts = 1; }
+		else { D1_parts = g; D2_parts = active_unit_num/g; }
+	}
+	double extra_transfer_ratio = (recv_num_RONLY)? (1.0*((D1_parts-1) + (D2_parts -1)))/recv_num_RONLY: 0;
+
+#ifdef DPDEBUG
+	fprintf(stderr, "PredictHeteroFullOverlapBLAS3_v2(unit_num = %d) : D1_parts = %d, D2_parts = %d, extra_transfer_ratio = %lf\n",
+	active_unit_num, D1_parts, D2_parts, extra_transfer_ratio);
+#endif
+	long long recv_sz_extra = extra_transfer_ratio * recv_sz_RONLY;
+	//double t_recv_extra_optimistic_old = model->predictBestFriends_t(extra_transfer_ratio, recv_sz_extra, active_unit_num, active_unit_id_list);
+	//double t_recv_extra_pesimistic = model->predictAvgBw_t(recv_sz_extra, active_unit_num, active_unit_id_list);
+	double t_recv_extra_optimistic = model->predictSumBw_t(recv_sz_extra, active_unit_num, active_unit_id_list);
+
+	double t_recv_extra = t_recv_extra_optimistic; // (t_recv_extra_optimistic + t_recv_extra_pesimistic)/2;
+
+	t_total = fmax(t_exec_full, fmax(t_recv_full, fmax(t_recv_extra, t_send_full)));
+			
+	result[0] = t_exec_full; 
+	result[1] = t_recv_full; 
+	result[2] = t_send_full; 
+	result[3] = t_recv_extra; 
+#ifdef PDEBUG
+	fprintf(stderr, "PARALia  PredictHeteroFullOverlapBLAS3_v2 (Unit = %d, Unit_ratio = %.2lf%%):\n"
+	"\tt_recv_full: %lf ms ( %lf Gb/s)\n"
+	"\tt_recv_extra: %lf ms ( %lf Gb/s) -> (%.2lf%% bytes of full)\n"
+	"\tt_exec_full: %lf ms (%lf GFlops/s)\n"
+	"\tt_send_full: %lf ms ( %lf Gb/s)\n"
+	"\tt_max: %lf ms (%lf GFlops/s)\n\n",
+	model->unit_id, 100*active_unit_score[used_unit_idx], t_recv_full*1000, Gval_per_s(recv_sz,t_recv_full),
+	t_recv_extra*1000, Gval_per_s(recv_sz_extra,t_recv_extra), 100*extra_transfer_ratio,
+	t_exec_full*1000, Gval_per_s(model->getFlops()*active_unit_score[used_unit_idx], t_exec_full),
+	t_send_full*1000, Gval_per_s(send_sz,t_send_full),
+	t_total*1000, Gval_per_s(model->getFlops()*active_unit_score[used_unit_idx], t_total));
+#endif
+	return result;
+}
+
+double PredictHeteroBestReuseMapBLAS3_v2(MD_p* model_list, long int T, int active_unit_num, int* active_unit_id_list,
+	double* active_unit_score){
+
+	/// Calculate extra transfers created from internal dims due to multi-unit spliting.
+	/// Algorithm may vary for other BLAS3, but not at that bridge yet.
+	/// The assumtion for extra transfers is made based on the 2D cyclic distribution,
+	/// but the estimation is also useful for other distributions as a best case scenario (worse distributions -> more extra transfers).
+	int D1_parts = sqrt(active_unit_num);
+	int D2_parts = D1_parts;
+	if (D1_parts ==0) { D2_parts = active_unit_num; D1_parts = 1; }
+	else { /* find the most square decomposition of autotune_controller->active_unit_num in D1_parts x D2_parts */
+		int g;
+		for (g = D1_parts+1; g>0; --g) if (active_unit_num % g == 0) break;
+		if (g==0) { D1_parts = active_unit_num; D2_parts = 1; }
+		else { D1_parts = g; D2_parts = active_unit_num/g; }
+	}
+
+	double t_recv_extra_min = 1e15;
+	int best_unit_list[active_unit_num];
+	double best_unit_scores[active_unit_num];
+	std::list<int> perm_unit_list_based;
+    for(int ctr = 0; ctr < active_unit_num; ctr++)
+        perm_unit_list_based.push_back(active_unit_id_list[ctr]);
+	int flag = 1;
+	while(flag){
+		// Extract vanilla list perm_unit_list from 'list' type perm_unit_list_based
+		int temp_ctr = 0, perm_unit_list[active_unit_num] = {0}; 
+		for (int x : perm_unit_list_based) perm_unit_list[temp_ctr++] = x; 
+		// Reorder active_unit_score to match the current permutation (perm_unit_list) of active_unit_id_list
+		double perm_unit_score[active_unit_num] = {0}; 
+		for(int unit_idx = 0; unit_idx < active_unit_num; unit_idx++){
+			int dev_id = perm_unit_list[unit_idx];
+			for(int unit_idy = 0; unit_idy < active_unit_num; unit_idy++)
+			if (active_unit_id_list[unit_idy] == dev_id){
+				perm_unit_score[unit_idx] = active_unit_score[unit_idy];
+				break;
+			}		
+		}
+//#ifdef PDEBUG
+		fprintf(stderr, "Testing permutation of unit list = %s with scores = %s: \n perm_unit_list = %s, perm_unit_score = %s\n",
+		printlist<int>(active_unit_id_list, active_unit_num), printlist<double>(active_unit_score, active_unit_num),
+		printlist<int>(perm_unit_list, active_unit_num), printlist<double>(perm_unit_score, active_unit_num));
+//#endif
+		// For each unit in unit_list, predict the performance for the current permutation.
+		double t_recv_local_max = 0; 
+		for(int unit_idx = 0; unit_idx < active_unit_num; unit_idx++){
+			int dev_id = perm_unit_list[unit_idx];
+			int dev_decom_row = dev_id/D1_parts, dev_decom_col = dev_id%D1_parts;
+			int list_row_bros[active_unit_num], list_row_bro_ctr = 0, list_col_bros[active_unit_num], list_col_bro_ctr = 0;
+			for(int unit_idy = 0; unit_idy < active_unit_num; unit_idy++) if(unit_idy != unit_idx){
+				int dev_id_bro = perm_unit_list[unit_idy];
+				int dev_decom_row_bro = dev_id_bro/D1_parts, dev_decom_col_bro = dev_id_bro%D1_parts;
+				if (dev_decom_row == dev_decom_row_bro)	list_row_bros[list_row_bro_ctr++] = dev_id_bro;	
+				if (dev_decom_col == dev_decom_col_bro)	list_col_bros[list_col_bro_ctr++] = dev_id_bro;	
+			} 
+			MD_p model = NULL;
+			for(int search_idx = 0; search_idx < active_unit_num; search_idx++)
+				if(dev_id == model_list[search_idx]->unit_id){ model = model_list[search_idx]; break;}
+			// This works for GEMM and similar 2D decomposition...should check about other stuff.
+			long long A_recv_sz = 0, B_recv_sz = 0;
+			if(model->V->loc[0] != model->unit_id) A_recv_sz = (long long) model->V->in[0]*(*model->V->Dim1[0])*(*model->V->Dim2[0])*
+					model->V->dtype_sz*perm_unit_score[unit_idx]* (D2_parts - 1);
+			if(model->V->loc[1] != model->unit_id) B_recv_sz = (long long) model->V->in[1]*(*model->V->Dim1[1])*(*model->V->Dim2[1])*
+					model->V->dtype_sz*perm_unit_score[unit_idx]* (D1_parts - 1);
+			double t_recv_A_optimistic = model->predictSumBw_t(A_recv_sz, list_col_bro_ctr, list_col_bros);
+			double t_recv_B_optimistic = model->predictSumBw_t(B_recv_sz, list_row_bro_ctr, list_row_bros);
+			double t_recv_extra = t_recv_A_optimistic + t_recv_B_optimistic;
+			if (t_recv_local_max < t_recv_extra){
+				t_recv_local_max = t_recv_extra;
+			}
+		}
+		if (t_recv_local_max < t_recv_extra_min){
+			t_recv_extra_min = t_recv_local_max;
+			for(int unit_idx = 0; unit_idx < active_unit_num; unit_idx++){
+				best_unit_list[unit_idx] = perm_unit_list[unit_idx];
+				best_unit_scores[unit_idx] = perm_unit_score[unit_idx];
+			}
+		}
+		flag = std::next_permutation(perm_unit_list_based.begin(), perm_unit_list_based.end());
+	}
+
+//#ifdef PDEBUG
+	fprintf(stderr, "PARALia  PredictHeteroBestReuseMapBLAS3_v2: Calculating best reuse map for %s\n"
+	"\tbest_unit_list = %s\n"
+	"\tt_recv_extra_min: %lf ms\n", 
+	printlist<int>(active_unit_id_list,active_unit_num), 
+	printlist<int>(best_unit_list,active_unit_num),t_recv_extra_min*1000);
+//#endif
+	for(int unit_idx = 0; unit_idx < active_unit_num; unit_idx++){
+		active_unit_id_list[unit_idx] = best_unit_list[unit_idx];
+		active_unit_score[unit_idx] = best_unit_scores[unit_idx];		
+	}
+	return t_recv_extra_min;
 }
 
 double PredictZeroOverlapBLAS3(MD_p model)

@@ -48,7 +48,7 @@ enum ModelType{
 	NO_OVERLAP = 10,
 	HETERO_REUSE = 11,
 	HETERO_BIDIRECTIONAL = 12,
-	PARALIA_HETERO_LINK_BASED = 13
+	HETERO_FULL_OVERLAP_v2 = 13
 };
 const char* printModel(ModelType mode);
 
@@ -160,6 +160,7 @@ typedef class ATC{
 	double optimize_tile_CoCoPeLia(int model_idx, ModelType mode); /// Predicts T using CoCoPeLia models for a single unit, defined at Model_functions.cpp
 	double optimize_split();
 	void normalize_split();
+	double predict_reuse_map();	
 /******************************************************************************/
 /**************************** Helper Fuctions *********************************/
 	void print(); /// Print the characteristics of the autotune controller to stderr
@@ -167,5 +168,8 @@ typedef class ATC{
 /******************************************************************************/
 
 }* ATC_p;
+
+double PredictHeteroBestReuseMapBLAS3_v2(MD_p* model_list, long int T, int active_unit_num, int* active_unit_id_list,
+	double* active_unit_score);
 
 #endif

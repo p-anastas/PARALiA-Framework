@@ -307,7 +307,7 @@ double Modeler::predict(ModelType mode, long int T, int used_devs, int* used_dev
 			if (T == -1 || used_devs == -1 || !used_dev_ids || !used_dev_relative_scores)
 				error("Called Modeler::predict(mode=HETERO_BIDIRECTIONAL) with undefined arguments\n");
 			return PredictBidirectionalHetero(this, T, used_devs, used_dev_ids, used_dev_relative_scores);
-		case PARALIA_HETERO_LINK_BASED:
+		case HETERO_FULL_OVERLAP_v2:
 		default:
 			error("CoCoPeLiaModelPredict: Invalid mode %s", printModel(mode));
 			return 0;
@@ -340,10 +340,10 @@ double* Modeler::predict_v2(ModelType mode, long int T, int used_devs, int* used
 			error("Modeler::predict_v2(mode=HETERO_REUSE) not implemented\n");
 		case HETERO_BIDIRECTIONAL:
 			error("Modeler::predict_v2(mode=HETERO_BIDIRECTIONAL) not implemented\n");
-		case PARALIA_HETERO_LINK_BASED:
+		case HETERO_FULL_OVERLAP_v2:
 			if (T == -1 || used_devs == -1 || !used_dev_ids || !used_dev_relative_scores)
 				error("Called Modeler::predict(mode=HETERO_REUSE) with undefined arguments\n");
-			return PARALiaPredictLinkHetero_v2(this, T, used_devs, used_dev_ids, used_dev_relative_scores);
+			return PredictHeteroFullOverlap_v2(this, T, used_devs, used_dev_ids, used_dev_relative_scores);
 		default:
 			error("CoCoPeLiaModelPredict: Invalid mode %s", printModel(mode));
 			return 0;
