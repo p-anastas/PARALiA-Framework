@@ -75,6 +75,9 @@ add_definitions(-DOUTPUT_ALGO_MODE="ALGO_WR_LAZY")
 ## Inconsequential for homogeneous cases, higher = better for heterogeneous ones.
 add_definitions(-DRATIO_TUNE_ITTER=10)
 
+#Enable device reordering optimization during split optimizing based on maximizing d2d bandwidths.
+#add_definitions(-DREORDER_DEVICES)
+
 ###########################################################################################
 #------------------------------------Routing options--------------------------------------#
 ###########################################################################################
@@ -201,7 +204,7 @@ add_definitions(-DUNIHELPER_LOCKFREE_ENABLE)
 #add_definitions(-DDDEBUG)
 
 #Run Simple Prediction debug mode (well-presented simple autotuner stuff)
-add_definitions(-DSDEBUG)
+#add_definitions(-DSDEBUG)
 
 #Run Prediction debug mode (autotuner stuff)
 #add_definitions(-DPDEBUG)
@@ -228,7 +231,7 @@ add_definitions(-DSDEBUG)
 #add_definitions(-DDSTEST)
 
 #Run in Link Hop testing mode; transfers using link hops are logged and timed.
-add_definitions(-DTTEST)
+#add_definitions(-DTTEST)
 
 ###########################################################################################
 #------------------------------------Other options----------------------------------------#

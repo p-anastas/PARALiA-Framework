@@ -200,25 +200,25 @@ double PredictHeteroBestReuseMapBLAS3_v2(MD_p* model_list, long int T, int activ
 				break;
 			}		
 		}
-//#ifdef PDEBUG
+#ifdef DPDEBUG
 		fprintf(stderr, "Testing permutation of unit list = %s with scores = %s: \n perm_unit_list = %s, perm_unit_score = %s\n",
 		printlist<int>(active_unit_id_list, active_unit_num), printlist<double>(active_unit_score, active_unit_num),
 		printlist<int>(perm_unit_list, active_unit_num), printlist<double>(perm_unit_score, active_unit_num));
-//#endif
+#endif
 		// For each unit in unit_list, predict the performance for the current permutation.
 		double t_recv_local_max = 0; 
 		for(int unit_idx = 0; unit_idx < active_unit_num; unit_idx++){
 			int dev_id = perm_unit_list[unit_idx];
-			int dev_decom_row = dev_id/D1_parts, dev_decom_col = dev_id%D1_parts;
+			int dev_decom_row = unit_idx/D1_parts, dev_decom_col = unit_idx%D1_parts;
 			int list_row_bros[active_unit_num], list_row_bro_ctr = 0, list_col_bros[active_unit_num], list_col_bro_ctr = 0;
 			for(int unit_idy = 0; unit_idy < active_unit_num; unit_idy++) if(unit_idy != unit_idx){
 				int dev_id_bro = perm_unit_list[unit_idy];
-				int dev_decom_row_bro = dev_id_bro/D1_parts, dev_decom_col_bro = dev_id_bro%D1_parts;
+				int dev_decom_row_bro = unit_idy/D1_parts, dev_decom_col_bro = unit_idy%D1_parts;
 				if (dev_decom_row == dev_decom_row_bro)	list_row_bros[list_row_bro_ctr++] = dev_id_bro;	
 				if (dev_decom_col == dev_decom_col_bro)	list_col_bros[list_col_bro_ctr++] = dev_id_bro;	
 			} 
 			MD_p model = NULL;
-			for(int search_idx = 0; search_idx < active_unit_num; search_idx++)
+			for(int search_idx = 0; search_idx < LOC_NUM; search_idx++)
 				if(dev_id == model_list[search_idx]->unit_id){ model = model_list[search_idx]; break;}
 			// This works for GEMM and similar 2D decomposition...should check about other stuff.
 			long long A_recv_sz = 0, B_recv_sz = 0;
@@ -229,6 +229,12 @@ double PredictHeteroBestReuseMapBLAS3_v2(MD_p* model_list, long int T, int activ
 			double t_recv_A_optimistic = model->predictSumBw_t(A_recv_sz, list_col_bro_ctr, list_col_bros);
 			double t_recv_B_optimistic = model->predictSumBw_t(B_recv_sz, list_row_bro_ctr, list_row_bros);
 			double t_recv_extra = t_recv_A_optimistic + t_recv_B_optimistic;
+#ifdef DPDEBUG
+			fprintf(stderr, "Checking unit_idx = %d (dev_id = %d) -> t_recv_A_optimistic = % lf ( %lf GB/s),"
+			" t_recv_B_optimistic = % lf ( %lf GB/s)\n",
+				unit_idx, dev_id, t_recv_A_optimistic, Gval_per_s(A_recv_sz,  t_recv_A_optimistic),
+				t_recv_B_optimistic, Gval_per_s(B_recv_sz,  t_recv_B_optimistic));
+#endif
 			if (t_recv_local_max < t_recv_extra){
 				t_recv_local_max = t_recv_extra;
 			}
@@ -240,16 +246,20 @@ double PredictHeteroBestReuseMapBLAS3_v2(MD_p* model_list, long int T, int activ
 				best_unit_scores[unit_idx] = perm_unit_score[unit_idx];
 			}
 		}
+#ifdef REORDER_DEVICES
 		flag = std::next_permutation(perm_unit_list_based.begin(), perm_unit_list_based.end());
+#else 
+		flag = 0; 
+#endif
 	}
 
-//#ifdef PDEBUG
+#ifdef PDEBUG
 	fprintf(stderr, "PARALia  PredictHeteroBestReuseMapBLAS3_v2: Calculating best reuse map for %s\n"
 	"\tbest_unit_list = %s\n"
 	"\tt_recv_extra_min: %lf ms\n", 
 	printlist<int>(active_unit_id_list,active_unit_num), 
 	printlist<int>(best_unit_list,active_unit_num),t_recv_extra_min*1000);
-//#endif
+#endif
 	for(int unit_idx = 0; unit_idx < active_unit_num; unit_idx++){
 		active_unit_id_list[unit_idx] = best_unit_list[unit_idx];
 		active_unit_score[unit_idx] = best_unit_scores[unit_idx];		
