@@ -80,6 +80,13 @@ add_definitions(-DRATIO_TUNE_ITTER=10)
 #add_definitions(-DCHAIN_FETCH_TIME)
 add_definitions(-DCHAIN_FETCH_QUEUE_WORKLOAD)
 
+## An extra heuristic to avoid only trusting QUEUE_ETAs for route selection
+## Since some routes migh result in extremely low botlenecks due to serialization
+## The multiplier defines the max bandwidth multiplier that is allowed to be used to replace a route
+## For example, 1 means that only allow replacement with links of >= bandwidth
+## The higher this value is, the more ETA-based the selection criteria
+add_definitions(-DBANDWIDTH_DIFFERENCE_CUTTOF_RATIO=5)
+
 ## The number of sub-buffers FasTCoCoMemcpy2DAsync will use to increase effective BW
 ## In general effective_trans_time = max_trans_time(route[]) + 1/SBO * sub_trans_time(route_minus_max[])
 ## Rule of thumb: large SBO -> increased transfer latency, small SBO -> decreased bandwidth
@@ -88,6 +95,9 @@ add_definitions(-DSTREAMING_BUFFER_OVERLAP=8)
 ## Enable the use of transfer hops through memory locations that do not need a tile
 ## Improves bandwidth, but adds (extra) network load to fast lanes. Currently not integrated in already-chained transfers.
 add_definitions(-DENABLE_TRANSFER_HOPS)
+
+#add_definitions(-DHOP_FETCH_BANDWIDTH)
+add_definitions(-DHOP_FETCH_QUEUE_WORKLOAD)
 
 #--------------------------------------Experimental----------------------------------------#
 
