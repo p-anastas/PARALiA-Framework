@@ -454,11 +454,9 @@ double ATC::autotune_problem(const char* routine_name, void* initial_problem_wra
 		final_link_active[i][j] = linkmap->link_active[i][j];
 	}
 	final_estimated_linkmap = linkmap;
-
-#ifdef PDEBUG
-#ifdef ENABLE_ESPA
-	final_estimated_linkmap->print_ESPA();
-#endif
+#ifdef SDEBUG
+	final_estimated_linkmap->print_link_active();
+  	final_estimated_linkmap->print_link_bw_shared();
 #endif
 	MD_p model = unit_modeler_list[idxize(active_unit_id_list[0])];
 	update_sk_num(model->getSKNum(T));

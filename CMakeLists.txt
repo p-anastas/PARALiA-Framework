@@ -58,18 +58,8 @@ add_definitions(-DOUTPUT_ALGO_MODE="ALGO_WR_LAZY")
 #add_definitions(-DOUTPUT_ALGO_MODE="ALGO_WREDUCE")
 
 ###########################################################################################
-#-----------------------------------Modeling options - UNDER CONSRUCTION------------------#
+#-----------------------------------Modeling options - -----------------------------------#
 ###########################################################################################
-
-## Enable using transfer hops for faster transfers between multiple links
-#add_definitions(-DENABLE_TRANSFER_HOPS)
-## Enable using transfer hops for W tiles as well (no data reuse, but potentially better BW)
-#add_definitions(-DENABLE_TRANSFER_W_HOPS)
-
-## Enable using estimated performance aggregation for initializing the link_hop_route
-#add_definitions(-DENABLE_ESPA)
-## Define the strategy for agreggating the transfer time of a problem if ESPA is used. 0 = max, 1 = sum.
-#add_definitions(-DESPA_COMMUNICATION_AGGREGATOR=0)
 
 ## The number of itterations that will performed to tune the per-device ratio workload split.
 ## Inconsequential for homogeneous cases, higher = better for heterogeneous ones.
@@ -94,6 +84,10 @@ add_definitions(-DCHAIN_FETCH_QUEUE_WORKLOAD)
 ## In general effective_trans_time = max_trans_time(route[]) + 1/SBO * sub_trans_time(route_minus_max[])
 ## Rule of thumb: large SBO -> increased transfer latency, small SBO -> decreased bandwidth
 add_definitions(-DSTREAMING_BUFFER_OVERLAP=8)
+
+## Enable the use of transfer hops through memory locations that do not need a tile
+## Improves bandwidth, but adds (extra) network load to fast lanes. Currently not integrated in already-chained transfers.
+add_definitions(-DENABLE_TRANSFER_HOPS)
 
 #--------------------------------------Experimental----------------------------------------#
 

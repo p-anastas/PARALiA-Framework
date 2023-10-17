@@ -265,6 +265,7 @@ void LinkMap::update_link_shared_weights(MD_p* unit_modeler_list,
     }
   }
 #ifdef PDEBUG
+  print_link_active();
   print_link_bw_shared();
 #endif
 #ifdef DEBUG
@@ -685,6 +686,24 @@ void LinkMap::print_ESPA(){
   }
 }
 */
+
+void LinkMap::print_link_active(){
+  lprintf(0,"\n Link Active Map:\n   |");
+  for (int d2 = 0; d2 < LOC_NUM; d2++)
+    lprintf(0, "  %2d  |", deidxize(d2));
+  lprintf(0, "\n   |");
+  for (int d2 = 0; d2 < LOC_NUM; d2++)
+    lprintf(0, "-------");
+  lprintf(0, "\n");
+  for (int d1 = 0; d1 < LOC_NUM; d1++){
+    lprintf(0, "%2d | ", deidxize(d1));
+    for (int d2 = 0; d2 < LOC_NUM; d2++){
+      lprintf(0, "%2d | ", link_active[d1][d2]);
+    }
+    lprintf(0, "\n");
+  }
+}
+
 void LinkMap::print_link_bw(){
   lprintf(0,"\n Link BW Map:\n   |");
   for (int d2 = 0; d2 < LOC_NUM; d2++)
