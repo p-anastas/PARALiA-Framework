@@ -328,14 +328,15 @@ double ATC::autotune_problem(const char* routine_name, void* initial_problem_wra
 
 			if(initial_T <= 0) tile_selection_t += temp_controller->optimize_tile();
 			/// Remove case that could not find a proper tile. 
+			if(temp_controller->T >= 0) split_selection_t += temp_controller->optimize_split();
+			if(initial_T <= 0) tile_selection_t += temp_controller->optimize_tile();
+			/// Remove case that could not find a proper tile. 
 			if(temp_controller->T < 0){
 				temp_controller->pred_t = pred_t*100;
 				temp_controller->pred_J = pred_J*100;
 				temp_controller->power_delay = power_delay/100; 
 				temp_controller->energy_delay = energy_delay/100; 
 			}
-			else split_selection_t += temp_controller->optimize_split();
-			if(initial_T <= 0) tile_selection_t += temp_controller->optimize_tile();
 #ifndef ENABLE_POWA
 			if (temp_controller->pred_t +
 				temp_controller->pred_t*((temp_controller->active_unit_num-active_unit_num)*MINIMUM_UNIT_CONTRIBUTION) < pred_t) mimic_ATC(temp_controller);
@@ -513,7 +514,8 @@ fprintf(stderr,  "|-----> ATC::optimize_tile( autotune_controller{ T=%ld, active
 	 *(D2_dummy/(candidate_T/ctr) + ((D2_dummy%(candidate_T/ctr))? 1:0)) % active_unit_num
 	|| (((D1_dummy%(candidate_T/ctr))? 1:0) + 
 		((D2_dummy%(candidate_T/ctr))? 1:0) + 
-		((D3_dummy%(candidate_T/ctr))? 1:0))))
+		((D3_dummy%(candidate_T/ctr))? 1:0))
+	|| (candidate_T%ctr)))
 		ctr++;
 	candidate_T/=ctr; 
 #ifdef PDEBUG
@@ -526,7 +528,8 @@ fprintf(stderr,  "|-----> ATC::optimize_tile( autotune_controller{ T=%ld, active
 	*(D2_dummy/(candidate_T/ctr) + ((D2_dummy%(candidate_T/ctr))? 1:0))) % active_unit_num
 	|| (((D1_dummy%(candidate_T/ctr))? 1:0) + 
 		((D2_dummy%(candidate_T/ctr))? 1:0) + 
-		((D3_dummy%(candidate_T/ctr))? 1:0))))
+		((D3_dummy%(candidate_T/ctr))? 1:0))
+	|| (candidate_T%ctr)))
 		ctr++;
 	candidate_T/=ctr; 
 #ifdef PDEBUG
@@ -540,38 +543,44 @@ fprintf(stderr,  "|-----> ATC::optimize_tile( autotune_controller{ T=%ld, active
 		candidate_T = gcd(D1_dummy, D2_dummy, D3_dummy);
 		if(candidate_T == 1) candidate_T = std::min(D1_dummy, std::min(D2_dummy, D3_dummy));
 		ctr = 1;
-		while(ctr < candidate_T && (((D1_dummy/(candidate_T/ctr) + ((D1_dummy%(candidate_T/ctr))? 1:0))
-		*(D2_dummy/(candidate_T/ctr) + ((D2_dummy%(candidate_T/ctr))? 1:0)))%active_unit_num))
+		while(ctr < candidate_T  && (((D1_dummy/(candidate_T/ctr) + ((D1_dummy%(candidate_T/ctr))? 1:0))
+		*(D2_dummy/(candidate_T/ctr) + ((D2_dummy%(candidate_T/ctr))? 1:0)))%active_unit_num
+		|| (candidate_T%ctr)))
 			ctr++;
-		candidate_T/=ctr; 
-#ifdef PDEBUG
-		fprintf(stderr,  "Updated candidate_T = %d with ctr = %d for NO-Wshare condition\n", candidate_T, ctr);
-#endif
-		ctr = 1; 
-		while(ctr < candidate_T && (model->getSKNum(candidate_T/ctr) < min_sk ||
-		((D1_dummy/(candidate_T/ctr) + ((D1_dummy%(candidate_T/ctr))? 1:0))
-		*(D2_dummy/(candidate_T/ctr) + ((D2_dummy%(candidate_T/ctr))? 1:0)))%active_unit_num))
-			ctr++;
-		if(candidate_T/ctr > 1){
+		//if(!candidate_T%ctr){
 			candidate_T/=ctr; 
 #ifdef PDEBUG
-			fprintf(stderr,  "Updated candidate_T = %d with ctr = %d for NO-Wshare + SK-num conditions\n", candidate_T, ctr);
-#endif
-		}
-		else{
-			ctr = 1; 
-			while(ctr < candidate_T &&
-			((D1_dummy/(candidate_T/ctr) + ((D1_dummy%(candidate_T/ctr))? 1:0))
-			*(D2_dummy/(candidate_T/ctr) + ((D2_dummy%(candidate_T/ctr))? 1:0)))%active_unit_num)
-				ctr++;
-			candidate_T/=ctr;
-#ifdef PDEBUG
 			fprintf(stderr,  "Updated candidate_T = %d with ctr = %d for NO-Wshare condition\n", candidate_T, ctr);
+#endif
+			ctr = 1; 
+			while(ctr < candidate_T && (model->getSKNum(candidate_T/ctr) < min_sk ||
+			((D1_dummy/(candidate_T/ctr) + ((D1_dummy%(candidate_T/ctr))? 1:0))
+			*(D2_dummy/(candidate_T/ctr) + ((D2_dummy%(candidate_T/ctr))? 1:0)))%active_unit_num
+			|| (candidate_T%ctr)))
+				ctr++;
+			if(candidate_T/ctr > 1){
+				candidate_T/=ctr; 
+#ifdef PDEBUG
+				fprintf(stderr,  "Updated candidate_T = %d with ctr = %d for NO-Wshare + SK-num conditions\n", candidate_T, ctr);
+#endif
+			}
+			else{
+				ctr = 1; 
+				while(ctr < candidate_T && 
+				(((D1_dummy/(candidate_T/ctr) + ((D1_dummy%(candidate_T/ctr))? 1:0))
+				*(D2_dummy/(candidate_T/ctr) + ((D2_dummy%(candidate_T/ctr))? 1:0)))%active_unit_num
+				|| (candidate_T%ctr)))
+					ctr++;
+				candidate_T/=ctr;
+#ifdef PDEBUG
+				fprintf(stderr,  "Updated candidate_T = %d with ctr = %d for NO-Wshare condition\n", candidate_T, ctr);
 #endif 			
-		}
+			}
+		//}
+		//else candidate_T = -1;
 	}
 	T = candidate_T;
-	if (model->getSKNum(candidate_T) > max_sk){
+	if (candidate_T <= 1 || model->getSKNum(candidate_T) > max_sk){
 #ifdef PDEBUG
 		warning("Default method for obtaining T failed for active_unit_num = %d\n", active_unit_num);
 #endif

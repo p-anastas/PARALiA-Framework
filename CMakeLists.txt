@@ -53,7 +53,7 @@ add_definitions(-DSUBKERNELS_FIRE_WHEN_READY)
 ##             be fetched, reduced locally in the last computation location and written back.
 ## - ALGO_WREDUCE: The output tiles are not fetched from the source. Instead, computations will use
 ##             local buffers. After they are complete, tiles are reduced to the output (=source) location.
-#dd_definitions(-DOUTPUT_ALGO_MODE="ALGO_WR")
+#add_definitions(-DOUTPUT_ALGO_MODE="ALGO_WR")
 add_definitions(-DOUTPUT_ALGO_MODE="ALGO_WR_LAZY")
 #add_definitions(-DOUTPUT_ALGO_MODE="ALGO_WREDUCE")
 
@@ -188,8 +188,8 @@ add_definitions(-DBUFFER_REUSE_ENABLE)
 ##             This enables the full autotuning metadata reuse of up to PROBLEM_MD_CACHE problems. 
 #add_definitions(-DMETADATA_REUSE_NONE)
 #add_definitions(-DMETADATA_REUSE_MODELS)
-add_definitions(-DMETADATA_REUSE_PROBLEMS)
-add_definitions(-DPROBLEM_MD_CACHE=10) # Only relevant for "PROBLEMS" reuse level
+add_definitions(-DMETADATA_REUSE_PROBLEMS) # FIXME: Currently bugged
+add_definitions(-DPROBLEM_MD_CACHE=100) # Only relevant for "PROBLEMS" reuse level
 
 ###########################################################################################
 #----------------------------------DEBUG/TEST Options-------------------------------------#
