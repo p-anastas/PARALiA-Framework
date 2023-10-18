@@ -134,7 +134,8 @@ add_definitions(-DHOP_FETCH_BW_PLUS_ETA)
 add_definitions(-DRATIO_TUNE_ITTER=10)
 
 #Enable device reordering optimization during split optimizing based on maximizing d2d bandwidths.
-add_definitions(-DREORDER_DEVICES)
+# Seems buggy for now...
+#add_definitions(-DREORDER_DEVICES)
 
 ###########################################################################################
 #------------------------------Subkernel selection options--------------------------------#

@@ -321,11 +321,12 @@ double ATC::autotune_problem(const char* routine_name, void* initial_problem_wra
 			temp_controller->linkmap->reset();
 			temp_controller->linkmap->update_link_shared_weights(temp_controller->unit_modeler_list,
 					temp_controller->active_unit_id_list, temp_controller->active_unit_num);
-			for(int i = 0; i< LOC_NUM; i++)	for(int j = 0; j< LOC_NUM; j++){
-				final_estimated_link_bw[i][j] = temp_controller->linkmap->link_bw_shared[i][j];
-				final_link_active[i][j] = temp_controller->linkmap->link_active[i][j];
-			}
-
+#ifdef ENABLE_TRANSFER_HOPS
+			temp_controller->linkmap->update_link_hop_shared_weights(temp_controller->unit_modeler_list,
+					temp_controller->active_unit_id_list, temp_controller->active_unit_num);
+			for(int i = 0; i< LOC_NUM; i++)	for(int j = 0; j< LOC_NUM; j++)
+				final_estimated_link_bw[i][j] = temp_controller->linkmap->link_bw_shared_hops[i][j];
+#endif
 			if(initial_T <= 0) tile_selection_t += temp_controller->optimize_tile();
 			/// Remove case that could not find a proper tile. 
 			if(temp_controller->T >= 0) split_selection_t += temp_controller->optimize_split();
@@ -441,8 +442,16 @@ double ATC::autotune_problem(const char* routine_name, void* initial_problem_wra
 		double tile_selection_t = 0, split_selection_t = 0;
 		linkmap->update_link_shared_weights(unit_modeler_list,
 				active_unit_id_list, active_unit_num);
+#ifdef ENABLE_TRANSFER_HOPS
+		linkmap->update_link_hop_shared_weights(unit_modeler_list,
+				active_unit_id_list, active_unit_num);
+#endif
 		for(int i = 0; i< LOC_NUM; i++)	for(int j = 0; j< LOC_NUM; j++){
-			final_estimated_link_bw[i][j] = linkmap->link_bw_shared[i][j];
+#ifdef ENABLE_TRANSFER_HOPS
+				final_estimated_link_bw[i][j] = linkmap->link_bw_shared_hops[i][j];
+#else
+				final_estimated_link_bw[i][j] = linkmap->link_bw_shared[i][j];
+#endif
 			final_link_active[i][j] = linkmap->link_active[i][j];
 		}
 		if(initial_T <= 0) tile_selection_t += optimize_tile();
@@ -457,6 +466,9 @@ double ATC::autotune_problem(const char* routine_name, void* initial_problem_wra
 	final_estimated_linkmap = linkmap;
 #ifdef SDEBUG
 	final_estimated_linkmap->print_link_active();
+#ifdef ENABLE_TRANSFER_HOPS
+	final_estimated_linkmap->print_link_bw_shared_hops();
+#endif
   	final_estimated_linkmap->print_link_bw_shared();
 #endif
 	MD_p model = unit_modeler_list[idxize(active_unit_id_list[0])];

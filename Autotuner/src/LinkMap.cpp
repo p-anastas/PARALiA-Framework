@@ -5,7 +5,7 @@
 #include "Model_functions.hpp"
 
 LinkMap::LinkMap(){
-	for (int i = 0; i < LOC_NUM*LOC_NUM; i++) ESPA_ETA_sorted_dec_ids[i] = i;
+    ;
 }
 
 void LinkMap::copy(class LinkMap* other_linkmap)
@@ -21,15 +21,10 @@ void LinkMap::copy(class LinkMap* other_linkmap)
       link_hop_num[i][j] = other_linkmap->link_hop_num[i][j];
       link_hop_route_num[i][j] = other_linkmap->link_hop_route_num[i][j];
       for (int k = 0; k < MAX_ALLOWED_HOPS; k++)
-        for (int l = 0; l < MAX_HOP_ROUTES; l++)
+        for (int l = 0; l < LOC_NUM; l++)
             link_hop_route[i][j][k][l] = other_linkmap->link_hop_route[i][j][k][l];
-			ESPA_bytes[i][j] = other_linkmap->ESPA_bytes[i][j];
-      ESPA_ETA[i][j] = other_linkmap->ESPA_ETA[i][j];
-      ESPA_ETA_max = other_linkmap->ESPA_ETA_max;
-			ESPA_ETA_mean = other_linkmap->ESPA_ETA_mean;
-			ESPA_ETA_var = other_linkmap->ESPA_ETA_var;
+
   }
-	for (int i = 0; i < LOC_NUM*LOC_NUM; i++) ESPA_ETA_sorted_dec_ids[i] = other_linkmap->ESPA_ETA_sorted_dec_ids[i];
 }
 
 void LinkMap::reset()
@@ -42,27 +37,23 @@ void LinkMap::reset()
       link_uses[i][j] = 0;
       link_hop_num[i][j] = 0;
       link_hop_route_num[i][j] = 0;
-      ESPA_bytes[i][j] = 0;
-      ESPA_ETA[i][j] = 0;
-      ESPA_ETA_max = ESPA_ETA_mean = ESPA_ETA_var = 0;
       for (int k = 0; k < MAX_ALLOWED_HOPS; k++)
         for (int l = 0; l < MAX_HOP_ROUTES; l++)
-            link_hop_route[i][j][k][l] = 0;
+            link_hop_route[i][j][k][l] = -42;
     }
-	for (int i = 0; i < LOC_NUM*LOC_NUM; i++) ESPA_ETA_sorted_dec_ids[i] = i;
 }
 
 void LinkMap::reset_links(int unit_id){
   	for (int i = 0; i < LOC_NUM; i++)
     	for (int j = 0; j < LOC_NUM; j++)
     		if(link_hop_num[i][j])
-    			for (int l = 0; l < MAX_HOP_ROUTES; l++)
+    			for (int l = 0; l < LOC_NUM; l++)
     				for (int k = 0; k < MAX_ALLOWED_HOPS; k++)
     			 		///terminate all routes for links that (might) use unit_id as an intermediate hop.
     	     			if(link_hop_route[i][j][k][l] == unit_id){
     	     				link_hop_num[i][j] = 0;
 #ifdef PDEBUG
-							lprintf(0, "\n|-----> LinkMap::reset_links(Terminating route [%d][%d] due to link_hop_route[%d][%d][%d][%d] = %d)\n\n",
+							fprintf(stderr, "\n|-----> LinkMap::reset_links(Terminating route [%d][%d] due to link_hop_route[%d][%d][%d][%d] = %d)\n\n",
 								i, j, i, j, k, l, unit_id);
 #endif
 						}
@@ -99,11 +90,11 @@ void normalize_2D_LOC_NUM(double link_bw [][LOC_NUM], int dim1, double split_lim
 void LinkMap::update_link_weights(MD_p* list_of_models, int T){
 short lvl = 1;
 #ifdef DEBUG
-    lprintf(0, "\n|-----> LinkMap::update_link_weights(list_of_models = %p, T = %d)\n\n",
+    fprintf(stderr, "\n|-----> LinkMap::update_link_weights(list_of_models = %p, T = %d)\n\n",
     list_of_models, T);
 #endif
 #ifdef PDEBUG
-    lprintf(0, "\n|-----> LinkMap::update_link_weights(list_of_models = %p, T = %d)\n\n",
+    fprintf(stderr, "\n|-----> LinkMap::update_link_weights(list_of_models = %p, T = %d)\n\n",
     list_of_models, T);
 #endif
   int pred_T_dim = 0;
@@ -140,7 +131,7 @@ void LinkMap::update_link_shared_weights(MD_p* unit_modeler_list,
   if (!dataloc_num)
     error("Called ATC::update_link_map_shared() without properly initalized model in unit_modeler_list[0]\n");
 #ifdef PDEBUG
-  lprintf(0, "\n|-----> LinkMap::update_link_shared_weights(unit_list = %s, datalocs = %s)\n\n",
+  fprintf(stderr, "\n|-----> LinkMap::update_link_shared_weights(unit_list = %s, datalocs = %s)\n\n",
     printlist<int>(active_unit_id_list, active_unit_num), printlist<int>(datalocs, dataloc_num));
 #endif
 #ifdef PDEBUG
@@ -273,76 +264,79 @@ void LinkMap::update_link_shared_weights(MD_p* unit_modeler_list,
 #endif
 }
 
-void LinkMap::init_hop_routes(MD_p* unit_modeler_list, int* active_unit_id_list, int active_unit_num){
-  double safe_hop_penalty = HOP_PENALTY;
-  for (int unit_idx = 0 ; unit_idx < LOC_NUM; unit_idx++)
-  for (int unit_idy = 0 ; unit_idy < LOC_NUM; unit_idy++){
-    for (int hops = 0 ; hops < MAX_ALLOWED_HOPS; hops++) for (int rt = 0 ; rt < MAX_HOP_ROUTES; rt++)
-      link_hop_route[unit_idx][unit_idy][rt][hops] = -42;
-    link_hop_num[unit_idx][unit_idy] = 0;
-    double max_hop_bw = link_bw_shared[unit_idx][unit_idy];
-    link_hop_route_num[unit_idx][unit_idy] = 0;
-    if(MAX_ALLOWED_HOPS >= 1){
-      for (int hop_idx = 0 ; hop_idx < LOC_NUM; hop_idx++)
-      if(hop_idx!= unit_idx && hop_idx!= unit_idy && unit_idx!= unit_idy){
-        if(!is_in_list(deidxize(hop_idx),active_unit_id_list, active_unit_num)) continue;
-        double hop_bw =  fmin(link_bw_shared[unit_idx][hop_idx], link_bw_shared[hop_idx][unit_idy]);
-        //  /unit_modeler_list[unit_idx]->link[hop_idx]->sl[hop_idx][unit_idy]; // FIXME: Might be reverse
-        hop_bw-= safe_hop_penalty*hop_bw;
-        if (hop_bw > max_hop_bw){
-         max_hop_bw = hop_bw;
-         link_hop_route_num[unit_idx][unit_idy] = 1;
-         link_hop_num[unit_idx][unit_idy] = 1;
-         link_hop_route[unit_idx][unit_idy][link_hop_route_num[unit_idx][unit_idy]-1][0] = hop_idx;
-        }
-        else if(hop_bw == max_hop_bw && link_hop_route_num[unit_idx][unit_idy] < MAX_HOP_ROUTES){
-          link_hop_route[unit_idx][unit_idy][link_hop_route_num[unit_idx][unit_idy]++][0] = hop_idx;
-        }
-      }
-    }
-    if(MAX_ALLOWED_HOPS >= 2){
-      for (int hop_idx = 0 ; hop_idx < LOC_NUM; hop_idx++)
-      for (int hop_idy = 0 ; hop_idy < LOC_NUM; hop_idy++)
-      if(hop_idx!= unit_idx && hop_idx!= unit_idy && unit_idx!= unit_idy &&
-      hop_idy!= unit_idx && hop_idy!= unit_idy && hop_idy!= hop_idx){
-        double hop_bw =  fmin(link_bw_shared[unit_idx][hop_idx], fmin(link_bw_shared[hop_idx][hop_idy], link_bw_shared[hop_idy][unit_idy]));
-        hop_bw-= 2*safe_hop_penalty*hop_bw;
-        if (hop_bw > max_hop_bw){
-          max_hop_bw = hop_bw;
-          link_hop_route_num[unit_idx][unit_idy] = 1;
-          link_hop_route[unit_idx][unit_idy][0][0] = hop_idy;
-          link_hop_route[unit_idx][unit_idy][0][1] = hop_idx;
-          link_hop_num[unit_idx][unit_idy] = 2;
-        }
-      }
-    }
-    if (link_hop_num[unit_idx][unit_idy]){
-    link_bw_shared_hops[unit_idx][unit_idy] = max_hop_bw;
-#ifdef PDEBUG
-		  	lprintf(0, "LinkMap::init_hop_routes: %d -> %d transfer sequence -> [ %d ] => ", unit_idy, unit_idx,
-		  		link_hop_route[unit_idx][unit_idy][link_hop_route_num[unit_idx][unit_idy]-1][0]);
-		  	lprintf(0, "Cost No-hop = %lf, Hop-adjusted = %lf (%3lf times faster)\n", link_bw_shared[unit_idx][unit_idy],
-				link_bw_shared_hops[unit_idx][unit_idy], link_bw_shared_hops[unit_idx][unit_idy]/link_bw_shared[unit_idx][unit_idy]);
-#endif
-    }
-    else link_bw_shared_hops[unit_idx][unit_idy] = link_bw_shared[unit_idx][unit_idy];
-  }
+/// Return the bandwidth of a link taking sharing into account
+double LinkMap::linkmap_shared_bw_unroll(int dest, int src)
+{
+	long double bw_actual = 0;
+	if (dest == src) error("linkmap_shared_bw_unroll src = dest = %d\n", src);
+	else if (link_bw_shared[idxize(dest)][idxize(src)] != -1.0)
+		bw_actual = link_bw_shared[idxize(dest)][idxize(src)];
+	else if(links_share_bandwidth[idxize(dest)][idxize(src)][0] != -42 )
+		bw_actual = link_bw_shared[links_share_bandwidth[idxize(dest)][idxize(src)][0]]
+													[links_share_bandwidth[idxize(dest)][idxize(src)][1]];
+	else error("linkmap_shared_bw_unroll: link_bw_shared[%d][%d] = %.1lf and is not shared.\n", 
+		dest, src, link_bw_shared[idxize(dest)][idxize(src)]);
+	return bw_actual;
 }
 
-void LinkMap::print_link_bw_shared_hops(){
-  lprintf(0,"\n Link Shared-BW Hop Map:\n   |");
-  for (int d2 = 0; d2 < LOC_NUM; d2++)
-    lprintf(0, "  %2d  |", deidxize(d2));
-  lprintf(0, "\n   |");
-  for (int d2 = 0; d2 < LOC_NUM; d2++)
-    lprintf(0, "-------");
-  lprintf(0, "\n");
-  for (int d1 = 0; d1 < LOC_NUM; d1++){
-    lprintf(0, "%2d | ", deidxize(d1));
-    for (int d2 = 0; d2 < LOC_NUM; d2++){
-      lprintf(0, "%4.2lf | ", link_bw_shared_hops[d1][d2]);
+#ifdef ENABLE_TRANSFER_HOPS
+void LinkMap::update_link_hop_shared_weights(MD_p* unit_modeler_list, int* active_unit_id_list, int active_unit_num){
+  if (MAX_ALLOWED_HOPS > 1) error("LinkMap::update_link_hop_shared_weights:"
+                                  "Not implemented for MAX_ALLOWED_HOPS = %d\n", MAX_ALLOWED_HOPS);
+  for (int unit_idx = 0 ; unit_idx < LOC_NUM; unit_idx++)
+  for (int unit_idy = 0 ; unit_idy < LOC_NUM; unit_idy++){
+    link_bw_shared_hops[unit_idx][unit_idy] = link_bw_shared[unit_idx][unit_idy];
+    if (link_active[unit_idx][unit_idy]){
+      int best_list[LOC_NUM], tie_list_num = 0; 
+      int dest_loc = deidxize(unit_idx), src_loc = deidxize(unit_idy); 
+      double hop_bw_best = linkmap_shared_bw_unroll(dest_loc, src_loc);
+      for(int uidx = 0; uidx < LOC_NUM; uidx++)
+        if (link_active[uidx][idxize(src_loc)] && link_active[idxize(dest_loc)][uidx]){
+          double hop_est_bw = (1 - HOP_PENALTY) * std::min(linkmap_shared_bw_unroll(deidxize(uidx),src_loc), 
+            linkmap_shared_bw_unroll(dest_loc, deidxize(uidx)));
+          if (hop_est_bw  > hop_bw_best){
+            hop_bw_best = hop_est_bw;
+            best_list[0] = deidxize(uidx);
+            tie_list_num = 1; 
+          }
+          else if (hop_est_bw  == hop_bw_best){
+            best_list[tie_list_num++] = deidxize(uidx);
+          }
+        }
+      if (tie_list_num){
+          link_bw_shared_hops[unit_idx][unit_idy] = hop_bw_best;
+          link_hop_num[unit_idx][unit_idy] = 1; 
+          link_hop_route_num[unit_idx][unit_idy] = tie_list_num;
+          for (int i = 0; i < tie_list_num; i++) link_hop_route[unit_idx][unit_idy][0][i] = best_list[i];
+  #ifdef PDEBUG
+          fprintf(stderr, "LinkMap::init_hop_routes: %d -> %d transfer sequence -> [ %d ] => ", unit_idy, unit_idx,
+            link_hop_route[unit_idx][unit_idy][0][link_hop_route_num[unit_idx][unit_idy]-1]);
+          fprintf(stderr, "Cost No-hop = %lf, Hop-adjusted = %lf (%3lf times faster)\n", link_bw_shared[unit_idx][unit_idy],
+          link_bw_shared_hops[unit_idx][unit_idy], link_bw_shared_hops[unit_idx][unit_idy]/link_bw_shared[unit_idx][unit_idy]);
+  #endif    
+      }
     }
-    lprintf(0, "\n");
+  }
+#ifdef PDEBUG
+  print_link_bw_shared_hops();
+#endif
+}
+#endif
+
+void LinkMap::print_link_bw_shared_hops(){
+  fprintf(stderr,"\n Link Shared-BW Hop Map:\n   |");
+  for (int d2 = 0; d2 < LOC_NUM; d2++)
+    fprintf(stderr, "  %2d  |", deidxize(d2));
+  fprintf(stderr, "\n   |");
+  for (int d2 = 0; d2 < LOC_NUM; d2++)
+    fprintf(stderr, "-------");
+  fprintf(stderr, "\n");
+  for (int d1 = 0; d1 < LOC_NUM; d1++){
+    fprintf(stderr, "%2d | ", deidxize(d1));
+    for (int d2 = 0; d2 < LOC_NUM; d2++){
+      fprintf(stderr, "%4.2lf | ", link_bw_shared_hops[d1][d2]);
+    }
+    fprintf(stderr, "\n");
   }
 }
 
@@ -394,12 +388,12 @@ void LinkMap::ESPA_init(MD_p* unit_modeler_list, int* active_unit_id_list, doubl
   int active_unit_num, int init_type){
   short lvl = 4;
 #ifdef DEBUG
-    lprintf(0, "\n|-----> link_map::ESPA_init(list_of_models = %p, list_of_units = %s, list_of_unit_percentages = %s, init_type = %d)\n\n",
+    fprintf(stderr, "\n|-----> link_map::ESPA_init(list_of_models = %p, list_of_units = %s, list_of_unit_percentages = %s, init_type = %d)\n\n",
       active_unit_id_list, printlist(active_unit_id_list, active_unit_num),
       (init_type)? printlist(active_unit_score, active_unit_num): "NULL->equal", init_type);
 #endif
 #ifdef PDEBUG
-    lprintf(0, "\n|-----> link_map::ESPA_init() Initializing for list_of_units = %s, list_of_unit_percentages = %s, init_type = %d)\n\n",
+    fprintf(stderr, "\n|-----> link_map::ESPA_init() Initializing for list_of_units = %s, list_of_unit_percentages = %s, init_type = %d)\n\n",
       printlist(active_unit_id_list, active_unit_num),
       (init_type)? printlist(active_unit_score, active_unit_num): "NULL->equal", init_type);
 #endif
@@ -550,9 +544,9 @@ void LinkMap::ESPA_estimate_hop_routes(MD_p* unit_modeler_list, int* active_unit
 					link_bw_shared_hops[unit_idx][unit_idy] = fmin(link_bw_shared[unit_idx][best_hop_idx], link_bw_shared[best_hop_idx][unit_idy]);
 					link_bw_shared_hops[unit_idx][unit_idy]-= safe_hop_penalty*link_bw_shared_hops[unit_idx][unit_idy];
 	#ifdef PDEBUG
-			  		lprintf(0, "LinkMap::ESPA_init_hop_routes: %d -> %d transfer sequence -> [ %d ] => ", unit_idy, unit_idx,
+			  		fprintf(stderr, "LinkMap::ESPA_init_hop_routes: %d -> %d transfer sequence -> [ %d ] => ", unit_idy, unit_idx,
 			  			deidxize(best_hop_idx));
-			  		lprintf(0, "Cost No-hop = %lf, Hop-adjusted = %lf (%3lf times faster)\n", link_bw_shared[unit_idx][unit_idy],
+			  		fprintf(stderr, "Cost No-hop = %lf, Hop-adjusted = %lf (%3lf times faster)\n", link_bw_shared[unit_idx][unit_idy],
 						link_bw_shared_hops[unit_idx][unit_idy], link_bw_shared_hops[unit_idx][unit_idy]/link_bw_shared[unit_idx][unit_idy]);
 	#endif
 				}
@@ -631,7 +625,7 @@ double LinkMap::ESPA_predict(MD_p unit_modeler, int T, int* active_unit_id_list,
 
 		t_total = fmax(t_exec_full, fmax(t_recv_full, t_send_full));
 #ifdef PDEBUG
-		lprintf(0, "PARALia LinkMap::ESPA_predict (Unit = %d, Unit_ratio = %.2lf%%):\n"
+		fprintf(stderr, "PARALia LinkMap::ESPA_predict (Unit = %d, Unit_ratio = %.2lf%%):\n"
 		"\tt_recv_full: %lf ms\n"
 		"\tt_exec_full: %lf ms (%lf GFlops/s)\n"
 		"\tt_send_full: %lf ms\n"
@@ -648,92 +642,92 @@ double LinkMap::ESPA_predict(MD_p unit_modeler, int T, int* active_unit_id_list,
 }
 
 void LinkMap::print_ESPA(){
-  lprintf(0,"\n ESPA bytes Map:\n   |");
+  fprintf(stderr,"\n ESPA bytes Map:\n   |");
   for (int d2 = 0; d2 < LOC_NUM; d2++)
-    lprintf(0, "  %2d  |", deidxize(d2));
-  lprintf(0, "\n   |");
+    fprintf(stderr, "  %2d  |", deidxize(d2));
+  fprintf(stderr, "\n   |");
   for (int d2 = 0; d2 < LOC_NUM; d2++)
-    lprintf(0, "-------");
-  lprintf(0, "\n");
+    fprintf(stderr, "-------");
+  fprintf(stderr, "\n");
   for (int d1 = 0; d1 < LOC_NUM; d1++){
-    lprintf(0, "%2d | ", deidxize(d1));
+    fprintf(stderr, "%2d | ", deidxize(d1));
     for (int d2 = 0; d2 < LOC_NUM; d2++){
-      lprintf(0, "%Le | ", ESPA_bytes[d1][d2]);
+      fprintf(stderr, "%Le | ", ESPA_bytes[d1][d2]);
     }
-    lprintf(0, "\n");
+    fprintf(stderr, "\n");
   }
 
-  lprintf(0,"\n ESPA ETA Map:\n   |");
+  fprintf(stderr,"\n ESPA ETA Map:\n   |");
   for (int d2 = 0; d2 < LOC_NUM; d2++)
-    lprintf(0, "  %2d  |", deidxize(d2));
-  lprintf(0, "\n   |");
+    fprintf(stderr, "  %2d  |", deidxize(d2));
+  fprintf(stderr, "\n   |");
   for (int d2 = 0; d2 < LOC_NUM; d2++)
-    lprintf(0, "-------");
-  lprintf(0, "\n");
+    fprintf(stderr, "-------");
+  fprintf(stderr, "\n");
   for (int d1 = 0; d1 < LOC_NUM; d1++){
-    lprintf(0, "%2d | ", deidxize(d1));
+    fprintf(stderr, "%2d | ", deidxize(d1));
     for (int d2 = 0; d2 < LOC_NUM; d2++){
-      lprintf(0, "%le | ", ESPA_ETA[d1][d2]);
+      fprintf(stderr, "%le | ", ESPA_ETA[d1][d2]);
     }
-    lprintf(0, "\n");
+    fprintf(stderr, "\n");
   }
 
-  lprintf(0,"\n ESPA Longest ETA Map (Top 10 from ESPA_ETA_sorted_dec_ids):\n");
+  fprintf(stderr,"\n ESPA Longest ETA Map (Top 10 from ESPA_ETA_sorted_dec_ids):\n");
   int top_print = ((LOC_NUM*LOC_NUM < 10) ? LOC_NUM*LOC_NUM : 10);
   for (int unit_ctr = 0 ; unit_ctr < top_print; unit_ctr++){
 	int unit_idx = ESPA_ETA_sorted_dec_ids[unit_ctr]/LOC_NUM, unit_idy = ESPA_ETA_sorted_dec_ids[unit_ctr]%LOC_NUM;
-	lprintf(0, "ESPA_ETA_sorted_dec_ids[%d] = %d : ESPA_ETA[%d][%d] = %lf\n", unit_ctr, ESPA_ETA_sorted_dec_ids[unit_ctr], unit_idx, unit_idy, ESPA_ETA[unit_idx][unit_idy]);
+	fprintf(stderr, "ESPA_ETA_sorted_dec_ids[%d] = %d : ESPA_ETA[%d][%d] = %lf\n", unit_ctr, ESPA_ETA_sorted_dec_ids[unit_ctr], unit_idx, unit_idy, ESPA_ETA[unit_idx][unit_idy]);
   }
 }
 */
 
 void LinkMap::print_link_active(){
-  lprintf(0,"\n Link Active Map:\n   |");
+  fprintf(stderr,"\n Link Active Map:\n   |");
   for (int d2 = 0; d2 < LOC_NUM; d2++)
-    lprintf(0, " %2d |", deidxize(d2));
-  lprintf(0, "\n   |");
+    fprintf(stderr, " %2d |", deidxize(d2));
+  fprintf(stderr, "\n   |");
   for (int d2 = 0; d2 < LOC_NUM; d2++)
-    lprintf(0, "-----");
-  lprintf(0, "\n");
+    fprintf(stderr, "-----");
+  fprintf(stderr, "\n");
   for (int d1 = 0; d1 < LOC_NUM; d1++){
-    lprintf(0, "%2d | ", deidxize(d1));
+    fprintf(stderr, "%2d | ", deidxize(d1));
     for (int d2 = 0; d2 < LOC_NUM; d2++){
-      lprintf(0, "%2d | ", link_active[d1][d2]);
+      fprintf(stderr, "%2d | ", link_active[d1][d2]);
     }
-    lprintf(0, "\n");
+    fprintf(stderr, "\n");
   }
 }
 
 void LinkMap::print_link_bw(){
-  lprintf(0,"\n Link BW Map:\n   |");
+  fprintf(stderr,"\n Link BW Map:\n   |");
   for (int d2 = 0; d2 < LOC_NUM; d2++)
-    lprintf(0, "  %2d  |", deidxize(d2));
-  lprintf(0, "\n   |");
+    fprintf(stderr, "  %2d  |", deidxize(d2));
+  fprintf(stderr, "\n   |");
   for (int d2 = 0; d2 < LOC_NUM; d2++)
-    lprintf(0, "-------");
-  lprintf(0, "\n");
+    fprintf(stderr, "-------");
+  fprintf(stderr, "\n");
   for (int d1 = 0; d1 < LOC_NUM; d1++){
-    lprintf(0, "%2d | ", deidxize(d1));
+    fprintf(stderr, "%2d | ", deidxize(d1));
     for (int d2 = 0; d2 < LOC_NUM; d2++){
-      lprintf(0, "%4.2lf | ", link_bw[d1][d2]);
+      fprintf(stderr, "%4.2lf | ", link_bw[d1][d2]);
     }
-    lprintf(0, "\n");
+    fprintf(stderr, "\n");
   }
 }
 
 void LinkMap::print_link_bw_shared(){
-  lprintf(0,"\n Link Shared-BW Map:\n   |");
+  fprintf(stderr,"\n Link Shared-BW Map:\n   |");
   for (int d2 = 0; d2 < LOC_NUM; d2++)
-    lprintf(0, "  %2d  |", deidxize(d2));
-  lprintf(0, "\n   |");
+    fprintf(stderr, "  %2d  |", deidxize(d2));
+  fprintf(stderr, "\n   |");
   for (int d2 = 0; d2 < LOC_NUM; d2++)
-    lprintf(0, "-------");
-  lprintf(0, "\n");
+    fprintf(stderr, "-------");
+  fprintf(stderr, "\n");
   for (int d1 = 0; d1 < LOC_NUM; d1++){
-    lprintf(0, "%2d | ", deidxize(d1));
+    fprintf(stderr, "%2d | ", deidxize(d1));
     for (int d2 = 0; d2 < LOC_NUM; d2++){
-      lprintf(0, "%4.2lf | ", link_bw_shared[d1][d2]);
+      fprintf(stderr, "%4.2lf | ", link_bw_shared[d1][d2]);
     }
-    lprintf(0, "\n");
+    fprintf(stderr, "\n");
   }
 }

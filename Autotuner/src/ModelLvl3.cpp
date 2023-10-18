@@ -74,7 +74,7 @@ double share_mult(int dest, int src, int* active_unit_id_list, int active_unit_n
 
 double* PredictHeteroFullOverlapBLAS3_v2(MD_p model, long int T, int active_unit_num, int* active_unit_id_list,
 	double* active_unit_score){
-	double* result = (double*) calloc(4,sizeof(double));
+	double* result = (double*) calloc(2,sizeof(double));
 	int used_unit_idx = -1;
 	for(int unit_idx = 0; unit_idx < active_unit_num; unit_idx++) if(model->unit_id == active_unit_id_list[unit_idx]) used_unit_idx = unit_idx;
 	if (used_unit_idx == - 1) error("PredictHeteroFullOverlapBLAS3_v2: Model %p with unit_id = %d not present in given active_unit_id_list = %s\n",
@@ -91,8 +91,7 @@ double* PredictHeteroFullOverlapBLAS3_v2(MD_p model, long int T, int active_unit
 	if ( t_exec_full < 0)
 		error("PredictHeteroFullOverlapBLAS3_v2: GPUexec3Model_predict submodel returned negative value, abort prediction");
 
-	long long recv_sz = 0, recv_sz_RONLY = 0, send_sz = 0;
-	int recv_num_RONLY = 0;
+	long long recv_sz = 0, send_sz = 0;
 	for (int i = 0; i < model->V->numT; i++){
 		long long tmp_recv_sz = (long long) model->V->in[i]*(*model->V->Dim1[i])*(*model->V->Dim2[i])*
 			model->V->dtype_sz*active_unit_score[used_unit_idx];
@@ -109,52 +108,22 @@ double* PredictHeteroFullOverlapBLAS3_v2(MD_p model, long int T, int active_unit
 
 		recv_sz += tmp_recv_sz;
 		send_sz += tmp_send_sz;
-		if(!model->V->out[i] && model->V->loc[i] != model->unit_id) { recv_sz_RONLY+= recv_sz; recv_num_RONLY++; }
 		t_recv_full+= t_recv_tmp;
 		t_send_full+= t_send_tmp;
 	}
 
-	/// TODO: Extra transfers created from internal dims due to multi-unit spliting.
-	/// Algorithm may vary for other BLAS3, but not at that bridge yet.
-	/// The assumtion for extra transfers is made based on the 2D cyclic distribution,
-	/// but the estimation is also useful for other distributions as a best case scenario (worse distributions -> more extra transfers).
-	int D1_parts = sqrt(active_unit_num);
-	int D2_parts = D1_parts;
-	if (D1_parts ==0) { D2_parts = active_unit_num; D1_parts = 1; }
-	else { /* find the most square decomposition of autotune_controller->active_unit_num in D1_parts x D2_parts */
-		int g;
-		for (g = D1_parts+1; g>0; --g) if (active_unit_num % g == 0) break;
-		if (g==0) { D1_parts = active_unit_num; D2_parts = 1; }
-		else { D1_parts = g; D2_parts = active_unit_num/g; }
-	}
-	double extra_transfer_ratio = (recv_num_RONLY)? (1.0*((D1_parts-1) + (D2_parts -1)))/recv_num_RONLY: 0;
-
-#ifdef DPDEBUG
-	fprintf(stderr, "PredictHeteroFullOverlapBLAS3_v2(unit_num = %d) : D1_parts = %d, D2_parts = %d, extra_transfer_ratio = %lf\n",
-	active_unit_num, D1_parts, D2_parts, extra_transfer_ratio);
-#endif
-	long long recv_sz_extra = extra_transfer_ratio * recv_sz_RONLY;
-	//double t_recv_extra_optimistic_old = model->predictBestFriends_t(extra_transfer_ratio, recv_sz_extra, active_unit_num, active_unit_id_list);
-	//double t_recv_extra_pesimistic = model->predictAvgBw_t(recv_sz_extra, active_unit_num, active_unit_id_list);
-	double t_recv_extra_optimistic = model->predictSumBw_t(recv_sz_extra, active_unit_num, active_unit_id_list);
-
-	double t_recv_extra = t_recv_extra_optimistic; // (t_recv_extra_optimistic + t_recv_extra_pesimistic)/2;
-
-	t_total = fmax(t_exec_full, fmax(t_recv_full, fmax(t_recv_extra, t_send_full)));
+	t_total = fmax(t_exec_full, fmax(t_recv_full, t_send_full));
 			
 	result[0] = t_exec_full; 
 	result[1] = t_recv_full; 
 	result[2] = t_send_full; 
-	result[3] = t_recv_extra; 
 #ifdef PDEBUG
 	fprintf(stderr, "PARALia  PredictHeteroFullOverlapBLAS3_v2 (Unit = %d, Unit_ratio = %.2lf%%):\n"
 	"\tt_recv_full: %lf ms ( %lf Gb/s)\n"
-	"\tt_recv_extra: %lf ms ( %lf Gb/s) -> (%.2lf%% bytes of full)\n"
 	"\tt_exec_full: %lf ms (%lf GFlops/s)\n"
 	"\tt_send_full: %lf ms ( %lf Gb/s)\n"
 	"\tt_max: %lf ms (%lf GFlops/s)\n\n",
 	model->unit_id, 100*active_unit_score[used_unit_idx], t_recv_full*1000, Gval_per_s(recv_sz,t_recv_full),
-	t_recv_extra*1000, Gval_per_s(recv_sz_extra,t_recv_extra), 100*extra_transfer_ratio,
 	t_exec_full*1000, Gval_per_s(model->getFlops()*active_unit_score[used_unit_idx], t_exec_full),
 	t_send_full*1000, Gval_per_s(send_sz,t_send_full),
 	t_total*1000, Gval_per_s(model->getFlops()*active_unit_score[used_unit_idx], t_total));
