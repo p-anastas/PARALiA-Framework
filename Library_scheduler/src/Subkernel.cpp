@@ -255,7 +255,15 @@ void CoCoPeLiaInitResources(int* dev_list, int dev_num){
 				short shared_iloc0 = links_share_bandwidth[dev_id_idx][dev_id_idy][0],
 					shared_iloc1 = links_share_bandwidth[dev_id_idx][dev_id_idy][1];
 				short queue_id = (dev_id_idy == LOC_NUM - 1)? deidxize(dev_id_idx) : deidxize(dev_id_idy);
-				recv_queues[dev_id_idx][dev_id_idy] = new CommandQueue(queue_id, 0);
+				if( shared_iloc0 == - 42) recv_queues[dev_id_idx][dev_id_idy] = new CommandQueue(queue_id, 0);
+				else{
+					if(final_link_active[dev_id_idx][dev_id_idy] || !final_link_active[shared_iloc0][shared_iloc1])
+						recv_queues[dev_id_idx][dev_id_idy] = new CommandQueue(queue_id, 0);
+					else{
+						int shared_queue_id = (shared_iloc1 == LOC_NUM - 1)? deidxize(shared_iloc0) : deidxize(shared_iloc1);
+						recv_queues[dev_id_idx][dev_id_idy] = new CommandQueue(shared_queue_id, 0);
+					}
+				}
 #ifdef ENABLE_SEND_RECV_OVERLAP
 				wb_queues[dev_id_idx][dev_id_idy] = new CommandQueue(queue_id, 0);
 #else 

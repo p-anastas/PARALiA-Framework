@@ -81,7 +81,7 @@ char* CoCoImplementationPrint(){
 #ifdef CHAIN_FETCH_QUEUE_WORKLOAD
 	sprintf(string_helper, "_R-CHAIN-QUEUE-ETA");
 	strcat(string_out, string_helper);
-	sprintf(string_helper, "CO-%d", BANDWIDTH_DIFFERENCE_CUTTOF_RATIO);
+	sprintf(string_helper, "-CO-%d", BANDWIDTH_DIFFERENCE_CUTTOF_RATIO);
 	strcat(string_out, string_helper);
 #endif
 #ifdef ENABLE_TRANSFER_HOPS
