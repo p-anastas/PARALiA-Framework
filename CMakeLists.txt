@@ -32,6 +32,32 @@ message("PARALiA-Framework - PROBLEM_GPU_PERCENTAGE: " ${PROBLEM_GPU_PERCENTAGE}
 add_definitions(-DPROBLEM_GPU_PERCENTAGE=${PROBLEM_GPU_PERCENTAGE})
 
 ###########################################################################################
+#---------------------------Internal resource reuse options-------------------------------#
+###########################################################################################
+
+## Enable Asynchronous execution for Subkernels
+add_definitions(-DASYNC_ENABLE)
+
+## Enable lock-free versions of event & Queue management in Universal_helpers
+add_definitions(-DUNIHELPER_LOCKFREE_ENABLE)
+
+## Enable GPU backend resourse reuse (streams, handles)
+add_definitions(-DQUEUE_REUSE_ENABLE)
+
+## Enable GPU and CPU allocated buffer reuse between different calls
+add_definitions(-DBUFFER_REUSE_ENABLE)
+
+## The level of reuse for the autotuning metadata of every routine call by SIMILAR subsequent calls
+## NONE -> Rerun full autotuning every time
+## MODELS -> Keep the models but rerun the distribution and routing functions
+## PROBLEMS -> Keep a cache of size PROBLEM_MD_CACHE with the autotuning MD of DIFFERENT routine calls
+##             This enables the full autotuning metadata reuse of up to PROBLEM_MD_CACHE problems. 
+#add_definitions(-DMETADATA_REUSE_NONE)
+#add_definitions(-DMETADATA_REUSE_MODELS)
+add_definitions(-DMETADATA_REUSE_PROBLEMS) # FIXME: Currently bugged
+add_definitions(-DPROBLEM_MD_CACHE=100) # Only relevant for "PROBLEMS" reuse level
+
+###########################################################################################
 #---------------------------Algorithmic/Software Optimizations----------------------------#
 ###########################################################################################
 
@@ -58,18 +84,22 @@ add_definitions(-DOUTPUT_ALGO_MODE="ALGO_WR_LAZY")
 #add_definitions(-DOUTPUT_ALGO_MODE="ALGO_WREDUCE")
 
 ###########################################################################################
-#-----------------------------------Modeling options - -----------------------------------#
+#---------------------------------Routing optimizations-----------------------------------#
 ###########################################################################################
 
-## The number of itterations that will performed to tune the per-device ratio workload split.
-## Inconsequential for homogeneous cases, higher = better for heterogeneous ones.
-add_definitions(-DRATIO_TUNE_ITTER=10)
+## Enable overlapping Send & recv Communication FIXME: Not implemented
+add_definitions(-DENABLE_SEND_RECV_OVERLAP)
 
-#Enable device reordering optimization during split optimizing based on maximizing d2d bandwidths.
-#add_definitions(-DREORDER_DEVICES)
+## Enable sharing of bandwidth between links that utilize the same underlying hardware communication resources
+#add_definitions(-DENABLE_LINK_BW_SHARING) # by putting them on different queues
+
+## The number of sub-buffers FasTCoCoMemcpy2DAsync will use to increase effective BW
+## In general effective_trans_time = max_trans_time(route[]) + 1/SBO * sub_trans_time(route_minus_max[])
+## Rule of thumb: large SBO -> increased transfer latency, small SBO -> decreased bandwidth
+add_definitions(-DSTREAMING_BUFFER_OVERLAP=8)
 
 ###########################################################################################
-#------------------------------------Routing options--------------------------------------#
+#-----------------------------------Routing selection-------------------------------------#
 ###########################################################################################
 
 #add_definitions(-DP2P_FETCH_FROM_INIT)
@@ -87,27 +117,35 @@ add_definitions(-DCHAIN_FETCH_QUEUE_WORKLOAD)
 ## The higher this value is, the more ETA-based the selection criteria
 add_definitions(-DBANDWIDTH_DIFFERENCE_CUTTOF_RATIO=5)
 
-## The number of sub-buffers FasTCoCoMemcpy2DAsync will use to increase effective BW
-## In general effective_trans_time = max_trans_time(route[]) + 1/SBO * sub_trans_time(route_minus_max[])
-## Rule of thumb: large SBO -> increased transfer latency, small SBO -> decreased bandwidth
-add_definitions(-DSTREAMING_BUFFER_OVERLAP=8)
-
 ## Enable the use of transfer hops through memory locations that do not need a tile
 ## Improves bandwidth, but adds (extra) network load to fast lanes. Currently not integrated in already-chained transfers.
 add_definitions(-DENABLE_TRANSFER_HOPS)
 
 #add_definitions(-DHOP_FETCH_BANDWIDTH)
-add_definitions(-DHOP_FETCH_QUEUE_WORKLOAD)
+#add_definitions(-DHOP_FETCH_QUEUE_WORKLOAD)
+add_definitions(-DHOP_FETCH_BW_PLUS_ETA)
 
-#--------------------------------------Experimental----------------------------------------#
+###########################################################################################
+#----------------------------------Autotuning options-------------------------------------#
+###########################################################################################
 
-## Enable sharing of bandwidth between links that utilize the same underlying hardware communication resources
-#add_definitions(-DENABLE_LINK_BW_SHARING) # by putting them on different queues
+## The number of itterations that will performed to tune the per-device ratio workload split.
+## Inconsequential for homogeneous cases, higher = better for heterogeneous ones.
+add_definitions(-DRATIO_TUNE_ITTER=10)
 
-## TODO: Route chains could be implemented later (e.g. instead of 1->2->3 to use 1->2 parallel to 1->3)
+#Enable device reordering optimization during split optimizing based on maximizing d2d bandwidths.
+add_definitions(-DREORDER_DEVICES)
 
-## Enable overlapping Send & recv Communication FIXME: Not implemented
-add_definitions(-DENABLE_SEND_RECV_OVERLAP)
+###########################################################################################
+#------------------------------Subkernel selection options--------------------------------#
+###########################################################################################
+
+#Run subkernels in provided order
+#add_definitions(-DSERIAL_SUBKERNEL_SELECTION)
+
+## Define subkernel selection heuristic values.
+#add_definitions(-DSUBKERNEL_SELECT_MIN_RONLY_ETA)
+add_definitions(-DSUBKERNEL_SELECT_FETCH_ETA_PLUS_MIN_PENDING)
 
 ###########################################################################################
 #--------------------------------Subkernel distributions----------------------------------#
@@ -121,17 +159,6 @@ add_definitions(-DDISTRIBUTION="2D-BLOCK-CYCLIC")
 #add_definitions(-DDISTRIBUTION="SPLIT-NAIVE")
 #add_definitions(-DDISTRIBUTION="SPLIT-CHUNKS-ROBIN")
 #add_definitions(-DDISTRIBUTION="SPLIT-CHUNKS-ROBIN-REVERSE")
-
-###########################################################################################
-#------------------------------Subkernel selection options--------------------------------#
-###########################################################################################
-
-#Run subkernels in provided order
-#add_definitions(-DSERIAL_SUBKERNEL_SELECTION)
-
-## Define subkernel selection heuristic values.
-add_definitions(-DSUBKERNEL_SELECT_FETCH_ETA_PLUS_MIN_PENDING)
-#add_definitions(-DSUBKERNEL_SELECT_MIN_RONLY_ETA)
 
 ###########################################################################################
 #---------------------------------Optimization targets------------------------------------#
@@ -172,34 +199,8 @@ add_definitions(-DPERPER_LIMIT=0.0)
 #add_definitions(-DPREDICT_OPTIMIZE_TARGET="OTHER_TBD")
 
 ###########################################################################################
-#---------------------------Internal resource reuse options-------------------------------#
-###########################################################################################
-
-## Enable GPU backend resourse reuse (streams, handles)
-add_definitions(-DQUEUE_REUSE_ENABLE)
-
-## Enable GPU and CPU allocated buffer reuse between different calls
-add_definitions(-DBUFFER_REUSE_ENABLE)
-
-## The level of reuse for the autotuning metadata of every routine call by SIMILAR subsequent calls
-## NONE -> Rerun full autotuning every time
-## MODELS -> Keep the models but rerun the distribution and routing functions
-## PROBLEMS -> Keep a cache of size PROBLEM_MD_CACHE with the autotuning MD of DIFFERENT routine calls
-##             This enables the full autotuning metadata reuse of up to PROBLEM_MD_CACHE problems. 
-#add_definitions(-DMETADATA_REUSE_NONE)
-#add_definitions(-DMETADATA_REUSE_MODELS)
-add_definitions(-DMETADATA_REUSE_PROBLEMS) # FIXME: Currently bugged
-add_definitions(-DPROBLEM_MD_CACHE=100) # Only relevant for "PROBLEMS" reuse level
-
-###########################################################################################
 #----------------------------------DEBUG/TEST Options-------------------------------------#
 ###########################################################################################
-
-## Enable Asynchronous execution for Subkernels
-add_definitions(-DASYNC_ENABLE)
-
-## Enable lock-free versions of event & Queue management in Universal_helpers
-add_definitions(-DUNIHELPER_LOCKFREE_ENABLE)
 
 #Run in debug mode, which includes detailed function calls and info for error-checking
 #add_definitions(-DDEBUG)

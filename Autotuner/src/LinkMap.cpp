@@ -690,10 +690,10 @@ void LinkMap::print_ESPA(){
 void LinkMap::print_link_active(){
   lprintf(0,"\n Link Active Map:\n   |");
   for (int d2 = 0; d2 < LOC_NUM; d2++)
-    lprintf(0, "  %2d  |", deidxize(d2));
+    lprintf(0, " %2d |", deidxize(d2));
   lprintf(0, "\n   |");
   for (int d2 = 0; d2 < LOC_NUM; d2++)
-    lprintf(0, "-------");
+    lprintf(0, "-----");
   lprintf(0, "\n");
   for (int d1 = 0; d1 < LOC_NUM; d1++){
     lprintf(0, "%2d | ", deidxize(d1));

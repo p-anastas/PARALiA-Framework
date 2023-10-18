@@ -552,7 +552,7 @@ fprintf(stderr,  "|-----> ATC::optimize_tile( autotune_controller{ T=%ld, active
 #ifdef PDEBUG
 			fprintf(stderr,  "Updated candidate_T = %d with ctr = %d for NO-Wshare condition\n", candidate_T, ctr);
 #endif
-			ctr = 1; 
+			ctr = 1;
 			while(ctr < candidate_T && (model->getSKNum(candidate_T/ctr) < min_sk ||
 			((D1_dummy/(candidate_T/ctr) + ((D1_dummy%(candidate_T/ctr))? 1:0))
 			*(D2_dummy/(candidate_T/ctr) + ((D2_dummy%(candidate_T/ctr))? 1:0)))%active_unit_num
