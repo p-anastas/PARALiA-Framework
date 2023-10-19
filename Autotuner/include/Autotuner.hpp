@@ -121,6 +121,7 @@ typedef class Modeler{
 typedef class ATC{
 	public:
 		long int T; /// The tiling size used for 1D/2D Data split to tiles.
+		int T_score; // A score for the selected T that can be used for model adjustment
 		int active_unit_num; /// The number of units that will be used in the involving operation.
 		int* active_unit_id_list;	/// The list of ids of said units.
 		double* active_unit_score; /// The 'score' of each said units relative to the total task completion.
@@ -157,6 +158,7 @@ typedef class ATC{
 	double autotune_problem(const char* routine_name, void* initial_problem_wrap); 	/// Fire the autotuner for a given problem.
 	void init_modelers(const char* routine_name, void* initial_problem_wrap);
 	double optimize_tile(); ///  Predicts the best tile T for a multi-unit problem
+	int get_T_score(int candidate_T);
 	double optimize_tile_CoCoPeLia(int model_idx, ModelType mode); /// Predicts T using CoCoPeLia models for a single unit, defined at Model_functions.cpp
 	double optimize_split();
 	void normalize_split();

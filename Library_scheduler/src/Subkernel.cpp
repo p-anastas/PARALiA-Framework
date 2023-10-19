@@ -256,7 +256,7 @@ void CoCoPeLiaInitResources(int* dev_list, int dev_num){
 					shared_iloc1 = links_share_bandwidth[dev_id_idx][dev_id_idy][1];
 				short queue_id = (dev_id_idy == LOC_NUM - 1)? deidxize(dev_id_idx) : deidxize(dev_id_idy);
 				if( shared_iloc0 == - 42) recv_queues[dev_id_idx][dev_id_idy] = new CommandQueue(queue_id, 0);
-				else{
+				else if (dev_id_idx*LOC_NUM + dev_id_idy < shared_iloc0*LOC_NUM + shared_iloc1){
 					if(final_link_active[dev_id_idx][dev_id_idy] || !final_link_active[shared_iloc0][shared_iloc1])
 						recv_queues[dev_id_idx][dev_id_idy] = new CommandQueue(queue_id, 0);
 					else{

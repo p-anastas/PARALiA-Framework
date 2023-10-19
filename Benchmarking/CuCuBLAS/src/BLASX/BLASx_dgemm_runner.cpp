@@ -31,11 +31,11 @@ int main(const int argc, const char *argv[]) {
 			else if (predef_control_values->T > M/1.5 && predef_control_values->T > N/1.5 && predef_control_values->T > K/1.5)
 				error("Given Tin=%ld bigger than all problem dims/1.5\n", predef_control_values->T);
 		}
-		sprintf(filename, "%s/BLASxDgemmRunner_predefined_vals_%s_%s_%s.log",
-				TESTLIBDIR, CoCoDistributionPrint(), CoCoImplementationPrint(), VERSION);
+		sprintf(filename, "%s/BLASxDgemmRunner_predefined_vals_%s.log",
+				TESTLIBDIR, VERSION);
 		}
-		else sprintf(filename, "%s/BLASxDgemmRunner_%s_%s_%s.log",
-			TESTLIBDIR, CoCoDistributionPrint(), CoCoImplementationPrint(), VERSION);
+		else sprintf(filename, "%s/BLASxDgemmRunner_%s.log",
+			TESTLIBDIR, VERSION);
 
 	long int BLASx_tile;
 	if (predef_control_values!= NULL && predef_control_values->T > 0) BLASx_tile = predef_control_values->T;

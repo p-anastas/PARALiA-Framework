@@ -145,11 +145,11 @@ int main(const int argc, const char *argv[]) {
 			else if (predef_control_values->T > M/1.5 && predef_control_values->T > N/1.5 && predef_control_values->T > K/1.5)
 				error("Given Tin=%ld bigger than all problem dims/1.5\n", predef_control_values->T);
 		}
-			sprintf(filename, "%s/XKBLASDgemmRunner_predefined_vals_%s_%s_%s.log",
-				TESTLIBDIR, CoCoDistributionPrint(), CoCoImplementationPrint(), VERSION);
+			sprintf(filename, "%s/XKBLASDgemmRunner_predefined_vals_%s.log",
+				TESTLIBDIR, VERSION);
 	}
-	else sprintf(filename, "%s/XKBLASDgemmRunner_%s_%s_%s.log",
-		TESTLIBDIR, CoCoDistributionPrint(), CoCoImplementationPrint(), VERSION);
+	else sprintf(filename, "%s/XKBLASDgemmRunner_%s.log",
+		TESTLIBDIR, VERSION);
 
 	long int XKBLAS_tile;
 	if (predef_control_values!= NULL && predef_control_values->T > 0)

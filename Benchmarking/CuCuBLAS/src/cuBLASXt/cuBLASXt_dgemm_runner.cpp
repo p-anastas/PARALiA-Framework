@@ -30,11 +30,11 @@ int main(const int argc, const char *argv[]) {
 			else if (predef_control_values->T > CBLASXT_MAX_SAFE_TILE)
 				error("Given Tin=%ld bigger than CBLASXT_MAX_SAFE_TILE\n", predef_control_values->T);
 		}
-		sprintf(filename, "%s/cuBLASXtDgemmRunner_predefined_vals_%s_%s_%s.log",
-			TESTLIBDIR, CoCoDistributionPrint(), CoCoImplementationPrint(), VERSION);
+		sprintf(filename, "%s/cuBLASXtDgemmRunner_predefined_vals_%s.log",
+			TESTLIBDIR, VERSION);
 	}
-	else sprintf(filename, "%s/cuBLASXtDgemmRunner_%s_%s_%s.log",
-		TESTLIBDIR, CoCoDistributionPrint(), CoCoImplementationPrint(), VERSION);
+	else sprintf(filename, "%s/cuBLASXtDgemmRunner_%s.log",
+		TESTLIBDIR, VERSION);
 
 	long int cublasXt_tile;
 	if (predef_control_values!= NULL && predef_control_values->T > 0) cublasXt_tile = predef_control_values->T;

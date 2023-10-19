@@ -24,7 +24,7 @@ ATC::ATC(){
 		Subkernels_per_unit_list[d] = NULL;
 		Subkernels_per_unit_num[d] = 0;
 	}
-	T = active_unit_num = subkernel_num = -1;
+	T = active_unit_num = subkernel_num = T_score = -1;
 	pred_t = pred_J = power_delay = energy_delay = -1.0;
 	cache_limit = 0;
 
@@ -119,6 +119,7 @@ void ATC::mimic_ATC(ATC_p other_ATC){
 		fprintf(stderr,  "|-----> ATC::mimic_ATC(other_ATC = %p)\n", other_ATC);
 	#endif
 	T = other_ATC->T;
+	T_score = other_ATC->T_score;
 	active_unit_num = other_ATC->active_unit_num;
 	for (int d = 0; d < other_ATC->active_unit_num; d++) active_unit_id_list[d] = other_ATC->active_unit_id_list[d];
 	for (int d = 0; d < other_ATC->active_unit_num; d++) active_unit_score[d] = other_ATC->active_unit_score[d];
@@ -324,13 +325,21 @@ double ATC::autotune_problem(const char* routine_name, void* initial_problem_wra
 #ifdef ENABLE_TRANSFER_HOPS
 			temp_controller->linkmap->update_link_hop_shared_weights(temp_controller->unit_modeler_list,
 					temp_controller->active_unit_id_list, temp_controller->active_unit_num);
-			for(int i = 0; i< LOC_NUM; i++)	for(int j = 0; j< LOC_NUM; j++)
-				final_estimated_link_bw[i][j] = temp_controller->linkmap->link_bw_shared_hops[i][j];
 #endif
+			for(int i = 0; i< LOC_NUM; i++)	for(int j = 0; j< LOC_NUM; j++){
+#ifdef ENABLE_TRANSFER_HOPS
+				final_estimated_link_bw[i][j] = temp_controller->linkmap->link_bw_shared_hops[i][j];
+#else 
+				final_estimated_link_bw[i][j] = temp_controller->linkmap->link_bw_shared[i][j];
+#endif
+				final_link_active[i][j] = temp_controller->linkmap->link_active[i][j];
+			}
 			if(initial_T <= 0) tile_selection_t += temp_controller->optimize_tile();
+			else temp_controller->T_score = temp_controller->get_T_score(initial_T);
 			/// Remove case that could not find a proper tile. 
 			if(temp_controller->T >= 0) split_selection_t += temp_controller->optimize_split();
 			if(initial_T <= 0) tile_selection_t += temp_controller->optimize_tile();
+			else temp_controller->T_score = temp_controller->get_T_score(initial_T);
 			/// Remove case that could not find a proper tile. 
 			if(temp_controller->T < 0){
 				temp_controller->pred_t = pred_t*100;
@@ -455,6 +464,7 @@ double ATC::autotune_problem(const char* routine_name, void* initial_problem_wra
 			final_link_active[i][j] = linkmap->link_active[i][j];
 		}
 		if(initial_T <= 0) tile_selection_t += optimize_tile();
+		else T_score = get_T_score(initial_T);
 		// TODO: Must decide if workload ratio should be tuned when there is a predefined number of devices... Currently == off for paper
 		split_homogeneously = 1;
 		split_selection_t += optimize_split();
@@ -476,16 +486,54 @@ double ATC::autotune_problem(const char* routine_name, void* initial_problem_wra
 	distribute_subkernels(model->D1/T + (model->D1%T ? 1 : 0), model->D2/T  + (model->D2%T ? 1 : 0), model->D3/T  + (model->D3%T ? 1 : 0));
 
 	cpu_timer = csecond() - cpu_timer;
+	if(T!=-1){
+		if (T_score < TILE_MIN + 16) 
+			warning("ATC::optimize_tile -> T = %d: C2 (NO-remainder) was not satisfied, performance might degrade\n", T);
+		if (T_score%(TILE_MIN + 16) < TILE_MIN) 
+			warning("ATC::optimize_tile -> T = %d: C3 (T >= %d) was not satisfied, performance might degrade\n", T, TILE_MIN);
+		int T_score_rem = (T >= TILE_MIN) ? T_score%(TILE_MIN + 16) - TILE_MIN : T_score%(TILE_MIN + 16) - (T - 15);
+		if (T_score_rem < 8) 
+			warning("ATC::optimize_tile -> T = %d: C4.1 (SK_DEV >= %d) was not satisfied, performance might degrade\n", T, MIN_DESIRED_SK_DEV);
+		if (T_score_rem%8 < 4) 
+			warning("ATC::optimize_tile -> T = %d: C4.2 (SK_DEV <= %d) was not satisfied, performance might degrade\n", T, MAX_DESIRED_SK_DEV);
+		if (T_score_rem%4 < 2) 
+			warning("ATC::optimize_tile -> T = %d: C5 (T <= %d) was not satisfied, performance might degrade\n", T, TILE_MAX);
+		if (T_score_rem%2 < 1) 
+			warning("ATC::optimize_tile -> T = %d: C5 (T == %d) was not satisfied, performance might degrade\n", T, TILE_FAVORI);
+	}
 	fprintf(stderr, "====================================\n");
 	fprintf(stderr, "ATC::autotune_problem: Autotuning complete-> t_autotune = %lf ms\n", cpu_timer*1000);
-	fprintf(stderr, "autotune_controller: T=%ld,  active_unit_num=%d, Problem split = %s -> %s : pred_t = %lf ms, pred_J = %lf kJ\n",
-		T, active_unit_num, printlist<int>(active_unit_id_list, active_unit_num),
+	fprintf(stderr, "autotune_controller: T=%ld, T_score=%d active_unit_num=%d, Problem split = %s -> %s : pred_t = %lf ms, pred_J = %lf kJ\n",
+		T, T_score, active_unit_num, printlist<int>(active_unit_id_list, active_unit_num),
 		printlist<int>(Subkernels_per_unit_num, active_unit_num), pred_t*1000, pred_J/1000);
 	fprintf(stderr, "====================================\n");
 #ifdef DEBUG
 	fprintf(stderr,  "<-----|\n");
 #endif
 	return cpu_timer;
+}
+
+int ATC::get_T_score(int candidate_T){
+	short first_model_idx = idxize(active_unit_id_list[0]);
+	MD_p model = unit_modeler_list[first_model_idx];
+	int D1_dummy = model->D1, D2_dummy = (model->D2 == -1)? D1_dummy: model->D2, 
+		D3_dummy = (model->D3 == -1)? D1_dummy: model->D3, score = 0;
+	long int min_sk = MIN_DESIRED_SK_DEV*active_unit_num, max_sk = MAX_DESIRED_SK_DEV*active_unit_num;
+	// Condition 2
+	if(!(((D1_dummy%(candidate_T))? 1:0) + 
+	((D2_dummy%(candidate_T))? 1:0) + 
+	((D3_dummy%(candidate_T))? 1:0))) score+= TILE_MIN + 16;
+	// Condition 3
+	if(candidate_T >= TILE_MIN) score+= TILE_MIN;
+	else score+= candidate_T - 15;
+	// Condition 4.1
+	if(model->getSKNum(candidate_T) >= min_sk) score+= 8;
+	// Condition 4.2
+	if(model->getSKNum(candidate_T) <= max_sk) score+= 4;
+	// Condition 5
+	if(candidate_T <= TILE_MAX) score+= 2;
+	if(candidate_T == TILE_FAVORI) score+= 1;
+	return score;
 }
 
 double ATC::optimize_tile(){
@@ -504,21 +552,23 @@ fprintf(stderr,  "|-----> ATC::optimize_tile( autotune_controller{ T=%ld, active
 	short first_model_idx = idxize(active_unit_id_list[0]);
 	MD_p model = unit_modeler_list[first_model_idx];
 
-/// TODO: Maybe define the lowest suggested Tile sizes?
-
-#define MIN_DESIRED_SK_DEV 64
-	long int min_sk = MIN_DESIRED_SK_DEV*active_unit_num, max_sk = 10000;
-#ifdef PDEBUG
-	fprintf(stderr,  "min_sk = %ld\n", min_sk);
-#endif
-
-/// Conditions: 
-/// 1-HARD: NO-Wshare: Spliting creates subkernels that can be distributed equally to devices without WR-sharing
-/// 2-HARD: SK-num: subkernels per device must be >= MIN_DESIRED_SK_DEV
-/// 3-LIGHT: NO-remainder: split should not create remainder Tiles if possible
-/// TODO: For future could also take into account specific "good" tiles per device.
-
 	int D1_dummy = model->D1, D2_dummy = (model->D2 == -1)? D1_dummy: model->D2, D3_dummy = (model->D3 == -1)? D1_dummy: model->D3;
+	int max_allowed_T = std::min(D1_dummy, std::min(D2_dummy, D3_dummy));
+	int best_T = -1;
+	int best_T_score = -1; 
+	for (int candidate_T = max_allowed_T; candidate_T > 0; candidate_T--)
+	// Condition 1
+	if(!((D1_dummy/(candidate_T) + ((D1_dummy%(candidate_T))? 1:0))
+	 *(D2_dummy/(candidate_T) + ((D2_dummy%(candidate_T))? 1:0)) % active_unit_num)){ 
+	 	int c_T_score = get_T_score(candidate_T); 
+		if (c_T_score > best_T_score){
+			best_T_score = c_T_score;
+			best_T = candidate_T;
+		}
+	}
+	T = best_T;
+	T_score = best_T_score; 
+/* Old div/mod-based Tile selection algorithm. Faster but much worse
 	int candidate_T = gcd(D1_dummy, D2_dummy, D3_dummy);
 	if(candidate_T == 1) candidate_T = std::min(D1_dummy, std::min(D2_dummy, D3_dummy));
 	int ctr = 1;
@@ -598,9 +648,10 @@ fprintf(stderr,  "|-----> ATC::optimize_tile( autotune_controller{ T=%ld, active
 #endif
 		T = -1; 
 	}
+*/
 #ifdef PDEBUG
 	fprintf(stderr,  "====================================\n");
-	fprintf(stderr,  "Predict T=%ld : No t_pred provided\n", T);
+	fprintf(stderr,  "Predict T=%ld with T_score = %d: No t_pred provided\n", T, T_score);
 #endif
 	timer = csecond() - timer;
 #ifdef TEST

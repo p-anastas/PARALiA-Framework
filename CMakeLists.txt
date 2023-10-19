@@ -138,6 +138,23 @@ add_definitions(-DRATIO_TUNE_ITTER=10)
 #add_definitions(-DREORDER_DEVICES)
 
 ###########################################################################################
+#---------------------------------Tiling size selection-----------------------------------#
+###########################################################################################
+## TODO: For future work could autotune ELASTIC conditions.
+## Conditions (with decreasing priority): 
+## 1-MUST: NO-Wshare: Spliting creates subkernels that can be distributed equally to devices without WR-sharing
+## 2-ELASTIC(score: varies): NO-remainder: split should not create remainder Tiles if possible
+## 3-ELASTIC(score: varies): T-min: Tile should be >= than a preset value
+add_definitions(-DTILE_MIN=1024)
+## 4-ELASTIC(score: 8 & 4): SK-num: subkernels per device must be >= MIN_DESIRED_SK_DEV
+add_definitions(-DMIN_DESIRED_SK_DEV=64)
+add_definitions(-DMAX_DESIRED_SK_DEV=512)
+## 5-ELASTIC(score: 2): T-max: Tile should be <= than a preset value
+add_definitions(-DTILE_MAX=4096)
+## 6-ELASTIC(score: 1): T-favori: Tile should be == to a preset value
+add_definitions(-DTILE_FAVORI=2048)
+
+###########################################################################################
 #------------------------------Subkernel selection options--------------------------------#
 ###########################################################################################
 
