@@ -336,7 +336,6 @@ double ATC::autotune_problem(const char* routine_name, void* initial_problem_wra
 			}
 			if(initial_T <= 0) tile_selection_t += temp_controller->optimize_tile();
 			else temp_controller->T_score = temp_controller->get_T_score(initial_T);
-			/// Remove case that could not find a proper tile. 
 			if(temp_controller->T >= 0) split_selection_t += temp_controller->optimize_split();
 			if(initial_T <= 0) tile_selection_t += temp_controller->optimize_tile();
 			else temp_controller->T_score = temp_controller->get_T_score(initial_T);
@@ -355,12 +354,12 @@ double ATC::autotune_problem(const char* routine_name, void* initial_problem_wra
 #endif
 #else
 			if (!strcmp(PREDICT_OPTIMIZE_TARGET,"PERF")){
-				if ((temp_controller->pred_t + temp_controller->pred_t*
-					((temp_controller->active_unit_num-active_unit_num)*MINIMUM_UNIT_CONTRIBUTION) < pred_t)
-					|| ((temp_controller->pred_t + temp_controller->pred_t*
-					((temp_controller->active_unit_num-active_unit_num)*MINIMUM_UNIT_CONTRIBUTION) == pred_t) && (
-					temp_controller->pred_t_pesimistic + temp_controller->pred_t_pesimistic*
-						((temp_controller->active_unit_num-active_unit_num)*MINIMUM_UNIT_CONTRIBUTION) < pred_t_pesimistic
+				if (normal_less(temp_controller->pred_t + temp_controller->pred_t*
+					((temp_controller->active_unit_num-active_unit_num)*MINIMUM_UNIT_CONTRIBUTION), pred_t)
+					|| (normal_equal(temp_controller->pred_t + temp_controller->pred_t*
+					((temp_controller->active_unit_num-active_unit_num)*MINIMUM_UNIT_CONTRIBUTION), pred_t) && 
+					normal_less(temp_controller->pred_t_pesimistic + temp_controller->pred_t_pesimistic*
+						((temp_controller->active_unit_num-active_unit_num)*MINIMUM_UNIT_CONTRIBUTION), pred_t_pesimistic
 					)))
 						mimic_ATC(temp_controller);
 #ifdef SDEBUG
@@ -369,12 +368,12 @@ double ATC::autotune_problem(const char* routine_name, void* initial_problem_wra
 #endif
 			}
 			else if(!strcmp(PREDICT_OPTIMIZE_TARGET,"ENERGY")){
-				if ((temp_controller->pred_J - temp_controller->pred_J*
-					((temp_controller->active_unit_num-active_unit_num)*MINIMUM_UNIT_CONTRIBUTION) < pred_J)
-					|| ((temp_controller->pred_J - temp_controller->pred_J*
-					((temp_controller->active_unit_num-active_unit_num)*MINIMUM_UNIT_CONTRIBUTION) == pred_J) && (
-					temp_controller->pred_J_pesimistic - temp_controller->pred_J_pesimistic*
-						((temp_controller->active_unit_num-active_unit_num)*MINIMUM_UNIT_CONTRIBUTION) < pred_J_pesimistic
+				if (normal_less(temp_controller->pred_J - temp_controller->pred_J*
+					((temp_controller->active_unit_num-active_unit_num)*MINIMUM_UNIT_CONTRIBUTION), pred_J)
+					|| (normal_equal(temp_controller->pred_J - temp_controller->pred_J*
+					((temp_controller->active_unit_num-active_unit_num)*MINIMUM_UNIT_CONTRIBUTION), pred_J) && 
+					normal_less(temp_controller->pred_J_pesimistic - temp_controller->pred_J_pesimistic*
+						((temp_controller->active_unit_num-active_unit_num)*MINIMUM_UNIT_CONTRIBUTION), pred_J_pesimistic
 					)))
 						mimic_ATC(temp_controller);
 #ifdef SDEBUG
@@ -383,12 +382,12 @@ double ATC::autotune_problem(const char* routine_name, void* initial_problem_wra
 #endif
 			}
 			else if(!strcmp(PREDICT_OPTIMIZE_TARGET,"POWER-DELAY")){
-				if ((temp_controller->power_delay - temp_controller->power_delay*
-					((temp_controller->active_unit_num-active_unit_num)*MINIMUM_UNIT_CONTRIBUTION) > power_delay)
-					|| ((temp_controller->power_delay - temp_controller->power_delay*
-					((temp_controller->active_unit_num-active_unit_num)*MINIMUM_UNIT_CONTRIBUTION) == power_delay) && (
-					temp_controller->power_delay_pesimistic - temp_controller->power_delay_pesimistic*
-						((temp_controller->active_unit_num-active_unit_num)*MINIMUM_UNIT_CONTRIBUTION) > power_delay_pesimistic
+				if (normal_larger(temp_controller->power_delay - temp_controller->power_delay*
+					((temp_controller->active_unit_num-active_unit_num)*MINIMUM_UNIT_CONTRIBUTION), power_delay)
+					|| (normal_equal(temp_controller->power_delay - temp_controller->power_delay*
+					((temp_controller->active_unit_num-active_unit_num)*MINIMUM_UNIT_CONTRIBUTION), power_delay) && 
+					normal_larger(temp_controller->power_delay_pesimistic - temp_controller->power_delay_pesimistic*
+						((temp_controller->active_unit_num-active_unit_num)*MINIMUM_UNIT_CONTRIBUTION), power_delay_pesimistic
 					)))
 						mimic_ATC(temp_controller);
 #ifdef SDEBUG
@@ -397,12 +396,12 @@ double ATC::autotune_problem(const char* routine_name, void* initial_problem_wra
 #endif
 			}
 			else if(!strcmp(PREDICT_OPTIMIZE_TARGET,"ENERGY-DELAY")){
-				if ((temp_controller->energy_delay - temp_controller->energy_delay*
-					((temp_controller->active_unit_num-active_unit_num)*MINIMUM_UNIT_CONTRIBUTION) > energy_delay)
-					|| ((temp_controller->energy_delay - temp_controller->energy_delay*
-					((temp_controller->active_unit_num-active_unit_num)*MINIMUM_UNIT_CONTRIBUTION) == energy_delay) && (
-					temp_controller->energy_delay_pesimistic - temp_controller->energy_delay_pesimistic*
-						((temp_controller->active_unit_num-active_unit_num)*MINIMUM_UNIT_CONTRIBUTION) > energy_delay_pesimistic
+				if (normal_larger(temp_controller->energy_delay - temp_controller->energy_delay*
+					((temp_controller->active_unit_num-active_unit_num)*MINIMUM_UNIT_CONTRIBUTION), energy_delay)
+					|| (normal_equal(temp_controller->energy_delay - temp_controller->energy_delay*
+					((temp_controller->active_unit_num-active_unit_num)*MINIMUM_UNIT_CONTRIBUTION), energy_delay) && 
+					normal_larger(temp_controller->energy_delay_pesimistic - temp_controller->energy_delay_pesimistic*
+						((temp_controller->active_unit_num-active_unit_num)*MINIMUM_UNIT_CONTRIBUTION), energy_delay_pesimistic
 					)))
 						mimic_ATC(temp_controller);
 #ifdef SDEBUG
@@ -411,6 +410,7 @@ double ATC::autotune_problem(const char* routine_name, void* initial_problem_wra
 #endif
 			} // Example for choosing U1(tpred = X, En = J1) vs U2(tpred = Y, En = J2) units with PERPER_LIMIT: if ( X/Y >= PERPER_LIMIT*J2/J1) U2 else U1
 			else if(!strcmp(PREDICT_OPTIMIZE_TARGET,"PERF-PER-J")){
+				warning("Not updated with PARALiA 2.0\n");
 				double PER_score = -42;
 				if (pred_t == DBL_MAX) mimic_ATC(temp_controller);
 				else if (temp_controller->pred_J == pred_J){
@@ -717,7 +717,6 @@ double ATC::optimize_split(){
 			}
 			double* scores = model->predict_v2(used_model, T, active_unit_num, active_unit_id_list, active_unit_score);
 			double extra_reuse_dim_t = predict_reuse_map();
-			//double 
 			double tmp_score = fmax(scores[0], fmax(scores[1], fmax(scores[2], extra_reuse_dim_t))), 
 				tmp_score_pesimistic = scores[0] + scores[1] + scores[2] + extra_reuse_dim_t;
 	#ifndef ENABLE_POWA
@@ -771,7 +770,7 @@ double ATC::optimize_split(){
 	#else
 		pred_t = temp_overlap_t;
 		pred_J = total_J;
-		long int total_flops = model->getFlops();
+		double total_flops = (double) model->getFlops();
 		power_delay = (total_flops/temp_overlap_t)/(total_J/temp_overlap_t);
 		energy_delay = (total_flops/temp_overlap_t)*(total_flops/temp_overlap_t)/(total_J/temp_overlap_t);
 
@@ -780,7 +779,13 @@ double ATC::optimize_split(){
 		power_delay_pesimistic = (total_flops/temp_overlap_t_pesimistic)/(total_J_pesimistic/temp_overlap_t_pesimistic);
 		energy_delay_pesimistic = (total_flops/temp_overlap_t_pesimistic)*(total_flops/temp_overlap_t_pesimistic)
 								/(total_J_pesimistic/temp_overlap_t_pesimistic);
-
+	#ifdef PDEBUG
+			fprintf(stderr,  "Aggregated predicted values: pred_t = %lf, pred_t_pesimistic = %lf\n"
+			"pred_J = %lf, pred_J_pesimistic = %lf\npower_delay = %lf, power_delay_pesimistic = %lf\n"
+			"energy_delay = %lf, energy_delay_pesimistic = %lf\n",
+				pred_t, pred_t_pesimistic, pred_J, pred_J_pesimistic, power_delay, 
+				power_delay_pesimistic, energy_delay, energy_delay_pesimistic);
+	#endif
 	#endif
 		for(int idx = 0; idx < active_unit_num; idx++){
 			if (split_homogeneously) active_unit_score[idx] = 1.0/active_unit_num;
