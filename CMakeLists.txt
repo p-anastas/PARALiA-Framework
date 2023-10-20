@@ -151,8 +151,6 @@ add_definitions(-DMIN_DESIRED_SK_DEV=64)
 add_definitions(-DMAX_DESIRED_SK_DEV=512)
 ## 5-ELASTIC(score: 2): T-max: Tile should be <= than a preset value
 add_definitions(-DTILE_MAX=4096)
-## 6-ELASTIC(score: 1): T-favori: Tile should be == to a preset value
-add_definitions(-DTILE_FAVORI=2048)
 
 ###########################################################################################
 #------------------------------Subkernel selection options--------------------------------#

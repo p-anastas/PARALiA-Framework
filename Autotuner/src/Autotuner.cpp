@@ -568,87 +568,6 @@ fprintf(stderr,  "|-----> ATC::optimize_tile( autotune_controller{ T=%ld, active
 	}
 	T = best_T;
 	T_score = best_T_score; 
-/* Old div/mod-based Tile selection algorithm. Faster but much worse
-	int candidate_T = gcd(D1_dummy, D2_dummy, D3_dummy);
-	if(candidate_T == 1) candidate_T = std::min(D1_dummy, std::min(D2_dummy, D3_dummy));
-	int ctr = 1;
-	while(ctr < candidate_T && ((D1_dummy/(candidate_T/ctr) + ((D1_dummy%(candidate_T/ctr))? 1:0))
-	 *(D2_dummy/(candidate_T/ctr) + ((D2_dummy%(candidate_T/ctr))? 1:0)) % active_unit_num
-	|| (((D1_dummy%(candidate_T/ctr))? 1:0) + 
-		((D2_dummy%(candidate_T/ctr))? 1:0) + 
-		((D3_dummy%(candidate_T/ctr))? 1:0))
-	|| (candidate_T%ctr)))
-		ctr++;
-	candidate_T/=ctr; 
-#ifdef PDEBUG
-	fprintf(stderr,  "Updated candidate_T = %d with ctr = %d for NO-Wshare + NO-remainder conditions\n", 
-		candidate_T, ctr);
-#endif
-	ctr = 1; 
-	while(ctr < candidate_T && (model->getSKNum(candidate_T/ctr) < min_sk ||
-	((D1_dummy/(candidate_T/ctr) + ((D1_dummy%(candidate_T/ctr))? 1:0))
-	*(D2_dummy/(candidate_T/ctr) + ((D2_dummy%(candidate_T/ctr))? 1:0))) % active_unit_num
-	|| (((D1_dummy%(candidate_T/ctr))? 1:0) + 
-		((D2_dummy%(candidate_T/ctr))? 1:0) + 
-		((D3_dummy%(candidate_T/ctr))? 1:0))
-	|| (candidate_T%ctr)))
-		ctr++;
-	candidate_T/=ctr; 
-#ifdef PDEBUG
-	fprintf(stderr,  "Updated candidate_T = %d with ctr = %d for NO-Wshare + NO-remainder + SK-num conditions\n", 
-		candidate_T, ctr);
-#endif
-	if (model->getSKNum(candidate_T) > max_sk){
-#ifdef PDEBUG
-		warning("Finding a no-remainder split failed - performance might degrade\n");
-#endif
-		candidate_T = gcd(D1_dummy, D2_dummy, D3_dummy);
-		if(candidate_T == 1) candidate_T = std::min(D1_dummy, std::min(D2_dummy, D3_dummy));
-		ctr = 1;
-		while(ctr < candidate_T  && (((D1_dummy/(candidate_T/ctr) + ((D1_dummy%(candidate_T/ctr))? 1:0))
-		*(D2_dummy/(candidate_T/ctr) + ((D2_dummy%(candidate_T/ctr))? 1:0)))%active_unit_num
-		|| (candidate_T%ctr)))
-			ctr++;
-		//if(!candidate_T%ctr){
-			candidate_T/=ctr; 
-#ifdef PDEBUG
-			fprintf(stderr,  "Updated candidate_T = %d with ctr = %d for NO-Wshare condition\n", candidate_T, ctr);
-#endif
-			ctr = 1;
-			while(ctr < candidate_T && (model->getSKNum(candidate_T/ctr) < min_sk ||
-			((D1_dummy/(candidate_T/ctr) + ((D1_dummy%(candidate_T/ctr))? 1:0))
-			*(D2_dummy/(candidate_T/ctr) + ((D2_dummy%(candidate_T/ctr))? 1:0)))%active_unit_num
-			|| (candidate_T%ctr)))
-				ctr++;
-			if(candidate_T/ctr > 1){
-				candidate_T/=ctr; 
-#ifdef PDEBUG
-				fprintf(stderr,  "Updated candidate_T = %d with ctr = %d for NO-Wshare + SK-num conditions\n", candidate_T, ctr);
-#endif
-			}
-			else{
-				ctr = 1; 
-				while(ctr < candidate_T && 
-				(((D1_dummy/(candidate_T/ctr) + ((D1_dummy%(candidate_T/ctr))? 1:0))
-				*(D2_dummy/(candidate_T/ctr) + ((D2_dummy%(candidate_T/ctr))? 1:0)))%active_unit_num
-				|| (candidate_T%ctr)))
-					ctr++;
-				candidate_T/=ctr;
-#ifdef PDEBUG
-				fprintf(stderr,  "Updated candidate_T = %d with ctr = %d for NO-Wshare condition\n", candidate_T, ctr);
-#endif 			
-			}
-		//}
-		//else candidate_T = -1;
-	}
-	T = candidate_T;
-	if (candidate_T <= 1 || model->getSKNum(candidate_T) > max_sk){
-#ifdef PDEBUG
-		warning("Default method for obtaining T failed for active_unit_num = %d\n", active_unit_num);
-#endif
-		T = -1; 
-	}
-*/
 #ifdef PDEBUG
 	fprintf(stderr,  "====================================\n");
 	fprintf(stderr,  "Predict T=%ld with T_score = %d: No t_pred provided\n", T, T_score);
@@ -770,14 +689,14 @@ double ATC::optimize_split(){
 	#else
 		pred_t = temp_overlap_t;
 		pred_J = total_J;
-		double total_flops = (double) model->getFlops();
-		power_delay = (total_flops/temp_overlap_t)/(total_J/temp_overlap_t);
-		energy_delay = (total_flops/temp_overlap_t)*(total_flops/temp_overlap_t)/(total_J/temp_overlap_t);
+		double total_gflops = ((double) model->getFlops())/1e9;
+		power_delay = (total_gflops/temp_overlap_t)/(total_J/temp_overlap_t);
+		energy_delay = (total_gflops/temp_overlap_t)*(total_gflops/temp_overlap_t)/(total_J/temp_overlap_t);
 
 		pred_t_pesimistic = temp_overlap_t_pesimistic;
 		pred_J_pesimistic = total_J_pesimistic;
-		power_delay_pesimistic = (total_flops/temp_overlap_t_pesimistic)/(total_J_pesimistic/temp_overlap_t_pesimistic);
-		energy_delay_pesimistic = (total_flops/temp_overlap_t_pesimistic)*(total_flops/temp_overlap_t_pesimistic)
+		power_delay_pesimistic = (total_gflops/temp_overlap_t_pesimistic)/(total_J_pesimistic/temp_overlap_t_pesimistic);
+		energy_delay_pesimistic = (total_gflops/temp_overlap_t_pesimistic)*(total_gflops/temp_overlap_t_pesimistic)
 								/(total_J_pesimistic/temp_overlap_t_pesimistic);
 	#ifdef PDEBUG
 			fprintf(stderr,  "Aggregated predicted values: pred_t = %lf, pred_t_pesimistic = %lf\n"

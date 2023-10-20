@@ -279,6 +279,14 @@ double LinkMap::linkmap_shared_bw_unroll(int dest, int src)
 	return bw_actual;
 }
 
+int LinkMap::link_causes_slowdowns(MD_p suspicious_link_modeler, int sus_dest, int sus_src){
+  for (int unit_idx = 0 ; unit_idx < LOC_NUM; unit_idx++)
+  for (int unit_idy = 0 ; unit_idy < LOC_NUM; unit_idy++) if(link_active[unit_idx][unit_idy]){
+    if(suspicious_link_modeler->link[idxize(sus_src)]->sl[unit_idx][unit_idy] > 1.0 + NORMALIZE_NEAR_SPLIT_LIMIT) return 1;
+  }
+  return 0;
+}
+
 #ifdef ENABLE_TRANSFER_HOPS
 void LinkMap::update_link_hop_shared_weights(MD_p* unit_modeler_list, int* active_unit_id_list, int active_unit_num){
   if (MAX_ALLOWED_HOPS > 1) error("LinkMap::update_link_hop_shared_weights:"
@@ -291,7 +299,9 @@ void LinkMap::update_link_hop_shared_weights(MD_p* unit_modeler_list, int* activ
       int dest_loc = deidxize(unit_idx), src_loc = deidxize(unit_idy); 
       double hop_bw_best = linkmap_shared_bw_unroll(dest_loc, src_loc);
       for(int uidx = 0; uidx < LOC_NUM; uidx++)
-        if (link_active[uidx][idxize(src_loc)] && link_active[idxize(dest_loc)][uidx]){
+        if (link_active[uidx][idxize(src_loc)] && link_active[idxize(dest_loc)][uidx]
+          && !link_causes_slowdowns(unit_modeler_list[uidx], deidxize(uidx), src_loc) 
+          && !link_causes_slowdowns(unit_modeler_list[idxize(dest_loc)], dest_loc, deidxize(uidx))){
           double hop_est_bw = (1 - HOP_PENALTY) * std::min(linkmap_shared_bw_unroll(deidxize(uidx),src_loc), 
             linkmap_shared_bw_unroll(dest_loc, deidxize(uidx)));
           if (hop_est_bw  > hop_bw_best){
