@@ -24,8 +24,10 @@ ATC::ATC(){
 		Subkernels_per_unit_list[d] = NULL;
 		Subkernels_per_unit_num[d] = 0;
 	}
-	T = active_unit_num = subkernel_num = T_score = -1;
+	T = active_unit_num = subkernel_num = -1;
 	pred_t = pred_J = power_delay = energy_delay = -1.0;
+	T_aggregate_sl = T_remainder_sl = T_small_sl = T_sknum_sl = T_big_sl = 0.0;
+
 	cache_limit = 0;
 
 	unit_modeler_list = (MD_p*) malloc(LOC_NUM*sizeof(MD_p));
@@ -119,7 +121,11 @@ void ATC::mimic_ATC(ATC_p other_ATC){
 		fprintf(stderr,  "|-----> ATC::mimic_ATC(other_ATC = %p)\n", other_ATC);
 	#endif
 	T = other_ATC->T;
-	T_score = other_ATC->T_score;
+	T_aggregate_sl = other_ATC->T_aggregate_sl;
+	T_remainder_sl = other_ATC->T_remainder_sl;
+	T_small_sl = other_ATC->T_small_sl;
+	T_sknum_sl = other_ATC->T_sknum_sl;
+	T_big_sl = other_ATC->T_big_sl;
 	active_unit_num = other_ATC->active_unit_num;
 	for (int d = 0; d < other_ATC->active_unit_num; d++) active_unit_id_list[d] = other_ATC->active_unit_id_list[d];
 	for (int d = 0; d < other_ATC->active_unit_num; d++) active_unit_score[d] = other_ATC->active_unit_score[d];
@@ -335,11 +341,20 @@ double ATC::autotune_problem(const char* routine_name, void* initial_problem_wra
 				final_link_active[i][j] = temp_controller->linkmap->link_active[i][j];
 			}
 			if(initial_T <= 0) tile_selection_t += temp_controller->optimize_tile();
-			else temp_controller->T_score = temp_controller->get_T_score(initial_T);
+			else{
+				double* c_T_sl = (double*) calloc(5,sizeof(double));
+				temp_controller->get_T_slowdowns(c_T_sl, initial_T);
+				temp_controller->set_T_slowdowns(c_T_sl);
+				free(c_T_sl);
+			}
 			if(temp_controller->T >= 0) split_selection_t += temp_controller->optimize_split();
 			if(initial_T <= 0) tile_selection_t += temp_controller->optimize_tile();
-			else temp_controller->T_score = temp_controller->get_T_score(initial_T);
-			/// Remove case that could not find a proper tile. 
+			else{
+				double* c_T_sl = (double*) calloc(5,sizeof(double));
+				temp_controller->get_T_slowdowns(c_T_sl, initial_T);
+				temp_controller->set_T_slowdowns(c_T_sl);
+				free(c_T_sl);
+			}			/// Remove case that could not find a proper tile. 
 			if(temp_controller->T < 0){
 				temp_controller->pred_t = pred_t*100;
 				temp_controller->pred_J = pred_J*100;
@@ -464,8 +479,12 @@ double ATC::autotune_problem(const char* routine_name, void* initial_problem_wra
 			final_link_active[i][j] = linkmap->link_active[i][j];
 		}
 		if(initial_T <= 0) tile_selection_t += optimize_tile();
-		else T_score = get_T_score(initial_T);
-		// TODO: Must decide if workload ratio should be tuned when there is a predefined number of devices... Currently == off for paper
+		else{
+			double* c_T_sl = (double*) calloc(5,sizeof(double));
+			get_T_slowdowns(c_T_sl, initial_T);
+			set_T_slowdowns(c_T_sl);
+			free(c_T_sl);
+		}		// TODO: Must decide if workload ratio should be tuned when there is a predefined number of devices... Currently == off for paper
 		split_homogeneously = 1;
 		split_selection_t += optimize_split();
 	}
@@ -487,24 +506,28 @@ double ATC::autotune_problem(const char* routine_name, void* initial_problem_wra
 
 	cpu_timer = csecond() - cpu_timer;
 	if(T!=-1){
-		if (T_score < TILE_MIN + 16) 
-			warning("ATC::optimize_tile -> T = %d: C2 (NO-remainder) was not satisfied, performance might degrade\n", T);
-		if (T_score%(TILE_MIN + 16) < TILE_MIN) 
-			warning("ATC::optimize_tile -> T = %d: C3 (T >= %d) was not satisfied, performance might degrade\n", T, TILE_MIN);
-		int T_score_rem = (T >= TILE_MIN) ? T_score%(TILE_MIN + 16) - TILE_MIN : T_score%(TILE_MIN + 16) - (T - 15);
-		if (T_score_rem < 8) 
-			warning("ATC::optimize_tile -> T = %d: C4.1 (SK_DEV >= %d) was not satisfied, performance might degrade\n", T, MIN_DESIRED_SK_DEV);
-		if (T_score_rem%8 < 4) 
-			warning("ATC::optimize_tile -> T = %d: C4.2 (SK_DEV <= %d) was not satisfied, performance might degrade\n", T, MAX_DESIRED_SK_DEV);
-		if (T_score_rem%4 < 2) 
-			warning("ATC::optimize_tile -> T = %d: C5 (T <= %d) was not satisfied, performance might degrade\n", T, TILE_MAX);
-		if (T_score_rem%2 < 1) 
-			warning("ATC::optimize_tile -> T = %d: C5 (T == %d) was not satisfied, performance might degrade\n", T, TILE_FAVORI);
+		if (T_remainder_sl > 0) 
+			warning("ATC::optimize_tile -> T = %d: C2 (NO-remainder) was not satisfied, estimated sl = %lf\n", 
+				T, T_remainder_sl);
+		if (T_small_sl > 0) 
+			warning("ATC::optimize_tile -> T = %d: C3 (T >= %d) was not satisfied, estimated sl = %lf\n", 
+				T, TILE_MIN, T_small_sl);
+		double sl_too_many_sk = 0;
+		if (subkernel_num/active_unit_num > MAX_DESIRED_SK_DEV){
+			sl_too_many_sk = (1.0*subkernel_num/active_unit_num/MAX_DESIRED_SK_DEV)*MAX_DESIRED_SK_DEV_SLOWDOWN;
+			warning("ATC::optimize_tile -> T = %d: C4 (SK_DEV <= %d) was not satisfied, estimated sl = %lf\n", 
+				T, MIN_DESIRED_SK_DEV, sl_too_many_sk);
+		}
+		fprintf(stderr, "ATC::optimize_tile -> T = %d: estimated sl from overlap = %lf\n", 
+			T, T_sknum_sl - sl_too_many_sk);
+		if (T_big_sl > 0 ) 
+			warning("ATC::optimize_tile -> T = %d: C5 (T <= %d) was not satisfied, estimated sl = %lf\n", 
+				T, TILE_MAX, T_big_sl);
 	}
 	fprintf(stderr, "====================================\n");
 	fprintf(stderr, "ATC::autotune_problem: Autotuning complete-> t_autotune = %lf ms\n", cpu_timer*1000);
-	fprintf(stderr, "autotune_controller: T=%ld, T_score=%d active_unit_num=%d, Problem split = %s -> %s : pred_t = %lf ms, pred_J = %lf kJ\n",
-		T, T_score, active_unit_num, printlist<int>(active_unit_id_list, active_unit_num),
+	fprintf(stderr, "autotune_controller: T=%ld, T_aggregate_sl=%lf active_unit_num=%d, Problem split = %s -> %s : pred_t = %lf ms, pred_J = %lf kJ\n",
+		T, T_aggregate_sl, active_unit_num, printlist<int>(active_unit_id_list, active_unit_num),
 		printlist<int>(Subkernels_per_unit_num, active_unit_num), pred_t*1000, pred_J/1000);
 	fprintf(stderr, "====================================\n");
 #ifdef DEBUG
@@ -513,27 +536,41 @@ double ATC::autotune_problem(const char* routine_name, void* initial_problem_wra
 	return cpu_timer;
 }
 
-int ATC::get_T_score(int candidate_T){
+void ATC::set_T_slowdowns(double* slowdowns){
+	T_aggregate_sl = slowdowns[0];
+	T_remainder_sl = slowdowns[1];
+	T_small_sl = slowdowns[2];
+	T_sknum_sl = slowdowns[3];
+	T_big_sl = slowdowns[4];
+}
+
+void ATC::get_T_slowdowns(double* slowdown, int candidate_T){
 	short first_model_idx = idxize(active_unit_id_list[0]);
 	MD_p model = unit_modeler_list[first_model_idx];
 	int D1_dummy = model->D1, D2_dummy = (model->D2 == -1)? D1_dummy: model->D2, 
-		D3_dummy = (model->D3 == -1)? D1_dummy: model->D3, score = 0;
-	long int min_sk = MIN_DESIRED_SK_DEV*active_unit_num, max_sk = MAX_DESIRED_SK_DEV*active_unit_num;
+		D3_dummy = (model->D3 == -1)? D1_dummy: model->D3;
 	// Condition 2
-	if(!(((D1_dummy%(candidate_T))? 1:0) + 
-	((D2_dummy%(candidate_T))? 1:0) + 
-	((D3_dummy%(candidate_T))? 1:0))) score+= TILE_MIN + 16;
+	for(int idx = 0; idx < 5; idx++) slowdown[idx] = 0.0;
+	if(D1_dummy%candidate_T) slowdown[1] += 1.0/(D1_dummy/candidate_T);
+	if(D2_dummy%candidate_T) slowdown[1] += 1.0/(D2_dummy/candidate_T);
+	if(D3_dummy%candidate_T) slowdown[1] += 1.0/(D3_dummy/candidate_T);
 	// Condition 3
-	if(candidate_T >= TILE_MIN) score+= TILE_MIN;
-	else score+= candidate_T - 15;
+	if(candidate_T < TILE_MIN) slowdown[2]+= 1.0*TILE_MIN/candidate_T*TILE_MIN_SLOWDOWN;
 	// Condition 4.1
-	if(model->getSKNum(candidate_T) >= min_sk) score+= 8;
+	long int dev_sks = (1.0*model->getSKNum(candidate_T))/active_unit_num; 
+	slowdown[3]+= 1.0/(dev_sks); // This slowdown like this removes the need for MIN_DESIRED_SK_DEV
+	//if(dev_sks < MIN_DESIRED_SK_DEV) slowdown+= 1/dev_sks;
 	// Condition 4.2
-	if(model->getSKNum(candidate_T) <= max_sk) score+= 4;
+	if(dev_sks > MAX_DESIRED_SK_DEV) slowdown[3]+= (1.0*dev_sks/MAX_DESIRED_SK_DEV)*MAX_DESIRED_SK_DEV_SLOWDOWN;
 	// Condition 5
-	if(candidate_T <= TILE_MAX) score+= 2;
-	if(candidate_T == TILE_FAVORI) score+= 1;
-	return score;
+	if(candidate_T > TILE_MAX) slowdown[4]+=candidate_T/TILE_MAX*TILE_MΑΧ_SLOWDOWN;
+	slowdown[0] = slowdown[1] + slowdown[2] + slowdown[3] + slowdown[4];
+#ifdef PDEBUG
+	fprintf(stderr,  "====================================\n");
+	fprintf(stderr,  "ATC::get_T_slowdowns(D1=%d, D2 = %d, D3 = %d) T=%d with T_aggregate_sl = %lf, T_remainder_sl= %lf, T_small_sl= %lf, "
+	"T_sknum_sl= %lf, T_big_sl = %lf\n", D1_dummy, D2_dummy, D3_dummy, candidate_T, slowdown[0], slowdown[1], slowdown[2], slowdown[3], slowdown[4]);
+#endif
+	return;
 }
 
 double ATC::optimize_tile(){
@@ -555,22 +592,27 @@ fprintf(stderr,  "|-----> ATC::optimize_tile( autotune_controller{ T=%ld, active
 	int D1_dummy = model->D1, D2_dummy = (model->D2 == -1)? D1_dummy: model->D2, D3_dummy = (model->D3 == -1)? D1_dummy: model->D3;
 	int max_allowed_T = std::min(D1_dummy, std::min(D2_dummy, D3_dummy));
 	int best_T = -1;
-	int best_T_score = -1; 
+	double* best_T_sl = (double*) calloc(5,sizeof(double));
+	for(int idx = 0; idx < 5; idx++) best_T_sl[idx] = DBL_MAX;
+	double* c_T_sl = (double*) calloc(5,sizeof(double));
 	for (int candidate_T = max_allowed_T; candidate_T > 0; candidate_T--)
 	// Condition 1
 	if(!((D1_dummy/(candidate_T) + ((D1_dummy%(candidate_T))? 1:0))
 	 *(D2_dummy/(candidate_T) + ((D2_dummy%(candidate_T))? 1:0)) % active_unit_num)){ 
-	 	int c_T_score = get_T_score(candidate_T); 
-		if (c_T_score > best_T_score){
-			best_T_score = c_T_score;
+		get_T_slowdowns(c_T_sl, candidate_T); 
+		if (c_T_sl[0] < best_T_sl[0]){
+			for(int idx = 0; idx < 5; idx++) best_T_sl[idx] = c_T_sl[idx];
 			best_T = candidate_T;
 		}
 	}
 	T = best_T;
-	T_score = best_T_score; 
+	set_T_slowdowns(best_T_sl);
+	free(best_T_sl);
+	free(c_T_sl);
 #ifdef PDEBUG
 	fprintf(stderr,  "====================================\n");
-	fprintf(stderr,  "Predict T=%ld with T_score = %d: No t_pred provided\n", T, T_score);
+	fprintf(stderr,  "Predict T=%ld with T_aggregate_sl = %lf, T_remainder_sl= %lf, T_small_sl= %lf, "
+	"T_sknum_sl= %lf, T_big_sl = %lf\n", T, T_aggregate_sl, T_remainder_sl, T_small_sl, T_sknum_sl, T_big_sl);
 #endif
 	timer = csecond() - timer;
 #ifdef TEST
@@ -638,6 +680,10 @@ double ATC::optimize_split(){
 			double extra_reuse_dim_t = predict_reuse_map();
 			double tmp_score = fmax(scores[0], fmax(scores[1], fmax(scores[2], extra_reuse_dim_t))), 
 				tmp_score_pesimistic = scores[0] + scores[1] + scores[2] + extra_reuse_dim_t;
+#ifdef APPLY_TILE_SL_TO_WORKLOAD_SPLIT
+			tmp_score*= (1 + T_aggregate_sl);
+			tmp_score_pesimistic*= (1 + T_aggregate_sl);			
+#endif
 	#ifndef ENABLE_POWA
 			double temp_t = tmp_score;
 			active_unit_score_new[idx] = temp_t;
@@ -710,7 +756,7 @@ double ATC::optimize_split(){
 			if (split_homogeneously) active_unit_score[idx] = 1.0/active_unit_num;
 			else active_unit_score[idx] = 1/((active_unit_score[idx]) ? active_unit_score_new[idx]/active_unit_score[idx] : 0)/temp_score;
 	#ifdef PDEBUG
-			fprintf(stderr,  "Recalibrating Relative score for unit_id = %d (idx = %d ): active_unit_score = %e\n",
+			fprintf(stderr,  "Recalibrating Relative slowdown for unit_id = %d (idx = %d ): active_unit_score = %e\n",
 					active_unit_id_list[idx], idx, active_unit_score[idx]);
 	#endif
 		}
@@ -718,10 +764,11 @@ double ATC::optimize_split(){
 		normalize_split();
 		for(int idx = 0; idx < active_unit_num; idx++){;
 	#ifdef PDEBUG
-			fprintf(stderr,  "Normalized Relative score for unit_id = %d (idx = %d ): active_unit_score = %e\n",
+			fprintf(stderr,  "Normalized Relative slowdown for unit_id = %d (idx = %d ): active_unit_score = %e\n",
 					active_unit_id_list[idx], idx, active_unit_score[idx]);
 	#endif
 		}
+	if (split_homogeneously) break;
 	}
 #ifdef PDEBUG
 	fprintf(stderr,  "====================================\n");

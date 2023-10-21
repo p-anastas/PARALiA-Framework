@@ -466,9 +466,9 @@ ATC_p PARALiADgemm(char TransA,  char TransB, long int M, long int N, long int K
 		}
 		if(buffer_freed) ManageCachesDgemm(local_PMD);
 		T = local_PMD->autotuner->T;
-		local_PMD->decom[0]->Reset((void*) A, ldA, local_PMD->SAB);
-		local_PMD->decom[1]->Reset((void*) B, ldB, local_PMD->SAB);
-		local_PMD->decom[2]->Reset((void*) C, ldC, local_PMD->SAB);
+		local_PMD->decom[0]->Reset((void*) A, T, T, ldA, local_PMD->SAB);
+		local_PMD->decom[1]->Reset((void*) B, T, T, ldB, local_PMD->SAB);
+		local_PMD->decom[2]->Reset((void*) C, T, T, ldC, local_PMD->SAB);
 #ifdef TEST
 		cpu_timer = csecond() - cpu_timer;
 		fprintf(stderr, "Re-assigning cache blocks to tiles -> t_tile = %lf ms\n", cpu_timer*1000);

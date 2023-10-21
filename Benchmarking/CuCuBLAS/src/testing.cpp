@@ -106,6 +106,10 @@ char* CoCoImplementationPrint(){
 	sprintf(string_helper, "_DEV-REORDER");
 	strcat(string_out, string_helper);
 #endif
+#ifdef APPLY_TILE_SL_TO_WORKLOAD_SPLIT
+	sprintf(string_helper, "_ACCOUNT-TILE-SL");
+	strcat(string_out, string_helper);
+#endif
 #ifdef SERIAL_SUBKERNEL_SELECTION
 	sprintf(string_helper, "_SK-SELECT-SERIAL");
 	strcat(string_out, string_helper);
