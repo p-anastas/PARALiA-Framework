@@ -122,6 +122,7 @@ void ATC::mimic_ATC(ATC_p other_ATC){
 	#endif
 	T = other_ATC->T;
 	T_aggregate_sl = other_ATC->T_aggregate_sl;
+	T_imbalance_sl = other_ATC->T_imbalance_sl;
 	T_remainder_sl = other_ATC->T_remainder_sl;
 	T_small_sl = other_ATC->T_small_sl;
 	T_sknum_sl = other_ATC->T_sknum_sl;
@@ -346,7 +347,7 @@ double ATC::autotune_problem(const char* routine_name, void* initial_problem_wra
 			}
 			if(initial_T <= 0) tile_selection_t += temp_controller->optimize_tile();
 			else{
-				double* c_T_sl = (double*) calloc(5,sizeof(double));
+				double* c_T_sl = (double*) calloc(6,sizeof(double));
 				temp_controller->get_T_slowdowns(c_T_sl, initial_T);
 				temp_controller->set_T_slowdowns(c_T_sl);
 				free(c_T_sl);
@@ -354,7 +355,7 @@ double ATC::autotune_problem(const char* routine_name, void* initial_problem_wra
 			if(temp_controller->T >= 0) split_selection_t += temp_controller->optimize_split();
 			if(initial_T <= 0) tile_selection_t += temp_controller->optimize_tile();
 			else{
-				double* c_T_sl = (double*) calloc(5,sizeof(double));
+				double* c_T_sl = (double*) calloc(6,sizeof(double));
 				temp_controller->get_T_slowdowns(c_T_sl, initial_T);
 				temp_controller->set_T_slowdowns(c_T_sl);
 				free(c_T_sl);
@@ -484,7 +485,7 @@ double ATC::autotune_problem(const char* routine_name, void* initial_problem_wra
 		}
 		if(initial_T <= 0) tile_selection_t += optimize_tile();
 		else{
-			double* c_T_sl = (double*) calloc(5,sizeof(double));
+			double* c_T_sl = (double*) calloc(6,sizeof(double));
 			get_T_slowdowns(c_T_sl, initial_T);
 			set_T_slowdowns(c_T_sl);
 			free(c_T_sl);
@@ -510,6 +511,9 @@ double ATC::autotune_problem(const char* routine_name, void* initial_problem_wra
 
 	cpu_timer = csecond() - cpu_timer;
 	if(T!=-1){
+		if (T_imbalance_sl > 0) 
+			warning("ATC::optimize_tile -> T = %d: C1 (NO-imbalance) was not satisfied, estimated sl = %lf\n", 
+				T, T_imbalance_sl);
 		if (T_remainder_sl > 0) 
 			warning("ATC::optimize_tile -> T = %d: C2 (NO-remainder) was not satisfied, estimated sl = %lf\n", 
 				T, T_remainder_sl);
@@ -545,10 +549,11 @@ double ATC::autotune_problem(const char* routine_name, void* initial_problem_wra
 
 void ATC::set_T_slowdowns(double* slowdowns){
 	T_aggregate_sl = slowdowns[0];
-	T_remainder_sl = slowdowns[1];
-	T_small_sl = slowdowns[2];
-	T_sknum_sl = slowdowns[3];
-	T_big_sl = slowdowns[4];
+	T_imbalance_sl = slowdowns[1];
+	T_remainder_sl = slowdowns[2];
+	T_small_sl = slowdowns[3];
+	T_sknum_sl = slowdowns[4];
+	T_big_sl = slowdowns[5];
 }
 
 void ATC::get_T_slowdowns(double* slowdown, int candidate_T){
@@ -556,26 +561,31 @@ void ATC::get_T_slowdowns(double* slowdown, int candidate_T){
 	MD_p model = unit_modeler_list[first_model_idx];
 	int D1_dummy = model->D1, D2_dummy = (model->D2 == -1)? D1_dummy: model->D2, 
 		D3_dummy = (model->D3 == -1)? D1_dummy: model->D3;
+	for(int idx = 0; idx < 6; idx++) slowdown[idx] = 0.0;
+	// Condition 1
+	int bucket_num = model->getSKNum(candidate_T)/(D3_dummy/(candidate_T) + ((D3_dummy%(candidate_T))? 1:0));
+	slowdown[1] = (bucket_num / active_unit_num ) ? 
+		1.0*(bucket_num % active_unit_num)/(bucket_num / active_unit_num) * active_unit_num 
+		: 1.0* bucket_num / active_unit_num;
 	// Condition 2
-	for(int idx = 0; idx < 5; idx++) slowdown[idx] = 0.0;
-	if(D1_dummy%candidate_T) slowdown[1] += 1.0/(D1_dummy/candidate_T);
-	if(D2_dummy%candidate_T) slowdown[1] += 1.0/(D2_dummy/candidate_T);
-	if(D3_dummy%candidate_T) slowdown[1] += 1.0/(D3_dummy/candidate_T);
+	if(D1_dummy%candidate_T) slowdown[2] += 1.0/(D1_dummy/candidate_T);
+	if(D2_dummy%candidate_T) slowdown[2] += 1.0/(D2_dummy/candidate_T);
+	if(D3_dummy%candidate_T) slowdown[2] += 1.0/(D3_dummy/candidate_T);
 	// Condition 3
-	if(candidate_T < TILE_MIN) slowdown[2]+= 1.0*TILE_MIN/candidate_T*TILE_MIN_SLOWDOWN;
+	if(candidate_T < TILE_MIN) slowdown[3]+= 1.0*TILE_MIN/candidate_T*TILE_MIN_SLOWDOWN;
 	// Condition 4.1
 	long int dev_sks = (1.0*model->getSKNum(candidate_T))/active_unit_num; 
 	slowdown[3]+= 1.0/(dev_sks); // This slowdown like this removes the need for MIN_DESIRED_SK_DEV
 	//if(dev_sks < MIN_DESIRED_SK_DEV) slowdown+= 1/dev_sks;
 	// Condition 4.2
-	if(dev_sks > MAX_DESIRED_SK_DEV) slowdown[3]+= (1.0*dev_sks/MAX_DESIRED_SK_DEV)*MAX_DESIRED_SK_DEV_SLOWDOWN;
+	if(dev_sks > MAX_DESIRED_SK_DEV) slowdown[4]+= (1.0*dev_sks/MAX_DESIRED_SK_DEV)*MAX_DESIRED_SK_DEV_SLOWDOWN;
 	// Condition 5
-	if(candidate_T > TILE_MAX) slowdown[4]+=candidate_T/TILE_MAX*TILE_MΑΧ_SLOWDOWN;
-	slowdown[0] = slowdown[1] + slowdown[2] + slowdown[3] + slowdown[4];
-#ifdef PDEBUG
+	if(candidate_T > TILE_MAX) slowdown[5]+=candidate_T/TILE_MAX*TILE_MΑΧ_SLOWDOWN;
+	slowdown[0] = slowdown[1] + slowdown[2] + slowdown[3] + slowdown[4]  + slowdown[5];
+#ifdef DPDEBUG
 	fprintf(stderr,  "====================================\n");
-	fprintf(stderr,  "ATC::get_T_slowdowns(D1=%d, D2 = %d, D3 = %d) T=%d with T_aggregate_sl = %lf, T_remainder_sl= %lf, T_small_sl= %lf, "
-	"T_sknum_sl= %lf, T_big_sl = %lf\n", D1_dummy, D2_dummy, D3_dummy, candidate_T, slowdown[0], slowdown[1], slowdown[2], slowdown[3], slowdown[4]);
+	fprintf(stderr,  "ATC::get_T_slowdowns(D1=%d, D2 = %d, D3 = %d) T=%d with T_aggregate_sl = %lf, T_imbalance_sl= %lf, T_remainder_sl= %lf, T_small_sl= %lf, "
+	"T_sknum_sl= %lf, T_big_sl = %lf\n", D1_dummy, D2_dummy, D3_dummy, candidate_T, slowdown[0], slowdown[1], slowdown[2], slowdown[3], slowdown[4], slowdown[5]);
 #endif
 	return;
 }
@@ -599,9 +609,9 @@ fprintf(stderr,  "|-----> ATC::optimize_tile( autotune_controller{ T=%ld, active
 	int D1_dummy = model->D1, D2_dummy = (model->D2 == -1)? D1_dummy: model->D2, D3_dummy = (model->D3 == -1)? D1_dummy: model->D3;
 	int max_allowed_T = std::min(D1_dummy, std::min(D2_dummy, D3_dummy));
 	int best_T = -1;
-	double* best_T_sl = (double*) calloc(5,sizeof(double));
-	for(int idx = 0; idx < 5; idx++) best_T_sl[idx] = DBL_MAX;
-	double* c_T_sl = (double*) calloc(5,sizeof(double));
+	double* best_T_sl = (double*) calloc(6,sizeof(double));
+	for(int idx = 0; idx < 6; idx++) best_T_sl[idx] = DBL_MAX;
+	double* c_T_sl = (double*) calloc(6,sizeof(double));
 	for (int candidate_T = max_allowed_T; candidate_T > 0; candidate_T--)
 	// Condition 1
 	//if(!((D1_dummy/(candidate_T) + ((D1_dummy%(candidate_T))? 1:0))
@@ -609,7 +619,7 @@ fprintf(stderr,  "|-----> ATC::optimize_tile( autotune_controller{ T=%ld, active
 	{ 
 		get_T_slowdowns(c_T_sl, candidate_T); 
 		if (c_T_sl[0] < best_T_sl[0]){
-			for(int idx = 0; idx < 5; idx++) best_T_sl[idx] = c_T_sl[idx];
+			for(int idx = 0; idx < 6; idx++) best_T_sl[idx] = c_T_sl[idx];
 			best_T = candidate_T;
 		}
 	}

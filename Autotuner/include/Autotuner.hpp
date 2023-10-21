@@ -122,7 +122,7 @@ typedef class ATC{
 	public:
 		long int T; /// The tiling size used for 1D/2D Data split to tiles.
 		/// Slowdowns for the selected T that can be used for model adjustment
-		double T_aggregate_sl, T_remainder_sl, T_small_sl, T_sknum_sl, T_big_sl;
+		double T_aggregate_sl, T_imbalance_sl, T_remainder_sl, T_small_sl, T_sknum_sl, T_big_sl;
 		int active_unit_num; /// The number of units that will be used in the involving operation.
 		int* active_unit_id_list;	/// The list of ids of said units.
 		double* active_unit_score; /// The 'score' of each said units relative to the total task completion.

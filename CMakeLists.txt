@@ -79,8 +79,8 @@ add_definitions(-DSUBKERNELS_FIRE_WHEN_READY)
 ##             be fetched, reduced locally in the last computation location and written back.
 ## - ALGO_WREDUCE: The output tiles are not fetched from the source. Instead, computations will use
 ##             local buffers. After they are complete, tiles are reduced to the output (=source) location.
-#add_definitions(-DOUTPUT_ALGO_MODE="ALGO_WR")
-add_definitions(-DOUTPUT_ALGO_MODE="ALGO_WR_LAZY")
+add_definitions(-DOUTPUT_ALGO_MODE="ALGO_WR")
+#add_definitions(-DOUTPUT_ALGO_MODE="ALGO_WR_LAZY")
 #add_definitions(-DOUTPUT_ALGO_MODE="ALGO_WREDUCE")
 
 ###########################################################################################

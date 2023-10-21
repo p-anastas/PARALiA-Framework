@@ -114,7 +114,7 @@ short lvl = 1;
   print_link_bw();
 #endif
 #ifdef DEBUG
-  lprintf(lvl, "<-----| LinkMap::update_link_weights()\n");
+  fprintf(stderr, "<-----| LinkMap::update_link_weights()\n");
 #endif
 }
 
@@ -123,7 +123,7 @@ void LinkMap::update_link_shared_weights(MD_p* unit_modeler_list,
 {
   short lvl = 3;
 #ifdef DEBUG
-    lprintf(lvl, "|-----> LinkMap::update_link_shared_weights(unit_modeler_list = %p, active_unit_id_list = %s)\n",
+    fprintf(stderr, "|-----> LinkMap::update_link_shared_weights(unit_modeler_list = %p, active_unit_id_list = %s)\n",
     unit_modeler_list, printlist<int>(active_unit_id_list, active_unit_num));
 #endif
   int* datalocs = (int*) malloc(LOC_NUM*sizeof(int)), dataloc_num = 0;
@@ -207,7 +207,7 @@ void LinkMap::update_link_shared_weights(MD_p* unit_modeler_list,
               && !(links_share_bandwidth[i][j][0] == k && links_share_bandwidth[i][j][1] == l)){
              link_slowdown_multiplier = fmax(link_slowdown_multiplier, unit_modeler_list[i]->link[j]->sl[k][l]);
 #ifdef DPDEBUG
-              if (unit_modeler_list[i]->link[j]->sl[k][l] != 1.0) lprintf(lvl, "ATC::update_link_map_shared():\
+              if (unit_modeler_list[i]->link[j]->sl[k][l] != 1.0) fprintf(stderr, "ATC::update_link_map_shared():\
                 \nFound link (%d -> %d) imposing potential recv-based slowdown to (%d -> %d) with sl = %Lf\n",
                 deidxize(l), deidxize(k), deidxize(j), deidxize(i), unit_modeler_list[i]->link[j]->sl[k][l]);
 #endif
@@ -218,7 +218,7 @@ void LinkMap::update_link_shared_weights(MD_p* unit_modeler_list,
                 && !(links_share_bandwidth[i][j][0] == k && links_share_bandwidth[i][j][1] == l)){
                 link_slowdown_multiplier = fmax(link_slowdown_multiplier,unit_modeler_list[i]->link[j]->sl[k][l]);
 #ifdef DPDEBUG
-                if (unit_modeler_list[i]->link[j]->sl[k][l] != 1.0) lprintf(lvl, "ATC::update_link_map_shared():\
+                if (unit_modeler_list[i]->link[j]->sl[k][l] != 1.0) fprintf(stderr, "ATC::update_link_map_shared():\
                    \nFound link (%d -> %d) imposing potential recv-based slowdown to (%d -> %d) with sl = %Lf\n",
                    deidxize(l), deidxize(k), deidxize(j), deidxize(i), unit_modeler_list[i]->link[j]->sl[k][l]);
 #endif
@@ -226,7 +226,7 @@ void LinkMap::update_link_shared_weights(MD_p* unit_modeler_list,
           }
         }
 #ifdef PDEBUG
-        if(link_slowdown_multiplier!= 1.00) lprintf(lvl, "ATC::update_link_map_shared():\
+        if(link_slowdown_multiplier!= 1.00) fprintf(stderr, "ATC::update_link_map_shared():\
         \nAdjusting link_bw_shared[%d][%d] with link_slowdown_multiplier = %lf\n", i, j, link_slowdown_multiplier);
 #endif
         if (link_slowdown_multiplier>2) link_slowdown_multiplier = 2;
@@ -255,12 +255,14 @@ void LinkMap::update_link_shared_weights(MD_p* unit_modeler_list,
       for (int k = j ; k < LOC_NUM; k++) if(flag_normalize[k]) link_bw_shared[i][k] = normalize_sum/normalize_num;
     }
   }
+#ifndef ENABLE_TRANSFER_HOPS
 #ifdef PDEBUG
   print_link_active();
   print_link_bw_shared();
 #endif
+#endif
 #ifdef DEBUG
-  lprintf(lvl, "<-----| update_link_map_shared()\n");
+  fprintf(stderr, "<-----| update_link_map_shared()\n");
 #endif
 }
 
@@ -327,7 +329,50 @@ void LinkMap::update_link_hop_shared_weights(MD_p* unit_modeler_list, int* activ
       }
     }
   }
+  int* datalocs = (int*) malloc(LOC_NUM*sizeof(int)), dataloc_num = 0;
+  unit_modeler_list[0]->getDatalocs(&datalocs, &dataloc_num);
+  for (int i = 0 ; i < LOC_NUM; i++)
+  for (int j = 0 ; j < LOC_NUM; j++){
+    if (link_active[i][j] && !link_hop_num[i][j]){
+        double link_slowdown_multiplier = 1.0;
+        for (int k = 0; k < LOC_NUM; k++){
+          for(int l = 0; l < LOC_NUM; l++){
+            if ((k == l) || (i == k && j == l)) continue;
+            if((is_in_list(deidxize(l),datalocs, dataloc_num) 
+              && is_in_list(deidxize(k),active_unit_id_list, active_unit_num)) 
+              && !(links_share_bandwidth[i][j][0] == k && links_share_bandwidth[i][j][1] == l)
+              && !link_hop_num[k][l]){
+             link_slowdown_multiplier = fmax(link_slowdown_multiplier, unit_modeler_list[i]->link[j]->sl[k][l]);
+#ifdef DPDEBUG
+              if (unit_modeler_list[i]->link[j]->sl[k][l] != 1.0) fprintf(stderr, "ATC::update_link_hop_shared_weights():\
+                \nFound link (%d -> %d) imposing potential recv-based slowdown to (%d -> %d) with sl = %Lf\n",
+                deidxize(l), deidxize(k), deidxize(j), deidxize(i), unit_modeler_list[i]->link[j]->sl[k][l]);
+#endif
+            }
+            /* Do not include output transfer to link slowdown calculation...
+            else if((is_in_list(deidxize(k),datalocs, dataloc_num)
+                && is_in_list(deidxize(l),active_unit_id_list, active_unit_num))
+                && !(links_share_bandwidth[i][j][0] == k && links_share_bandwidth[i][j][1] == l)){
+                link_slowdown_multiplier = fmax(link_slowdown_multiplier,unit_modeler_list[i]->link[j]->sl[k][l]);
+#ifdef DPDEBUG
+                if (unit_modeler_list[i]->link[j]->sl[k][l] != 1.0) fprintf(stderr, "ATC::update_link_map_shared():\
+                   \nFound link (%d -> %d) imposing potential recv-based slowdown to (%d -> %d) with sl = %Lf\n",
+                   deidxize(l), deidxize(k), deidxize(j), deidxize(i), unit_modeler_list[i]->link[j]->sl[k][l]);
+#endif
+            }*/
+          }
+        }
 #ifdef PDEBUG
+        if(link_slowdown_multiplier!= 1.00) fprintf(stderr, "ATC::update_link_hop_shared_weights():\
+        \nAdjusting link_bw_shared[%d][%d] with link_slowdown_multiplier = %lf\n", i, j, link_slowdown_multiplier);
+#endif
+        if (link_slowdown_multiplier>2) link_slowdown_multiplier = 2;
+        if (link_bw_shared[i][j] != -1) link_bw_shared_hops[i][j] = link_bw_shared[i][j] = link_bw[i][j] * (1/link_slowdown_multiplier);
+      }
+    }
+#ifdef PDEBUG
+  print_link_active();
+  print_link_bw_shared();
   print_link_bw_shared_hops();
 #endif
 }
@@ -460,7 +505,7 @@ void LinkMap::ESPA_init(MD_p* unit_modeler_list, int* active_unit_id_list, doubl
         else { D1_parts = g; D2_parts = active_unit_num/g; }
       }
   #ifdef DPDEBUG
-      lprintf(lvl, "LinkMap::ESPA_init(unit_num = %d) : D1_parts = %d, D2_parts = %d\n",
+      fprintf(stderr, "LinkMap::ESPA_init(unit_num = %d) : D1_parts = %d, D2_parts = %d\n",
       active_unit_num, D1_parts, D2_parts);
   #endif
       /// Assume extra transfers are split equally between all other units on the decomposition dims
@@ -486,7 +531,7 @@ void LinkMap::ESPA_init(MD_p* unit_modeler_list, int* active_unit_id_list, doubl
   print_ESPA();
 #endif
 #ifdef DEBUG
-  lprintf(lvl, "<-----| LinkMap::ESPA_init()\n");
+  fprintf(stderr, "<-----| LinkMap::ESPA_init()\n");
 #endif
 }
 
