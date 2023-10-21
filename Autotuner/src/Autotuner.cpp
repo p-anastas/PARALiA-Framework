@@ -133,6 +133,10 @@ void ATC::mimic_ATC(ATC_p other_ATC){
 	pred_J = other_ATC->pred_J;
 	power_delay = other_ATC->power_delay;
 	energy_delay = other_ATC->energy_delay;
+	pred_t_pesimistic = other_ATC->pred_t_pesimistic;
+	pred_J_pesimistic = other_ATC->pred_J_pesimistic;
+	power_delay_pesimistic = other_ATC->power_delay_pesimistic;
+	energy_delay_pesimistic = other_ATC->energy_delay_pesimistic;
 	cache_limit = other_ATC->cache_limit;
 	linkmap->copy(other_ATC->linkmap);
 
@@ -420,8 +424,8 @@ double ATC::autotune_problem(const char* routine_name, void* initial_problem_wra
 					)))
 						mimic_ATC(temp_controller);
 #ifdef SDEBUG
-				fprintf(stderr, "-> T = %d, energy_delay = %e, energy_delay_pesimistic = %e, best_energy_delay = %e\n", 
-					temp_controller->T, temp_controller->energy_delay, temp_controller->energy_delay_pesimistic, energy_delay);
+				fprintf(stderr, "-> T = %d, T_aggregate_sl = %lf, energy_delay = %e, energy_delay_pesimistic = %e, best_energy_delay = %e\n", 
+					temp_controller->T, temp_controller->T_aggregate_sl, temp_controller->energy_delay, temp_controller->energy_delay_pesimistic, energy_delay);
 #endif
 			} // Example for choosing U1(tpred = X, En = J1) vs U2(tpred = Y, En = J2) units with PERPER_LIMIT: if ( X/Y >= PERPER_LIMIT*J2/J1) U2 else U1
 			else if(!strcmp(PREDICT_OPTIMIZE_TARGET,"PERF-PER-J")){
@@ -526,9 +530,12 @@ double ATC::autotune_problem(const char* routine_name, void* initial_problem_wra
 	}
 	fprintf(stderr, "====================================\n");
 	fprintf(stderr, "ATC::autotune_problem: Autotuning complete-> t_autotune = %lf ms\n", cpu_timer*1000);
-	fprintf(stderr, "autotune_controller: T=%ld, T_aggregate_sl=%lf active_unit_num=%d, Problem split = %s -> %s : pred_t = %lf ms, pred_J = %lf kJ\n",
+	fprintf(stderr, "autotune_controller: T=%ld, T_aggregate_sl=%lf active_unit_num=%d, Problem split = %s -> %s :\n"
+		"\t -> pred_t = %lf ms, pred_J = %lf kJ, pred_PDP = %lf Gflops/J, pred_EDP = %lf Gflops^2/J\n"
+		"\t -> pred_t_pesimistic = %lf ms, pred_J_pesimistic = %lf kJ, PDP_pesimistic = %lf Gflops/J, EDP_pesimistic = %lf Gflops^2/J\n",
 		T, T_aggregate_sl, active_unit_num, printlist<int>(active_unit_id_list, active_unit_num),
-		printlist<int>(Subkernels_per_unit_num, active_unit_num), pred_t*1000, pred_J/1000);
+		printlist<int>(Subkernels_per_unit_num, active_unit_num), pred_t*1000, pred_J/1000, power_delay, energy_delay,
+		pred_t_pesimistic*1000, pred_J_pesimistic/1000, power_delay_pesimistic, energy_delay_pesimistic);
 	fprintf(stderr, "====================================\n");
 #ifdef DEBUG
 	fprintf(stderr,  "<-----|\n");
