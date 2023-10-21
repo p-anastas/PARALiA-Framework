@@ -370,13 +370,15 @@ fprintf(stderr, "CoCoDistributeSubkernels2DBlockCyclic(%d, %d, %d): Devices = %d
   int sks_accounted_for = 0;
   for (int d = 0 ; d < autotune_controller->active_unit_num; d++){
      autotune_controller->Subkernels_per_unit_num[d] = D3GridSz * (
-      (int) (autotune_controller->active_unit_score[d]* D1GridSz_div*D2GridSz_div));
-      /// TODO: this is a fix because int (some_float) does not work for all floats as intended!
+      (int) (autotune_controller->active_unit_score[d]* (D1GridSz_div*D2GridSz_div)));
+      /// TODO: this is a fix because int (some_double) does not work for all doubles as intended (???)
       /// Might not work for non-homogeneous splits!
       sks_accounted_for+= autotune_controller->Subkernels_per_unit_num[d]; 
   }
   if(!D1GridSz_mod && !D2GridSz_mod && sks_accounted_for < autotune_controller->subkernel_num){
-    for (int d = 0 ; d < autotune_controller->active_unit_num; d++) autotune_controller->Subkernels_per_unit_num[d]++; 
+    warning("CoCoDistributeSubkernels2DBlockCyclic: Questionable remainder from first pass %d / %d sub-kernels\n",
+     autotune_controller->subkernel_num - sks_accounted_for, autotune_controller->subkernel_num);
+    for (int d = 0 ; d < autotune_controller->active_unit_num; d++) autotune_controller->Subkernels_per_unit_num[d]+= D3GridSz; 
   }
 #ifdef PDEBUG
 fprintf(stderr, "Assigned kernel num to devices kernels (first pass): %s\n",
