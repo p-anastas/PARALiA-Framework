@@ -604,8 +604,9 @@ fprintf(stderr,  "|-----> ATC::optimize_tile( autotune_controller{ T=%ld, active
 	double* c_T_sl = (double*) calloc(5,sizeof(double));
 	for (int candidate_T = max_allowed_T; candidate_T > 0; candidate_T--)
 	// Condition 1
-	if(!((D1_dummy/(candidate_T) + ((D1_dummy%(candidate_T))? 1:0))
-	 *(D2_dummy/(candidate_T) + ((D2_dummy%(candidate_T))? 1:0)) % active_unit_num)){ 
+	//if(!((D1_dummy/(candidate_T) + ((D1_dummy%(candidate_T))? 1:0))
+	// *(D2_dummy/(candidate_T) + ((D2_dummy%(candidate_T))? 1:0)) % active_unit_num))
+	{ 
 		get_T_slowdowns(c_T_sl, candidate_T); 
 		if (c_T_sl[0] < best_T_sl[0]){
 			for(int idx = 0; idx < 5; idx++) best_T_sl[idx] = c_T_sl[idx];

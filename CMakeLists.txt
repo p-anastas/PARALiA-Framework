@@ -144,18 +144,18 @@ add_definitions(-DRATIO_TUNE_ITTER=10)
 ## Decision regarding perplexing tile selection and workload selection
 ## by applying estimated overlap sl from tile to device split prediction
 add_definitions(-DAPPLY_TILE_SL_TO_WORKLOAD_SPLIT)
-## TODO: For future work could autotune ELASTIC conditions.
+## TODO: For future work could autotune conditions.
 ## Conditions (with decreasing priority): 
-## 1-MUST: NO-Wshare: Spliting creates subkernels that can be distributed equally to devices without WR-sharing
-## 2-ELASTIC(score: varies): NO-remainder: split should not create remainder Tiles if possible
-## 3-ELASTIC(score: varies): T-min: Tile should be >= than a preset value
+## 1: NO-Imbalance: Spliting creates subkernels that can be distributed equally to devices without WR-sharing
+## 2: NO-remainder: split should not create remainder Tiles if possible
+## 3: T-min: Tile should be >= than a preset value
 add_definitions(-DTILE_MIN=2048)
 add_definitions(-DTILE_MIN_SLOWDOWN=0.2)
-## 4-ELASTIC(score: 8 & 4): SK-num: subkernels per device must be >= MIN_DESIRED_SK_DEV
+## 4: SK-num: subkernels per device must be >= MIN_DESIRED_SK_DEV
 add_definitions(-DMIN_DESIRED_SK_DEV=64)
 add_definitions(-DMAX_DESIRED_SK_DEV=512)
 add_definitions(-DMAX_DESIRED_SK_DEV_SLOWDOWN=0.1)
-## 5-ELASTIC(score: 2): T-max: Tile should be <= than a preset value
+## 5: T-max: Tile should be <= than a preset value
 add_definitions(-DTILE_MAX=4096)
 add_definitions(-DTILE_MΑΧ_SLOWDOWN=0.1)
 

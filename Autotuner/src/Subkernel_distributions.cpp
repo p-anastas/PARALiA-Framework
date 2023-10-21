@@ -141,9 +141,15 @@ void CoCoDistributeSubkernelsNaive(ATC_p autotune_controller){
 }
 
 void CoCoDistributeSubkernelsRoundRobinChunk(ATC_p autotune_controller,  int Chunk_size){
-  #ifdef DEBUG
+#ifdef DEBUG
   	fprintf(stderr, "|-----> CoCoDistributeSubkernelsRoundRobinChunk(%p, %d)\n", autotune_controller, Chunk_size);
-  #endif
+#endif
+#ifdef PDEBUG
+fprintf(stderr, "CoCoDistributeSubkernelsRoundRobinChunk(%d): Devices = %d (scores = %s), sk_num = %d, sk_buckets = %d\n",
+  Chunk_size, autotune_controller->active_unit_num, 
+  printlist<double>(autotune_controller->active_unit_score, autotune_controller->active_unit_num),
+  autotune_controller->subkernel_num, autotune_controller->subkernel_num/Chunk_size);
+#endif
   if (autotune_controller->subkernel_num/Chunk_size <= autotune_controller->active_unit_num){
     int pred_active_unit_num = autotune_controller->active_unit_num;
     autotune_controller->active_unit_num = autotune_controller->subkernel_num/Chunk_size;
@@ -158,13 +164,16 @@ void CoCoDistributeSubkernelsRoundRobinChunk(ATC_p autotune_controller,  int Chu
   }
   else{
   for (int d = 0 ; d < autotune_controller->active_unit_num; d++){
-    autotune_controller->Subkernels_per_unit_num[d] =
-      (int) (1.0* autotune_controller->active_unit_score[d]* ((autotune_controller->subkernel_num/Chunk_size)*Chunk_size));
+    autotune_controller->Subkernels_per_unit_num[d] = Chunk_size*
+      (int) (1.0* autotune_controller->active_unit_score[d]* (autotune_controller->subkernel_num/Chunk_size));
   }
   int sks_accounted_for = 0;
   for (int d = 0 ; d < autotune_controller->active_unit_num; d++)
     sks_accounted_for += autotune_controller->Subkernels_per_unit_num[d];
-  
+#ifdef PDEBUG
+fprintf(stderr, "Assigned kernel num to devices kernels (first pass): %s\n",
+  printlist<int>(autotune_controller->Subkernels_per_unit_num, autotune_controller->active_unit_num));
+#endif
   int sk_ctr = 0, dev_sk_ctr_list[autotune_controller->active_unit_num] = {0}, devidx = 0;
   for (int D1 = 0; D1 < autotune_controller->subkernel_num/Chunk_size; D1++){
     for (int D3 = 0; D3 < Chunk_size; D3++){
@@ -178,11 +187,11 @@ void CoCoDistributeSubkernelsRoundRobinChunk(ATC_p autotune_controller,  int Chu
       autotune_controller->Subkernels_per_unit_list[devidx][dev_sk_ctr_list[devidx]] = sk_ctr;
       if(sk_ctr >= sks_accounted_for) autotune_controller->Subkernels_per_unit_num[devidx] ++;
       dev_sk_ctr_list[devidx]++;
-      sk_ctr++;
 #ifdef PDEBUG
       fprintf(stderr, "CoCoDistributeSubkernelsRoundRobinChunk: sk_ctr[%d,%d] = %d, devidx = %d\n",
         D1, D3, sk_ctr, devidx);
 #endif
+      sk_ctr++;
     }
     if(devidx == autotune_controller->active_unit_num - 1) devidx = 0;
     else devidx++;
@@ -360,8 +369,8 @@ fprintf(stderr, "CoCoDistributeSubkernels2DBlockCyclic(%d, %d, %d): Devices = %d
   else{
   int sks_accounted_for = 0;
   for (int d = 0 ; d < autotune_controller->active_unit_num; d++){
-     autotune_controller->Subkernels_per_unit_num[d] =
-      (int) (autotune_controller->active_unit_score[d]* (D1GridSz_div*D2GridSz_div*D3GridSz));
+     autotune_controller->Subkernels_per_unit_num[d] = D3GridSz * (
+      (int) (autotune_controller->active_unit_score[d]* D1GridSz_div*D2GridSz_div));
       /// TODO: this is a fix because int (some_float) does not work for all floats as intended!
       /// Might not work for non-homogeneous splits!
       sks_accounted_for+= autotune_controller->Subkernels_per_unit_num[d]; 
