@@ -78,7 +78,7 @@ void ManageCachesDgemm(PMD_p local_PMD){
 			max_cache_sz = free_dev_mem - ((long long) max_dev_mem*(1-PROBLEM_GPU_PERCENTAGE/100.0)) + prev_DevCache_sz;
 		}
 		Block_num = 1 + Block_num_A + Block_num_B + Block_num_C;
-		if (WR_LAZY) Block_num+= Block_num_C; 
+		if (!strcmp(OUTPUT_ALGO_MODE,"ALGO_WR_LAZY") || !strcmp(OUTPUT_ALGO_MODE,"ALGO_WREDUCE")) Block_num+= Block_num_C; 
 		int max_block_num = max_cache_sz/Block_sz;
 		if(max_block_num < Block_num){
 			lprintf(0, "PARALiADgemm: Problem will use %d blocks for dev_id = %d\
@@ -273,7 +273,7 @@ void DgemmPrepareLaunch(Subkernel* ker){
 	if(!(ker->TileList[2]->W_master_backend_ctr == -42)) 
 	// Means its not the first subkernel using the WR tile
 		ptr_ker_translate->beta = 1.0;
-	else if(WR_LAZY == ker->TileList[2]->WRP) ptr_ker_translate->beta = 0;
+	else if(WR_LAZY == ker->TileList[2]->WRP || W_REDUCE == ker->TileList[2]->WRP) ptr_ker_translate->beta = 0;
 }
 
 void DgemmUpdatePointers(Subkernel* ker){
@@ -487,6 +487,10 @@ ATC_p PARALiADgemm(char TransA,  char TransB, long int M, long int N, long int K
 #endif
 	for(int d=0; d < local_PMD->autotuner->active_unit_num; d++)
 		current_SAB[idxize(local_PMD->autotuner->active_unit_id_list[d])]->allocate(true);
+	if(!strcmp(OUTPUT_ALGO_MODE,"ALGO_WREDUCE")){
+		reduce_loc = CoCoGetPtrLoc(C); 
+		current_SAB[idxize(reduce_loc)]->allocate(true);
+	}
 
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer;

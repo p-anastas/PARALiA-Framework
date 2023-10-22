@@ -290,6 +290,11 @@ void CoCoPeLiaInitResources(int* dev_list, int dev_num){
 					exec_queue[dev_id_idx][i] = new CommandQueue(deidxize(dev_id_idx), 1);
 					exec_queue_ctr[dev_id_idx] = -1; 
 				}
+				for (int i = 0; i < REDUCE_WORKERS_PERDEV; i++){
+					short reloc = (reduce_loc == LOC_NUM - 1)? deidxize(dev_id_idx) : reduce_loc;
+					reduce_queue[dev_id_idx][i] = new CommandQueue(reduce_loc, 1);
+					reduce_queue_ctr[dev_id_idx] = -1; 
+				}
 			}
 		}
 	}

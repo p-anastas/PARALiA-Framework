@@ -80,9 +80,9 @@ add_definitions(-DSUBKERNELS_FIRE_WHEN_READY)
 ## - ALGO_WREDUCE: The output tiles are not fetched from the source. Instead, computations will use
 ##             local buffers. After they are complete, tiles are reduced to the output (=source) location.
 #add_definitions(-DOUTPUT_ALGO_MODE="ALGO_WR")
-add_definitions(-DOUTPUT_ALGO_MODE="ALGO_WR_LAZY")
-#add_definitions(-DOUTPUT_ALGO_MODE="ALGO_WREDUCE")
-
+#add_definitions(-DOUTPUT_ALGO_MODE="ALGO_WR_LAZY")
+add_definitions(-DOUTPUT_ALGO_MODE="ALGO_WREDUCE")
+add_definitions(-DREDUCE_WORKERS_PERDEV=10)
 ###########################################################################################
 #---------------------------------Routing optimizations-----------------------------------#
 ###########################################################################################
@@ -201,7 +201,7 @@ add_definitions(-DENABLE_POWA)
 add_definitions(-DCPU_W_PREDEF=$ENV{PARALIA_W_CPU_PREDEF})
 
 ## Choose the Unit combination that maximizes total performance (minimum time).
-#add_definitions(-DPREDICT_OPTIMIZE_TARGET="PERF")
+add_definitions(-DPREDICT_OPTIMIZE_TARGET="PERF")
 ## Choose the Unit combination that minimizes consumed energy (J).
 ## Rarely chooses multi-unit execution, since its almost always less energy-efficient than single-unit.
 #add_definitions(-DPREDICT_OPTIMIZE_TARGET="ENERGY")
@@ -210,7 +210,7 @@ add_definitions(-DCPU_W_PREDEF=$ENV{PARALIA_W_CPU_PREDEF})
 #add_definitions(-DPREDICT_OPTIMIZE_TARGET="POWER-DELAY")
 
 ## Choose the Unit combination that maximizes the energy-delay product - closer to "PERF" but also slightly considering energy.
-add_definitions(-DPREDICT_OPTIMIZE_TARGET="ENERGY-DELAY")
+#add_definitions(-DPREDICT_OPTIMIZE_TARGET="ENERGY-DELAY")
 
 #--------------------------------------Experimental----------------------------------------#
 
