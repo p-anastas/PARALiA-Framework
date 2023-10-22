@@ -575,7 +575,7 @@ void ATC::get_T_slowdowns(double* slowdown, int candidate_T){
 	if(candidate_T < TILE_MIN) slowdown[3]+= 1.0*TILE_MIN/candidate_T*TILE_MIN_SLOWDOWN;
 	// Condition 4.1
 	long int dev_sks = (1.0*model->getSKNum(candidate_T))/active_unit_num; 
-	slowdown[3]+= 1.0/(dev_sks); // This slowdown like this removes the need for MIN_DESIRED_SK_DEV
+	slowdown[4]+= 2.0/(dev_sks); // This slowdown like this removes the need for MIN_DESIRED_SK_DEV
 	//if(dev_sks < MIN_DESIRED_SK_DEV) slowdown+= 1/dev_sks;
 	// Condition 4.2
 	if(dev_sks > MAX_DESIRED_SK_DEV) slowdown[4]+= (1.0*dev_sks/MAX_DESIRED_SK_DEV)*MAX_DESIRED_SK_DEV_SLOWDOWN;
