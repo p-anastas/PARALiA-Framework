@@ -197,7 +197,8 @@ void LinkMap::update_link_shared_weights(MD_p* unit_modeler_list,
       || (is_in_list(deidxize(j),datalocs, dataloc_num) && is_in_list(deidxize(i),active_unit_id_list, active_unit_num))))
         link_bw_shared[i][j] = -1;
       else{
-        link_active[i][j] = 1;
+        if(is_in_list(deidxize(i),active_unit_id_list, active_unit_num)) link_active[i][j] = 2;
+        else link_active[i][j] = 1;
         double link_slowdown_multiplier = 1.0;
         for (int k = 0; k < LOC_NUM; k++){
           for(int l = 0; l < LOC_NUM; l++){
@@ -303,7 +304,8 @@ void LinkMap::update_link_hop_shared_weights(MD_p* unit_modeler_list, int* activ
       for(int uidx = 0; uidx < LOC_NUM; uidx++)
         if (link_active[uidx][idxize(src_loc)] && link_active[idxize(dest_loc)][uidx]
           && !link_causes_slowdowns(unit_modeler_list[uidx], deidxize(uidx), src_loc) 
-          && !link_causes_slowdowns(unit_modeler_list[idxize(dest_loc)], dest_loc, deidxize(uidx))){
+          && !link_causes_slowdowns(unit_modeler_list[idxize(dest_loc)], dest_loc, deidxize(uidx))
+          && is_in_list(deidxize(uidx), active_unit_id_list, active_unit_num)){
           double hop_est_bw = (1 - HOP_PENALTY) * std::min(linkmap_shared_bw_unroll(deidxize(uidx),src_loc), 
             linkmap_shared_bw_unroll(dest_loc, deidxize(uidx)));
           if (hop_est_bw  > hop_bw_best){

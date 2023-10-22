@@ -35,7 +35,7 @@ do
 	## A = Full offload scenario (Initially all data on CPU), B = Partial offload scenario
 	TransA=N
 	TransB=N
-	for scenario in "Full_offload" "Partial_offload_result" "Partial_offload_result_mixed_in" "Partial_offload_in" "Partial_offload_mixed" "Device_only_offload" "Device_only_offload_mixed1" "Device_only_offload_mixed2" "Device_only_offload_mixed3" "Device_only_offload_mixed4" #
+	for scenario in "Device_only_offload_mixed2" "Device_only_offload_mixed3" "Device_only_offload_mixed4" # "Full_offload" "Partial_offload_result" "Partial_offload_result_mixed_in" "Partial_offload_in" "Partial_offload_mixed" "Device_only_offload" "Device_only_offload_mixed1" 
 	do
 		C_loc=-1
 		echo $scenario

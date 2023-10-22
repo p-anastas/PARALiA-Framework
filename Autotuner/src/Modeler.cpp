@@ -273,6 +273,10 @@ double Modeler::predictSumBw_t(long long request_size, int active_unit_num, int*
 			if (active_unit_id_list[i] == unit_id) continue;
 			sum_bw += shared_bw_unroll(unit_id, active_unit_id_list[i]);
 		}
+		for (int i = 0; i < active_unit_num; i++){
+			if (active_unit_id_list[i] == unit_id) continue;
+			sum_bw *= (1-HOP_PENALTY);
+		}
 		return (sum_bw) ? request_size/(sum_bw*1e9) : 0;
 }
 

@@ -325,6 +325,7 @@ double ATC::autotune_problem(const char* routine_name, void* initial_problem_wra
 		for (int case_id = 1; case_id < explored_cases; case_id++){
 			translate_binary_to_unit_list(case_id, &temp_controller->active_unit_num, temp_controller->active_unit_id_list);
 			if(temp_controller->active_unit_num > max_unit_num) continue;
+			int current_unit_num = temp_controller->active_unit_num; 
 #ifdef SDEBUG
 				fprintf(stderr, "==============================================\n");
 				fprintf(stderr, "Autotune devices (iter %d): Tuning for active_unit_id_list = %s\n", case_id,
@@ -353,6 +354,17 @@ double ATC::autotune_problem(const char* routine_name, void* initial_problem_wra
 				free(c_T_sl);
 			}
 			if(temp_controller->T >= 0) split_selection_t += temp_controller->optimize_split();
+			// In the autotune_eval_devices loop, if devices were dropped 
+			//the problem will be (or was) explored in another itter, so we drop it.
+			if(temp_controller->active_unit_num < current_unit_num){
+#ifdef SDEBUG
+			fprintf(stderr, "Case dropped due to removing units in autotune_eval_devices loop\n-> active_unit_id_list = %s with active_unit_score = %s\n",
+				printlist<int>(temp_controller->active_unit_id_list, temp_controller->active_unit_num),
+				printlist<double>(temp_controller->active_unit_score, temp_controller->active_unit_num));
+			fprintf(stderr, "==============================================\n");
+#endif
+				continue;
+			} 
 			if(initial_T <= 0) tile_selection_t += temp_controller->optimize_tile();
 			else{
 				double* c_T_sl = (double*) calloc(6,sizeof(double));
