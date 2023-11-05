@@ -45,25 +45,6 @@ do
 done
 echo "Done"
 
-#exit 1
-
-rm $daxpy_log
-echo "Performing microbenchmarks for daxpy..."
-echo "$micro_daxpy_exec $device &>> $daxpy_log"
-$micro_daxpy_exec $device &>> $daxpy_log
-
-echo "Done"
-
-#exit 1
-
-echo "Performing microbenchmarks for ddot..."
-echo "$micro_ddot_exec $device &>> $ddot_log"
-$micro_ddot_exec $device &>> $ddot_log
-
-echo "Done"
-
-#exit 1
-
 # dgemm micro-benchmark Tile size
 rm $dgemm_log
 echo "Performing microbenchmarks for dgemm..."
@@ -76,6 +57,8 @@ do
 	done
 done
 echo "Done"
+
+exit 1
 
 # dsyrk micro-benchmark Tile size
 rm $dsyrk_log
@@ -101,6 +84,28 @@ do
 		echo "Done"
 	done
 done
+
+#exit 1
+
+rm $daxpy_log
+echo "Performing microbenchmarks for daxpy..."
+echo "$micro_daxpy_exec $device &>> $daxpy_log"
+$micro_daxpy_exec $device &>> $daxpy_log
+
+echo "Done"
+
+#exit 1
+
+rm $ddot_log
+echo "Performing microbenchmarks for ddot..."
+echo "$micro_ddot_exec $device &>> $ddot_log"
+$micro_ddot_exec $device &>> $ddot_log
+
+echo "Done"
+
+#exit 1
+
+
 
 rm $dgemv_log
 echo "Performing microbenchmarks for dgemv..."

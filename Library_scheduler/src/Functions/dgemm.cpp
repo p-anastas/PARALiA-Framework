@@ -260,7 +260,10 @@ void DgemmBindDevice(PMD_p local_PMD, Subkernel* ker, int dev_id){
 	if (ker->TileList[2]->WRP != WR && !ker->TileList[2]->loc_map[dev_id_idx]) 
 		ker->TileList[2]->set_WRP(WR);
 	ker->TileList[2]->W_master = dev_id;
-	if(ker->TileList[2]->W_pending == local_PMD->decom[0]->GridSz2) ker->TileList[2]->W_complete = new Event(dev_id);
+	if(ker->TileList[2]->W_pending == local_PMD->decom[0]->GridSz2){
+		ker->TileList[2]->W_complete = new Event(dev_id);
+		ker->TileList[2]->W_reduce = new Event(ker->TileList[2]->get_initial_location());
+	}
 	//if(local_PMD->autotuner) if(local_PMD->autotuner->unit_modeler_list[dev_id_idx])
 	//	ker->run_op_estimate(local_PMD->autotuner->unit_modeler_list[dev_id_idx]); 
 #ifdef DEBUG

@@ -104,7 +104,7 @@ short lvl = 1;
     for(int j = 0; j < LOC_NUM; j++){
       if(i == j) link_bw[i][j] = 0;
       else link_bw[i][j] = Gval_per_s(pred_T_dim*pred_T_dim*8, // TODO: assuming a tile2D double transfer (inconsequential since its a BW estimation)
-      t_com_predict(list_of_models[i]->revlink[j], pred_T_dim*pred_T_dim*8));
+      t_com_predict(list_of_models[i]->link[j], pred_T_dim*pred_T_dim*8));
     }
   }
   normalize_2D_LOC_NUM(link_bw, LOC_NUM, NORMALIZE_NEAR_SPLIT_LIMIT);
@@ -206,7 +206,7 @@ void LinkMap::update_link_shared_weights(MD_p* unit_modeler_list,
             if((is_in_list(deidxize(l),datalocs, dataloc_num) 
               && is_in_list(deidxize(k),active_unit_id_list, active_unit_num)) 
               && !(links_share_bandwidth[i][j][0] == k && links_share_bandwidth[i][j][1] == l)){
-             link_slowdown_multiplier = fmax(link_slowdown_multiplier, unit_modeler_list[i]->link[j]->sl[k][l]);
+             link_slowdown_multiplier = link_slowdown_multiplier;// + (unit_modeler_list[i]->link[j]->sl[k][l] -1); //fmax(link_slowdown_multiplier, unit_modeler_list[i]->link[j]->sl[k][l]); //
 #ifdef DPDEBUG
               if (unit_modeler_list[i]->link[j]->sl[k][l] != 1.0) fprintf(stderr, "ATC::update_link_map_shared():\
                 \nFound link (%d -> %d) imposing potential recv-based slowdown to (%d -> %d) with sl = %Lf\n",
@@ -230,7 +230,7 @@ void LinkMap::update_link_shared_weights(MD_p* unit_modeler_list,
         if(link_slowdown_multiplier!= 1.00) fprintf(stderr, "ATC::update_link_map_shared():\
         \nAdjusting link_bw_shared[%d][%d] with link_slowdown_multiplier = %lf\n", i, j, link_slowdown_multiplier);
 #endif
-        if (link_slowdown_multiplier>2) link_slowdown_multiplier = 2;
+        //if (link_slowdown_multiplier>2) link_slowdown_multiplier = 2;
         if (links_share_bandwidth[i][j][0] != -42 
         && (i*LOC_NUM + j > links_share_bandwidth[i][j][0]*LOC_NUM + links_share_bandwidth[i][j][1]) 
         && (link_bw_shared[links_share_bandwidth[i][j][0]][links_share_bandwidth[i][j][1]]!=-1)) link_bw_shared[i][j] = -1;

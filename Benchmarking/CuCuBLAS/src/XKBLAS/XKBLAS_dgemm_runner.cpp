@@ -23,12 +23,12 @@ extern "C"{
 #define CBLASXT_MAX_SAFE_TILE 10000
 
 #ifdef TTEST /// C programmers hate him PETROFIX
-extern int xktrans_ctr;
-extern long long xkbytes[100000];
-extern int xklocs[10000][2];
-extern double xktimers[100000][3];
-extern int xktimer_ctr[LOC_NUM][LOC_NUM];
-extern double xklink_gbytes_s[LOC_NUM][LOC_NUM];
+int xktrans_ctr;
+long long xkbytes[100000];
+int xklocs[10000][2];
+double xktimers[100000][3];
+int xktimer_ctr[LOC_NUM][LOC_NUM];
+double xklink_gbytes_s[LOC_NUM][LOC_NUM];
 
 void xkreseTTEST(){
 	for(int k = 0; k < xktrans_ctr; k++){
@@ -118,12 +118,16 @@ double XKBLASDgemmWrap(char TransA,  char TransB, long int M, long int N, long i
 #ifdef TTEST
 	xkHopMemcpyPrint();
 #endif
+#ifdef DEBUG
+	lprintf(lvl-1, "<-----|\n");
+#endif
 	return total_t;
 
 }
 
 void XKBLASFlushGPUBuf(){
-	xkblas_memory_free();
+		//xkblas_memory_invalidate_caches(); 
+		xkblas_memory_free();
 }
 
 int main(const int argc, const char *argv[]) {

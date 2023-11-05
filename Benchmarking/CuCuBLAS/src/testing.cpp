@@ -12,6 +12,23 @@
 char* CoCoImplementationPrint(){
 	char* string_out = (char*) malloc (2048*sizeof(char));
 	char* string_helper = (char*) malloc (1024*sizeof(char));
+
+#ifdef RUNTIME_SCHEDULER_VERSION
+#ifdef DISTRIBUTION
+	if (!strcmp(DISTRIBUTION, "2D-BLOCK-CYCLIC")) sprintf(string_helper, "RT-2D-BC");
+	else error("ATC::distribute_subkernels: Unknown Subkernel Distribution %s\n", DISTRIBUTION);
+#else
+#error
+#endif
+#else
+#ifdef DISTRIBUTION
+	if (!strcmp(DISTRIBUTION, "2D-BLOCK-CYCLIC")) sprintf(string_helper, "ST-2D-BC");
+	else error("ATC::distribute_subkernels: Unknown Subkernel Distribution %s\n", DISTRIBUTION);
+#else
+#error
+#endif
+#endif
+	strcat(string_out, string_helper);
 #ifndef ASYNC_ENABLE
 	sprintf(string_helper, "_SYNC");
 	strcat(string_out, string_helper);
@@ -136,25 +153,10 @@ char* CoCoImplementationPrint(){
 }
 
 char* CoCoDistributionPrint(){
-	char* string_out = (char*) malloc (2048*sizeof(char));
-#ifdef RUNTIME_SCHEDULER_VERSION
-#ifdef DISTRIBUTION
-	sprintf(string_out, "RT-%s", DISTRIBUTION);
-	//sprintf(string_out, "RT-%s_MFP-%4.2lf_FUP-%4.2lf_WTP-%4.2lf_PBP-%4.2lf_EXP-%4.2lf",
-	//	DISTRIBUTION, MULTIFETCH_PENALTY, FETCH_UNAVAILABLE_PENALTY, WTILE_TRANSFER_PENALTY,
-	//	PARALLELBBOTLENECK_PENALTY, EXSTEAL_PENALTY); This does not work , wonder why!
-#else
-#error
-#endif
-#else
-#ifdef DISTRIBUTION
-	sprintf(string_out, "ST-%s", DISTRIBUTION);
-#else
-#error
-#endif
-#endif
-	return string_out;
+	error("CoCoDistributionPrint: doesn't work, replaced\n");
+	return NULL;
 }
+
 void ParseInputLvl1(const int argc, const char *argv[], ATC_p* predef_control_values, double* alpha,
 	long int* D1, long int* inc1, long int* inc2, short* loc1, short* loc2, short* outloc1, short* outloc2){
 	if(argc != 13) error("Incorrect input arguments. Usage: ./correct_run\n\tactive_unit_num(auto if <0)\

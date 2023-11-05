@@ -21,6 +21,10 @@ set(TESTBED_NAME $ENV{PARALIA_SYSTEM})
 message("PARALiA-Framework - TESTBED_NAME: " ${TESTBED_NAME})
 add_definitions(-DTESTBED="${TESTBED_NAME}")
 
+## Define the workspace where execution of the library (benchmarks & deployment) will be invoked from (e.g. to avoid Disk quota problems in /home)
+set(CD_LOCATION $ENV{CD_FOLDER})
+message("PARALiA-Framework - CD_LOCATION: " ${CD_LOCATION})
+
 ## Define the (max) number of devices for utilization (0-num_devices)
 set(NUM_LOCATIONS $ENV{PARALIA_SYSTEM_DEVNUM})
 message("PARALiA-Framework - NUM_LOCATIONS: " ${NUM_LOCATIONS})
@@ -80,8 +84,8 @@ add_definitions(-DSUBKERNELS_FIRE_WHEN_READY)
 ## - ALGO_WREDUCE: The output tiles are not fetched from the source. Instead, computations will use
 ##             local buffers. After they are complete, tiles are reduced to the output (=source) location.
 #add_definitions(-DOUTPUT_ALGO_MODE="ALGO_WR")
-#add_definitions(-DOUTPUT_ALGO_MODE="ALGO_WR_LAZY")
-add_definitions(-DOUTPUT_ALGO_MODE="ALGO_WREDUCE")
+add_definitions(-DOUTPUT_ALGO_MODE="ALGO_WR_LAZY")
+#add_definitions(-DOUTPUT_ALGO_MODE="ALGO_WREDUCE")
 add_definitions(-DREDUCE_WORKERS_PERDEV=10)
 ###########################################################################################
 #---------------------------------Routing optimizations-----------------------------------#
@@ -105,6 +109,7 @@ add_definitions(-DSTREAMING_BUFFER_OVERLAP=8)
 #add_definitions(-DP2P_FETCH_FROM_INIT)
 #add_definitions(-DP2P_FETCH_FROM_GPU_SERIAL)
 #add_definitions(-DP2P_FETCH_FROM_GPU_DISTANCE)
+#add_definitions(-DP2P_FETCH_FROM_GPU_DISTANCE_PLUS) # PARALIa 1.5
 #add_definitions(-DCHAIN_FETCH_SERIAL)
 #add_definitions(-DCHAIN_FETCH_RANDOM)
 #add_definitions(-DCHAIN_FETCH_TIME)
@@ -119,7 +124,7 @@ add_definitions(-DBANDWIDTH_DIFFERENCE_CUTTOF_RATIO=5)
 
 ## Enable the use of transfer hops through memory locations that do not need a tile
 ## Improves bandwidth, but adds (extra) network load to fast lanes. Currently not integrated in already-chained transfers.
-add_definitions(-DENABLE_TRANSFER_HOPS)
+#add_definitions(-DENABLE_TRANSFER_HOPS)
 
 #add_definitions(-DHOP_FETCH_BANDWIDTH)
 #add_definitions(-DHOP_FETCH_QUEUE_WORKLOAD)
@@ -295,9 +300,9 @@ include_directories(${CUDA_INCLUDE_DIRS})
 message("PARALiA-Framework - CUDA_INCLUDE_DIRS: " ${CUDA_INCLUDE_DIRS})
 
 set (CUDA_LD ${CUDA_PREFIX}/lib64) # or /lib depending on system
-set (CUDA_LINK "-L${CUDA_LD} -lcudart -lcublas -lcurand $ENV{PARALIA_CUDA_LOAD_COMMAND}")
+set (CUDA_LINK "-L${CUDA_LD} -lcudart -lcublas -lcurand $ENV{PARALIA_CUDA_LOAD_COMMAND} -fopenmp")
 message("PARALiA-Framework - CUDA_LINK: " ${CUDA_LINK} )
-set (INTERNAL_LINK_LIB "${CUDA_LINK} -lrt -ldl")
+set (INTERNAL_LINK_LIB "${CUDA_LINK} -lrt -ldl -lnuma")
 message("PARALiA-Framework - INTERNAL_LINK_LIB: " ${INTERNAL_LINK_LIB})
 
 ###########################################################################################
@@ -310,7 +315,7 @@ if(NOT $ENV{PARALIA_CXX_PREFIX} STREQUAL "default")
   set (CMAKE_C_COMPILER ${CXX_PREFIX}/bin/gcc)
 endif()
 
-set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -fopenmp -lm -Wuninitialized")
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -fopenmp -lm -Wuninitialized -lgomp -lnuma")
 message("PARALiA-Framework - CMAKE_CXX_FLAGS: " ${CMAKE_CXX_FLAGS})
 
 #set(CMAKE_C_FLAGS ${CMAKE_CXX_FLAGS})
@@ -326,7 +331,7 @@ include_directories(${OPENBLAS_INCLUDE_DIRS})
 message("PARALiA-Framework - OPENBLAS_INCLUDE_DIRS: " ${OPENBLAS_INCLUDE_DIRS})
 
 set (OPENBLAS_LD ${OPENBLAS_PREFIX}/lib)
-set (OPENBLAS_LINK  "-L${OPENBLAS_LD} -lopenblas" )
+set (OPENBLAS_LINK  "-L${OPENBLAS_LD} -lopenblas -lgomp" )
 message("PARALiA-Framework - OPENBLAS_LINK: " ${OPENBLAS_LINK})
 
 ###########################################################################################
