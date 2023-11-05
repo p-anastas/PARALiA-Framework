@@ -34,9 +34,9 @@ int main(const int argc, const char *argv[]) {
 
 	double *A, *B, *C;
 	// allocate in device if loc = 0, otherwise allocate in pinned memory for benchmarks
-	A = (double*) CoCoMalloc(M * K*sizeof(double), A_loc);
-	B = (double*) CoCoMalloc(N * K*sizeof(double), B_loc);
-	C = (double*) CoCoMalloc(M * N*sizeof(double), C_loc);
+	A = (double*) CoCoMalloc(M * K*sizeof(double), A_loc, 0);
+	B = (double*) CoCoMalloc(N * K*sizeof(double), B_loc, 0);
+	C = (double*) CoCoMalloc(M * N*sizeof(double), C_loc, 1);
 
 	CoCoSyncCheckErr();
 	CoCoVecInit(A, K * M, 42, A_loc);

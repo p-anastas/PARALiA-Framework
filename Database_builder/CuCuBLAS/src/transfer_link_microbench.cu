@@ -71,8 +71,8 @@ int main(const int argc, const char *argv[]) {
 
 	for(short dev_id_idx = 0 ; dev_id_idx < LOC_NUM; dev_id_idx++){
 		double timer = csecond();
-  	unit_buffs[2*dev_id_idx] = CoCoMalloc(maxDim*(maxDim+1)*elemSize, deidxize(dev_id_idx));
-		unit_buffs[2*dev_id_idx+1] = CoCoMalloc(maxDim*(maxDim+1)*elemSize, deidxize(dev_id_idx));
+  	unit_buffs[2*dev_id_idx] = CoCoMalloc(maxDim*(maxDim+1)*elemSize, deidxize(dev_id_idx), 1);
+		unit_buffs[2*dev_id_idx+1] = CoCoMalloc(maxDim*(maxDim+1)*elemSize, deidxize(dev_id_idx), 1);
 		timer = csecond() - timer;
 		//fprintf(stderr, "Allocation of 2 Tiles (dim1 = dim2 = %zu) in unit_id = %2d complete:\t alloc_timer=%lf ms\n",
 		//maxDim, deidxize(dev_id_idx), timer  * 1000);

@@ -44,8 +44,8 @@ int main(const int argc, const char *argv[]) {
 	double *x, *y;
 	double result[1] = {0};
 	// allocate in device if loc = 0, otherwise allocate in pinned memory for benchmarks
-	x = (double*) CoCoMalloc(N * incx *sizeof(double), x_loc);
-	y = (double*) CoCoMalloc(N * incy *sizeof(double), y_loc);
+	x = (double*) CoCoMalloc(N * incx *sizeof(double), x_loc, 0);
+	y = (double*) CoCoMalloc(N * incy *sizeof(double), y_loc, 1);
 
 	CoCoSyncCheckErr();
 	cpu_timer  = csecond() - cpu_timer;
@@ -86,12 +86,12 @@ int main(const int argc, const char *argv[]) {
 	double result_dev[1] = {0};
 	if (x_loc == 0) x_dev = x;
 	else {
-		x_dev = (double*) CoCoMalloc(N * incx *sizeof(double), 0);
+		x_dev = (double*) CoCoMalloc(N * incx *sizeof(double), 0, 0);
 		CoCoMemcpy(x_dev, x,  N * incx *sizeof(double), 0, x_loc);
 	}
 	if (y_loc == 0) y_dev = y;
 	else{
-		y_dev = (double*) CoCoMalloc(N * incy *sizeof(double), 0);
+		y_dev = (double*) CoCoMalloc(N * incy *sizeof(double), 0, 1);
 		CoCoMemcpy(y_dev, y,  N * incy *sizeof(double), 0, y_loc);
 	}
 

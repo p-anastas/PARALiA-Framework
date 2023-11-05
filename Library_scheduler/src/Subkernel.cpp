@@ -315,7 +315,7 @@ void CoCoPeLiaInitWS(int* dev_list, int dev_num){
 			}
 			if(flag_is_worker && deidxize(dev_id_idx)!= -1){
 				for (int par_idx = 0; par_idx < exec_queue[dev_id_idx][0]->simultaneous_workers; par_idx++ ){
-					void* local_ws = CoCoMalloc(2048, deidxize(dev_id_idx)); 
+					void* local_ws = CoCoMalloc(2048, deidxize(dev_id_idx), 1); 
 					massert(CUBLAS_STATUS_SUCCESS == cublasSetWorkspace(*((cublasHandle_t*) 
 						exec_queue[dev_id_idx][0]->cqueue_backend_data[par_idx]), local_ws, 2048), 
 						"CommandQueue::CommandQueue(%d): cublasSetWorkspace failed\n", deidxize(dev_id_idx));

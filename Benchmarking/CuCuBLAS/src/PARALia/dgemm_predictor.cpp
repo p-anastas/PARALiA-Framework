@@ -52,9 +52,9 @@ int main(const int argc, const char *argv[]) {
 
 	double *A_ptr, *B_ptr, *C_ptr;
 	// allocate in device if loc = 0, otherwise allocate in pinned memory for benchmarks
-	A_ptr = (double*) CoCoMalloc(sizeof(double), A_loc);
-	B_ptr = (double*) CoCoMalloc(sizeof(double), B_loc);
-	C_ptr = (double*) CoCoMalloc(sizeof(double), C_loc);
+	A_ptr = (double*) CoCoMalloc(sizeof(double), A_loc, 0);
+	B_ptr = (double*) CoCoMalloc(sizeof(double), B_loc, 0);
+	C_ptr = (double*) CoCoMalloc(sizeof(double), C_loc, 1);
 
 	gemm_backend_in<double>* initial_gemm = (gemm_backend_in<double>*) malloc(sizeof(struct gemm_backend_in<double>));
 

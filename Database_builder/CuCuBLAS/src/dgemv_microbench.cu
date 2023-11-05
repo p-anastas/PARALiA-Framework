@@ -83,9 +83,9 @@ int main(const int argc, const char *argv[]) {
 
 	double *A_buf;
     double *x_buf, *y_buf;
-    A_buf = (double*) CoCoMalloc(maxDim * maxDim * sizeof(double), dev_id);
-  	x_buf = (double*) CoCoMalloc(maxDim * sizeof(double), dev_id);
-  	y_buf = (double*) CoCoMalloc(maxDim * sizeof(double), dev_id);
+    A_buf = (double*) CoCoMalloc(maxDim * maxDim * sizeof(double), dev_id, 0);
+  	x_buf = (double*) CoCoMalloc(maxDim * sizeof(double), dev_id, 0);
+  	y_buf = (double*) CoCoMalloc(maxDim * sizeof(double), dev_id, 1);
 	CoCoSyncCheckErr();
 
 	cpu_timer  = csecond() - cpu_timer ;
