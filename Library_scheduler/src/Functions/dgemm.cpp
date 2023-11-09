@@ -78,7 +78,7 @@ void ManageCachesDgemm(PMD_p local_PMD){
 			max_cache_sz = free_dev_mem - ((long long) max_dev_mem*(1-PROBLEM_GPU_PERCENTAGE/100.0)) + prev_DevCache_sz;
 		}
 		Block_num = 1 + Block_num_A + Block_num_B + Block_num_C;
-		if (WR_LAZY) Block_num+= Block_num_C; 
+		if (!strcmp(OUTPUT_ALGO_MODE,"ALGO_WR_LAZY") || !strcmp(OUTPUT_ALGO_MODE,"ALGO_WREDUCE")) Block_num+= Block_num_C; 
 		int max_block_num = max_cache_sz/Block_sz;
 		if(max_block_num < Block_num){
 			lprintf(0, "PARALiADgemm: Problem will use %d blocks for dev_id = %d\
@@ -140,7 +140,7 @@ void CreateSubkernelsDgemm(PMD_p local_PMD){
 						== local_PMD->decom[1]->Tile_map[local_PMD->decom[1]->GridSz1*local_PMD->decom[1]->GridSz2-1]->dim1,
 						"K dim does not mach between decomposers for GEMM\n");
 	}
-	local_PMD->sk_num = local_PMD->decom[0]->GridSz1*local_PMD->decom[1]->GridSz2*local_PMD->decom[0]->GridSz2;
+	local_PMD->sk_num = local_PMD->autotuner->subkernel_num;
 #ifdef DEBUG
 	fprintf(stderr, "|-----> CreateSubkernelsDgemm(%p,%d,%d)\n",
 		local_PMD, local_PMD->autotuner->T, local_PMD->sk_num);
@@ -232,9 +232,12 @@ void UpdateSubkernelsDgemm(PMD_p local_PMD){
 				ptr_ker_translate->beta = initial_dgemm->beta;
 
 				int dev_id_idx = idxize(local_PMD->subkernel_list[current_ctr]->run_dev_id);
-				local_PMD->subkernel_list[current_ctr]->TileList[0]->set_loc_idx(dev_id_idx, 1);
-				local_PMD->subkernel_list[current_ctr]->TileList[1]->set_loc_idx(dev_id_idx, 1);
-				local_PMD->subkernel_list[current_ctr]->TileList[2]->set_loc_idx(dev_id_idx, 1);
+				local_PMD->subkernel_list[current_ctr]->TileList[0]->try_set_loc_idx(dev_id_idx, 1);
+				local_PMD->subkernel_list[current_ctr]->TileList[1]->try_set_loc_idx(dev_id_idx, 1);
+				local_PMD->subkernel_list[current_ctr]->TileList[2]->try_set_loc_idx(dev_id_idx, 1);
+				if (local_PMD->subkernel_list[current_ctr]->TileList[2]->WRP != WR && 
+					!local_PMD->subkernel_list[current_ctr]->TileList[2]->loc_map[dev_id_idx]) 
+					local_PMD->subkernel_list[current_ctr]->TileList[2]->set_WRP(WR);
 			}
 		}
 	}
@@ -251,11 +254,16 @@ void DgemmBindDevice(PMD_p local_PMD, Subkernel* ker, int dev_id){
 	ptr_ker_translate->ldA = ker->TileList[0]->get_chunk_size(dev_id_idx);
 	ptr_ker_translate->ldB = ker->TileList[1]->get_chunk_size(dev_id_idx);
 	ptr_ker_translate->ldC = ker->TileList[2]->get_chunk_size(dev_id_idx);
-	ker->TileList[0]->set_loc_idx(dev_id_idx, 1);
-	ker->TileList[1]->set_loc_idx(dev_id_idx, 1);
-	ker->TileList[2]->set_loc_idx(dev_id_idx, 1);
+	ker->TileList[0]->try_set_loc_idx(dev_id_idx, 1);
+	ker->TileList[1]->try_set_loc_idx(dev_id_idx, 1);
+	ker->TileList[2]->try_set_loc_idx(dev_id_idx, 1);
+	if (ker->TileList[2]->WRP != WR && !ker->TileList[2]->loc_map[dev_id_idx]) 
+		ker->TileList[2]->set_WRP(WR);
 	ker->TileList[2]->W_master = dev_id;
-	if(ker->TileList[2]->W_pending == local_PMD->decom[0]->GridSz2) ker->TileList[2]->W_complete = new Event(dev_id);
+	if(ker->TileList[2]->W_pending == local_PMD->decom[0]->GridSz2){
+		ker->TileList[2]->W_complete = new Event(dev_id);
+		ker->TileList[2]->W_reduce = new Event(ker->TileList[2]->get_initial_location());
+	}
 	//if(local_PMD->autotuner) if(local_PMD->autotuner->unit_modeler_list[dev_id_idx])
 	//	ker->run_op_estimate(local_PMD->autotuner->unit_modeler_list[dev_id_idx]); 
 #ifdef DEBUG
@@ -268,7 +276,7 @@ void DgemmPrepareLaunch(Subkernel* ker){
 	if(!(ker->TileList[2]->W_master_backend_ctr == -42)) 
 	// Means its not the first subkernel using the WR tile
 		ptr_ker_translate->beta = 1.0;
-	else if(WR_LAZY == ker->TileList[2]->WRP) ptr_ker_translate->beta = 0;
+	else if(WR_LAZY == ker->TileList[2]->WRP || W_REDUCE == ker->TileList[2]->WRP) ptr_ker_translate->beta = 0;
 }
 
 void DgemmUpdatePointers(Subkernel* ker){
@@ -437,23 +445,6 @@ ATC_p PARALiADgemm(char TransA,  char TransB, long int M, long int N, long int K
 		cpu_timer = csecond();
 #endif
 		CreateSubkernelsDgemm(local_PMD);
-		local_PMD->autotuner->update_sk_num(local_PMD->sk_num);
-#ifdef DEBUG
-		fprintf(stderr, "local_PMD->sk_num = %d {M,N,K}GridSz = {%d, %d, %d}, local_PMD->autotuner->active_unit_num = %d\n\n",
-			local_PMD->sk_num, local_PMD->decom[0]->GridSz1, local_PMD->decom[1]->GridSz2, local_PMD->decom[0]->GridSz2, local_PMD->autotuner->active_unit_num);
-#endif
-#ifdef TEST
-		cpu_timer = csecond() - cpu_timer;
-		fprintf(stderr, "Subkernel init -> t_subkernel_init = %lf ms\n", cpu_timer*1000);
-		cpu_timer = csecond();
-#endif
-		local_PMD->autotuner->distribute_subkernels(local_PMD->decom[0]->GridSz1, local_PMD->decom[1]->GridSz2, local_PMD->decom[0]->GridSz2);
-
-#ifdef TEST
-		cpu_timer = csecond() - cpu_timer;
-		fprintf(stderr, "Subkernel Distribute -> t_subkernel_dist = %lf ms\n", cpu_timer*1000);
-		cpu_timer = csecond();
-#endif
 		remaining_Subkernels = local_PMD->sk_num;
 		for(int d=0; d < local_PMD->autotuner->active_unit_num; d++){
 			if(local_PMD->autotuner->Subkernels_per_unit_num[d] == 0 )
@@ -478,9 +469,9 @@ ATC_p PARALiADgemm(char TransA,  char TransB, long int M, long int N, long int K
 		}
 		if(buffer_freed) ManageCachesDgemm(local_PMD);
 		T = local_PMD->autotuner->T;
-		local_PMD->decom[0]->Reset((void*) A, ldA, local_PMD->SAB);
-		local_PMD->decom[1]->Reset((void*) B, ldB, local_PMD->SAB);
-		local_PMD->decom[2]->Reset((void*) C, ldC, local_PMD->SAB);
+		local_PMD->decom[0]->Reset((void*) A, T, T, ldA, local_PMD->SAB);
+		local_PMD->decom[1]->Reset((void*) B, T, T, ldB, local_PMD->SAB);
+		local_PMD->decom[2]->Reset((void*) C, T, T, ldC, local_PMD->SAB);
 #ifdef TEST
 		cpu_timer = csecond() - cpu_timer;
 		fprintf(stderr, "Re-assigning cache blocks to tiles -> t_tile = %lf ms\n", cpu_timer*1000);
@@ -499,6 +490,10 @@ ATC_p PARALiADgemm(char TransA,  char TransB, long int M, long int N, long int K
 #endif
 	for(int d=0; d < local_PMD->autotuner->active_unit_num; d++)
 		current_SAB[idxize(local_PMD->autotuner->active_unit_id_list[d])]->allocate(true);
+	if(!strcmp(OUTPUT_ALGO_MODE,"ALGO_WREDUCE")){
+		reduce_loc = CoCoGetPtrLoc(C); 
+		current_SAB[idxize(reduce_loc)]->allocate(true);
+	}
 
 #ifdef TEST
 	cpu_timer = csecond() - cpu_timer;

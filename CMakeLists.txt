@@ -21,6 +21,10 @@ set(TESTBED_NAME $ENV{PARALIA_SYSTEM})
 message("PARALiA-Framework - TESTBED_NAME: " ${TESTBED_NAME})
 add_definitions(-DTESTBED="${TESTBED_NAME}")
 
+## Define the workspace where execution of the library (benchmarks & deployment) will be invoked from (e.g. to avoid Disk quota problems in /home)
+set(CD_LOCATION $ENV{CD_FOLDER})
+message("PARALiA-Framework - CD_LOCATION: " ${CD_LOCATION})
+
 ## Define the (max) number of devices for utilization (0-num_devices)
 set(NUM_LOCATIONS $ENV{PARALIA_SYSTEM_DEVNUM})
 message("PARALiA-Framework - NUM_LOCATIONS: " ${NUM_LOCATIONS})
@@ -30,6 +34,32 @@ add_definitions(-DLOC_NUM=${NUM_LOCATIONS})
 set(PROBLEM_GPU_PERCENTAGE 70)
 message("PARALiA-Framework - PROBLEM_GPU_PERCENTAGE: " ${PROBLEM_GPU_PERCENTAGE})
 add_definitions(-DPROBLEM_GPU_PERCENTAGE=${PROBLEM_GPU_PERCENTAGE})
+
+###########################################################################################
+#---------------------------Internal resource reuse options-------------------------------#
+###########################################################################################
+
+## Enable Asynchronous execution for Subkernels
+add_definitions(-DASYNC_ENABLE)
+
+## Enable lock-free versions of event & Queue management in Universal_helpers
+add_definitions(-DUNIHELPER_LOCKFREE_ENABLE)
+
+## Enable GPU backend resourse reuse (streams, handles)
+add_definitions(-DQUEUE_REUSE_ENABLE)
+
+## Enable GPU and CPU allocated buffer reuse between different calls
+add_definitions(-DBUFFER_REUSE_ENABLE)
+
+## The level of reuse for the autotuning metadata of every routine call by SIMILAR subsequent calls
+## NONE -> Rerun full autotuning every time
+## MODELS -> Keep the models but rerun the distribution and routing functions
+## PROBLEMS -> Keep a cache of size PROBLEM_MD_CACHE with the autotuning MD of DIFFERENT routine calls
+##             This enables the full autotuning metadata reuse of up to PROBLEM_MD_CACHE problems. 
+#add_definitions(-DMETADATA_REUSE_NONE)
+#add_definitions(-DMETADATA_REUSE_MODELS)
+add_definitions(-DMETADATA_REUSE_PROBLEMS) # FIXME: Currently bugged
+add_definitions(-DPROBLEM_MD_CACHE=100) # Only relevant for "PROBLEMS" reuse level
 
 ###########################################################################################
 #---------------------------Algorithmic/Software Optimizations----------------------------#
@@ -56,47 +86,95 @@ add_definitions(-DSUBKERNELS_FIRE_WHEN_READY)
 #add_definitions(-DOUTPUT_ALGO_MODE="ALGO_WR")
 add_definitions(-DOUTPUT_ALGO_MODE="ALGO_WR_LAZY")
 #add_definitions(-DOUTPUT_ALGO_MODE="ALGO_WREDUCE")
-
+add_definitions(-DREDUCE_WORKERS_PERDEV=10)
 ###########################################################################################
-#-----------------------------------Modeling options--------------------------------------#
-###########################################################################################
-
-## Enable using transfer hops for faster transfers between multiple links
-#add_definitions(-DENABLE_TRANSFER_HOPS)
-## Enable using transfer hops for W tiles as well (no data reuse, but potentially better BW)
-#add_definitions(-DENABLE_TRANSFER_W_HOPS)
-
-## Enable using estimated performance aggregation for initializing the link_hop_route
-#add_definitions(-DENABLE_ESPA)
-## Define the strategy for agreggating the transfer time of a problem if ESPA is used. 0 = max, 1 = sum.
-#add_definitions(-DESPA_COMMUNICATION_AGGREGATOR=0)
-
-###########################################################################################
-#------------------------------------Routing options--------------------------------------#
+#---------------------------------Routing optimizations-----------------------------------#
 ###########################################################################################
 
-#add_definitions(-DP2P_FETCH_FROM_INIT)
-#add_definitions(-DP2P_FETCH_FROM_GPU_SERIAL)
-#add_definitions(-DP2P_FETCH_FROM_GPU_DISTANCE)
-#add_definitions(-DCHAIN_FETCH_SERIAL)
-#add_definitions(-DCHAIN_FETCH_RANDOM)
-#add_definitions(-DCHAIN_FETCH_TIME)
-add_definitions(-DCHAIN_FETCH_QUEUE_WORKLOAD)
+## Enable overlapping Send & recv Communication FIXME: Not implemented
+add_definitions(-DENABLE_SEND_RECV_OVERLAP)
+
+## Enable sharing of bandwidth between links that utilize the same underlying hardware communication resources
+#add_definitions(-DENABLE_LINK_BW_SHARING) # by putting them on different queues
 
 ## The number of sub-buffers FasTCoCoMemcpy2DAsync will use to increase effective BW
 ## In general effective_trans_time = max_trans_time(route[]) + 1/SBO * sub_trans_time(route_minus_max[])
 ## Rule of thumb: large SBO -> increased transfer latency, small SBO -> decreased bandwidth
 add_definitions(-DSTREAMING_BUFFER_OVERLAP=8)
 
-#--------------------------------------Experimental----------------------------------------#
+###########################################################################################
+#-----------------------------------Routing selection-------------------------------------#
+###########################################################################################
 
-## Enable sharing of bandwidth between links that utilize the same underlying hardware communication resources
-#add_definitions(-DENABLE_LINK_BW_SHARING) # by putting them on different queues
+#add_definitions(-DP2P_FETCH_FROM_INIT)
+#add_definitions(-DP2P_FETCH_FROM_GPU_SERIAL)
+#add_definitions(-DP2P_FETCH_FROM_GPU_DISTANCE)
+#add_definitions(-DP2P_FETCH_FROM_GPU_DISTANCE_PLUS) # PARALIa 1.5
+#add_definitions(-DCHAIN_FETCH_SERIAL)
+#add_definitions(-DCHAIN_FETCH_RANDOM)
+#add_definitions(-DCHAIN_FETCH_TIME)
+add_definitions(-DCHAIN_FETCH_QUEUE_WORKLOAD)
 
-## TODO: Route chains could be implemented later (e.g. instead of 1->2->3 to use 1->2 parallel to 1->3)
+## An extra heuristic to avoid only trusting QUEUE_ETAs for route selection
+## Since some routes migh result in extremely low botlenecks due to serialization
+## The multiplier defines the max bandwidth multiplier that is allowed to be used to replace a route
+## For example, 1 means that only allow replacement with links of >= bandwidth
+## The higher this value is, the more ETA-based the selection criteria
+add_definitions(-DBANDWIDTH_DIFFERENCE_CUTTOF_RATIO=5)
 
-## Enable overlapping Send & recv Communication FIXME: Not implemented
-add_definitions(-DENABLE_SEND_RECV_OVERLAP)
+## Enable the use of transfer hops through memory locations that do not need a tile
+## Improves bandwidth, but adds (extra) network load to fast lanes. Currently not integrated in already-chained transfers.
+#add_definitions(-DENABLE_TRANSFER_HOPS)
+
+#add_definitions(-DHOP_FETCH_BANDWIDTH)
+#add_definitions(-DHOP_FETCH_QUEUE_WORKLOAD)
+add_definitions(-DHOP_FETCH_BW_PLUS_ETA)
+
+###########################################################################################
+#----------------------------------Autotuning options-------------------------------------#
+###########################################################################################
+
+## The number of itterations that will performed to tune the per-device ratio workload split.
+## Inconsequential for homogeneous cases, higher = better for heterogeneous ones.
+add_definitions(-DRATIO_TUNE_ITTER=10)
+
+#Enable device reordering optimization during split optimizing based on maximizing d2d bandwidths.
+# Seems buggy for now...
+#add_definitions(-DREORDER_DEVICES)
+
+###########################################################################################
+#---------------------------------Tiling size selection-----------------------------------#
+###########################################################################################
+
+## Decision regarding perplexing tile selection and workload selection
+## by applying estimated overlap sl from tile to device split prediction
+add_definitions(-DAPPLY_TILE_SL_TO_WORKLOAD_SPLIT)
+## TODO: For future work could autotune conditions.
+## Conditions (with decreasing priority): 
+## 1: NO-Imbalance: Spliting creates subkernels that can be distributed equally to devices without WR-sharing
+## 2: NO-remainder: split should not create remainder Tiles if possible
+## 3: T-min: Tile should be >= than a preset value
+add_definitions(-DTILE_MIN=2048)
+add_definitions(-DTILE_MIN_SLOWDOWN=0.2)
+## 4: SK-num: subkernels per device must be >= MIN_DESIRED_SK_DEV
+add_definitions(-DMIN_DESIRED_SK_DEV=64)
+add_definitions(-DMAX_DESIRED_SK_DEV=512)
+add_definitions(-DMAX_DESIRED_SK_DEV_SLOWDOWN=0.1)
+## 5: T-max: Tile should be <= than a preset value
+add_definitions(-DTILE_MAX=4096)
+add_definitions(-DTILE_MΑΧ_SLOWDOWN=0.1)
+
+
+###########################################################################################
+#------------------------------Subkernel selection options--------------------------------#
+###########################################################################################
+
+#Run subkernels in provided order
+#add_definitions(-DSERIAL_SUBKERNEL_SELECTION)
+
+## Define subkernel selection heuristic values.
+#add_definitions(-DSUBKERNEL_SELECT_MIN_RONLY_ETA)
+add_definitions(-DSUBKERNEL_SELECT_FETCH_ETA_PLUS_MIN_PENDING)
 
 ###########################################################################################
 #--------------------------------Subkernel distributions----------------------------------#
@@ -112,22 +190,12 @@ add_definitions(-DDISTRIBUTION="2D-BLOCK-CYCLIC")
 #add_definitions(-DDISTRIBUTION="SPLIT-CHUNKS-ROBIN-REVERSE")
 
 ###########################################################################################
-#------------------------------Subkernel selection options--------------------------------#
-###########################################################################################
-
-#Run subkernels in provided order
-#add_definitions(-DSERIAL_SUBKERNEL_SELECTION)
-
-## Define subkernel selection heuristic values.
-add_definitions(-DSUBKERNEL_SELECT_FETCH_ETA_PLUS_MIN_PENDING)
-#add_definitions(-DSUBKERNEL_SELECT_MIN_RONLY_ETA)
-
-###########################################################################################
 #---------------------------------Optimization targets------------------------------------#
 ###########################################################################################
 
 ## Define at which percentage to normalize float values for similar data (e.g. costs, splits etc) to avoid empirical errors leaking into decisions
 add_definitions(-DNORMALIZE_NEAR_SPLIT_LIMIT=0.05)
+#TODO: FIXME !!!! TRIM execution logs automatically, currently by hand for testing
 
 ## Define the minimum allowed percentile contribution in total time from each potential unit
 ## In case of energy, the maximum allowed percentile energy increase by each new unit.
@@ -160,34 +228,8 @@ add_definitions(-DPERPER_LIMIT=0.0)
 #add_definitions(-DPREDICT_OPTIMIZE_TARGET="OTHER_TBD")
 
 ###########################################################################################
-#---------------------------Internal resource reuse options-------------------------------#
-###########################################################################################
-
-## Enable GPU backend resourse reuse (streams, handles)
-add_definitions(-DQUEUE_REUSE_ENABLE)
-
-## Enable GPU and CPU allocated buffer reuse between different calls
-add_definitions(-DBUFFER_REUSE_ENABLE)
-
-## The level of reuse for the autotuning metadata of every routine call by SIMILAR subsequent calls
-## NONE -> Rerun full autotuning every time
-## MODELS -> Keep the models but rerun the distribution and routing functions
-## PROBLEMS -> Keep a cache of size PROBLEM_MD_CACHE with the autotuning MD of DIFFERENT routine calls
-##             This enables the full autotuning metadata reuse of up to PROBLEM_MD_CACHE problems. 
-#add_definitions(-DMETADATA_REUSE_NONE)
-#add_definitions(-DMETADATA_REUSE_MODELS)
-add_definitions(-DMETADATA_REUSE_PROBLEMS)
-add_definitions(-DPROBLEM_MD_CACHE=10) # Only relevant for "PROBLEMS" reuse level
-
-###########################################################################################
 #----------------------------------DEBUG/TEST Options-------------------------------------#
 ###########################################################################################
-
-## Enable Asynchronous execution for Subkernels
-add_definitions(-DASYNC_ENABLE)
-
-## Enable lock-free versions of event & Queue management in Universal_helpers
-add_definitions(-DUNIHELPER_LOCKFREE_ENABLE)
 
 #Run in debug mode, which includes detailed function calls and info for error-checking
 #add_definitions(-DDEBUG)
@@ -258,9 +300,9 @@ include_directories(${CUDA_INCLUDE_DIRS})
 message("PARALiA-Framework - CUDA_INCLUDE_DIRS: " ${CUDA_INCLUDE_DIRS})
 
 set (CUDA_LD ${CUDA_PREFIX}/lib64) # or /lib depending on system
-set (CUDA_LINK "-L${CUDA_LD} -lcudart -lcublas -lcurand $ENV{PARALIA_CUDA_LOAD_COMMAND}")
+set (CUDA_LINK "-L${CUDA_LD} -lcudart -lcublas -lcurand $ENV{PARALIA_CUDA_LOAD_COMMAND} -fopenmp")
 message("PARALiA-Framework - CUDA_LINK: " ${CUDA_LINK} )
-set (INTERNAL_LINK_LIB "${CUDA_LINK} -lrt -ldl")
+set (INTERNAL_LINK_LIB "${CUDA_LINK} -lrt -ldl -lnuma")
 message("PARALiA-Framework - INTERNAL_LINK_LIB: " ${INTERNAL_LINK_LIB})
 
 ###########################################################################################
@@ -273,7 +315,7 @@ if(NOT $ENV{PARALIA_CXX_PREFIX} STREQUAL "default")
   set (CMAKE_C_COMPILER ${CXX_PREFIX}/bin/gcc)
 endif()
 
-set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -fopenmp -lm -Wuninitialized")
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -fopenmp -lm -Wuninitialized -lgomp -lnuma")
 message("PARALiA-Framework - CMAKE_CXX_FLAGS: " ${CMAKE_CXX_FLAGS})
 
 #set(CMAKE_C_FLAGS ${CMAKE_CXX_FLAGS})
@@ -289,7 +331,7 @@ include_directories(${OPENBLAS_INCLUDE_DIRS})
 message("PARALiA-Framework - OPENBLAS_INCLUDE_DIRS: " ${OPENBLAS_INCLUDE_DIRS})
 
 set (OPENBLAS_LD ${OPENBLAS_PREFIX}/lib)
-set (OPENBLAS_LINK  "-L${OPENBLAS_LD} -lopenblas" )
+set (OPENBLAS_LINK  "-L${OPENBLAS_LD} -lopenblas -lgomp" )
 message("PARALiA-Framework - OPENBLAS_LINK: " ${OPENBLAS_LINK})
 
 ###########################################################################################

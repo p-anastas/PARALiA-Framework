@@ -76,19 +76,21 @@ int main(const int argc, const char *argv[]) {
   	cudaStreamCreate(&host_stream);
 		assert(CUBLAS_STATUS_SUCCESS == cublasCreate(&handle0));
 		assert(CUBLAS_STATUS_SUCCESS == cublasSetStream(handle0, host_stream));
-	}
+	    //void* WS = CoCoMalloc(4*1024*1024*sizeof(double), dev_id);
+        //assert(CUBLAS_STATUS_SUCCESS == cublasSetWorkspace(handle0, WS, 4*1024*1024*sizeof(double)));
+    }
 
 	fprintf(stderr, "\nAllocating memory...");
 	double cpu_timer = csecond();
 
 	double *A_buf, *B_buf, *C_buf;
-  	A_buf = (double*) CoCoMalloc(maxDim * maxDim * sizeof(double), dev_id);
-  	B_buf = (double*) CoCoMalloc(maxDim * maxDim * sizeof(double), dev_id);
-  	C_buf = (double*) CoCoMalloc(maxDim * maxDim * sizeof(double), dev_id);
+  	A_buf = (double*) CoCoMalloc(maxDim * maxDim * sizeof(double), dev_id, 0);
+  	B_buf = (double*) CoCoMalloc(maxDim * maxDim * sizeof(double), dev_id, 0);
+  	C_buf = (double*) CoCoMalloc(maxDim * maxDim * sizeof(double), dev_id, 1);
 	CoCoSyncCheckErr();
 
 	cpu_timer  = csecond() - cpu_timer ;
-	fprintf(stderr, "done.\nAlloc time:\t%lf ms\n\n",  cpu_timer  * 1000);
+	fprintf(stderr, "done.\nAlloc time (locs = [%d, %d, %d]):\t%lf ms\n\n",  CoCoGetPtrLoc(A_buf) ,  CoCoGetPtrLoc(B_buf) ,CoCoGetPtrLoc(C_buf) , cpu_timer  * 1000);
 
 	fprintf(stderr, "Initializing to random values...");
 	cpu_timer = csecond();

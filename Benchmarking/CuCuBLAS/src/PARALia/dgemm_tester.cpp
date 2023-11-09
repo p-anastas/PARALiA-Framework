@@ -49,9 +49,9 @@ int main(const int argc, const char *argv[]) {
 
 		A_loc = B_loc = C_loc = -1;
 
-		A = (double*) CoCoMalloc(M * K*sizeof(double), A_loc);
-		B = (double*) CoCoMalloc(N * K*sizeof(double), B_loc);
-		C = (double*) CoCoMalloc(M * N*sizeof(double), C_loc);
+		A = (double*) CoCoMalloc(M * K*sizeof(double), A_loc, 1);
+		B = (double*) CoCoMalloc(N * K*sizeof(double), B_loc, 1);
+		C = (double*) CoCoMalloc(M * N*sizeof(double), C_loc, 1);
 
 		CoCoSyncCheckErr();
 		cpu_timer  = csecond() - cpu_timer;
@@ -65,7 +65,7 @@ int main(const int argc, const char *argv[]) {
 		cpu_timer  = csecond() - cpu_timer ;
 		fprintf(stderr, "done.\nInit time:\t%lf ms\n\n",  cpu_timer  * 1000);
 
-		C_comp = (double*) CoCoMalloc(M * N*sizeof(double), C_loc);
+		C_comp = (double*) CoCoMalloc(M * N*sizeof(double), C_loc, 1);
 		CoCoMemcpy(C_comp, C,  M * N *sizeof(double), -1, -1);
 
 		fprintf(stderr, "\n==============================================================================================================================\n");
@@ -194,14 +194,14 @@ int main(const int argc, const char *argv[]) {
 			fprintf(stderr, "CoCoPeLiaDgemmTester: Allocating GPU buffers...->100 MB...");
 			cpu_timer = csecond();
 			A_loc = B_loc = C_loc = dev_id;
-			A = (double*) CoCoMalloc(M * K*sizeof(double), A_loc);
-			B = (double*) CoCoMalloc(N * K*sizeof(double), B_loc);
-			C = (double*) CoCoMalloc(M * N*sizeof(double), C_loc);
-			C_comp = (double*) CoCoMalloc(M * N*sizeof(double), C_loc);
+			A = (double*) CoCoMalloc(M * K*sizeof(double), A_loc, 1);
+			B = (double*) CoCoMalloc(N * K*sizeof(double), B_loc, 1);
+			C = (double*) CoCoMalloc(M * N*sizeof(double), C_loc, 1);
+			C_comp = (double*) CoCoMalloc(M * N*sizeof(double), C_loc, 1);
 
 			double* C_host_buf, * C_host_comp_buf;
-			C_host_buf =  (double*) CoCoMalloc(M * N*sizeof(double), -2);
-			C_host_comp_buf =  (double*) CoCoMalloc(M * N*sizeof(double), -2);
+			C_host_buf =  (double*) CoCoMalloc(M * N*sizeof(double), -2, 1);
+			C_host_comp_buf =  (double*) CoCoMalloc(M * N*sizeof(double), -2, 1);
 			CoCoSyncCheckErr();
 			cpu_timer  = csecond() - cpu_timer;
 			fprintf(stderr, "done.\nAlloc time:\t%lf ms\n\n",  cpu_timer  * 1000);
@@ -290,9 +290,9 @@ int main(const int argc, const char *argv[]) {
 		A_loc = B_loc = C_loc = -1;
 
 		double *A, *B, *C;
-		A = (double*) CoCoMalloc(M * K*sizeof(double), A_loc);
-		B = (double*) CoCoMalloc(N * K*sizeof(double), B_loc);
-		C = (double*) CoCoMalloc(M * N*sizeof(double), C_loc);
+		A = (double*) CoCoMalloc(M * K*sizeof(double), A_loc, 1);
+		B = (double*) CoCoMalloc(N * K*sizeof(double), B_loc, 1);
+		C = (double*) CoCoMalloc(M * N*sizeof(double), C_loc, 1);
 
 		CoCoSyncCheckErr();
 		cpu_timer  = csecond() - cpu_timer;
@@ -422,14 +422,14 @@ int main(const int argc, const char *argv[]) {
 		fprintf(stderr, "CoCoPeLiaDgemmTester: Allocating Mixed GPU buffers...-> A(dev=%d) : %.3lf GB, B(dev=%d) : %.3lf GB, C(dev=%d) : %.3lf GB(x2 for check):", A_loc, M*K*sizeof(double)/1e9, B_loc, K*N*sizeof(double)/1e9, C_loc, M*N*sizeof(double)/1e9);
 		cpu_timer = csecond();
 
-		A = (double*) CoCoMalloc(M * K*sizeof(double), A_loc);
-		B = (double*) CoCoMalloc(N * K*sizeof(double), B_loc);
-		C = (double*) CoCoMalloc(M * N*sizeof(double), C_loc);
-		C_comp = (double*) CoCoMalloc(M * N*sizeof(double), C_loc);
+		A = (double*) CoCoMalloc(M * K*sizeof(double), A_loc, 1);
+		B = (double*) CoCoMalloc(N * K*sizeof(double), B_loc, 1);
+		C = (double*) CoCoMalloc(M * N*sizeof(double), C_loc, 1);
+		C_comp = (double*) CoCoMalloc(M * N*sizeof(double), C_loc, 1);
 
 		double* C_host_buf, * C_host_comp_buf;
-		C_host_buf =  (double*) CoCoMalloc(M * N*sizeof(double), -2);
-		C_host_comp_buf =  (double*) CoCoMalloc(M * N*sizeof(double), -2);
+		C_host_buf =  (double*) CoCoMalloc(M * N*sizeof(double), -2, 1);
+		C_host_comp_buf =  (double*) CoCoMalloc(M * N*sizeof(double), -2, 1);
 		CoCoSyncCheckErr();
 		cpu_timer  = csecond() - cpu_timer;
 		fprintf(stderr, "done.\nAlloc time:\t%lf ms\n\n",  cpu_timer  * 1000);

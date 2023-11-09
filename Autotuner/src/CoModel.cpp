@@ -104,7 +104,6 @@ CoModel_p CoModel_init_local(short dev_id)
 	return out_model;
 }
 
-
 /// Predict t_com for bytes using a Cmodel
 double t_com_predict(CoModel_p model, long double bytes)
 {
@@ -120,10 +119,19 @@ double t_com_predict(CoModel_p model, long double bytes)
 /// Predict t_com for bytes using a Cmodel
 double t_com_predict_shared(CoModel_p model, long double bytes)
 {
+	long double tb_estimated = 0;
 	if (bytes < 0) return -1;
 	else if ( bytes == 0) return 0;
-	else if (final_estimated_link_bw[idxize(model->to)][idxize(model->from)] == 0.0) return 0;
-	long double tb_estimated = 1/(1e9*final_estimated_link_bw[idxize(model->to)][idxize(model->from)]);
+	else if (model->to == model->from) return 0;
+	else if (final_estimated_link_bw[idxize(model->to)][idxize(model->from)] != -1.0){
+		tb_estimated = 1/(1e9*final_estimated_link_bw[idxize(model->to)][idxize(model->from)]);
+	}
+	else if(links_share_bandwidth[idxize(model->to)][idxize(model->from)][0] != -42 ){
+		tb_estimated = 1/(1e9*final_estimated_link_bw[links_share_bandwidth[idxize(model->to)][idxize(model->from)][0]]
+													[links_share_bandwidth[idxize(model->to)][idxize(model->from)][1]]);
+	}
+	else error("t_com_predict_shared: final_estimated_link_bw[%d][%d] = %.1lf and is not shared.\n", 
+		model->to, model->from, final_estimated_link_bw[idxize(model->to)][idxize(model->from)]);
 #ifdef DPDEBUG
 		lprintf(4, "t_com_predict_shared(%Le): ti = %Le, tb = %Le, tb_estimated[%d][%d] = %Le, t_com = %Le ms\n",
 			bytes, model->ti, model-> tb, model->to, model->from, tb_estimated, model->ti + tb_estimated* bytes);
@@ -138,7 +146,6 @@ double t_com_sl(CoModel_p model, long double bytes)
 	else if ( bytes == 0) return 0;
 	return model->ti + model->tb*bytes*model->sl[idxize(model->from)][idxize(model->to)];
 }
-
 
 /// Predict t_com_bid for oposing transfers of bytes1,bytes2
 double t_com_bid_predict(CoModel_p model1, CoModel_p model2, long double bytes1, long double bytes2)

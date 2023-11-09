@@ -23,12 +23,12 @@ extern "C"{
 #define CBLASXT_MAX_SAFE_TILE 10000
 
 #ifdef TTEST /// C programmers hate him PETROFIX
-extern int xktrans_ctr;
-extern long long xkbytes[100000];
-extern int xklocs[10000][2];
-extern double xktimers[100000][3];
-extern int xktimer_ctr[LOC_NUM][LOC_NUM];
-extern double xklink_gbytes_s[LOC_NUM][LOC_NUM];
+int xktrans_ctr;
+long long xkbytes[100000];
+int xklocs[10000][2];
+double xktimers[100000][3];
+int xktimer_ctr[LOC_NUM][LOC_NUM];
+double xklink_gbytes_s[LOC_NUM][LOC_NUM];
 
 void xkreseTTEST(){
 	for(int k = 0; k < xktrans_ctr; k++){
@@ -118,12 +118,16 @@ double XKBLASDgemmWrap(char TransA,  char TransB, long int M, long int N, long i
 #ifdef TTEST
 	xkHopMemcpyPrint();
 #endif
+#ifdef DEBUG
+	lprintf(lvl-1, "<-----|\n");
+#endif
 	return total_t;
 
 }
 
 void XKBLASFlushGPUBuf(){
-	xkblas_memory_free();
+		//xkblas_memory_invalidate_caches(); 
+		xkblas_memory_free();
 }
 
 int main(const int argc, const char *argv[]) {
@@ -145,11 +149,11 @@ int main(const int argc, const char *argv[]) {
 			else if (predef_control_values->T > M/1.5 && predef_control_values->T > N/1.5 && predef_control_values->T > K/1.5)
 				error("Given Tin=%ld bigger than all problem dims/1.5\n", predef_control_values->T);
 		}
-			sprintf(filename, "%s/XKBLASDgemmRunner_predefined_vals_%s_%s_%s.log",
-				TESTLIBDIR, CoCoDistributionPrint(), CoCoImplementationPrint(), VERSION);
+			sprintf(filename, "%s/XKBLASDgemmRunner_predefined_vals_%s.log",
+				TESTLIBDIR, VERSION);
 	}
-	else sprintf(filename, "%s/XKBLASDgemmRunner_%s_%s_%s.log",
-		TESTLIBDIR, CoCoDistributionPrint(), CoCoImplementationPrint(), VERSION);
+	else sprintf(filename, "%s/XKBLASDgemmRunner_%s.log",
+		TESTLIBDIR, VERSION);
 
 	long int XKBLAS_tile;
 	if (predef_control_values!= NULL && predef_control_values->T > 0)
@@ -190,9 +194,9 @@ int main(const int argc, const char *argv[]) {
 
 	double *A, *B, *C;
 	// allocate in device if loc = 0, otherwise allocate in pinned memory for benchmarks
-	A = (double*) CoCoMalloc(M * K*sizeof(double), A_loc);
-	B = (double*) CoCoMalloc(N * K*sizeof(double), B_loc);
-	C = (double*) CoCoMalloc(M * N*sizeof(double), C_loc);
+	A = (double*) CoCoMalloc(M * K*sizeof(double), A_loc, 0);
+	B = (double*) CoCoMalloc(N * K*sizeof(double), B_loc, 0);
+	C = (double*) CoCoMalloc(M * N*sizeof(double), C_loc, 1);
 
 	CoCoSyncCheckErr();
 	cpu_timer  = csecond() - cpu_timer;

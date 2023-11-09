@@ -72,8 +72,8 @@ int main(const int argc, const char *argv[]) {
 	double cpu_timer = csecond();
 
 	double *x_dev, *y_dev;
-  	x_dev = (double*) CoCoMalloc(maxDim * sizeof(double), dev_id);
-  	y_dev = (double*) CoCoMalloc(maxDim * sizeof(double), dev_id);
+  	x_dev = (double*) CoCoMalloc(maxDim * sizeof(double), dev_id, 0);
+  	y_dev = (double*) CoCoMalloc(maxDim * sizeof(double), dev_id, 1);
 
 	CoCoSyncCheckErr();
 	cpu_timer  = csecond() - cpu_timer ;

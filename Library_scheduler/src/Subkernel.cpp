@@ -247,57 +247,6 @@ void Subkernel::run_ready_operation(){
 }
 
 void CoCoPeLiaInitResources(int* dev_list, int dev_num){
-
-	for(int i = 0; i < LOC_NUM; i++)
-	for(int j = 0; j < LOC_NUM; j++)
-	for(int k = 0; k < 2; k++) links_share_bandwidth[i][j][k] = -42;
-
-#ifndef ENABLE_LINK_BW_SHARING
-	///TODO: ENABLE_LINK_BW_SHARING flag is disabled, but sharing-disabler mechanism is handmade
-
-	// FIXME: Handmade distribution, for testing purposes
-	links_share_bandwidth[0][LOC_NUM - 1][0] = 1;
-	links_share_bandwidth[0][LOC_NUM - 1][1] = LOC_NUM - 1;
-	links_share_bandwidth[1][LOC_NUM - 1][0] = 0;
-	links_share_bandwidth[1][LOC_NUM - 1][1] = LOC_NUM - 1;
-
-	links_share_bandwidth[2][LOC_NUM - 1][0] = 3;
-	links_share_bandwidth[2][LOC_NUM - 1][1] = LOC_NUM - 1;
-	links_share_bandwidth[3][LOC_NUM - 1][0] = 2;
-	links_share_bandwidth[3][LOC_NUM - 1][1] = LOC_NUM - 1;
-
-	links_share_bandwidth[4][LOC_NUM - 1][0] = 5;
-	links_share_bandwidth[4][LOC_NUM - 1][1] = LOC_NUM - 1;
-	links_share_bandwidth[5][LOC_NUM - 1][0] = 4;
-	links_share_bandwidth[5][LOC_NUM - 1][1] = LOC_NUM - 1;
-
-	links_share_bandwidth[6][LOC_NUM - 1][0] = 7;
-	links_share_bandwidth[6][LOC_NUM - 1][1] = LOC_NUM - 1;
-	links_share_bandwidth[7][LOC_NUM - 1][0] = 6;
-	links_share_bandwidth[7][LOC_NUM - 1][1] = LOC_NUM - 1;
-/*
-	links_share_bandwidth[LOC_NUM - 1][0][0] = LOC_NUM - 1;
-	links_share_bandwidth[LOC_NUM - 1][0][1] = 1;
-	links_share_bandwidth[LOC_NUM - 1][1][0] = LOC_NUM - 1;
-	links_share_bandwidth[LOC_NUM - 1][1][1] = 0;
-
-	links_share_bandwidth[LOC_NUM - 1][2][0] = LOC_NUM - 1;
-	links_share_bandwidth[LOC_NUM - 1][2][1] = 3;
-	links_share_bandwidth[LOC_NUM - 1][3][0] = LOC_NUM - 1;
-	links_share_bandwidth[LOC_NUM - 1][3][1] = 2;
-
-	links_share_bandwidth[LOC_NUM - 1][4][0] = LOC_NUM - 1;
-	links_share_bandwidth[LOC_NUM - 1][4][1] = 5;
-	links_share_bandwidth[LOC_NUM - 1][5][0] = LOC_NUM - 1;
-	links_share_bandwidth[LOC_NUM - 1][5][1] = 4;
-
-	links_share_bandwidth[LOC_NUM - 1][6][0] = LOC_NUM - 1;
-	links_share_bandwidth[LOC_NUM - 1][6][1] = 7;
-	links_share_bandwidth[LOC_NUM - 1][7][0] = LOC_NUM - 1;
-	links_share_bandwidth[LOC_NUM - 1][7][1] = 6;
-*/
-#endif
-
 	for(short dev_id_idx = 0 ; dev_id_idx < LOC_NUM; dev_id_idx++){
 		for(short dev_id_idy = 0 ; dev_id_idy < LOC_NUM; dev_id_idy++)
 		if(dev_id_idy!=dev_id_idx){
@@ -306,7 +255,15 @@ void CoCoPeLiaInitResources(int* dev_list, int dev_num){
 				short shared_iloc0 = links_share_bandwidth[dev_id_idx][dev_id_idy][0],
 					shared_iloc1 = links_share_bandwidth[dev_id_idx][dev_id_idy][1];
 				short queue_id = (dev_id_idy == LOC_NUM - 1)? deidxize(dev_id_idx) : deidxize(dev_id_idy);
-				recv_queues[dev_id_idx][dev_id_idy] = new CommandQueue(queue_id, 0);
+				if( shared_iloc0 == - 42) recv_queues[dev_id_idx][dev_id_idy] = new CommandQueue(queue_id, 0);
+				else if (dev_id_idx*LOC_NUM + dev_id_idy < shared_iloc0*LOC_NUM + shared_iloc1){
+					if(final_link_active[dev_id_idx][dev_id_idy] || !final_link_active[shared_iloc0][shared_iloc1])
+						recv_queues[dev_id_idx][dev_id_idy] = new CommandQueue(queue_id, 0);
+					else{
+						int shared_queue_id = (shared_iloc1 == LOC_NUM - 1)? deidxize(shared_iloc0) : deidxize(shared_iloc1);
+						recv_queues[dev_id_idx][dev_id_idy] = new CommandQueue(shared_queue_id, 0);
+					}
+				}
 #ifdef ENABLE_SEND_RECV_OVERLAP
 				wb_queues[dev_id_idx][dev_id_idy] = new CommandQueue(queue_id, 0);
 #else 
@@ -333,6 +290,11 @@ void CoCoPeLiaInitResources(int* dev_list, int dev_num){
 					exec_queue[dev_id_idx][i] = new CommandQueue(deidxize(dev_id_idx), 1);
 					exec_queue_ctr[dev_id_idx] = -1; 
 				}
+				for (int i = 0; i < REDUCE_WORKERS_PERDEV; i++){
+					short reloc = (reduce_loc == LOC_NUM - 1)? deidxize(dev_id_idx) : reduce_loc;
+					reduce_queue[dev_id_idx][i] = new CommandQueue(reduce_loc, 1);
+					reduce_queue_ctr[dev_id_idx] = -1; 
+				}
 			}
 		}
 	}
@@ -353,7 +315,7 @@ void CoCoPeLiaInitWS(int* dev_list, int dev_num){
 			}
 			if(flag_is_worker && deidxize(dev_id_idx)!= -1){
 				for (int par_idx = 0; par_idx < exec_queue[dev_id_idx][0]->simultaneous_workers; par_idx++ ){
-					void* local_ws = CoCoMalloc(2048, deidxize(dev_id_idx)); 
+					void* local_ws = CoCoMalloc(2048, deidxize(dev_id_idx), 1); 
 					massert(CUBLAS_STATUS_SUCCESS == cublasSetWorkspace(*((cublasHandle_t*) 
 						exec_queue[dev_id_idx][0]->cqueue_backend_data[par_idx]), local_ws, 2048), 
 						"CommandQueue::CommandQueue(%d): cublasSetWorkspace failed\n", deidxize(dev_id_idx));

@@ -2,7 +2,7 @@
 echo "Bash version ${BASH_VERSION}..."
 
 module load gcc/11.2.0
-module load system/cuda/11.6.0
+module load system/cuda/12.1
 module load python/3.10
 source ~/.bashrc
 
@@ -126,7 +126,7 @@ do
 					do
 						K_thin=$((MN/$inbalance_ctr))
 						echo "$CoCopelia_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $MN $MN $K_thin $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
-						$CoCopelia_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $MN $MN $K_thin $A_loc $B_loc $C_loc $C_loc  &>> $perf_log
+						#$CoCopelia_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $MN $MN $K_thin $A_loc $B_loc $C_loc $C_loc  &>> $perf_log
 						#echo "$CoCopelia_run 8 11111111 -1 -1 $TransA $TransB $alpha $beta $MN $MN $K_thin $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
 						#$CoCopelia_run 8 11111111 -1 -1 $TransA $TransB $alpha $beta $MN $MN $K_thin $A_loc $B_loc $C_loc $C_loc  &>> $perf_log
 						#echo "$CoCopelia_run 4 11110000 -1 -1 $TransA $TransB $alpha $beta $MN $MN $K_thin $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
@@ -152,9 +152,9 @@ do
 					do
 						MN_thin=$((K_fat/$inbalance_ctr))
 						echo "$CoCopelia_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $MN_thin $MN_thin $K_fat $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
-						$CoCopelia_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $MN_thin $MN_thin $K_fat $A_loc $B_loc $C_loc $C_loc  &>> $perf_log
-						echo "$CoCopelia_run 8 11111111 -1 -1 $TransA $TransB $alpha $beta $MN_thin $MN_thin $K_fat $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
-						$CoCopelia_run 8 11111111 -1 -1 $TransA $TransB $alpha $beta $MN_thin $MN_thin $K_fat $A_loc $B_loc $C_loc $C_loc  &>> $perf_log
+						#$CoCopelia_run -1 -1 -1 -1 $TransA $TransB $alpha $beta $MN_thin $MN_thin $K_fat $A_loc $B_loc $C_loc $C_loc  &>> $perf_log
+						#echo "$CoCopelia_run 8 11111111 -1 -1 $TransA $TransB $alpha $beta $MN_thin $MN_thin $K_fat $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
+						#$CoCopelia_run 8 11111111 -1 -1 $TransA $TransB $alpha $beta $MN_thin $MN_thin $K_fat $A_loc $B_loc $C_loc $C_loc  &>> $perf_log
 						#echo "$CoCopelia_run 4 11110000 -1 -1 $TransA $TransB $alpha $beta $MN_thin $MN_thin $K_fat $A_loc $B_loc $C_loc $C_loc &>> $perf_log"
 						#$CoCopelia_run 4 11110000 -1 -1 $TransA $TransB $alpha $beta $MN_thin $MN_thin $K_fat $A_loc $B_loc $C_loc $C_loc  &>> $perf_log
 						#echo "$CoCopelia_run 4 01100110 -1 -1 $TransA $TransB $alpha $beta $MN_thin $MN_thin $K_fat $A_loc $B_loc $C_loc $C_loc &>> $perf_log"

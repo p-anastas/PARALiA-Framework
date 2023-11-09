@@ -236,15 +236,15 @@ double Modeler::predictBestFriends_t(double request_ratio, long long request_siz
 			int i, i_out = 0, closest_remaining_unit_idx = idxize(remaining_unit_id_list[0]);
 			for (i = 0; i < remaining_unit_num; i++){
 				if (remaining_unit_id_list[i] == unit_id) continue;
-				if(final_estimated_link_bw[idxize(unit_id)][idxize(remaining_unit_id_list[i])] >
-					 final_estimated_link_bw[idxize(unit_id)][closest_remaining_unit_idx]){
+				if(shared_bw_unroll(unit_id, remaining_unit_id_list[i]) >
+					 shared_bw_unroll(unit_id, deidxize(closest_remaining_unit_idx))){
 					 	closest_remaining_unit_idx = idxize(remaining_unit_id_list[i]);
 						i_out = i;
 					}
 			}
 #ifdef DPDEBUG
 			lprintf(0, "Closest %d friend Unit with bw[%d][%d] = %lf\n", active_unit_num - remaining_unit_num,
-				idxize(unit_id), closest_remaining_unit_idx, final_estimated_link_bw[idxize(unit_id)][closest_remaining_unit_idx]);
+				idxize(unit_id), closest_remaining_unit_idx, shared_bw_unroll(unit_id, deidxize(closest_remaining_unit_idx)));
 #endif
 			total_t+= t_com_predict_shared(link[closest_remaining_unit_idx], (long long)((1.0*curr_ratio/request_ratio)*request_size));
 			remaining_unit_num--;
@@ -266,7 +266,22 @@ double Modeler::predictAvgBw_t(long long request_size, int active_unit_num, int*
 		return total_t;
 }
 
+double Modeler::predictSumBw_t(long long request_size, int active_unit_num, int* active_unit_id_list)
+{
+		double sum_bw = 0;
+		for (int i = 0; i < active_unit_num; i++){
+			if (active_unit_id_list[i] == unit_id) continue;
+			sum_bw += shared_bw_unroll(unit_id, active_unit_id_list[i]);
+		}
+		for (int i = 0; i < active_unit_num; i++){
+			if (active_unit_id_list[i] == unit_id) continue;
+			sum_bw *= (1-HOP_PENALTY);
+		}
+		return (sum_bw) ? request_size/(sum_bw*1e9) : 0;
+}
+
 double Modeler::predict(ModelType mode, long int T, int used_devs, int* used_dev_ids, double* used_dev_relative_scores){
+	error("Modeler::predict is outdated, use Modeler::predict_v2\n");
 	switch(mode){
 		case WERKHOVEN:
 			return WerkhovenModelPredictWrapper(this, T, 0);
@@ -296,10 +311,43 @@ double Modeler::predict(ModelType mode, long int T, int used_devs, int* used_dev
 			if (T == -1 || used_devs == -1 || !used_dev_ids || !used_dev_relative_scores)
 				error("Called Modeler::predict(mode=HETERO_BIDIRECTIONAL) with undefined arguments\n");
 			return PredictBidirectionalHetero(this, T, used_devs, used_dev_ids, used_dev_relative_scores);
-		case PARALIA_HETERO_LINK_BASED:
+		case HETERO_FULL_OVERLAP_v2:
+		default:
+			error("CoCoPeLiaModelPredict: Invalid mode %s", printModel(mode));
+			return 0;
+	}
+}
+
+double* Modeler::predict_v2(ModelType mode, long int T, int used_devs, int* used_dev_ids, double* used_dev_relative_scores){
+	switch(mode){
+		case WERKHOVEN:
+			error("Modeler::predict_v2(mode=WERKHOVEN) not implemented\n");
+		case WERKHOVEN_DATALOC:
+			error("Modeler::predict_v2(mode=WERKHOVEN_DATALOC) not implemented\n");
+		case WERKHOVEN_LOOKUP_EXEC_TILES:
+			error("Modeler::predict_v2(mode=WERKHOVEN_LOOKUP_EXEC_TILES) not implemented\n");
+		case COCOPELIA_BASELINE:
+			error("Modeler::predict_v2(mode=COCOPELIA_BASELINE) not implemented\n");
+		case COCOPELIA_DATALOC:
+			error("Modeler::predict_v2(mode=COCOPELIA_DATALOC) not implemented\n");
+		case COCOPELIA_BIDIRECTIONAL:
+			error("Modeler::predict_v2(mode=COCOPELIA_BIDIRECTIONAL) not implemented\n");
+		case COCOPELIA_REUSE:
+			error("Modeler::predict_v2(mode=COCOPELIA_REUSE) not implemented\n");
+		case COCOPELIA_PIPELINE_EMULATE:
+			error("Modeler::predict_v2(mode=COCOPELIA_PIPELINE_EMULATE) not implemented\n");
+		case FULL_OVERLAP:
+			error("Modeler::predict_v2(mode=FULL_OVERLAP) not implemented\n");
+		case NO_OVERLAP:
+			error("Modeler::predict_v2(mode=NO_OVERLAP) not implemented\n");
+		case HETERO_REUSE:
+			error("Modeler::predict_v2(mode=HETERO_REUSE) not implemented\n");
+		case HETERO_BIDIRECTIONAL:
+			error("Modeler::predict_v2(mode=HETERO_BIDIRECTIONAL) not implemented\n");
+		case HETERO_FULL_OVERLAP_v2:
 			if (T == -1 || used_devs == -1 || !used_dev_ids || !used_dev_relative_scores)
 				error("Called Modeler::predict(mode=HETERO_REUSE) with undefined arguments\n");
-			return PARALiaPredictLinkHetero(this, T, used_devs, used_dev_ids, used_dev_relative_scores);
+			return PredictHeteroFullOverlap_v2(this, T, used_devs, used_dev_ids, used_dev_relative_scores);
 		default:
 			error("CoCoPeLiaModelPredict: Invalid mode %s", printModel(mode));
 			return 0;

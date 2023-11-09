@@ -141,60 +141,61 @@ void CoCoDistributeSubkernelsNaive(ATC_p autotune_controller){
 }
 
 void CoCoDistributeSubkernelsRoundRobinChunk(ATC_p autotune_controller,  int Chunk_size){
-  #ifdef DEBUG
+#ifdef DEBUG
   	fprintf(stderr, "|-----> CoCoDistributeSubkernelsRoundRobinChunk(%p, %d)\n", autotune_controller, Chunk_size);
-  #endif
-  if (autotune_controller->subkernel_num <= autotune_controller->active_unit_num){
+#endif
+#ifdef PDEBUG
+fprintf(stderr, "CoCoDistributeSubkernelsRoundRobinChunk(%d): Devices = %d (scores = %s), sk_num = %d, sk_buckets = %d\n",
+  Chunk_size, autotune_controller->active_unit_num, 
+  printlist<double>(autotune_controller->active_unit_score, autotune_controller->active_unit_num),
+  autotune_controller->subkernel_num, autotune_controller->subkernel_num/Chunk_size);
+#endif
+  if (autotune_controller->subkernel_num/Chunk_size <= autotune_controller->active_unit_num){
     int pred_active_unit_num = autotune_controller->active_unit_num;
-    autotune_controller->active_unit_num = autotune_controller->subkernel_num;
+    autotune_controller->active_unit_num = autotune_controller->subkernel_num/Chunk_size;
     warning("CoCoDistributeSubkernelsRoundRobinChunk: Problem with predicted active_unit_num(%d) < subkernel_num(%d) will be run with active_unit_num = %d\n",
     	pred_active_unit_num, autotune_controller->subkernel_num, autotune_controller->active_unit_num);
     for (int d = autotune_controller->active_unit_num; d < pred_active_unit_num; d++) autotune_controller->linkmap->reset_links(autotune_controller->active_unit_id_list[d]);
     for (int d = 0 ; d < autotune_controller->active_unit_num; d++){
-      autotune_controller->Subkernels_per_unit_num[d] = 1;
-      autotune_controller->Subkernels_per_unit_list[d][0] = d;
+      autotune_controller->Subkernels_per_unit_num[d] = Chunk_size;
+      for (int idx3 = 0; idx3 < Chunk_size; idx3++)
+        autotune_controller->Subkernels_per_unit_list[d][idx3] = d*Chunk_size + idx3;
     }
   }
   else{
-    int rem_dev = autotune_controller->subkernel_num;
-    for (int d = 0 ; d < autotune_controller->active_unit_num; d++){
-       autotune_controller->Subkernels_per_unit_num[d] =
-        (int) (1.0* autotune_controller->active_unit_score[d]* autotune_controller->subkernel_num);
-       rem_dev-= autotune_controller->Subkernels_per_unit_num[d];
-    }
-    while(rem_dev!= 0){
-      for (int d = 0 ; d < autotune_controller->active_unit_num; d++){
-         if(rem_dev!= 0){
-           autotune_controller->Subkernels_per_unit_num[d] += 1;
-           rem_dev--;
-         }
-         else break;
+  for (int d = 0 ; d < autotune_controller->active_unit_num; d++){
+    autotune_controller->Subkernels_per_unit_num[d] = Chunk_size*
+      (int) (1.0* autotune_controller->active_unit_score[d]* (autotune_controller->subkernel_num/Chunk_size));
+  }
+  int sks_accounted_for = 0;
+  for (int d = 0 ; d < autotune_controller->active_unit_num; d++)
+    sks_accounted_for += autotune_controller->Subkernels_per_unit_num[d];
+#ifdef PDEBUG
+fprintf(stderr, "Assigned kernel num to devices kernels (first pass): %s\n",
+  printlist<int>(autotune_controller->Subkernels_per_unit_num, autotune_controller->active_unit_num));
+#endif
+  int sk_ctr = 0, dev_sk_ctr_list[autotune_controller->active_unit_num] = {0}, devidx = 0;
+  for (int D1 = 0; D1 < autotune_controller->subkernel_num/Chunk_size; D1++){
+    for (int D3 = 0; D3 < Chunk_size; D3++){
+      int full_circle = autotune_controller->active_unit_num;
+      while(dev_sk_ctr_list[devidx] == autotune_controller->Subkernels_per_unit_num[devidx] && sk_ctr < sks_accounted_for){ 
+        if(!full_circle) error("CoCoDistributeSubkernels2DBlockCyclic: would enter infinite loop due to wrong Subkernels_per_unit_num, terminating\n");
+        if(devidx == autotune_controller->active_unit_num - 1) devidx = 0;
+        else devidx++;
+        full_circle--;
       }
+      autotune_controller->Subkernels_per_unit_list[devidx][dev_sk_ctr_list[devidx]] = sk_ctr;
+      if(sk_ctr >= sks_accounted_for) autotune_controller->Subkernels_per_unit_num[devidx] ++;
+      dev_sk_ctr_list[devidx]++;
+#ifdef PDEBUG
+      fprintf(stderr, "CoCoDistributeSubkernelsRoundRobinChunk: sk_ctr[%d,%d] = %d, devidx = %d\n",
+        D1, D3, sk_ctr, devidx);
+#endif
+      sk_ctr++;
     }
-    int total_sk_ctr = 0, local_dim_ctr = 0;
-    short dev_sk_ctr_list[autotune_controller->active_unit_num];
-    for(int devidx = 0; devidx < autotune_controller->active_unit_num; devidx++) dev_sk_ctr_list[devidx] = 0;
-    while(total_sk_ctr<autotune_controller->subkernel_num){
-      for(int devidx = 0; devidx < autotune_controller->active_unit_num; devidx++){
-        if(total_sk_ctr == autotune_controller->subkernel_num) break;
-        else if(dev_sk_ctr_list[devidx] == autotune_controller->Subkernels_per_unit_num[devidx]) continue;
-        else{
-          autotune_controller->Subkernels_per_unit_list[devidx][dev_sk_ctr_list[devidx]] = total_sk_ctr;
-          dev_sk_ctr_list[devidx]++;
-          total_sk_ctr++;
-        }
-        while(total_sk_ctr%Chunk_size!=0){
-          if(total_sk_ctr == autotune_controller->subkernel_num) break;
-          else if(dev_sk_ctr_list[devidx] == autotune_controller->Subkernels_per_unit_num[devidx]) break;
-          else{
-            autotune_controller->Subkernels_per_unit_list[devidx][dev_sk_ctr_list[devidx]] = total_sk_ctr;
-            dev_sk_ctr_list[devidx]++;
-            total_sk_ctr++;
-          }
-        }
-        if(total_sk_ctr == autotune_controller->subkernel_num) break;
-      }
-    }
+    if(devidx == autotune_controller->active_unit_num - 1) devidx = 0;
+    else devidx++;
+  }
   }
 #ifdef PDEBUG
     fprintf(stderr, "CoCoDistributeSubkernelsRoundRobinChunk:\nDistributing %ld Subkernels to %d devices\n",
@@ -312,42 +313,15 @@ void CoCoDistributeSubkernelsRoundRobinChunkReverse(ATC_p autotune_controller,  
 }
 
 void CoCoDistributeSubkernels2DBlockCyclic(ATC_p autotune_controller, int D1GridSz, int D2GridSz, int D3GridSz){
-  #ifdef DEBUG
+#ifdef DEBUG
   	fprintf(stderr, "|-----> CoCoDistributeSubkernels2DBlockCyclic(%p, %d, %d, %d)\n", autotune_controller, D1GridSz, D2GridSz, D3GridSz);
-  #endif
+#endif
   if ((D2GridSz == D3GridSz) &&  (D2GridSz == 1)){
     warning("CoCoDistributeSubkernels2DBlockCyclic: D2GridSz==D3GridSz==1 -> using CoCoDistributeSubkernelsRoundRobin\n");
     return CoCoDistributeSubkernelsRoundRobin(autotune_controller);
   }
-  if (autotune_controller->subkernel_num <= autotune_controller->active_unit_num){
-    int pred_active_unit_num = autotune_controller->active_unit_num;
-    autotune_controller->active_unit_num = autotune_controller->subkernel_num;
-    warning("CoCoDistributeSubkernels2DBlockCyclic: Problem with predicted active_unit_num(%d) < subkernel_num(%d) will be run with active_unit_num = %d\n",
-    	pred_active_unit_num, autotune_controller->subkernel_num, autotune_controller->active_unit_num);
-    for (int d = autotune_controller->active_unit_num; d < pred_active_unit_num; d++) autotune_controller->linkmap->reset_links(autotune_controller->active_unit_id_list[d]);
-    for (int d = 0 ; d < autotune_controller->active_unit_num; d++){
-      autotune_controller->Subkernels_per_unit_num[d] = 1;
-      autotune_controller->Subkernels_per_unit_list[d][0] = d;
-    }
-  }
-  else{
-  int rem_dev = autotune_controller->subkernel_num;
-  for (int d = 0 ; d < autotune_controller->active_unit_num; d++){
-     autotune_controller->Subkernels_per_unit_num[d] =
-      (int) (1.0* autotune_controller->active_unit_score[d]* autotune_controller->subkernel_num);
-     rem_dev-= autotune_controller->Subkernels_per_unit_num[d];
-  }
-  while(rem_dev!= 0){
-    for (int d = 0 ; d < autotune_controller->active_unit_num; d++){
-       if(rem_dev!= 0){
-         autotune_controller->Subkernels_per_unit_num[d] += 1;
-         rem_dev--;
-       }
-       else break;
-    }
-  }
 
-/* 2D Bloc cyclic */
+/* 2D Block cyclic */
   int D1_parts = sqrt(autotune_controller->active_unit_num);
   int D2_parts = D1_parts;
   if (D1_parts ==0) { D2_parts = autotune_controller->active_unit_num; D1_parts = 1; }
@@ -373,44 +347,84 @@ void CoCoDistributeSubkernels2DBlockCyclic(ATC_p autotune_controller, int D1Grid
   int D1GridSz_div = D1GridSz/D1_parts*D1_parts, D2GridSz_div = D2GridSz/D2_parts*D2_parts,
       D1GridSz_mod = D1GridSz%D1_parts, D2GridSz_mod = D2GridSz%D2_parts;
 #ifdef PDEBUG
-fprintf(stderr, "CoCoDistributeSubkernels2DBlockCyclic: Devices = %d, D1_parts = %d, D2_parts = %d\n",
-  autotune_controller->active_unit_num, D1_parts, D2_parts);
+fprintf(stderr, "CoCoDistributeSubkernels2DBlockCyclic(%d, %d, %d): Devices = %d (scores = %s), D1_parts = %d, D2_parts = %d\n",
+  D1GridSz, D2GridSz, D3GridSz, autotune_controller->active_unit_num, 
+  printlist<double>(autotune_controller->active_unit_score, autotune_controller->active_unit_num),D1_parts, D2_parts);
 #endif
-  int sk_ctr, devidx, dev_sk_ctr_list[autotune_controller->active_unit_num] = {0};
+
+  if ((D1GridSz*D2GridSz) < autotune_controller->active_unit_num){
+    warning("CoCoDistributeSubkernels2DBlockCyclic: D1GridSz*D2GridSz(%d) < autotune_controller->active_unit_num(%d)\n", 
+      D1GridSz*D2GridSz, autotune_controller->active_unit_num);
+    int pred_active_unit_num = D1GridSz*D2GridSz;
+    autotune_controller->active_unit_num = autotune_controller->subkernel_num;
+    warning("CoCoDistributeSubkernels2DBlockCyclic: Problem with predicted active_unit_num(%d) < subkernel_num(%d) will be run with active_unit_num = %d\n",
+    	pred_active_unit_num, autotune_controller->subkernel_num, autotune_controller->active_unit_num);
+    for (int d = autotune_controller->active_unit_num; d < pred_active_unit_num; d++) autotune_controller->linkmap->reset_links(autotune_controller->active_unit_id_list[d]);
+    for (int d = 0 ; d < autotune_controller->active_unit_num; d++){
+      autotune_controller->Subkernels_per_unit_num[d] = D3GridSz;
+      for (int idx3 = 0; idx3 < D3GridSz; idx3++)
+        autotune_controller->Subkernels_per_unit_list[d][idx3] = d*D3GridSz + idx3;
+    }
+  }
+  else{
+  int sks_accounted_for = 0;
+  for (int d = 0 ; d < autotune_controller->active_unit_num; d++){
+     autotune_controller->Subkernels_per_unit_num[d] = D3GridSz * (
+      (int) (autotune_controller->active_unit_score[d]* D1GridSz_div*D2GridSz_div));
+      /// TODO: this is a fix because int (some_double) does not work for all doubles as intended 
+      /// Will disrupt non-homogeneous splits!
+      sks_accounted_for+= autotune_controller->Subkernels_per_unit_num[d]; 
+  }
+  if(!D1GridSz_mod && !D2GridSz_mod && sks_accounted_for < autotune_controller->subkernel_num){
+    warning("CoCoDistributeSubkernels2DBlockCyclic: Questionable remainder from first pass %d / %d sub-kernels\n",
+      autotune_controller->subkernel_num - sks_accounted_for, autotune_controller->subkernel_num);
+    int buckets =  D1GridSz_div*D2GridSz_div, 
+        buckets_rem = (autotune_controller->subkernel_num - sks_accounted_for)/D3GridSz,
+        buckets_intended = buckets/autotune_controller->active_unit_num; 
+    for (int d = 0 ; d < autotune_controller->active_unit_num; d++) 
+      if(autotune_controller->Subkernels_per_unit_num[d]/D3GridSz < buckets_intended && buckets_rem){
+        autotune_controller->Subkernels_per_unit_num[d]+= D3GridSz; 
+        buckets_rem--;
+      }
+  }
+#ifdef PDEBUG
+fprintf(stderr, "Assigned kernel num to devices kernels (first pass): %s\n",
+  printlist<int>(autotune_controller->Subkernels_per_unit_num, autotune_controller->active_unit_num));
+#endif
+  int sk_ctr, dev_sk_ctr_list[autotune_controller->active_unit_num] = {0}, devidx = 0;
   for (int D1 = 0; D1 < D1GridSz_div; D1++)
     for (int D2 = 0; D2 < D2GridSz_div; D2++)
         for (int D3 = 0; D3 < D3GridSz; D3++){
           sk_ctr = D1*D2GridSz*D3GridSz + D2*D3GridSz+D3;
           devidx = D1/(D1GridSz/D1_parts)*D2_parts + D2/(D2GridSz/D2_parts);
-#ifdef DPDEBUG
+#ifdef PDEBUG
           fprintf(stderr, "CoCoDistributeSubkernels2DBlockCyclic: sk_ctr[%d,%d,%d] = %d, devidx = %d\n",
             D1,D2,D3, sk_ctr, devidx);
 #endif
+          int full_circle = autotune_controller->active_unit_num; 
           while(dev_sk_ctr_list[devidx] == autotune_controller->Subkernels_per_unit_num[devidx]){
+            if(!full_circle) error("CoCoDistributeSubkernels2DBlockCyclic: would enter infinite loop due to wrong Subkernels_per_unit_num, terminating\n");
             if(devidx == autotune_controller->active_unit_num - 1) devidx = 0;
             else devidx++;
+            full_circle--; 
           }
           autotune_controller->Subkernels_per_unit_list[devidx][dev_sk_ctr_list[devidx]] = sk_ctr;
           dev_sk_ctr_list[devidx]++;
         }
 
   devidx = 0;
-
   for (int D1 = 0; D1 < D1GridSz_div; D1++)
     for (int D2 = D2GridSz_div; D2 < D2GridSz_div + D2GridSz_mod; D2++){
       for (int D3 = 0; D3 < D3GridSz; D3++){
         sk_ctr = D1*D2GridSz*D3GridSz + D2*D3GridSz+D3;
 #ifdef PDEBUG
-        fprintf(stderr, "CoCoDistributeSubkernels2DBlockCyclic:\nsk_ctr[%d,%d,%d] = %d, devidx = %d\n",
+        fprintf(stderr, "CoCoDistributeSubkernels2DBlockCyclic: D1-mod part\n sk_ctr[%d,%d,%d] = %d, devidx = %d\n",
           D1,D2,D3, sk_ctr, devidx);
 #endif
-        while(dev_sk_ctr_list[devidx] == autotune_controller->Subkernels_per_unit_num[devidx]){
-          if(devidx == autotune_controller->active_unit_num - 1) devidx = 0;
-          else devidx++;
-        }
         autotune_controller->Subkernels_per_unit_list[devidx][dev_sk_ctr_list[devidx]] = sk_ctr;
         dev_sk_ctr_list[devidx]++;
       }
+      autotune_controller->Subkernels_per_unit_num[devidx] += D3GridSz;
       if(devidx == autotune_controller->active_unit_num - 1) devidx = 0;
       else devidx++;
     }
@@ -420,16 +434,13 @@ fprintf(stderr, "CoCoDistributeSubkernels2DBlockCyclic: Devices = %d, D1_parts =
       for (int D3 = 0; D3 < D3GridSz; D3++){
         sk_ctr = D1*D2GridSz*D3GridSz + D2*D3GridSz+D3;
 #ifdef PDEBUG
-        fprintf(stderr, "CoCoDistributeSubkernels2DBlockCyclic:\nsk_ctr[%d,%d,%d] = %d, devidx = %d\n",
+        fprintf(stderr, "CoCoDistributeSubkernels2DBlockCyclic: D2-mod part\nsk_ctr[%d,%d,%d] = %d, devidx = %d\n",
           D1,D2,D3, sk_ctr, devidx);
 #endif
-        while(dev_sk_ctr_list[devidx] == autotune_controller->Subkernels_per_unit_num[devidx]){
-          if(devidx == autotune_controller->active_unit_num - 1) devidx = 0;
-          else devidx++;
-        }
         autotune_controller->Subkernels_per_unit_list[devidx][dev_sk_ctr_list[devidx]] = sk_ctr;
         dev_sk_ctr_list[devidx]++;
       }
+      autotune_controller->Subkernels_per_unit_num[devidx] += D3GridSz;
       if(devidx == autotune_controller->active_unit_num - 1) devidx = 0;
       else devidx++;
     }
@@ -439,18 +450,15 @@ fprintf(stderr, "CoCoDistributeSubkernels2DBlockCyclic: Devices = %d, D1_parts =
         for (int D3 = 0; D3 < D3GridSz; D3++){
           sk_ctr = D1*D2GridSz*D3GridSz + D2*D3GridSz+D3;
 #ifdef PDEBUG
-          fprintf(stderr, "CoCoDistributeSubkernels2DBlockCyclic:\nsk_ctr[%d,%d,%d] = %d, devidx = %d\n",
+          fprintf(stderr, "CoCoDistributeSubkernels2DBlockCyclic: D1 & D2 mod part\nsk_ctr[%d,%d,%d] = %d, devidx = %d\n",
             D1,D2,D3, sk_ctr, devidx);
 #endif
-          while(dev_sk_ctr_list[devidx] == autotune_controller->Subkernels_per_unit_num[devidx]){
-            if(devidx == autotune_controller->active_unit_num - 1) devidx = 0;
-            else devidx++;
-          }
-          autotune_controller->Subkernels_per_unit_list[devidx][dev_sk_ctr_list[devidx]] = sk_ctr;
-          dev_sk_ctr_list[devidx]++;
-        }
-        if(devidx == autotune_controller->active_unit_num - 1) devidx = 0;
-        else devidx++;
+        autotune_controller->Subkernels_per_unit_list[devidx][dev_sk_ctr_list[devidx]] = sk_ctr;
+        dev_sk_ctr_list[devidx]++;
+      }
+      autotune_controller->Subkernels_per_unit_num[devidx] += D3GridSz;
+      if(devidx == autotune_controller->active_unit_num - 1) devidx = 0;
+      else devidx++;
       }
     }
 #ifdef PDEBUG
