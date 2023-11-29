@@ -167,7 +167,8 @@ void LinkMap::update_link_shared_weights(MD_p* unit_modeler_list,
 	links_share_bandwidth[6][LOC_NUM - 1][1] = LOC_NUM - 1;
 	links_share_bandwidth[7][LOC_NUM - 1][0] = 6;
 	links_share_bandwidth[7][LOC_NUM - 1][1] = LOC_NUM - 1;
-/*
+#endif
+
 	links_share_bandwidth[LOC_NUM - 1][0][0] = LOC_NUM - 1;
 	links_share_bandwidth[LOC_NUM - 1][0][1] = 1;
 	links_share_bandwidth[LOC_NUM - 1][1][0] = LOC_NUM - 1;
@@ -187,8 +188,8 @@ void LinkMap::update_link_shared_weights(MD_p* unit_modeler_list,
 	links_share_bandwidth[LOC_NUM - 1][6][1] = 7;
 	links_share_bandwidth[LOC_NUM - 1][7][0] = LOC_NUM - 1;
 	links_share_bandwidth[LOC_NUM - 1][7][1] = 6;
-*/
-#endif
+
+
   for (int i = 0; i < LOC_NUM; i++){
     for(int j = 0; j < LOC_NUM; j++){
       if(i == j || 

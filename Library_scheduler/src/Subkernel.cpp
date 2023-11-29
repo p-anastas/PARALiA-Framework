@@ -264,17 +264,18 @@ void CoCoPeLiaInitResources(int* dev_list, int dev_num){
 						recv_queues[dev_id_idx][dev_id_idy] = new CommandQueue(shared_queue_id, 0);
 					}
 				}
-#ifdef ENABLE_SEND_RECV_OVERLAP
+//#ifdef ENABLE_SEND_RECV_OVERLAP
 				wb_queues[dev_id_idx][dev_id_idy] = new CommandQueue(queue_id, 0);
-#else 
-				wb_queues[dev_id_idx][dev_id_idy] = recv_queues[dev_id_idx][dev_id_idy];
-				wb_queues[dev_id_idy][dev_id_idx] = recv_queues[dev_id_idx][dev_id_idy];
+//#else 
+//				wb_queues[dev_id_idx][dev_id_idy] = recv_queues[dev_id_idx][dev_id_idy];
+//				wb_queues[dev_id_idy][dev_id_idx] = recv_queues[dev_id_idx][dev_id_idy];
 
-#endif
+//#endif
 				if( shared_iloc0 != - 42){ // The smallest index shared link allocates the queue
 					if (dev_id_idx*LOC_NUM + dev_id_idy < shared_iloc0*LOC_NUM + shared_iloc1){
 						recv_queues[shared_iloc0][shared_iloc1] = recv_queues[dev_id_idx][dev_id_idy];
 						wb_queues[shared_iloc0][shared_iloc1] = wb_queues[dev_id_idx][dev_id_idy];
+//						wb_queues[shared_iloc1][shared_iloc0] = wb_queues[dev_id_idx][dev_id_idy];
 					}
 				}
 			}
@@ -355,6 +356,12 @@ void CoCoPeLiaCleanResources(){
 				exec_queue_ctr[dev_id_idx] = -1;
 			}
 	}
+}
+
+void sync_recv_queues(){
+	for(short dev_id_idx = 0 ; dev_id_idx < LOC_NUM; dev_id_idx++)
+		for(short dev_id_idy = 0 ; dev_id_idy < LOC_NUM; dev_id_idy++)
+		if(dev_id_idx!=dev_id_idy) recv_queues[dev_id_idx][dev_id_idy]->sync_barrier();
 }
 
 void swap_sk(Subkernel** sk1, Subkernel** sk2){

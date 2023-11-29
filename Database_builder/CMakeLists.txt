@@ -23,7 +23,7 @@ ADD_SUBDIRECTORY (CuCuBLAS/nvidia-energy-measure)
 ## i) Automatic micro-benchmarking (Population checked within 95% CI) using boost (recommended if boost available).
 message("Database Builder - Using Boost for microbenchmark statistics")
 add_definitions(-DAUTO_BENCH_USE_BOOST)
-set(BOOSTO_PREFIX "/home/users/panastas/Lib_install/boost-1.69")
+set(BOOSTO_PREFIX $ENV{CHANGELINK_BOOST_PREFIX})
 set (BOOSTO_INCLUDE_DIRS ${BOOSTO_PREFIX}/include)
 include_directories(${BOOSTO_INCLUDE_DIRS})
 message("Database Builder - Included (Boost) DIR: " ${BOOSTO_INCLUDE_DIRS})

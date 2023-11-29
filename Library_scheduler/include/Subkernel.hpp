@@ -65,6 +65,7 @@ void CoCoPeLiaInitWS(int* dev_list, int dev_num);
 void CoCoPeLiaFreeResources();
 void CoCoPeLiaCleanResources();
 
+void sync_recv_queues();
 
 int SubkernelPrefetchCheapRONLYTiles(int numTiles, short dev_id, Subkernel** Subkernel_list, long Subkernel_list_len);
 

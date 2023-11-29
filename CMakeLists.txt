@@ -91,16 +91,16 @@ add_definitions(-DREDUCE_WORKERS_PERDEV=10)
 #---------------------------------Routing optimizations-----------------------------------#
 ###########################################################################################
 
-## Enable overlapping Send & recv Communication FIXME: Not implemented
+## Enable overlapping Send & recv Communication FIXME: disabling this flag is not entirely implemented
 add_definitions(-DENABLE_SEND_RECV_OVERLAP)
 
 ## Enable sharing of bandwidth between links that utilize the same underlying hardware communication resources
-#add_definitions(-DENABLE_LINK_BW_SHARING) # by putting them on different queues
+add_definitions(-DENABLE_LINK_BW_SHARING) # by putting them on different queues
 
 ## The number of sub-buffers FasTCoCoMemcpy2DAsync will use to increase effective BW
 ## In general effective_trans_time = max_trans_time(route[]) + 1/SBO * sub_trans_time(route_minus_max[])
 ## Rule of thumb: large SBO -> increased transfer latency, small SBO -> decreased bandwidth
-add_definitions(-DSTREAMING_BUFFER_OVERLAP=8)
+add_definitions(-DSTREAMING_BUFFER_OVERLAP=1)
 
 ###########################################################################################
 #-----------------------------------Routing selection-------------------------------------#
@@ -265,7 +265,7 @@ add_definitions(-DPERPER_LIMIT=0.0)
 #add_definitions(-DDSTEST)
 
 #Run in Link Hop testing mode; transfers using link hops are logged and timed.
-#add_definitions(-DTTEST)
+add_definitions(-DTTEST)
 
 ###########################################################################################
 #------------------------------------Other options----------------------------------------#

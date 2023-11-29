@@ -121,7 +121,6 @@ void ManageCachesDgemm(PMD_p local_PMD){
 }
 
 void CreateSubkernelsDgemm(PMD_p local_PMD){
-
 	/// Check if decomposers satisfy GEMM dim criteria for N, N transpose
 	if (local_PMD->decom[0]->transpose == 'N' && local_PMD->decom[1]->transpose == 'N'){
 		massert(local_PMD->decom[0]->GridSz1 == local_PMD->decom[2]->GridSz1 &&
@@ -588,8 +587,13 @@ ATC_p PARALiADgemm(char TransA,  char TransB, long int M, long int N, long int K
 	cpu_timer = csecond();
 #endif
 #endif
+#ifdef SUBKERNELS_FIRE_WHEN_READY
+#ifndef ENABLE_SEND_RECV_OVERLAP
+	sync_recv_queues();
+	local_PMD->decom[2]->WBTileMap();
+#endif
+#endif
 	local_PMD->decom[2]->SyncTileMap();
-
 	CoCoSyncCheckErr();
 #ifdef TEST
 	cpu_timer = csecond() - run_timer;
