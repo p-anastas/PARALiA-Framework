@@ -14,3 +14,4 @@ __pycache__
 *build/
 **/.idea/
 Benchmarking/Python_Scripts/Plots/
+*.code-workspace
