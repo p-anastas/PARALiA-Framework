@@ -1298,6 +1298,7 @@ void CoCoPeLiaInitResources(short dev_id){
 	transfer_link_sharing[7][LOC_NUM - 1][0] = 6;
 	transfer_link_sharing[7][LOC_NUM - 1][1] = LOC_NUM - 1;
 */
+/*
 	transfer_link_sharing[LOC_NUM - 1][0][0] = LOC_NUM - 1;
 	transfer_link_sharing[LOC_NUM - 1][0][1] = 1;
 	transfer_link_sharing[LOC_NUM - 1][1][0] = LOC_NUM - 1;
@@ -1317,6 +1318,7 @@ void CoCoPeLiaInitResources(short dev_id){
 	transfer_link_sharing[LOC_NUM - 1][6][1] = 7;
 	transfer_link_sharing[LOC_NUM - 1][7][0] = LOC_NUM - 1;
 	transfer_link_sharing[LOC_NUM - 1][7][1] = 6;
+	*/
 #endif
 
 	short dev_id_idx = idxize(dev_id);
