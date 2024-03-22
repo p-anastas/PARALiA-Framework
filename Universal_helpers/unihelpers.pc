@@ -1,0 +1,12 @@
+prefix=/usr/local
+exec_prefix=/usr/local
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: CoCopeLia-Helpers
+Description: Universal Helper function lib for CoCoPeLia
+Version: 0.0.1
+
+Requires:
+Libs: -L${libdir} -lunihelpers
+Cflags: -I${includedir}
