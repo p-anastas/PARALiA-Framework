@@ -12,6 +12,7 @@ It performs microbenchmarks during installation, uses these for constructing BLA
  - OpenBLAS, installed (preferably) with the same gcc compiler.
 
 ## Installation
+### NOTE: The main branch contains experimental research additions to PARALiA - for the stable TACO PARALiA version use the paralia1.5 branch!
 PARALiA installation consists of 5 easy steps:
  - Duplicate *config.sh* and fill *config_sysname.sh* with deployed system details for each different system.
  - source *config_sysname.sh*
