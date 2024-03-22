@@ -57,7 +57,7 @@ add_definitions(-DENABLE_ESPA)
 add_definitions(-DESPA_COMMUNICATION_AGGREGATOR=0)
 
 ## Enable sharing of bandwidth between links that utilize the same underlying hardware communication resources
-add_definitions(-DENABLE_LINK_BW_SHARING) # by putting them on different queues
+#add_definitions(-DENABLE_LINK_BW_SHARING) # by putting them on different queues
 
 ## TODO: Enable power measuring for benchmarks, and energy-related prediction modes for the Autotuner
 add_definitions(-DENABLE_POWA)
@@ -122,13 +122,13 @@ add_definitions(-DFETCH_UNAVAILABLE_PENALTY=0.1)
 #add_definitions(-DTEST)
 
 #Run in Subkernel testing mode : details about time spend in subkernel operations.
-add_definitions(-DSTEST)
+#add_definitions(-DSTEST)
 
 #Run in Deep Subkernel testing mode : many details about time spend in subkernel operations.
 #add_definitions(-DDSTEST)
 
 #Run in Link Hop testing mode; transfers using link hops are logged and timed.
-add_definitions(-DTTEST)
+#add_definitions(-DTTEST)
 
 #Run in debug mode, which includes detailed function calls and info for error-checking
 #add_definitions(-DDEBUG)
@@ -165,7 +165,7 @@ message("PARALiA-Framework - NUM_LOCATIONS: " ${NUM_LOCATIONS})
 add_definitions(-DLOC_NUM=${NUM_LOCATIONS})
 
 ## Define the max GPU memory percentage (%) a problem can use ( not accounting for streams and other control structs; e.g. only the problem data ).
-set(PROBLEM_GPU_PERCENTAGE 70)
+set(PROBLEM_GPU_PERCENTAGE 90)
 message("PARALiA-Framework - PROBLEM_GPU_PERCENTAGE: " ${PROBLEM_GPU_PERCENTAGE})
 add_definitions(-DPROBLEM_GPU_PERCENTAGE=${PROBLEM_GPU_PERCENTAGE})
 
@@ -182,7 +182,7 @@ if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
   set(CMAKE_CUDA_ARCHITECTURES $ENV{PARALIA_CUDA_ARCH})
 endif()
 
-set (CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -w -O3")
+set (CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -w -O3 -lnuma")
 message("PARALiA-Framework - CMAKE_CUDA_FLAGS: " ${CMAKE_CUDA_FLAGS})
 
 set (CUDA_INCLUDE_DIRS ${CUDA_PREFIX}/include ${CUDA_PREFIX}/samples/common/inc)
@@ -190,7 +190,7 @@ include_directories(${CUDA_INCLUDE_DIRS})
 message("PARALiA-Framework - CUDA_INCLUDE_DIRS: " ${CUDA_INCLUDE_DIRS})
 
 set (CUDA_LD ${CUDA_PREFIX}/lib64) # or /lib depending on system
-set (CUDA_LINK "-L${CUDA_LD} -lcudart -lcublas -lcurand $ENV{PARALIA_CUDA_LOAD_COMMAND}")
+set (CUDA_LINK "-L${CUDA_LD} -lcudart -lcublas -lcurand -lnuma $ENV{PARALIA_CUDA_LOAD_COMMAND}")
 message("PARALiA-Framework - CUDA_LINK: " ${CUDA_LINK} )
 set (INTERNAL_LINK_LIB "${CUDA_LINK} -lrt -ldl")
 message("PARALiA-Framework - INTERNAL_LINK_LIB: " ${INTERNAL_LINK_LIB})

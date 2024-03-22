@@ -1275,7 +1275,7 @@ void CoCoPeLiaInitResources(short dev_id){
 	for(int k = 0; k < 2; k++) transfer_link_sharing[i][j][k] = -42;
 
 #ifndef ENABLE_LINK_BW_SHARING
-	warning("ENABLE_LINK_BW_SHARING flag is disabled, but sharing-disabler mechanism is missing -> link bw will be shared\n")
+	//warning("ENABLE_LINK_BW_SHARING flag is disabled, but sharing-disabler mechanism is missing -> link bw will be shared\n");
 /*
 	// FIXME: Handmade distribution, for testing purposes
 	transfer_link_sharing[0][LOC_NUM - 1][0] = 1;
@@ -1293,13 +1293,11 @@ void CoCoPeLiaInitResources(short dev_id){
 	transfer_link_sharing[5][LOC_NUM - 1][0] = 4;
 	transfer_link_sharing[5][LOC_NUM - 1][1] = LOC_NUM - 1;
 
-
 	transfer_link_sharing[6][LOC_NUM - 1][0] = 7;
 	transfer_link_sharing[6][LOC_NUM - 1][1] = LOC_NUM - 1;
 	transfer_link_sharing[7][LOC_NUM - 1][0] = 6;
 	transfer_link_sharing[7][LOC_NUM - 1][1] = LOC_NUM - 1;
-
-/*
+*/
 	transfer_link_sharing[LOC_NUM - 1][0][0] = LOC_NUM - 1;
 	transfer_link_sharing[LOC_NUM - 1][0][1] = 1;
 	transfer_link_sharing[LOC_NUM - 1][1][0] = LOC_NUM - 1;
@@ -1319,7 +1317,6 @@ void CoCoPeLiaInitResources(short dev_id){
 	transfer_link_sharing[LOC_NUM - 1][6][1] = 7;
 	transfer_link_sharing[LOC_NUM - 1][7][0] = LOC_NUM - 1;
 	transfer_link_sharing[LOC_NUM - 1][7][1] = 6;
-*/
 #endif
 
 	short dev_id_idx = idxize(dev_id);
